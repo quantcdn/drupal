@@ -1,0 +1,6 @@
+name: Quant
+description: Quant content export
+package: Quant
+
+type: module
+core: 8.x

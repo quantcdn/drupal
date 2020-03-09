@@ -1,0 +1,29 @@
+services:
+  plugin.manager.quant.metadata:
+    class: Drupal\quant\Plugin\QuantMetadataManager
+    parent: default_plugin_manager
+
+  quant.entity_renderer:
+    class: Drupal\quant\EntityRenderer
+    arguments:
+      - '@config.factory'
+      - '@entity.manager'
+      - '@renderer'
+      - '@main_content_renderer.html'
+      - '@plugin.manager.display_variant'
+      - '@theme.initialization'
+      - '@theme.manager'
+      - '@account_switcher'
+
+  quant.node.insert:
+    class: Drupal\quant\EventSubscriber\NodeInsertSubscriber
+    arguments:
+      - '@quant.entity_renderer'
+      - '@plugin.manager.quant.metadata'
+    tags:
+    - { name: 'event_subscriber' }
+
+  quant.output.filesystem:
+    class: Drupal\quant\EventSubscriber\QuantFilesystem
+    tags:
+      - { name: 'event_subscriber' }

@@ -1,0 +1,13 @@
+services:
+  quant_api.client:
+    class: Drupal\quant_api\Client\QuantClient
+    arguments:
+      - '@http_client'
+      - '@config.factory'
+
+  quant.output.api:
+    class: Drupal\quant_api\EventSubscriber\QuantApi
+    arguments:
+      - '@quant_api.client'
+    tags:
+      - { name: 'event_subscriber' }

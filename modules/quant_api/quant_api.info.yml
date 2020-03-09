@@ -1,0 +1,9 @@
+name: Quant API
+description: Connect to the hosted Quant service
+package: Quant
+
+type: module
+core: 8.x
+
+dependencies:
+  - drupal:quant
