@@ -49,8 +49,12 @@ class Published extends MetadataBase implements ContainerFactoryPluginInterface 
    * {@inheritdoc}
    */
   public function build(EntityInterface $entity) : array {
-    $default = $this->entityManager->getStorage($entity->getEntityTypeId())->load($entity->id());
-    return ['published' => $default->isPublished()];
+    // Note: This approach returns the default published state of the parent node.
+    // This should be used to make content non-viewable if it is unpublished.
+    //$default = $this->entityManager->getStorage($entity->getEntityTypeId())->load($entity->id());
+
+    // Return the published status of the revision.
+    return ['published' => $entity->isPublished()];
   }
 
 }

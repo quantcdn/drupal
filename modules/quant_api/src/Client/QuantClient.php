@@ -4,6 +4,7 @@ namespace Drupal\quant_api\Client;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use GuzzleHttp\Client;
+use GuzzleHttp\RequestOptions;
 
 
 class QuantClient implements QuantClientInterface {
@@ -27,8 +28,39 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
-  public function send(array $data) : bool {
-    return TRUE;
+  public function send(array $data) : array {
+
+    // @todo: Exception handling, error reporting.
+    $response = $this->client->post('http://api:80/', [
+      RequestOptions::JSON => $data
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
   }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function sendFile(string $file, string $url, integer $rid=null) : array {
+
+    // @todo: Exception handling, error reporting.
+    $response = $this->client->post('http://api:80/', [
+      'headers' => [
+        //'Content-Type' => 'multipart/form-data',
+        'Quant-File-Url' => $url,
+      ],
+      'multipart' => [
+        [
+          'name' => 'filename',
+          'filename' => basename($file),
+          'contents' => fopen($file, 'r')
+        ]
+      ]
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
 
 }

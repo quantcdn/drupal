@@ -54,12 +54,28 @@ final class QuantEvent extends Event {
   protected $location;
 
   /**
+   * The metadata array.
+   *
+   * @var array
+   */
+  protected $meta;
+
+  /**
+   * Entity revision id.
+   *
+   * @var integer
+   */
+  protected $rid;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct($contents, $location, EntityInterface $entity) {
+  public function __construct($contents, $location, EntityInterface $entity, $meta, $rid=null) {
     $this->contents = $contents;
     $this->location = $location;
     $this->entity = $entity;
+    $this->meta = $meta;
+    $this->rid = $rid;
   }
 
   /**
@@ -90,6 +106,26 @@ final class QuantEvent extends Event {
    */
   public function getEntity() {
     return $this->entity;
+  }
+
+  /**
+   * Get the revision id associated.
+   *
+   * @return integer
+   *   The revision id.
+   */
+  public function getRevisionId() {
+    return $this->rid;
+  }
+
+  /**
+   * Get the metadata associated with the event.
+   *
+   * @return array
+   *   The metadata.
+   */
+  public function getMetadata() {
+    return $this->meta;
   }
 
 }

@@ -67,14 +67,36 @@ class SettingsForm extends ConfigFormBase {
       }
     }
 
-    $form['api_token'] = [
+    $form['api_endpoint'] = [
       '#type' => 'textfield',
+      '#title' => $this->t('API Endpoint'),
+      '#description' => $this->t('e.g: http://api.quantcdn.io'),
+      '#default_value' => $config->get('api_endpoint'),
+    ];
+
+    $form['api_token'] = [
+      '#type' => 'password',
       '#title' => $this->t('API Token'),
+      '#default_value' => $config->get('api_token'),
     ];
 
     // @TODO QUANT API CONFIGURATION...
 
     return parent::buildForm($form, $form_state);
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    // Retrieve the configuration.
+    $this->configFactory->getEditable(self::SETTINGS)
+      ->set('api_endpoint', $form_state->getValue('api_endpoint'))
+      ->set('api_token', $form_state->getValue('api_token'))
+      ->save();
+
+    parent::submitForm($form, $form_state);
   }
 
 }

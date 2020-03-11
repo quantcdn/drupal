@@ -4,3 +4,6 @@ package: Quant
 
 type: module
 core: 8.x
+
+dependencies:
+  - quant:quant_api

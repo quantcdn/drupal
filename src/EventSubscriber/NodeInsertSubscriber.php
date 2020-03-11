@@ -36,11 +36,6 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
     $entity = $event->getEntity();
     $markup = $this->renderer->render($entity);
     $rid = $entity->get('vid')->value;
-
-    // This should get the entity alias.
-    $url = $entity->toUrl()->toString();
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, "$url/index_$rid.html", $entity));
-
     $meta = [];
 
     foreach ($this->metadataManager->getDefinitions() as $pid => $def) {
@@ -50,7 +45,12 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
       }
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent(json_encode($meta), "$url/quant.meta", $entity));
+    // This should get the entity alias.
+    $url = $entity->toUrl()->toString();
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $entity, $meta, $rid));
+
+    // Metadata writing is handled by the API.
+    //\Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent(json_encode($meta), "$url/quant.meta", $entity));
 
   }
 
