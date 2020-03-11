@@ -13,3 +13,12 @@ quant.seed:
     _title: 'Generate bulk export/seed of web content'
   requirements:
     _permission: 'bulk quant export'
+
+quant.node.revision.view:
+  path: '/node/{node}/quant/{quant_revision_id}'
+  defaults:
+    _controller: '\Drupal\quant\Controller\QuantNodeViewController::view'
+    #_controller: '\Drupal\node\Controller\NodeViewController::view'
+    revision_id: latest
+  requirements:
+    _permission: 'bulk quant export'
