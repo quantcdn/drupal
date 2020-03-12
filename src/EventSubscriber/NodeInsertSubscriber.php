@@ -48,8 +48,21 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
     // This should get the entity alias.
     $url = $entity->toUrl()->toString();
 
-    // @todo: Special case for homepage (submit 2x, one for '/' and one for alias).
-    // @todo: Special case for 404/403/error pages.
+    // Special case pages (front/403/404); 2x exports.
+    // One for alias associated with page, one for root domain.
+    $config = \Drupal::config('system.site');
+    $specialPages = [
+      '/' => $config->get('page.front'),
+      '/_quant404' => $config->get('page.404'),
+      '/_quant403' => $config->get('page.403'),
+    ];
+
+    foreach ($specialPages as $k => $v) {
+      if ((strpos($v, '/node/') === 0) && $entity->get('nid')->value == substr($v, 6)) {
+        \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $k, $entity, $meta, $rid));
+      }
+    }
+
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $entity, $meta, $rid));
 
   }

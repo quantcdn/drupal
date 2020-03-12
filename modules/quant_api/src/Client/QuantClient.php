@@ -32,7 +32,8 @@ class QuantClient implements QuantClientInterface {
 
     // @todo: Exception handling, error reporting.
     $response = $this->client->post('http://api:80/', [
-      RequestOptions::JSON => $data
+      RequestOptions::JSON => $data,
+      'http_errors' => FALSE,
     ]);
 
     return json_decode($response->getBody(), TRUE);
@@ -47,7 +48,6 @@ class QuantClient implements QuantClientInterface {
     // @todo: Exception handling, error reporting.
     $response = $this->client->post('http://api:80/', [
       'headers' => [
-        //'Content-Type' => 'multipart/form-data',
         'Quant-File-Url' => $url,
       ],
       'multipart' => [
@@ -56,7 +56,8 @@ class QuantClient implements QuantClientInterface {
           'filename' => basename($file),
           'contents' => fopen($file, 'r')
         ]
-      ]
+      ],
+      'http_errors' => FALSE,
     ]);
 
     return json_decode($response->getBody(), TRUE);

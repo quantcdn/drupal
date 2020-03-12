@@ -53,6 +53,7 @@ class QuantApi implements EventSubscriberInterface {
     $content = $event->getContents();
     $rid = $event->getRevisionId();
     $meta = $event->getMetadata();
+    $entity = $event->getEntity();
 
     $data = [
       'content' => $content,
