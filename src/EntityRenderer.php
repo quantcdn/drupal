@@ -13,6 +13,11 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Theme\ThemeInitializationInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Symfony\Component\HttpFoundation\Request;
+
+// @todo: Remove superfluous services.
+// @todo: Remove unused use statements.
 
 /**
  * The entity renderer service for Quant.
@@ -79,6 +84,13 @@ class EntityRenderer implements EntityRendererInterface {
   protected $accountSwitcher;
 
   /**
+   * Symfony\Component\HttpKernel\HttpKernelInterface definition.
+   *
+   * @var Symfony\Component\HttpKernel\HttpKernelInterface
+   */
+  protected $httpKernel;
+
+  /**
    * Build the entity renderer service.
    *
    * @param Drupal\Core\Config\ConfigFactory $config_factory
@@ -96,7 +108,7 @@ class EntityRenderer implements EntityRendererInterface {
    * @param Drupal\Core\Session\AccountSwitcherInterface $account_switcher
    *   The accounnt switcher.
    */
-  public function __construct(ConfigFactory $config_factory, EntityManagerInterface $entity_manager, RendererInterface $renderer, HtmlRenderer $html_renderer, $display_variant, ThemeInitializationInterface $theme_init, ThemeManagerInterface $theme_manager, AccountSwitcherInterface $account_switcher) {
+  public function __construct(ConfigFactory $config_factory, EntityManagerInterface $entity_manager, RendererInterface $renderer, HtmlRenderer $html_renderer, $display_variant, ThemeInitializationInterface $theme_init, ThemeManagerInterface $theme_manager, AccountSwitcherInterface $account_switcher, HttpKernelInterface $http_kernel) {
     $this->configFactory = $config_factory;
     $this->entityManager = $entity_manager;
     $this->renderer = $renderer;
@@ -105,28 +117,16 @@ class EntityRenderer implements EntityRendererInterface {
     $this->themeInit = $theme_init;
     $this->themeManager = $theme_manager;
     $this->accountSwitcher = $account_switcher;
+    $this->httpKernel = $http_kernel;
 
     $this->activeTheme = $theme_manager->getActiveTheme()->getName();
     $this->frontendTheme = $config_factory->get('system.theme')->get('default');
   }
 
-  /**
-   * Create a render array for the entity.
-   *
-   * @see entity_view
-   *
-   * @return array
-   *   A renderable array.
-   */
-  protected function entityView(EntityInterface $entity, $view_mode = 'full', $langcode = NULL) {
-    $render_controller = \Drupal::entityManager()
-      ->getViewBuilder($entity->getEntityTypeId());
-
-    // @TODO: Validate cache clear.
-    // @see entity_view.
-
-    return $render_controller
-      ->view($entity, $view_mode, $langcode);
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('http_kernel.basic')
+    );
   }
 
   /**
@@ -150,95 +150,25 @@ class EntityRenderer implements EntityRendererInterface {
     }
   }
 
-
   /**
    * {@inheritdoc}
    */
   public function render(EntityInterface $entity) : string {
-    // Make sure notices and other PHP warnings are not surfaced
-    // during the static render.
-    // @TODO: We should probably try and log this.
-    error_reporting(0);
-    $main_content = $this->entityView($entity);
+    // Note this is node only.
+    // @todo: Rename to something node-specific (extensible to other entities?)
+    $nid = $entity->get('nid')->value;
+    $rid = $entity->get('vid')->value;
 
-    // Switch to the anonymous session.
-    $this->accountSwitcher->switchTo(new AnonymousUserSession());
+    // The kernel sub-request still requires a theme switch.
     $this->switchTheme();
 
-    $context = new RenderContext();
+    // Sub-request needs full domain, redirects to localhost otherwise
+    $host = \Drupal::request()->getSchemeAndHttpHost();
+    $sub_request = Request::create($host . "/node/{$nid}/quant/{$rid}", 'GET');
+    $subResponse = $this->httpKernel->handle($sub_request, HttpKernelInterface::SUB_REQUEST);
+    $html = $subResponse->getContent();
 
-    // @TODO: Variant ID service for this.
-    $variant_id = 'block_page';
-
-    \Drupal::messenger()->deleteAll();
-
-    $this->renderer->executeInRenderContext($context, function () use (&$main_content) {
-      $this->renderer->render($main_content);
-    });
-
-    // Get render cache.
-    $renderCache = \Drupal::service('render_cache');
-    $main_content = $renderCache->getCacheableRenderArray($main_content) + [
-      '#title' => isset($main_content['#title']) ? $main_content['#title'] : NULL,
-    ];
-
-    // @TODO: Change how to grab the title.
-    $title = [
-      '#markup' => $entity->getTitle(),
-    ];
-    $this->renderer->renderPlain($title);
-    $title = $title['#markup'];
-
-    $page_display = $this->displayVariant->createInstance($variant_id);
-    $page_display
-      ->setMainContent($main_content)
-      ->setTitle($title);
-
-    $page = [
-      '#type' => 'page',
-    ];
-    $page += $page_display->build();
-
-    // Get regions for the currently active theme.
-    $regions = $this->themeManager->getActiveTheme()->getRegions();
-
-    foreach ($regions as $region) {
-      if (!empty($page[$region])) {
-        $page[$region]['#theme_wrappers'][] = 'region';
-        $page[$region]['#region'] = $region;
-      }
-    }
-
-    // @TODO: This should give us attachments (css+js) for the page so we can
-    // add this to the page attachments.
-    $this->htmlRenderer->invokePageAttachmentHooks($page);
-
-    // @todo: Determine which approach is better.
-    // bare_html_page_renderer replaces the placeholders with correct values
-    $bb = \Drupal::service('bare_html_page_renderer')
-      ->renderBarePage(
-        $page,
-        'Page label',
-        'page',
-        []
-      );
-    $this->accountSwitcher->switchBack();
-    return $bb->getContent();
-    // END: End of bare_html_page_renderer hax.
-
-    $html = [
-      'page' => $page,
-      '#type' => 'html',
-    ];
-
-    // Go back to the logged in session.
-
-    $this->htmlRenderer->buildPageTopAndBottom($html);
-    system_page_attachments($html['page']);
-    $output = $this->renderer->renderPlain($html);
-    $this->accountSwitcher->switchBack();
-
-    return $output;
+    return $html;
   }
 
 }

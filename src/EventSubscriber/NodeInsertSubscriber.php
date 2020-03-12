@@ -47,10 +47,10 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
 
     // This should get the entity alias.
     $url = $entity->toUrl()->toString();
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $entity, $meta, $rid));
 
-    // Metadata writing is handled by the API.
-    //\Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent(json_encode($meta), "$url/quant.meta", $entity));
+    // @todo: Special case for homepage (submit 2x, one for '/' and one for alias).
+    // @todo: Special case for 404/403/error pages.
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $entity, $meta, $rid));
 
   }
 

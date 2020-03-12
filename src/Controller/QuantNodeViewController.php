@@ -9,6 +9,8 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\node\Controller\NodeViewController;
+use Drupal\Core\Session\AnonymousUserSession;
+use Drupal\Core\Session\AccountSwitcherInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -38,6 +40,13 @@ class QuantNodeViewController extends NodeViewController {
   protected $revisionId;
 
   /**
+   * The account switcher.
+   *
+   * @var \Drupal\Core\Session\AccountSwitcherInterface
+   */
+  protected $accountSwitcher;
+
+  /**
    * Creates an NodeViewController object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -58,7 +67,8 @@ class QuantNodeViewController extends NodeViewController {
       $entity_repository = \Drupal::service('entity.repository');
     }
     $this->entityRepository = $entity_repository;
-    $this->revisionId = \Drupal::routeMatch()->getParameter('revision_id');
+    $this->accountSwitcher = \Drupal::service('account_switcher');
+    $this->revisionId = \Drupal::routeMatch()->getParameter('quant_revision_id');
   }
 
   /**
@@ -66,8 +76,9 @@ class QuantNodeViewController extends NodeViewController {
    */
   public function view(EntityInterface $node, $view_mode = 'full', $langcode = NULL) {
     // Override the node with a custom revision.
-    // @todo: AccountSwitcher to render as a QuantUserSession.
     $node = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($this->revisionId);
+    // @todo: AccountSwitcher to render as a QuantUserSession.
+    $this->accountSwitcher->switchTo(new AnonymousUserSession());
     return parent::view($node, $view_mode, $langcode);
   }
 

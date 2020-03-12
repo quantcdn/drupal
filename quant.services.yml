@@ -14,6 +14,7 @@ services:
       - '@theme.initialization'
       - '@theme.manager'
       - '@account_switcher'
+      - '@http_kernel'
 
   quant.node.insert:
     class: Drupal\quant\EventSubscriber\NodeInsertSubscriber

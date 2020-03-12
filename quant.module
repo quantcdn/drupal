@@ -16,7 +16,14 @@ function quant_node_update(Drupal\Core\Entity\EntityInterface $entity) {
   \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($entity));
 }
 
-// function quant_node_load($entities) {
-//   $entity = reset($entities);
-//   \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($entity));
-// }
+/**
+ * Implements hook_node_access().
+ *
+ * Grants access to users to view any node/revision.
+ * Access control is restricted in the route definition.
+ */
+function quant_node_access(\Drupal\node\NodeInterface $node, $op, \Drupal\Core\Session\AccountInterface $account) {
+  // @todo: Urgent: Replace placeholder with real logic.
+  // Should only grant allowed access on custom route, view operation.
+  return \Drupal\Core\Access\AccessResult::allowed();
+}
