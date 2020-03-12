@@ -33,6 +33,10 @@ class QuantFilesystem implements EventSubscriberInterface {
    *   The event that is being triggered.
    */
   public function onOutput(QuantEvent $event) {
+
+    // @todo: Think about what we do with this when we use API.
+    return;
+
     $dir = self::LOC . dirname($event->getLocation());
     $file = self::LOC . $event->getLocation();
     // Make sure the output directory exists.
