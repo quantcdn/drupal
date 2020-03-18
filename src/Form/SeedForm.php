@@ -62,7 +62,13 @@ class SeedForm extends FormBase {
       ],
     ];
 
-    // @todo: Plugins.
+    // @todo: Implement these as plugins.
+    $form['theme_assets'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Theme assets'),
+      '#description' => $this->t('Theme images, fonts, favicon'),
+    ];
+
     $form['entity_user'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Export user profiles'),
@@ -101,12 +107,18 @@ class SeedForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
-    if (!$form_state->getValue('entity_node')) {
-      return;
+    $nids = [];
+    $assets = [];
+
+    // @todo: Separate plugins.
+    if ($form_state->getValue('theme_assets')) {
+      $assets = \Drupal\quant\Seed::findThemeAssets();
     }
 
-    $query = \Drupal::entityQuery('node');
-    $nids = $query->execute();
+    if ($form_state->getValue('entity_node')) {
+      $query = \Drupal::entityQuery('node');
+      $nids = $query->execute();
+    }
 
     $batch = array(
       'title' => t('Exporting to Quant...'),
@@ -116,6 +128,8 @@ class SeedForm extends FormBase {
       'error_message'    => t('An error occurred during processing'),
       'finished' => '\Drupal\quant\Seed::finishedSeedCallback',
     );
+
+    // Add nodes to export batch.
     foreach ($nids as $key => $value) {
       $node = \Drupal\node\Entity\Node::load($value);
 
@@ -127,14 +141,17 @@ class SeedForm extends FormBase {
           $nr = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($vid);
           $batch['operations'][] = ['\Drupal\quant\Seed::exportNode',[$nr]];
         }
-
       }
-
       // Export current node revision.
       $batch['operations'][] = ['\Drupal\quant\Seed::exportNode',[$node]];
     }
 
-    batch_set($batch);
+    // Add assets to export batch.
+    foreach ($assets as $file) {
+      $batch['operations'][] = ['\Drupal\quant\Seed::exportFile',[$file]];
+    }
 
+    batch_set($batch);
   }
+
 }
