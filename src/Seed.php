@@ -81,8 +81,6 @@ class Seed {
       $files[] = str_replace(DRUPAL_ROOT, '', $name);
     }
 
-    print_r($files); die;
-
     return $files;
 
   }
