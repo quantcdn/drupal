@@ -61,6 +61,7 @@ class QuantApi implements EventSubscriberInterface {
       'revision' => $rid,
       'published' => $meta['published'],
       'transitions' => $meta['transitions'],
+      'info' => $meta['info'],
     ];
 
     $res = $this->client->send($data);
