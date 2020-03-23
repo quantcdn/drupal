@@ -165,12 +165,12 @@ class EntityRenderer implements EntityRendererInterface {
 
     // Sub-request needs full domain, redirects to localhost otherwise
     $host = \Drupal::request()->getSchemeAndHttpHost();
-    //$sub_request = Request::create($host . "/node/{$nid}/quant/{$rid}", 'GET');
-    //$sub_request = Request::create($host . "/node/{$nid}?quant_revision={$rid}", 'GET');
     $sub_request = Request::create($host . $url . "?quant_revision={$rid}", 'GET');
-    error_log($host . $url . "?quant_revision={$rid}");
     $subResponse = $this->httpKernel->handle($sub_request, HttpKernelInterface::SUB_REQUEST);
     $html = $subResponse->getContent();
+
+    // @todo: Unclear why this fixes rendering issues with context.
+    sleep(1);
 
     return $html;
   }
