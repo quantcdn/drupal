@@ -158,6 +158,7 @@ class EntityRenderer implements EntityRendererInterface {
     // @todo: Rename to something node-specific (extensible to other entities?)
     $nid = $entity->get('nid')->value;
     $rid = $entity->get('vid')->value;
+    $url = $entity->toUrl()->toString();
 
     // The kernel sub-request still requires a theme switch.
     $this->switchTheme();
@@ -165,7 +166,9 @@ class EntityRenderer implements EntityRendererInterface {
     // Sub-request needs full domain, redirects to localhost otherwise
     $host = \Drupal::request()->getSchemeAndHttpHost();
     //$sub_request = Request::create($host . "/node/{$nid}/quant/{$rid}", 'GET');
-    $sub_request = Request::create($host . "/node/{$nid}?quant_revision={$rid}", 'GET');
+    //$sub_request = Request::create($host . "/node/{$nid}?quant_revision={$rid}", 'GET');
+    $sub_request = Request::create($host . $url . "?quant_revision={$rid}", 'GET');
+    error_log($host . $url . "?quant_revision={$rid}");
     $subResponse = $this->httpKernel->handle($sub_request, HttpKernelInterface::SUB_REQUEST);
     $html = $subResponse->getContent();
 
