@@ -164,7 +164,8 @@ class EntityRenderer implements EntityRendererInterface {
 
     // Sub-request needs full domain, redirects to localhost otherwise
     $host = \Drupal::request()->getSchemeAndHttpHost();
-    $sub_request = Request::create($host . "/node/{$nid}/quant/{$rid}", 'GET');
+    //$sub_request = Request::create($host . "/node/{$nid}/quant/{$rid}", 'GET');
+    $sub_request = Request::create($host . "/node/{$nid}?quant_revision={$rid}", 'GET');
     $subResponse = $this->httpKernel->handle($sub_request, HttpKernelInterface::SUB_REQUEST);
     $html = $subResponse->getContent();
 

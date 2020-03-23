@@ -69,16 +69,24 @@ class QuantNodeViewController extends NodeViewController {
     $this->entityRepository = $entity_repository;
     $this->accountSwitcher = \Drupal::service('account_switcher');
     $this->revisionId = \Drupal::routeMatch()->getParameter('quant_revision_id');
+
+    if ($q = \Drupal::request()->get('quant_revision')) {
+      $this->revisionId = intval($q);
+    }
   }
 
   /**
    * {@inheritdoc}
    */
   public function view(EntityInterface $node, $view_mode = 'full', $langcode = NULL) {
-    // Override the node with a custom revision.
-    $node = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($this->revisionId);
-    // @todo: AccountSwitcher to render as a QuantUserSession.
-    $this->accountSwitcher->switchTo(new AnonymousUserSession());
+
+    if (!empty($this->revisionId)) {
+      // Override the node with a custom revision.
+      $node = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($this->revisionId);
+      // @todo: AccountSwitcher to render as a QuantUserSession.
+      $this->accountSwitcher->switchTo(new AnonymousUserSession());
+    }
+
     return parent::view($node, $view_mode, $langcode);
   }
 

@@ -28,3 +28,10 @@ services:
     class: Drupal\quant\EventSubscriber\QuantFilesystem
     tags:
       - { name: 'event_subscriber' }
+
+  ## Tmp: Fix by query param.
+  ## Context for block placement (and other things) depend on expected routes.
+  quant.route_subscriber:
+    class: Drupal\quant\Routing\RouteSubscriber
+    tags:
+      - { name: 'event_subscriber' }
