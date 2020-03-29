@@ -5,7 +5,11 @@ namespace Drupal\quant_api\EventSubscriber;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant_api\Client\QuantClientInterface;
+use Exception;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\quant_api\Exception\InvalidPayload;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 
 /**
  * Integrate with the QuantAPI to store static assets.
@@ -20,6 +24,20 @@ class QuantApi implements EventSubscriberInterface {
   protected $client;
 
   /**
+   * The logger.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
+   */
+  protected $logger;
+
+  /**
+   * The event dispatcher.
+   *
+   * @var \Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher
+   */
+  protected $eventDispatcher;
+
+  /**
    * QuantAPI event subcsriber.
    *
    * Listens to Quant events and triggers requests to the configured
@@ -28,8 +46,10 @@ class QuantApi implements EventSubscriberInterface {
    * @param \Drupal\quant_api\Client\QuantClientInterface $client
    *   The Drupal HTTP Client to make requests.
    */
-  public function __construct(QuantClientInterface $client) {
+  public function __construct(QuantClientInterface $client, LoggerChannelFactoryInterface $logger_factory, ContainerAwareEventDispatcher $event_dispatcher) {
     $this->client = $client;
+    $this->logger = $logger_factory->get('quant_api');
+    $this->eventDispatcher = $event_dispatcher;
   }
 
   /**
@@ -64,7 +84,11 @@ class QuantApi implements EventSubscriberInterface {
       'info' => $meta['info'],
     ];
 
-    if (!$res = $this->client->send($data)) {
+    try {
+      $res = $this->client->send($data);
+    }
+    catch (Exception $error) {
+      $this->logger->error($error->getMessage());
       return FALSE;
     }
 
@@ -84,9 +108,8 @@ class QuantApi implements EventSubscriberInterface {
       // Strip query params.
       $file = strtok($file, '?');
 
-      //$public = \Drupal::service('file_system')->realpath(file_default_scheme() . "://");
       if (file_exists(DRUPAL_ROOT . $file)) {
-        \Drupal::service('event_dispatcher')->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
+        $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
       }
     }
   }
@@ -103,10 +126,17 @@ class QuantApi implements EventSubscriberInterface {
     $url = $event->getUrl();
     $rid = $event->getRevisionId();
 
-    // @todo: Support revision id.
-    if (!$res = $this->client->sendfile($file, $url)) {
-      return FALSE;
+    try {
+      $res = $this->client->sendFile($file, $url);
     }
+    catch (InvalidPayload $error) {
+      $this->logger->error($error->getMessage());
+    }
+    catch (Exception $error) {
+      $this->logger->error($error->getMessage());
+    }
+
+    return $res;
   }
 
 }

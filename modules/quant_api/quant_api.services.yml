@@ -10,5 +10,7 @@ services:
     class: Drupal\quant_api\EventSubscriber\QuantApi
     arguments:
       - '@quant_api.client'
+      - '@logger.factory'
+      - '@event_dispatcher'
     tags:
       - { name: 'event_subscriber' }

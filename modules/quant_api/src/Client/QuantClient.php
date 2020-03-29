@@ -6,6 +6,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\RequestOptions;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\quant_api\Exception\InvalidPayload;
 
 class QuantClient implements QuantClientInterface {
 
@@ -53,18 +54,9 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function send(array $data) : array {
-    try {
-      $response = $this->client->post('http://api:80/', [
-        RequestOptions::JSON => $data,
-      ]);
-    }
-    catch (\Exception $exception) {
-      $this->logger->error('API Error: %error', [
-        '%error' => $exception->getMessage(),
-      ]);
-      return FALSE;
-    }
-
+    $response = $this->client->post($this->endpoint, [
+      RequestOptions::JSON => $data,
+    ]);
     return json_decode($response->getBody(), TRUE);
   }
 
@@ -73,29 +65,26 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function sendFile(string $file, string $url, int $rid = NULL) : array {
-    try {
-      $response = $this->client->post('http://api:80/', [
-        'headers' => [
-          'Quant-File-Url' => $url,
-        ],
-        'multipart' => [
-          [
-            'name' => 'filename',
-            'filename' => basename($file),
-            'contents' => fopen($file, 'r')
-          ]
-        ],
-      ]);
+
+    // Ensure the file is accessible before attempting to send to the API.
+    if (!file_exists($file) || !is_readable(($file))) {
+      throw new InvalidPayload($file);
     }
-    catch (\Exception $error) {
-      $this->logger->error('SendFile error: %error', [
-        '%error' => $error->getMessage(),
-      ]);
-      return FALSE;
-    }
+
+    $response = $this->client->post('http://api:80/', [
+      'headers' => [
+        'Quant-File-Url' => $url,
+      ],
+      'multipart' => [
+        [
+          'name' => 'filename',
+          'filename' => basename($file),
+          'contents' => fopen($file, 'r'),
+        ],
+      ],
+    ]);
 
     return json_decode($response->getBody(), TRUE);
   }
-
 
 }
