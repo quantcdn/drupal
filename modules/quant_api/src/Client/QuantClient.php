@@ -60,7 +60,6 @@ class QuantClient implements QuantClientInterface {
     return json_decode($response->getBody(), TRUE);
   }
 
-
   /**
    * {@inheritdoc}
    */
