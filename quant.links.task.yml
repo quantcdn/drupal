@@ -1,11 +1,9 @@
 quant.config:
-  title: 'Config'
   route_name: quant.config
-  base_route: quant
-  weight: 1
+  title: 'Configure'
+  base_route: quant.config
 
 quant.seed:
-  title: 'Seed'
   route_name: quant.seed
-  base_route: quant
-  weight: 2
+  title: 'Seed'
+  base_route: quant.config
