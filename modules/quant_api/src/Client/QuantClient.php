@@ -53,7 +53,6 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function send(array $data) : array {
-
     try {
       $response = $this->client->post('http://api:80/', [
         RequestOptions::JSON => $data,
@@ -74,8 +73,6 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function sendFile(string $file, string $url, int $rid = NULL) : array {
-
-    // @todo: Exception handling, error reporting.
     try {
       $response = $this->client->post('http://api:80/', [
         'headers' => [

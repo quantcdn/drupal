@@ -2,7 +2,7 @@ quant.config:
   path: '/admin/config/quant'
   defaults:
     _form: 'Drupal\quant\Form\ConfigForm'
-    _title: 'Configure Quant'
+    _title: 'Quant configuration'
   requirements:
     _permission: 'configure quant'
 
@@ -10,7 +10,7 @@ quant.seed:
   path: '/admin/config/quant/seed'
   defaults:
     _form: 'Drupal\quant\Form\SeedForm'
-    _title: 'Generate bulk export/seed of web content'
+    _title: 'Quant seed'
   requirements:
     _permission: 'bulk quant export'
 
