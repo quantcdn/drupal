@@ -64,7 +64,9 @@ class QuantApi implements EventSubscriberInterface {
       'info' => $meta['info'],
     ];
 
-    $res = $this->client->send($data);
+    if (!$res = $this->client->send($data)) {
+      return FALSE;
+    }
 
     // @todo: Obviously make this less ridiculous.
     $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents']);
@@ -102,7 +104,9 @@ class QuantApi implements EventSubscriberInterface {
     $rid = $event->getRevisionId();
 
     // @todo: Support revision id.
-    $res = $this->client->sendfile($file, $url);
+    if (!$res = $this->client->sendfile($file, $url)) {
+      return FALSE;
+    }
   }
 
 }

@@ -5,17 +5,41 @@ namespace Drupal\quant_api\Client;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\RequestOptions;
-
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 
 class QuantClient implements QuantClientInterface {
 
   /**
-   * Build the QuantClient instance.
+   * The logger service.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
    */
-  public function __construct(Client $client, ConfigFactoryInterface $config_factory) {
+  protected $logger;
+
+  /**
+   * The client key.
+   *
+   * @var string
+   */
+  protected $token;
+
+  /**
+   * The client endpoint.
+   *
+   * @var string
+   */
+  protected $endpoint;
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __construct(Client $client, ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory) {
     $config = $config_factory->get('quant_api.settings');
     $this->client = $client;
-    // @TODO: Grab API connection details from the config.
+    $this->logger = $logger_factory->get('quant_api');
+
+    $this->token = $config->get('api_token');
+    $this->endpoint = $config->get('api_endpoint');
   }
 
   /**
@@ -30,11 +54,17 @@ class QuantClient implements QuantClientInterface {
    */
   public function send(array $data) : array {
 
-    // @todo: Exception handling, error reporting.
-    $response = $this->client->post('http://api:80/', [
-      RequestOptions::JSON => $data,
-      'http_errors' => FALSE,
-    ]);
+    try {
+      $response = $this->client->post('http://api:80/', [
+        RequestOptions::JSON => $data,
+      ]);
+    }
+    catch (\Exception $exception) {
+      $this->logger->error('API Error: %error', [
+        '%error' => $exception->getMessage(),
+      ]);
+      return FALSE;
+    }
 
     return json_decode($response->getBody(), TRUE);
   }
@@ -43,22 +73,29 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
-  public function sendFile(string $file, string $url, integer $rid=null) : array {
+  public function sendFile(string $file, string $url, int $rid = NULL) : array {
 
     // @todo: Exception handling, error reporting.
-    $response = $this->client->post('http://api:80/', [
-      'headers' => [
-        'Quant-File-Url' => $url,
-      ],
-      'multipart' => [
-        [
-          'name' => 'filename',
-          'filename' => basename($file),
-          'contents' => fopen($file, 'r')
-        ]
-      ],
-      'http_errors' => FALSE,
-    ]);
+    try {
+      $response = $this->client->post('http://api:80/', [
+        'headers' => [
+          'Quant-File-Url' => $url,
+        ],
+        'multipart' => [
+          [
+            'name' => 'filename',
+            'filename' => basename($file),
+            'contents' => fopen($file, 'r')
+          ]
+        ],
+      ]);
+    }
+    catch (\Exception $error) {
+      $this->logger->error('SendFile error: %error', [
+        '%error' => $error->getMessage(),
+      ]);
+      return FALSE;
+    }
 
     return json_decode($response->getBody(), TRUE);
   }

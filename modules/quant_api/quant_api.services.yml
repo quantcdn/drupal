@@ -4,6 +4,7 @@ services:
     arguments:
       - '@http_client'
       - '@config.factory'
+      - '@logger.factory'
 
   quant.output.api:
     class: Drupal\quant_api\EventSubscriber\QuantApi
