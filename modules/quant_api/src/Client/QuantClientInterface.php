@@ -25,8 +25,8 @@ interface QuantClientInterface {
    *   Return array of response data.
    *
    * @TODO: Error handlers :D
-   * @throws \Drupal\quant_api\Error\InvalidPayload
-   * @throws \Drupal\quant_api\Error\InvalidResposne
+   * @throws \Drupal\quant_api\Exception\InvalidPayload
+   * @throws \Drupal\quant_api\Exception\InvalidResposne
    */
   public function send(array $data) : array;
 
@@ -36,20 +36,18 @@ interface QuantClientInterface {
    *
    * @param string $file
    *   The path of a file on disk.
-   *
    * @param string $url
    *   The relative URL of the file.
-   *
-   * @param string $rid
+   * @param int $rid
    *   The optional revision id.
    *
    * @return array
    *   Return array of response data.
    *
    * @TODO: Error handlers :D
-   * @throws \Drupal\quant_api\Error\InvalidPayload
-   * @throws \Drupal\quant_api\Error\InvalidResposne
+   * @throws \Drupal\quant_api\Exception\InvalidPayload
+   * @throws \Drupal\quant_api\Exception\InvalidResposne
    */
-  public function sendFile(string $file, string $url, integer $rid=null) : array;
+  public function sendFile(string $file, string $url, int $rid = NULL) : array;
 
 }
