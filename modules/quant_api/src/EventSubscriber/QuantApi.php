@@ -95,10 +95,17 @@ class QuantApi implements EventSubscriberInterface {
     // @todo: Obviously make this less ridiculous.
     $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents']);
 
-    foreach ($media as $file) {
+    foreach ($media as $item) {
       // @todo: Determine local vs. remote.
       // @todo: Configurable to disallow remote files.
       // @todo: Strip base domain.
+      $file = $item['path'];
+
+      if (isset($item['existing_md5'])) {
+        if (file_exists(DRUPAL_ROOT . $file) && md5_file(DRUPAL_ROOT . $file) == $item['existing_md5']) {
+          continue;
+        }
+      }
 
       // Ignore anything that isn't relative for now.
       if (substr($file, 0, 1) != "/") {
