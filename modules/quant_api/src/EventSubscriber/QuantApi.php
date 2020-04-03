@@ -99,7 +99,7 @@ class QuantApi implements EventSubscriberInterface {
       // @todo: Determine local vs. remote.
       // @todo: Configurable to disallow remote files.
       // @todo: Strip base domain.
-      $file = $item['path'];
+      $file = urldecode($item['path']);
 
       if (isset($item['existing_md5'])) {
         if (file_exists(DRUPAL_ROOT . $file) && md5_file(DRUPAL_ROOT . $file) == $item['existing_md5']) {
