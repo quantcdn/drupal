@@ -46,7 +46,7 @@ function quant_menu() {
     'title' => 'Seed',
     'description' => 'Hydrate the static representation of the Drupal site.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('quant_seed'),
+    'page arguments' => array('quant_seed_settings'),
     'file' => 'quant.admin.inc',
     'access arguments' => array('bulk quant export'),
     'type' => MENU_LOCAL_TASK,
@@ -105,11 +105,38 @@ function quant_seed($nid, $rid = NULL, $context = []) {
   // however we might need to change this to a sub request.
   $node_render_array = node_view($node);
 
-  $markup = drupal_render($node_render_array);
+  drupal_get_messages();
 
-  // Allows the API module to hook into the batch process.
-  module_invoke_all('quant_seed', $node);
+  // @TODO: Get theme from config
+  _quant_theme_switch('bartik');
 
+  // Path alias might not be what we want.
+  $alias = drupal_get_path_alias("node/$nid");
+  $markup = drupal_render_page($node_render_array);
+
+  _quant_theme_switch();
+
+  module_invoke_all('quant_seed', $alias, $markup);
+}
+
+/**
+ * Implements hook_quant_seed().
+ */
+function quant_quant_seed($location, $data, $ext = '.html') {
+  if (!($file_path = variable_get('quant_storage_location'))) {
+    // If file path is not set... we can't export :(.
+    return;
+  }
+
+  // Make sure we have a trailing slash.
+  $file_path = rtrim($file_path, '/') . '/';
+
+  $dir = $file_path . dirname($location);
+  $file = $file_path . $location . $ext;
+
+  // Make sure the directory exists.
+  @mkdir($dir, 0755);
+  file_put_contents($file, $data);
 }
 
 /**
@@ -175,4 +202,18 @@ function _quant_seed_prepare($form, $form_state) {
  */
 function _quant_get_seed_warnings(&$form) {
   // @TODO get the settings for warnings.
+}
+
+/**
+ * Theme swticher.
+ */
+function _quant_theme_switch($to = NULL) {
+  static $original_theme;
+  if (empty($original_theme)) {
+    $original_theme = drupal_static('menu_get_custom_theme');
+  }
+  $custom_theme = &drupal_static('menu_get_custom_theme');
+  $custom_theme = $to ?? $original_theme;
+  unset($GLOBALS['theme']);
+  drupal_theme_initialize();
 }

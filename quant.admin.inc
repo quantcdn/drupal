@@ -40,7 +40,7 @@ function quant_config() {
  *
  * @ingroup forms
  */
-function quant_seed() {
+function quant_seed_settings() {
   $form = array();
 
   _quant_get_seed_warnings($form);
