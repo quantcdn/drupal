@@ -1,0 +1,178 @@
+<?php
+
+/**
+ * @file
+ * Support exporting to quant.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function quant_help($section) {
+  switch ($section) {
+    case 'quant/config':
+      return '';
+
+    case 'quant/api':
+      return '';
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function quant_menu() {
+  $items['admin/config/services/quant'] = array(
+    'title' => 'Quant configuration',
+    'description' => 'Configure the Quant static site generator.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_config'),
+    'file' => 'quant.admin.inc',
+    'access arguments' => array('configure quant'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $item['admin/config/services/quant/settings'] = array(
+    'title' => 'Quant configuration',
+    'description' => 'Configure the Quant static site generator.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_config'),
+    'file' => 'quant.admin.inc',
+    'access arguments' => array('configure quant'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  $items['admin/config/services/quant/seed'] = array(
+    'title' => 'Seed',
+    'description' => 'Hydrate the static representation of the Drupal site.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_seed'),
+    'file' => 'quant.admin.inc',
+    'access arguments' => array('bulk quant export'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_admin_paths().
+ */
+function quant_admin_paths() {
+  return array(
+    'admin/quant/config' => TRUE,
+    'admin/quant/seed' => TRUE,
+  );
+}
+
+/**
+ * Implements hook_permission()
+ */
+function quant_permission() {
+  return array(
+    'configure quant' => array(
+      'description' => t('Configure the Quant exporter'),
+      'title' => t('Configure quant'),
+      'restrict access' => TRUE,
+    ),
+    'bulk quant export' => array(
+      'description' => t('Trigger a bulk export/seed via Quant'),
+      'title' => t('Bulk Quant Export'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+function quant_hook_node_insert($node) {}
+
+function quant_hook_node_update($node) {}
+
+/**
+ * Seed a node.
+ *
+ * @param int $nid
+ *   The node id to send.
+ * @param int $rid
+ *   The node revision id.
+ * @param array $context
+ *   The batch context.
+ */
+function quant_seed($nid, $rid = NULL, $context = []) {
+  $node = node_load($nid);
+
+  // Wondering if we can just render the node view in D7.
+  // this would prevent the need for a sub request -
+  // however we might need to change this to a sub request.
+  $node_render_array = node_view($node);
+
+  $markup = drupal_render($node_render_array);
+
+  // Allows the API module to hook into the batch process.
+  module_invoke_all('quant_seed', $node);
+
+}
+
+/**
+ * Prepare a batch process for the node entity type.
+ *
+ * @param array $nids
+ *   A list of nodes to export.
+ */
+function _quant_batch_nodes($nids = array()) {
+
+  $ops = array();
+
+  foreach ($nids as $nid) {
+    $ops[] = array(
+      'quant_seed',
+      array($nid),
+    );
+  }
+
+  $batch = array(
+    'title' => t('Quant seeding'),
+    'operations' => $ops,
+    'finished' => '_quant_batch_complete',
+    'init_message' => t('Initialising...'),
+    'progress_message' => t('Operation @current out of @total'),
+    'error_message' => t('Unable to export'),
+    'file' => drupal_get_path('module', 'quant') . 'quant.module',
+  );
+
+  return $batch;
+}
+
+/**
+ * Create the batch process to export the form.
+ *
+ * @param array $form
+ *   The form render array.
+ * @param array $form_state
+ *   The submitted form values.
+ */
+function _quant_seed_prepare($form, $form_state) {
+  if (!variable_get('quant_seed_entity_node')) {
+    drupal_set_message(t('Nodes are not configured to be exported.'));
+    return;
+  }
+
+  // Fetch the node ids.
+  $nids = db_select('node', 'n')
+    ->fields('n', array('nid'))
+    ->execute()
+    ->fetchCol();
+
+  $batch = _quant_batch_nodes($nids);
+
+  batch_set($batch);
+}
+
+/**
+ * Generate warning messsages for the seed form.
+ *
+ * @param array &$form
+ *   The form render array.
+ */
+function _quant_get_seed_warnings(&$form) {
+  // @TODO get the settings for warnings.
+}
