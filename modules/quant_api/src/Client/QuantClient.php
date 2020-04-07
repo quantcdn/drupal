@@ -70,7 +70,7 @@ class QuantClient implements QuantClientInterface {
       throw new InvalidPayload($file);
     }
 
-    $response = $this->client->post('http://api:80/', [
+    $response = $this->client->post($this->endpoint, [
       'headers' => [
         'Quant-File-Url' => $url,
       ],
