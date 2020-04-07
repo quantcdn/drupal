@@ -66,6 +66,7 @@ class Seed {
     $config = \Drupal::config('system.theme');
     $themeName = $config->get('default');
     $themePath = DRUPAL_ROOT . '/themes/custom/' . $themeName;
+    $filesPath = \Drupal::service('file_system')->realpath(file_default_scheme() . "://");
 
     if (!is_dir($themePath)) {
       echo "Theme dir does not exist"; die;
@@ -79,6 +80,18 @@ class Seed {
 
     foreach($regex as $name => $r) {
       $files[] = str_replace(DRUPAL_ROOT, '', $name);
+    }
+
+    // Include all aggregated css/js files.
+    $directoryIteratorCss = new \RecursiveDirectoryIterator($filesPath.'/css');
+    $directoryIteratorJs  = new \RecursiveDirectoryIterator($filesPath.'/js');
+
+    $iterator = new \AppendIterator();
+    $iterator->append(new \RecursiveIteratorIterator( $directoryIteratorCss ));
+    $iterator->append(new \RecursiveIteratorIterator( $directoryIteratorJs ));
+
+    foreach ($iterator as $fileInfo) {
+      $files[] = str_replace(DRUPAL_ROOT, '', $fileInfo->getPathname());
     }
 
     return $files;

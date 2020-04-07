@@ -119,6 +119,9 @@ class QuantApi implements EventSubscriberInterface {
         $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
       }
     }
+
+    // @todo: Report on forms that need proxying (attachments.forms).
+
   }
 
 
