@@ -18,6 +18,13 @@ class QuantClient implements QuantClientInterface {
   protected $logger;
 
   /**
+   * The client account.
+   *
+   * @var string
+   */
+  protected $username;
+
+  /**
    * The client key.
    *
    * @var string
@@ -39,6 +46,7 @@ class QuantClient implements QuantClientInterface {
     $this->client = $client;
     $this->logger = $logger_factory->get('quant_api');
 
+    $this->username = $config->get('api_account');
     $this->token = $config->get('api_token');
     $this->endpoint = $config->get('api_endpoint');
   }
@@ -56,7 +64,12 @@ class QuantClient implements QuantClientInterface {
   public function send(array $data) : array {
     $response = $this->client->post($this->endpoint, [
       RequestOptions::JSON => $data,
+      'headers' => [
+        'Quant-Customer' => $this->username,
+        'Quant-Token'    => $this->token,
+      ],
     ]);
+
     return json_decode($response->getBody(), TRUE);
   }
 
@@ -73,6 +86,8 @@ class QuantClient implements QuantClientInterface {
     $response = $this->client->post($this->endpoint, [
       'headers' => [
         'Quant-File-Url' => $url,
+        'Quant-Customer' => $this->username,
+        'Quant-Token'    => $this->token,
       ],
       'multipart' => [
         [
