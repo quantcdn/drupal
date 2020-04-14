@@ -1,0 +1,98 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for quant_api.
+ */
+
+define('QUANT_ENDPOINT_DEFAULT', 'http://localhost:8081/');
+
+/**
+ * Implements hook_help()
+ */
+function quant_api_help() {
+  // @TODO.
+}
+
+/**
+ * Implements hook_menu().
+ */
+function quant_api_menu() {
+  $items['admin/config/services/quant/api'] = array(
+    'title' => 'API',
+    'description' => 'Configure the API connection',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_api_settings'),
+    'file' => 'quant_api.admin.inc',
+    'access arguments' => array('configure quant'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 2,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_form_validate().
+ */
+function quant_api_settings_validate($form, $form_state) {
+  // @TODO ping request to the API for validation.
+}
+
+/**
+ * Implements hook_quant_seed().
+ */
+function quant_api_quant_seed($location, $data, $meta = [], $ext = '.html') {
+  $api = variable_get('quant_api_endpoint', QUANT_ENDPOINT_DEFAULT);
+
+  if (empty($api)) {
+    watchdog('quant_api', 'API endpoint is not configured.', [], 'info');
+    return;
+  }
+
+  // Ensure we have a leading forward-slash.
+  $location = '/' . ltrim($location, '/');
+
+  $request = array(
+    'headers' => array(
+      'content-type' => 'application/json',
+    ),
+    'method' => 'POST',
+    'data' => json_encode(array(
+      'content' => $data,
+      'url' => $location,
+      'published' => $meta['published'],
+      'transitions' => $meta['transitions'],
+      'info' => $meta['info'],
+    )),
+  );
+
+  dpm($request);
+
+  $response = drupal_http_request($api, $request);
+
+  if (!empty($response->error)) {
+    watchdog('quant_api', 'Error sending request: %error', array(
+      '%error' => $response->error,
+    ), WATCHDOG_ERROR);
+    dpm($response);
+    return;
+  }
+
+  dpm($response);
+
+  $media = array_merge($response['attachments']['js'], $response['attachments']['css'], $response['attachments']['media']['images'], $response['attachments']['media']['documents']);
+
+  foreach ($media as $item) {
+    // @todo: Determine local vs. remote.
+    // @todo: Configurable to disallow remote files.
+    // @todo: Strip base domain.
+    $file = urldecode($item['path']);
+    if (isset($item['existing_md5'])) {
+      if (file_exists(DRUPAL_ROOT . $file) && md5_file(DRUPAL_ROOT . $file) == $item['existing_md5']) {
+        continue;
+      }
+    }
+  }
+
+}

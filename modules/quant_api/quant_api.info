@@ -1,0 +1,5 @@
+name = Quant API
+description = Quant API exporter
+package = Quant
+core = 7.x
+configure = admin/config/quant/api

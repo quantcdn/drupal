@@ -23,7 +23,7 @@ function quant_help($section) {
  */
 function quant_menu() {
   $items['admin/config/services/quant'] = array(
-    'title' => 'Quant configuration',
+    'title' => 'Quant',
     'description' => 'Configure the Quant static site generator.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('quant_config'),
@@ -32,14 +32,15 @@ function quant_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
 
-  $item['admin/config/services/quant/settings'] = array(
-    'title' => 'Quant configuration',
+  $items['admin/config/services/quant/settings'] = array(
+    'title' => 'Config',
     'description' => 'Configure the Quant static site generator.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('quant_config'),
     'file' => 'quant.admin.inc',
     'access arguments' => array('configure quant'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 0,
   );
 
   $items['admin/config/services/quant/seed'] = array(
@@ -50,6 +51,18 @@ function quant_menu() {
     'file' => 'quant.admin.inc',
     'access arguments' => array('bulk quant export'),
     'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+  );
+
+  // Custom quant view controller.
+  $items['node/%node/quant'] = array(
+    'title callback' => 'quant_page_title',
+    'title arguments' => array(1),
+    'page callback' => 'quant_page_view',
+    'page arguments' => array(1),
+    'file' => 'quant.renderer.inc',
+    'access callback' => 'quant_page_access',
+    'access arguments' => array(1),
   );
 
   return $items;
@@ -62,6 +75,7 @@ function quant_admin_paths() {
   return array(
     'admin/quant/config' => TRUE,
     'admin/quant/seed' => TRUE,
+    'node/%node/quant' => FALSE,
   );
 }
 
@@ -83,60 +97,98 @@ function quant_permission() {
   );
 }
 
-function quant_hook_node_insert($node) {}
+/**
+ * Implements hook_node_insert().
+ */
+function quant_hook_node_insert($node) {
+  quant_seed($node->nid);
+}
 
-function quant_hook_node_update($node) {}
+/**
+ * Implements hook_node_update().
+ */
+function quant_hook_node_update($node) {
+  quant_seed($node->nid);
+}
 
 /**
  * Seed a node.
  *
  * @param int $nid
  *   The node id to send.
- * @param int $rid
- *   The node revision id.
  * @param array $context
  *   The batch context.
  */
-function quant_seed($nid, $rid = NULL, $context = []) {
-  $node = node_load($nid);
+function quant_seed($nid, $context = []) {
+  global $base_url;
 
-  // Wondering if we can just render the node view in D7.
-  // this would prevent the need for a sub request -
-  // however we might need to change this to a sub request.
-  $node_render_array = node_view($node);
-
+  // This clears the message bag as we don't want this to be
+  // rendered with the static output.
   drupal_get_messages();
 
-  // @TODO: Get theme from config
-  _quant_theme_switch('bartik');
+  $response = drupal_http_request($base_url . "/node/$nid/quant");
+
+  if (!property_exists($response, 'data')) {
+    watchdog('quant', 'Unable to complete subrequest %error %request', array(
+      '%error' => $response->error,
+      '%request' => json_encode($response),
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
 
   // Path alias might not be what we want.
   $alias = drupal_get_path_alias("node/$nid");
-  $markup = drupal_render_page($node_render_array);
+  $markup = $response->data;
 
-  _quant_theme_switch();
+  $meta = array();
+  $context = array('nid' => $nid);
 
-  module_invoke_all('quant_seed', $alias, $markup);
+  drupal_alter('quant_meta', $meta, $context);
+
+  dpm($meta);
+
+  module_invoke_all('quant_seed', $alias, $markup, $meta);
 }
 
 /**
  * Implements hook_quant_seed().
  */
-function quant_quant_seed($location, $data, $ext = '.html') {
+function quant_quant_seed($location, $data, $meta = []) {
   if (!($file_path = variable_get('quant_storage_location'))) {
-    // If file path is not set... we can't export :(.
-    return;
+    watchdog('quant', 'Unable to export static asset to disk [storage_location] is not defined', array(), WATCHDOG_INFO);
+    return FALSE;
   }
 
   // Make sure we have a trailing slash.
   $file_path = rtrim($file_path, '/') . '/';
 
   $dir = $file_path . dirname($location);
-  $file = $file_path . $location . $ext;
+  $file = $file_path . $location;
+
+  if (empty(pathinfo($file, PATHINFO_EXTENSION))) {
+    $dir = $file_path . $location;
+    $file .= '/index.html';
+  }
+
+  dpm('create dir ' . $dir);
 
   // Make sure the directory exists.
   @mkdir($dir, 0755);
   file_put_contents($file, $data);
+}
+
+/**
+ * Implements hook_quant_meta_alter().
+ */
+function quant_quant_meta_alter(&$meta, $context) {
+  $node = node_load($context['nid']);
+  $meta['published'] = $node->status;
+
+  // @TODO: Transition support.
+  $meta['transitions'] = [];
+
+  // @TODO: node info.
+  $meta['info'] = [];
 }
 
 /**
@@ -201,19 +253,35 @@ function _quant_seed_prepare($form, $form_state) {
  *   The form render array.
  */
 function _quant_get_seed_warnings(&$form) {
-  // @TODO get the settings for warnings.
+  $cssagg = variable_get('preprocess_css');
+  $jsagg = variable_get('preprocess_js');
+
+  if ($cssagg == 1 && $jsagg == 1) {
+    // Good things get no warnings.
+    return;
+  }
+
+  if ($cssagg == 0) {
+    drupal_set_message(t('CSS aggregation is disabled'), 'warning');
+  }
+
+  if ($jsagg == 0) {
+    drupal_set_message(t('JS aggregation is disabled'), 'warning');
+  }
+
+  drupal_set_message(t('This could lead to performance issues. To resolve, visit /admin/config/development/performance'), 'warning');
 }
 
-/**
- * Theme swticher.
- */
-function _quant_theme_switch($to = NULL) {
-  static $original_theme;
-  if (empty($original_theme)) {
-    $original_theme = drupal_static('menu_get_custom_theme');
-  }
-  $custom_theme = &drupal_static('menu_get_custom_theme');
-  $custom_theme = $to ?? $original_theme;
-  unset($GLOBALS['theme']);
-  drupal_theme_initialize();
+function quant_test() {
+  quant_seed(1);
+  // $aliases = [
+  //   '/file.jpg',
+  //   '/no-extension',
+  // ];
+
+  // foreach ($aliases as $a) {
+  //   $ext = strtolower(pathinfo($a, PATHINFO_EXTENSION));
+  //   dpm($ext);
+  // }
+
 }
