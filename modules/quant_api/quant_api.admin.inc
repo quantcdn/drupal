@@ -24,6 +24,12 @@ function quant_api_settings() {
     '#decription' => t('The API token'),
   );
 
+  $form['quant_api_customer'] = array(
+    '#type' => 'textfield',
+    '#title' => t('API Customer'),
+    '#description' => t('The API customer'),
+  );
+
   $form['#validate'][] = 'quant_api_settings_validate';
 
   return system_settings_form($form);

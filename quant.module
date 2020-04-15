@@ -101,14 +101,16 @@ function quant_permission() {
  * Implements hook_node_insert().
  */
 function quant_hook_node_insert($node) {
-  quant_seed($node->nid);
+  list($url, $context) = _quant_prepare_entity('node', $node->nid);
+  quant_seed($url, $context);
 }
 
 /**
  * Implements hook_node_update().
  */
 function quant_hook_node_update($node) {
-  quant_seed($node->nid);
+  list($url, $context) = _quant_prepare_entity('node', $node->nid);
+  quant_seed($url, $context);
 }
 
 /**
@@ -119,14 +121,12 @@ function quant_hook_node_update($node) {
  * @param array $context
  *   The batch context.
  */
-function quant_seed($nid, $context = []) {
-  global $base_url;
-
+function quant_seed($url, $context, $batch_context = []) {
   // This clears the message bag as we don't want this to be
   // rendered with the static output.
   drupal_get_messages();
 
-  $response = drupal_http_request($base_url . "/node/$nid/quant");
+  $response = drupal_http_request($url);
 
   if (!property_exists($response, 'data')) {
     watchdog('quant', 'Unable to complete subrequest %error %request', array(
@@ -137,58 +137,103 @@ function quant_seed($nid, $context = []) {
   }
 
   // Path alias might not be what we want.
-  $alias = drupal_get_path_alias("node/$nid");
+  $path = parse_url($url, PHP_URL_PATH);
+  $alias = drupal_get_path_alias($path);
+
+  if (empty($alias)) {
+    $alias = $path;
+  }
+
   $markup = $response->data;
 
   $meta = array();
-  $context = array('nid' => $nid);
 
   drupal_alter('quant_meta', $meta, $context);
+  module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
+}
 
-  dpm($meta);
-
-  module_invoke_all('quant_seed', $alias, $markup, $meta);
+/**
+ * Prepare a file export.
+ */
+function quant_seed_file($url, $context = array()) {
+  $meta = array();
+  drupal_alter('quant_file_meta', $meta, $context);
+  module_invoke_all('quant_seed_file', $url, $context);
 }
 
 /**
  * Implements hook_quant_seed().
+ *
+ * @TODO: Do we need this?!
  */
-function quant_quant_seed($location, $data, $meta = []) {
-  if (!($file_path = variable_get('quant_storage_location'))) {
-    watchdog('quant', 'Unable to export static asset to disk [storage_location] is not defined', array(), WATCHDOG_INFO);
-    return FALSE;
-  }
+// function quant_quant_seed($location, $data, $meta = []) {
+//   if (!($file_path = variable_get('quant_storage_location'))) {
+//     watchdog('quant', 'Unable to export static asset to disk [storage_location] is not defined', array(), WATCHDOG_INFO);
+//     return FALSE;
+//   }
 
-  // Make sure we have a trailing slash.
-  $file_path = rtrim($file_path, '/') . '/';
+//   // Make sure we have a trailing slash.
+//   $file_path = rtrim($file_path, '/') . '/';
 
-  $dir = $file_path . dirname($location);
-  $file = $file_path . $location;
+//   $dir = $file_path . dirname($location);
+//   $file = $file_path . $location;
 
-  if (empty(pathinfo($file, PATHINFO_EXTENSION))) {
-    $dir = $file_path . $location;
-    $file .= '/index.html';
-  }
+//   if (empty(pathinfo($file, PATHINFO_EXTENSION))) {
+//     $dir = $file_path . $location;
+//     $file .= '/index.html';
+//   }
 
-  dpm('create dir ' . $dir);
-
-  // Make sure the directory exists.
-  @mkdir($dir, 0755);
-  file_put_contents($file, $data);
-}
+//   // Make sure the directory exists.
+//   @mkdir($dir, 0755);
+//   file_put_contents($file, $data);
+// }
 
 /**
  * Implements hook_quant_meta_alter().
  */
 function quant_quant_meta_alter(&$meta, $context) {
-  $node = node_load($context['nid']);
-  $meta['published'] = $node->status;
+  $meta = [
+    'published' => null,
+    'transitions' => [],
+    'info' => [],
+  ];
+
+  if (empty($context['entity'])) {
+    return;
+  }
+
+  $meta['published'] = $context['entity']->status;
 
   // @TODO: Transition support.
   $meta['transitions'] = [];
 
   // @TODO: node info.
-  $meta['info'] = [];
+  $meta['info'] = [
+    'author' => $context['entity']->uid,
+  ];
+}
+
+/**
+ * Prepare an entity for exporting.
+ */
+function _quant_prepare_entity($type, $entity_id) {
+  global $base_url;
+  $entity = entity_load($type, [$entity_id]);
+
+  if (empty($entity)) {
+    return FALSE;
+  }
+
+  $entity = reset($entity);
+
+  $uri = entity_uri($type, $entity);
+  $url = $base_url . "/{$uri['path']}";
+  return [
+    $url,
+    [
+      'entity' => $entity,
+    ],
+  ];
 }
 
 /**
@@ -198,13 +243,13 @@ function quant_quant_meta_alter(&$meta, $context) {
  *   A list of nodes to export.
  */
 function _quant_batch_nodes($nids = array()) {
-
   $ops = array();
 
   foreach ($nids as $nid) {
+    list($url, $context) = _quant_prepare_entity('node', $nid);
     $ops[] = array(
       'quant_seed',
-      array($nid),
+      array($url, $context),
     );
   }
 
@@ -273,7 +318,8 @@ function _quant_get_seed_warnings(&$form) {
 }
 
 function quant_test() {
-  quant_seed(1);
+  list($url, $context) = _quant_prepare_entity('node', 1);
+  quant_seed($url, $context);
   // $aliases = [
   //   '/file.jpg',
   //   '/no-extension',

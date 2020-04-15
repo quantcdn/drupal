@@ -40,9 +40,40 @@ function quant_api_settings_validate($form, $form_state) {
 }
 
 /**
+ * Get request headers.
+ *
+ * @return array
+ *   The standard quant api headers.
+ */
+function quant_api_get_request_headers() {
+  $token = variable_get('quant_api_token');
+  $customer = variable_get('quant_api_customer');
+
+  $token = 'test';
+  $customer = 'dev';
+
+  if (empty($token)) {
+    watchdog('quant_api', 'API Token is not configured.', [], 'info');
+    return [];
+  }
+
+  if (empty($customer)) {
+    watchdog('quant_api', 'API Customer is not configured', [], 'info');
+    return [];
+  }
+
+  return array(
+    'quant-customer' => $customer,
+    'quant-token' => $token,
+  );
+}
+
+/**
  * Implements hook_quant_seed().
  */
-function quant_api_quant_seed($location, $data, $meta = [], $ext = '.html') {
+function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
+  global $base_url;
+
   $api = variable_get('quant_api_endpoint', QUANT_ENDPOINT_DEFAULT);
 
   if (empty($api)) {
@@ -54,7 +85,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $ext = '.html') {
   $location = '/' . ltrim($location, '/');
 
   $request = array(
-    'headers' => array(
+    'headers' => quant_api_get_request_headers() + array(
       'content-type' => 'application/json',
     ),
     'method' => 'POST',
@@ -67,32 +98,125 @@ function quant_api_quant_seed($location, $data, $meta = [], $ext = '.html') {
     )),
   );
 
-  dpm($request);
-
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
+    $body = json_decode($response->data);
     watchdog('quant_api', 'Error sending request: %error', array(
-      '%error' => $response->error,
+      '%error' => $body->errorMsg,
     ), WATCHDOG_ERROR);
-    dpm($response);
     return;
   }
 
-  dpm($response);
-
-  $media = array_merge($response['attachments']['js'], $response['attachments']['css'], $response['attachments']['media']['images'], $response['attachments']['media']['documents']);
+  $data = json_decode($response->data, TRUE);
+  $media = array_merge($data['attachments']['js'], $data['attachments']['css'], $data['attachments']['media']['images'], $data['attachments']['media']['documents']);
 
   foreach ($media as $item) {
-    // @todo: Determine local vs. remote.
     // @todo: Configurable to disallow remote files.
-    // @todo: Strip base domain.
     $file = urldecode($item['path']);
-    if (isset($item['existing_md5'])) {
-      if (file_exists(DRUPAL_ROOT . $file) && md5_file(DRUPAL_ROOT . $file) == $item['existing_md5']) {
-        continue;
-      }
+    $on_disk = parse_url($file, PHP_URL_PATH);
+    $domain = parse_url($file, PHP_URL_HOST);
+
+    if (stripos($base_url, $domain) == -1) {
+      // @todo: Determine local vs. remote.
+      continue;
     }
+
+    $loc = DRUPAL_ROOT . $on_disk;
+
+    if (!file_exists($loc)) {
+      watchdog('quant_api', 'File not found: %file', array(
+        '%file' => $file,
+      ));
+      continue;
+    }
+
+    if (isset($item['existing_md5']) && md5_file($loc) == $item['existing_md5']) {
+      // This file hasn't changed since the last export.
+      continue;
+    }
+
+    // @TODO - this processes inline in the batch request
+    // which might cause performance problems with pages with
+    // many assets.
+    quant_seed_file($file, ['location' => $loc]);
   }
 
+}
+
+/**
+ * Implements hook_quant_seed_file().
+ */
+function quant_api_quant_seed_file($url, $context) {
+  $api = variable_get('quant_api_endpoint', QUANT_ENDPOINT_DEFAULT);
+
+  if (empty($api)) {
+    watchdog('quant_api', 'API endpoint is not configured.', [], 'info');
+    return;
+  }
+
+  $boundary = 'A0sFSD';
+  $data = quant_api_encode_file($boundary, $context);
+
+  $options = array(
+    'headers' => quant_api_get_request_headers() + array(
+      'Quant-File-Url' => $context['location'],
+      'Content-Type' => "multipart/form-data; boundary=$boundary",
+    ),
+    'method' => 'POST',
+    'data' => $data,
+  );
+
+  $response = drupal_http_request($api, $options);
+
+  if (!empty($response->error)) {
+    $body = json_decode($response->data);
+    watchdog('quant_api', 'Error sending request: %error', array(
+      '%error' => $body->errorMsg,
+    ), WATCHDOG_ERROR);
+    return;
+  }
+}
+
+/**
+ * Encode the file.
+ *
+ * @param string $boundary
+ *   The boundary placeholder.
+ * @param array $params
+ *   Params to include the location of the file.
+ *
+ * @return string
+ *   The encoded file.
+ */
+function quant_api_encode_file($boundary, $params) {
+  $output = "";
+  foreach ($params as $key => $value) {
+    $output .= "--$boundary\r\n";
+    $output .= quant_api_multipart_enc_file($value);
+  }
+  $output .= "--$boundary--";
+  return $output;
+}
+
+/**
+ * Loads the file.
+ *
+ * @param string $path
+ *   The file path.
+ *
+ * @return string
+ *   Encoded file.
+ */
+function quant_api_multipart_enc_file($path) {
+  if (substr($path, 0, 1) == "@") {
+    $path = substr($path, 1);
+  }
+  $filename = basename($path);
+  $mimetype = "application/octet-stream";
+  $data = "Content-Disposition: form-data; name=\"file\"; filename=\"$filename\"\r\n";
+  $data .= "Content-Transfer-Encoding: binary\r\n";
+  $data .= "Content-Type: $mimetype\r\n\r\n";
+  $data .= file_get_contents($path) . "\r\n";
+  return $data;
 }
