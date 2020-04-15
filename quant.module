@@ -61,8 +61,7 @@ function quant_menu() {
     'page callback' => 'quant_page_view',
     'page arguments' => array(1),
     'file' => 'quant.renderer.inc',
-    'access callback' => 'quant_page_access',
-    'access arguments' => array(1),
+    'access callback' => TRUE,
   );
 
   return $items;
@@ -100,17 +99,45 @@ function quant_permission() {
 /**
  * Implements hook_node_insert().
  */
-function quant_hook_node_insert($node) {
-  list($url, $context) = _quant_prepare_entity('node', $node->nid);
-  quant_seed($url, $context);
+function quant_node_insert($node) {
+  $entity_info = array(
+    'entity' => $node,
+    'type' => 'node',
+    'op' => 'update',
+    'original' => $node,
+  );
+
+  drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
 }
 
 /**
  * Implements hook_node_update().
  */
-function quant_hook_node_update($node) {
-  list($url, $context) = _quant_prepare_entity('node', $node->nid);
+function quant_node_update($node) {
+  $original = isset($entity->original) ? $entity->original : NULL;
+  $entity_info = array(
+    'entity' => $node,
+    'type' => 'node',
+    'op' => 'update',
+    'original' => $original,
+  );
+
+  drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
+}
+
+/**
+ * Post entity operation hook.
+ *
+ * This should be registered as a shutdown function so that it
+ * can operate after the db_transaction has finished.
+ */
+function _quant_post_entity_op($entity_info) {
+  $entity = $entity_info['entity'];
+  list($id) = entity_extract_ids($entity_info['type'], $entity_info['entity']);
+  list($url, $context) = _quant_prepare_entity($entity_info['type'], $id);
+
   quant_seed($url, $context);
+  quant_export_drupal_pages();
 }
 
 /**
@@ -120,13 +147,15 @@ function quant_hook_node_update($node) {
  *   The node id to send.
  * @param array $context
  *   The batch context.
+ * @param array $batch_context
+ *   The context of the batch process.
  */
-function quant_seed($url, $context, $batch_context = []) {
+function quant_seed($url, $context = array(), $batch_context = array()) {
   // This clears the message bag as we don't want this to be
   // rendered with the static output.
-  drupal_get_messages();
+  // drupal_get_messages();
 
-  $response = drupal_http_request($url);
+  $response = drupal_http_request($url . "?_quant=" . strtotime('now'));
 
   if (!property_exists($response, 'data')) {
     watchdog('quant', 'Unable to complete subrequest %error %request', array(
@@ -138,6 +167,17 @@ function quant_seed($url, $context, $batch_context = []) {
 
   // Path alias might not be what we want.
   $path = parse_url($url, PHP_URL_PATH);
+  $path = ltrim($path, '/');
+
+  if (empty($path)) {
+    // Homepage is a request to /, ltrim removes that we need to
+    // not have the leading slash when trying to find the alias.
+    // If we use an empty string drupal_get_path_alias will use
+    // the current request path which will cause node updates to
+    // run twice.
+    $path = '/';
+  }
+
   $alias = drupal_get_path_alias($path);
 
   if (empty($alias)) {
@@ -162,33 +202,6 @@ function quant_seed_file($url, $context = array()) {
 }
 
 /**
- * Implements hook_quant_seed().
- *
- * @TODO: Do we need this?!
- */
-// function quant_quant_seed($location, $data, $meta = []) {
-//   if (!($file_path = variable_get('quant_storage_location'))) {
-//     watchdog('quant', 'Unable to export static asset to disk [storage_location] is not defined', array(), WATCHDOG_INFO);
-//     return FALSE;
-//   }
-
-//   // Make sure we have a trailing slash.
-//   $file_path = rtrim($file_path, '/') . '/';
-
-//   $dir = $file_path . dirname($location);
-//   $file = $file_path . $location;
-
-//   if (empty(pathinfo($file, PATHINFO_EXTENSION))) {
-//     $dir = $file_path . $location;
-//     $file .= '/index.html';
-//   }
-
-//   // Make sure the directory exists.
-//   @mkdir($dir, 0755);
-//   file_put_contents($file, $data);
-// }
-
-/**
  * Implements hook_quant_meta_alter().
  */
 function quant_quant_meta_alter(&$meta, $context) {
@@ -207,14 +220,22 @@ function quant_quant_meta_alter(&$meta, $context) {
   // @TODO: Transition support.
   $meta['transitions'] = [];
 
+  $meta['published_revision'] = $context['entity']->vid;
+
+  $user = user_load($context['entity']->uid);
+
   // @TODO: node info.
   $meta['info'] = [
-    'author' => $context['entity']->uid,
+    'author' => $user->mail,
+    'date_timestamp' => $context['entity']->changed,
   ];
 }
 
 /**
  * Prepare an entity for exporting.
+ *
+ * @return array
+ *   The path with context for seeding.
  */
 function _quant_prepare_entity($type, $entity_id) {
   global $base_url;
@@ -243,6 +264,10 @@ function _quant_prepare_entity($type, $entity_id) {
  *   A list of nodes to export.
  */
 function _quant_batch_nodes($nids = array()) {
+  global $base_url;
+
+  dpm('batching nodes');
+
   $ops = array();
 
   foreach ($nids as $nid) {
@@ -252,6 +277,9 @@ function _quant_batch_nodes($nids = array()) {
       array($url, $context),
     );
   }
+
+  // Batch the homepage.
+  $ops[] = array('quant_seed', array("$base_url/", array()));
 
   $batch = array(
     'title' => t('Quant seeding'),
@@ -317,9 +345,43 @@ function _quant_get_seed_warnings(&$form) {
   drupal_set_message(t('This could lead to performance issues. To resolve, visit /admin/config/development/performance'), 'warning');
 }
 
+/**
+ * Export static pages.
+ *
+ * This gathers front and error pages and prepares them to be
+ * exported.
+ */
+function quant_export_drupal_pages() {
+  global $base_url;
+
+  dpm('here');
+
+  $special_pages = array(
+    '/' => variable_get('site_frontpage', 'node'),
+    '/_quant404' => variable_get('site_404'),
+    '/_quant403' => variable_get('site_403'),
+  );
+
+  foreach ($special_pages as $path => $route) {
+    if (empty($route)) {
+      continue;
+    }
+    quant_seed("{$base_url}{$path}", array());
+  }
+}
+
 function quant_test() {
   list($url, $context) = _quant_prepare_entity('node', 1);
   quant_seed($url, $context);
+
+  global $base_url;
+
+  quant_seed("$base_url/", array());
+
+  // dpm('and home');
+
+  // dpm(_quant_prepare_entity('node', 1));
+
   // $aliases = [
   //   '/file.jpg',
   //   '/no-extension',

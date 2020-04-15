@@ -49,9 +49,6 @@ function quant_api_get_request_headers() {
   $token = variable_get('quant_api_token');
   $customer = variable_get('quant_api_customer');
 
-  $token = 'test';
-  $customer = 'dev';
-
   if (empty($token)) {
     watchdog('quant_api', 'API Token is not configured.', [], 'info');
     return [];

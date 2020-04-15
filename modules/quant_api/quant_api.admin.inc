@@ -28,6 +28,7 @@ function quant_api_settings() {
     '#type' => 'textfield',
     '#title' => t('API Customer'),
     '#description' => t('The API customer'),
+    '#default_value' => variable_get('quant_api_customer'),
   );
 
   $form['#validate'][] = 'quant_api_settings_validate';

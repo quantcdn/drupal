@@ -2,4 +2,4 @@ name = Quant
 description = Quant content export
 package = Quant
 core = 7.x
-configure = admin/config/quant
+configure = admin/config/services/quant
