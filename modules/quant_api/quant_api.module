@@ -84,6 +84,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
   $request = array(
     'headers' => quant_api_get_request_headers() + array(
       'content-type' => 'application/json',
+      'User-Agent' => 'Quant (+http://quant.io)',
     ),
     'method' => 'POST',
     'data' => json_encode(array(
@@ -99,8 +100,9 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
 
   if (!empty($response->error)) {
     $body = json_decode($response->data);
-    watchdog('quant_api', 'Error sending request: %error', array(
+    watchdog('quant_api', 'Error sending request: %error %res', array(
       '%error' => $body->errorMsg,
+      '%res' => json_encode($response),
     ), WATCHDOG_ERROR);
     return;
   }
@@ -136,7 +138,10 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     // @TODO - this processes inline in the batch request
     // which might cause performance problems with pages with
     // many assets.
-    quant_seed_file($file, ['location' => $loc]);
+    quant_seed_file($file, [
+      'location' => $loc,
+      'request' => $on_disk,
+    ]);
   }
 
 }
@@ -157,8 +162,9 @@ function quant_api_quant_seed_file($url, $context) {
 
   $options = array(
     'headers' => quant_api_get_request_headers() + array(
-      'Quant-File-Url' => $context['location'],
+      'Quant-File-Url' => $context['request'],
       'Content-Type' => "multipart/form-data; boundary=$boundary",
+      'User-Agent' => 'Quant (+http://quant.io)'
     ),
     'method' => 'POST',
     'data' => $data,
@@ -190,7 +196,9 @@ function quant_api_encode_file($boundary, $params) {
   $output = "";
   foreach ($params as $key => $value) {
     $output .= "--$boundary\r\n";
-    $output .= quant_api_multipart_enc_file($value);
+    if ($key == 'location') {
+      $output .= quant_api_multipart_enc_file($value);
+    }
   }
   $output .= "--$boundary--";
   return $output;

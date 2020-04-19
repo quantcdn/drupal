@@ -143,19 +143,30 @@ function _quant_post_entity_op($entity_info) {
 /**
  * Seed a node.
  *
- * @param int $nid
- *   The node id to send.
+ * @param string $url
+ *   The url to seed.
  * @param array $context
- *   The batch context.
+ *   The context of the seed, usually incldues entity info.
  * @param array $batch_context
  *   The context of the batch process.
+ *
+ * @TODO: Should $url be path?
  */
 function quant_seed($url, $context = array(), $batch_context = array()) {
+  global $base_url;
+
   // This clears the message bag as we don't want this to be
   // rendered with the static output.
-  // drupal_get_messages();
+  drupal_get_messages();
 
-  $response = drupal_http_request($url . "?_quant=" . strtotime('now'));
+  $options = array(
+    'headers' => array(
+      'Host' => variable_get('quant_hostname', $base_url),
+      'User-Agent' => 'Quant (+http://quantcdn.io)'
+    ),
+  );
+
+  $response = drupal_http_request($url . "?_quant=" . strtotime('now'), $options);
 
   if (!property_exists($response, 'data')) {
     watchdog('quant', 'Unable to complete subrequest %error %request', array(
@@ -165,28 +176,12 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     return FALSE;
   }
 
-  // Path alias might not be what we want.
-  $path = parse_url($url, PHP_URL_PATH);
-  $path = ltrim($path, '/');
-
-  if (empty($path)) {
-    // Homepage is a request to /, ltrim removes that we need to
-    // not have the leading slash when trying to find the alias.
-    // If we use an empty string drupal_get_path_alias will use
-    // the current request path which will cause node updates to
-    // run twice.
-    $path = '/';
-  }
-
-  $alias = drupal_get_path_alias($path);
-
-  if (empty($alias)) {
-    $alias = $path;
-  }
-
   $markup = $response->data;
 
   $meta = array();
+
+  $alias = parse_url($url, PHP_URL_PATH);
+  $alias = empty($alias) ? '/' : $alias;
 
   drupal_alter('quant_meta', $meta, $context);
   module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
@@ -223,8 +218,6 @@ function quant_quant_meta_alter(&$meta, $context) {
   $meta['published_revision'] = $context['entity']->vid;
 
   $user = user_load($context['entity']->uid);
-
-  // @TODO: node info.
   $meta['info'] = [
     'author' => $user->mail,
     'date_timestamp' => $context['entity']->changed,
@@ -241,16 +234,18 @@ function _quant_prepare_entity($type, $entity_id) {
   global $base_url;
   $entity = entity_load($type, [$entity_id]);
 
+  $base = variable_get('quant_base_url', $base_url);
+
   if (empty($entity)) {
     return FALSE;
   }
 
   $entity = reset($entity);
-
   $uri = entity_uri($type, $entity);
-  $url = $base_url . "/{$uri['path']}";
+  $path = $uri['path'];
+  $alias = drupal_get_path_alias($path);
   return [
-    $url,
+    "$base/$alias",
     [
       'entity' => $entity,
     ],
@@ -266,20 +261,19 @@ function _quant_prepare_entity($type, $entity_id) {
 function _quant_batch_nodes($nids = array()) {
   global $base_url;
 
-  dpm('batching nodes');
-
   $ops = array();
 
   foreach ($nids as $nid) {
-    list($url, $context) = _quant_prepare_entity('node', $nid);
     $ops[] = array(
-      'quant_seed',
-      array($url, $context),
+      'quant_seed_batch',
+      array($nid),
     );
   }
 
+  $req = variable_get('quant_base_url', $base_url);
+
   // Batch the homepage.
-  $ops[] = array('quant_seed', array("$base_url/", array()));
+  $ops[] = array('quant_seed', array("$req/", array()));
 
   $batch = array(
     'title' => t('Quant seeding'),
@@ -295,6 +289,14 @@ function _quant_batch_nodes($nids = array()) {
 }
 
 /**
+ * Batch processor for exporting nodes.
+ */
+function quant_seed_batch($nid) {
+  list($url, $context) = _quant_prepare_entity('node', $nid);
+  quant_seed($url, $context);
+}
+
+/**
  * Create the batch process to export the form.
  *
  * @param array $form
@@ -302,7 +304,7 @@ function _quant_batch_nodes($nids = array()) {
  * @param array $form_state
  *   The submitted form values.
  */
-function _quant_seed_prepare($form, $form_state) {
+function _quant_seed_prepare($form = array(), $form_state = array()) {
   if (!variable_get('quant_seed_entity_node')) {
     drupal_set_message(t('Nodes are not configured to be exported.'));
     return;
@@ -353,8 +355,7 @@ function _quant_get_seed_warnings(&$form) {
  */
 function quant_export_drupal_pages() {
   global $base_url;
-
-  dpm('here');
+  $base = variable_get('quant_base_url', $base_url);
 
   $special_pages = array(
     '/' => variable_get('site_frontpage', 'node'),
@@ -366,18 +367,13 @@ function quant_export_drupal_pages() {
     if (empty($route)) {
       continue;
     }
-    quant_seed("{$base_url}{$path}", array());
+    quant_seed("{$base}{$path}", array());
   }
 }
 
 function quant_test() {
   list($url, $context) = _quant_prepare_entity('node', 1);
   quant_seed($url, $context);
-
-  global $base_url;
-
-  quant_seed("$base_url/", array());
-
   // dpm('and home');
 
   // dpm(_quant_prepare_entity('node', 1));

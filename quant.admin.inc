@@ -11,6 +11,8 @@
  * @ingroup forms
  */
 function quant_config() {
+  global $base_url;
+
   $form['quant_content_revisions'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable content revisions'),
@@ -25,12 +27,21 @@ function quant_config() {
     '#default_value' => variable_get('quant_asset_revisions', FALSE),
   );
 
-  $form['quant_storage_location'] = array(
+  $form['quant_base_url'] = array(
     '#type' => 'textfield',
-    '#title' => t('Storage path'),
-    '#description' => t('Location on disk to store static assets.'),
-    '#default_value' => variable_get('quant_storage_location'),
+    '#title' => t('Webserver URL'),
+    '#description' => t('Provide the FQDN that internal requests may route to. e.g: http://localhost, http://nginx:8080, http:127.0.0.1. <a href="#">More info</a>'),
+    '#default_value' => variable_get('quant_base_url'),
   );
+
+  $form['quant_hostname'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Hostname'),
+    '#description' => t('Optionally provide the expected hostname for content served via quant, this ensures that absolute links in content point to the correct domain. This ensures absolute links in content point to the correct domain. e.g: www.example.com <a href="#">More info</a>'),
+    '#default_value' => variable_get('quant_hostname', $base_url),
+  );
+
+  quant_test();
 
   return system_settings_form($form);
 }
