@@ -54,9 +54,24 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
-  public function ping() : bool {
-    return TRUE;
+  public function ping() {
+    $response = $this->client->get($this->endpoint."/ping", [
+      RequestOptions::JSON => $data,
+      'http_errors' => false,
+      'headers' => [
+        'Quant-Customer' => $this->username,
+        'Quant-Token'    => $this->token,
+      ],
+    ]);
+
+    if ($response->getStatusCode() == 200) {
+      $res = json_decode($response->getBody(), TRUE);
+      return $res['project'];
+    }
+
+    return FALSE;
   }
+
 
   /**
    * {@inheritdoc}

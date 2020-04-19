@@ -55,15 +55,11 @@ class SettingsForm extends ConfigFormBase {
     $config = $this->config(self::SETTINGS);
 
     if ($config->get('api_token')) {
-      if ($this->client->ping()) {
-        $form['api_status'] = [
-          '#markup' => $this->t('Successfully connected to the API'),
-        ];
+      if ($project = $this->client->ping()) {
+        \Drupal::messenger()->addMessage(t('Successfully connected; using project: ' . $project));
       }
       else {
-        $form['api_status'] = [
-          '#markup' => $this->t('Cannot connect to the API'),
-        ];
+        \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
       }
     }
 
@@ -85,8 +81,6 @@ class SettingsForm extends ConfigFormBase {
       '#title' => $this->t('API Token'),
       '#default_value' => $config->get('api_token'),
     ];
-
-    // @TODO QUANT API CONFIGURATION...
 
     return parent::buildForm($form, $form_state);
   }
