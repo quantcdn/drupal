@@ -35,6 +35,7 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
 
     $entity = $event->getEntity();
     $markup = $this->renderer->render($entity);
+
     $rid = $entity->get('vid')->value;
     $meta = [];
 
@@ -64,7 +65,6 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
     }
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $entity, $meta, $rid));
-
   }
 
   /**
@@ -74,4 +74,5 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
     $events[NodeInsertEvent::NODE_INSERT_EVENT][] = ['onNodeInsert'];
     return $events;
   }
+
 }

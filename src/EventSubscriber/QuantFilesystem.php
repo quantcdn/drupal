@@ -34,7 +34,7 @@ class QuantFilesystem implements EventSubscriberInterface {
    */
   public function onOutput(QuantEvent $event) {
 
-    // @todo: Think about what we do with this when we use API.
+    // @todo: Remove local file writing, handled by API.
     return;
 
     $dir = self::LOC . dirname($event->getLocation());
