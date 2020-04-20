@@ -5,6 +5,11 @@
  * Hook implementations for quant_api.
  */
 
+/**
+ * The default URL endpoint for Quant.
+ *
+ * @var string
+ */
 define('QUANT_ENDPOINT_DEFAULT', 'http://localhost:8081/');
 
 /**
@@ -30,13 +35,6 @@ function quant_api_menu() {
   );
 
   return $items;
-}
-
-/**
- * Implements hook_form_validate().
- */
-function quant_api_settings_validate($form, $form_state) {
-  // @TODO ping request to the API for validation.
 }
 
 /**

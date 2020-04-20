@@ -6,6 +6,13 @@
  */
 
 /**
+ * The regular expression to find theme assests.
+ *
+ * @var string
+ */
+define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.otf)$/i');
+
+/**
  * Implements hook_help().
  */
 function quant_help($section) {
@@ -155,6 +162,10 @@ function _quant_post_entity_op($entity_info) {
 function quant_seed($url, $context = array(), $batch_context = array()) {
   global $base_url;
 
+  watchdog('quant', 'Preparing to send %url', array(
+    '%url' => $url,
+  ), WATCHDOG_INFO);
+
   // This clears the message bag as we don't want this to be
   // rendered with the static output.
   drupal_get_messages();
@@ -169,7 +180,8 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   $response = drupal_http_request($url . "?_quant=" . strtotime('now'), $options);
 
   if (!property_exists($response, 'data')) {
-    watchdog('quant', 'Unable to complete subrequest %error %request', array(
+    watchdog('quant', 'Unable to seed %url %error %request', array(
+      '%url' => $url,
       '%error' => $response->error,
       '%request' => json_encode($response),
     ), WATCHDOG_ERROR);
@@ -194,6 +206,27 @@ function quant_seed_file($url, $context = array()) {
   $meta = array();
   drupal_alter('quant_file_meta', $meta, $context);
   module_invoke_all('quant_seed_file', $url, $context);
+}
+
+/**
+ * Drush or watchdog logging.
+ *
+ * Choose the correct log function to use and centralise the verbosity
+ * check.
+ */
+function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
+  $verbosity = variable_get('quant_log_level');
+
+  if ($level < $verbosity) {
+    return;
+  }
+
+  if (drupal_is_cli()) {
+    drush_log(t($message, $replacements), 'ok');
+    return;
+  }
+
+  watchdog('quant', $message, $replacements, $level);
 }
 
 /**
@@ -305,9 +338,14 @@ function quant_seed_batch($nid) {
  *   The submitted form values.
  */
 function _quant_seed_prepare($form = array(), $form_state = array()) {
+  if (!empty($form_state['values']) && $form_state['values']['quant_seed'] == 0) {
+    drupal_set_message('Quant: Skipping the batch process.', 'warning');
+    return [];
+  }
+
   if (!variable_get('quant_seed_entity_node')) {
     drupal_set_message(t('Nodes are not configured to be exported.'));
-    return;
+    return [];
   }
 
   // Fetch the node ids.
@@ -317,6 +355,25 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
     ->fetchCol();
 
   $batch = _quant_batch_nodes($nids);
+
+  // Find theme assets.
+  if (!empty(variable_get('quant_seed_theme_assets'))) {
+    $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
+
+    foreach (file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK) as $file) {
+      $path = urldecode($file->uri);
+
+      $context = array(
+        'location' => $file->uri,
+        'request' => str_replace(DRUPAL_ROOT, '', $file->uri),
+      );
+
+      $batch['operations'][] = array(
+        'quant_seed_file',
+        array($path, $context),
+      );
+    }
+  }
 
   batch_set($batch);
 }
@@ -371,8 +428,8 @@ function quant_export_drupal_pages() {
   }
 }
 
-function quant_test() {
-  list($url, $context) = _quant_prepare_entity('node', 1);
+function quant_test($nid = 1) {
+  list($url, $context) = _quant_prepare_entity('node', $nid);
   quant_seed($url, $context);
   // dpm('and home');
 

@@ -41,8 +41,6 @@ function quant_config() {
     '#default_value' => variable_get('quant_hostname', $base_url),
   );
 
-  quant_test();
-
   return system_settings_form($form);
 }
 
@@ -62,15 +60,21 @@ function quant_seed_settings() {
     '#default_value' => variable_get('quant_seed_entity_node', FALSE),
   );
 
-  $form['quant_seed_theme_asset'] = array(
+  $form['quant_seed_theme_assets'] = array(
     '#type' => 'checkbox',
     '#title' => t('Theme assets'),
-    '#default_value' => variable_get('quant_seed_theme_asset', FALSE),
+    '#default_value' => variable_get('quant_seed_theme_assets', FALSE),
   );
 
   $form['entity_users'] = array();
 
   $form['entity_media'] = array();
+
+  $form['quant_seed'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Trigger the batch'),
+    '#description' => t('<strong>Note:</strong> This will attempt to trigger the seed from the UI, depending on the size of your site and PHP configuration this may not work.'),
+  );
 
   $form = system_settings_form($form);
 
