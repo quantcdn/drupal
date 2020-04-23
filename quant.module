@@ -4,16 +4,16 @@ use Drupal\Core\Render\RenderContext;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\quant\Event\NodeInsertEvent;
+use Drupal\quant\Seed;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 
 function quant_node_insert(Drupal\Core\Entity\EntityInterface $entity) {
-  // Dispatch the node insert demo event so that subscribers can act accordingly.
-  \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($entity));
+  drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
 }
 
 function quant_node_update(Drupal\Core\Entity\EntityInterface $entity) {
-  \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($entity));
+  drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
 }
 
 /**
@@ -26,4 +26,15 @@ function quant_node_access(\Drupal\node\NodeInterface $node, $op, \Drupal\Core\S
   // @todo: Urgent: Replace placeholder with real logic.
   // Should only grant allowed access on custom route, view operation.
   return \Drupal\Core\Access\AccessResult::allowed();
+}
+
+
+/**
+ * Post entity operation hook.
+ *
+ * This should be registered as a shutdown function so that it
+ * can operate after the db_transaction has finished.
+ */
+function _quant_post_node_entity_op($entity) {
+  Seed::seedNode($entity);
 }

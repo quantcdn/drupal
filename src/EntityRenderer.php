@@ -41,114 +41,16 @@ class EntityRenderer implements EntityRendererInterface {
   protected $entityManager;
 
   /**
-   * The base renderer.
-   *
-   * @var \Drupal\Core\Render\RendererInterface
-   */
-  protected $renderer;
-
-  /**
-   * The HTML Renderer.
-   *
-   * @var \Drupal\Core\Render\RendererInterface
-   */
-  protected $htmlRenderer;
-
-
-  /**
-   * The display variant service.
-   *
-   * @var string
-   */
-  protected $displayVariant;
-
-  /**
-   * Theme initalization object.
-   *
-   * @var \Drupal\Core\Theme\ThemeInitializationInterface
-   */
-  protected $themeInit;
-
-  /**
-   * The theme manager.
-   *
-   * @var Drupal\Core\Theme\ThemeManagerInterface
-   */
-  protected $themeManager;
-
-  /**
-   * The account switcher.
-   *
-   * @var \Drupal\Core\Session\AccountSwitcherInterface
-   */
-  protected $accountSwitcher;
-
-  /**
-   * Symfony\Component\HttpKernel\HttpKernelInterface definition.
-   *
-   * @var Symfony\Component\HttpKernel\HttpKernelInterface
-   */
-  protected $httpKernel;
-
-  /**
    * Build the entity renderer service.
    *
    * @param Drupal\Core\Config\ConfigFactory $config_factory
    *   The configuration factory.
-   * @param Drupal\Core\Render\RendererInterface $renderer
-   *   The baes renderer object.
-   * @param Drupal\Core\Render\HtmlRenderer $html_renderer
-   *   The HTML renderer object.
-   * @param string $display_variant
-   *   The theme variant.
-   * @param Drupal\Core\Theme\ThemeInitializationInterface $theme_init
-   *   The theme initializatio nobject.
-   * @param Drupal\Core\Theme\ThemeManagerInterface $theme_manager
-   *   The theme manager.
-   * @param Drupal\Core\Session\AccountSwitcherInterface $account_switcher
-   *   The accounnt switcher.
    */
-  public function __construct(ConfigFactory $config_factory, EntityManagerInterface $entity_manager, RendererInterface $renderer, HtmlRenderer $html_renderer, $display_variant, ThemeInitializationInterface $theme_init, ThemeManagerInterface $theme_manager, AccountSwitcherInterface $account_switcher, HttpKernelInterface $http_kernel) {
+  public function __construct(ConfigFactory $config_factory, EntityManagerInterface $entity_manager) {
     $this->configFactory = $config_factory;
     $this->entityManager = $entity_manager;
-    $this->renderer = $renderer;
-    $this->htmlRenderer = $html_renderer;
-    $this->displayVariant = $display_variant;
-    $this->themeInit = $theme_init;
-    $this->themeManager = $theme_manager;
-    $this->accountSwitcher = $account_switcher;
-    $this->httpKernel = $http_kernel;
-
-    $this->activeTheme = $theme_manager->getActiveTheme()->getName();
-    $this->frontendTheme = $config_factory->get('system.theme')->get('default');
   }
 
-  public static function create(ContainerInterface $container) {
-    return new static(
-      $container->get('http_kernel.basic')
-    );
-  }
-
-  /**
-   * Switch the theme.
-   */
-  protected function switchTheme($first = FALSE) {
-    $theme_name = $first ? $this->activeTheme : $this->frontendTheme;
-    $active_theme = $this->themeInit->initTheme($theme_name);
-    $this->themeManager->setActiveTheme($active_theme);
-  }
-
-  protected function removeKeyFromArray($key, &$array) {
-    foreach ($array as $k => $arr) {
-      if (is_array($arr)) {
-        if (isset($arr[$key])) {
-          unset($arr[$key]);
-        } else {
-          $this->removeKeyFromArray($key, $arr[$k]);
-        }
-      }
-    }
-  }
 
   /**
    * {@inheritdoc}
@@ -160,19 +62,32 @@ class EntityRenderer implements EntityRendererInterface {
     $rid = $entity->get('vid')->value;
     $url = $entity->toUrl()->toString();
 
-    // The kernel sub-request still requires a theme switch.
-    $this->switchTheme();
+    // Build internal request.
+    $config = $this->configFactory->get('quant.settings');
+    $local_host = $config->get('local_server') ?: 'http://localhost';
+    $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
+    $url = $local_host.$url;
 
-    // Sub-request needs full domain, redirects to localhost otherwise
-    $host = \Drupal::request()->getSchemeAndHttpHost();
-    $sub_request = Request::create($host . $url . "?quant_revision={$rid}", 'GET');
-    $subResponse = $this->httpKernel->handle($sub_request, HttpKernelInterface::SUB_REQUEST);
-    $html = $subResponse->getContent();
+    $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
 
-    // @todo: Unclear why this fixes rendering issues with context.
-    sleep(1);
+    $response = \Drupal::httpClient()->get($url, [
+      'http_errors' => false,
+      'query' => ['quant_revision' => $rid ],
+      'headers' => [
+        'Host' => $hostname,
+      ],
+      'auth' => $auth
+    ]);
 
-    return $html;
+    if ($response->getStatusCode() == 200) {
+      return $response->getBody();
+    }
+
+    $messenger = \Drupal::messenger();
+    $messenger->addMessage('Quant error: ' . $response->getStatusCode(), $messenger::TYPE_WARNING);
+    $messenger->addMessage('Quant error: ' . $response->getBody(), $messenger::TYPE_WARNING);
+
+    return '';
   }
 
 }

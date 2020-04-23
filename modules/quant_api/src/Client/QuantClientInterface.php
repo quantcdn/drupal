@@ -10,10 +10,10 @@ interface QuantClientInterface {
   /**
    * Test the connection to the API controller.
    *
-   * @return bool
-   *   If API credentials can
+   * @return mixed
+   *   Contains project machine name if successful
    */
-  public function ping() : bool;
+  public function ping();
 
   /**
    * Send a payload to the API.

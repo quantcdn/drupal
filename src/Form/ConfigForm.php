@@ -56,11 +56,18 @@ class ConfigForm extends ConfigFormBase {
       '#default_value' => $config->get('asset_revisions'),
     ];
 
-    $form['storage_location'] = [
+    $form['local_server'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Storage path'),
-      '#description' => $this->t('Location on disk to store static assets'),
-      '#default_value' => $config->get('storage_location'),
+      '#title' => $this->t('Webserver URL'),
+      '#description' => $this->t('Provide the FQDN that internal requests may route to. e.g: <em>http://localhost</em>, <em>http://nginx:8080</em> or <em>http://127.0.0.1</em>. <a href="https://support.quantcdn.io/setup/drupal">More info.</a>'),
+      '#default_value' => $config->get('local_server', 'http://localhost'),
+    ];
+
+    $form['host_domain'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Hostname'),
+      '#description' => $this->t('Optionally provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain. e.g: <em>www.example.com</em> <a href="https://support.quantcdn.io/setup/drupal">More info.</a>'),
+      '#default_value' => $config->get('host_domain'),
     ];
 
     return parent::buildForm($form, $form_state);
@@ -74,7 +81,8 @@ class ConfigForm extends ConfigFormBase {
     $this->configFactory->getEditable(static::SETTINGS)
       ->set('content_revisions', $form_state->getValue('content_revisions'))
       ->set('asset_revisions', $form_state->getValue('asset_revisions'))
-      ->set('storage_location', $form_state->getValue('storage_location'))
+      ->set('local_server', $form_state->getValue('local_server'))
+      ->set('host_domain', $form_state->getValue('host_domain'))
       ->save();
 
     parent::submitForm($form, $form_state);

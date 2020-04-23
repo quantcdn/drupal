@@ -5,6 +5,7 @@ namespace Drupal\quant_api\Client;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\Exception\RequestException;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
 
@@ -54,9 +55,31 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
-  public function ping() : bool {
-    return TRUE;
+  public function ping() {
+
+    try {
+      $response = $this->client->get($this->endpoint."/ping", [
+        RequestOptions::JSON => $data,
+        'http_errors' => false,
+        'headers' => [
+          'Quant-Customer' => $this->username,
+          'Quant-Token'    => $this->token,
+        ],
+        'exceptions' => false,
+      ]);
+    } catch (RequestException $e) {
+      \Drupal::messenger()->addError(t($e->getMessage()));
+      return FALSE;
+    }
+
+    if ($response->getStatusCode() == 200) {
+      $res = json_decode($response->getBody(), TRUE);
+      return $res['project'];
+    }
+
+    return FALSE;
   }
+
 
   /**
    * {@inheritdoc}
