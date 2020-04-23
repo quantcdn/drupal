@@ -128,7 +128,7 @@ class SeedForm extends FormBase {
     // Lunr.
     if ($form_state->getValue('lunr')) {
       $assets = array_merge($assets, \Drupal\quant\Seed::findLunrAssets());
-      //$routes = array_merge($routes, \Drupal\quant\Seed::findLunrRoutes());
+      $routes = array_merge($routes, \Drupal\quant\Seed::findLunrRoutes());
     }
 
     if ($form_state->getValue('entity_node')) {
