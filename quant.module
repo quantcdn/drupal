@@ -4,15 +4,16 @@ use Drupal\Core\Render\RenderContext;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\quant\Event\NodeInsertEvent;
+use Drupal\quant\Seed;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 
 function quant_node_insert(Drupal\Core\Entity\EntityInterface $entity) {
-  drupal_register_shutdown_function('_quant_post_entity_op', $entity);
+  drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
 }
 
 function quant_node_update(Drupal\Core\Entity\EntityInterface $entity) {
-  drupal_register_shutdown_function('_quant_post_entity_op', $entity);
+  drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
 }
 
 /**
@@ -34,69 +35,6 @@ function quant_node_access(\Drupal\node\NodeInterface $node, $op, \Drupal\Core\S
  * This should be registered as a shutdown function so that it
  * can operate after the db_transaction has finished.
  */
-function _quant_post_entity_op($entity) {
-
-  // @todo: Make common function and replace EntityRenderer.php
-  $nid = $entity->get('nid')->value;
-  $rid = $entity->get('vid')->value;
-  $url = $entity->toUrl()->toString();
-
-  // Build internal request.
-  $config = \Drupal::config('quant.settings');
-  $local_host = $config->get('local_server') ?: 'http://localhost';
-  $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-  $url = $local_host.$url;
-
-  $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
-
-  // @todo; Note: Passing in the Host header fixes issues with absolute links.
-  // It may also cause some redirects to the real host.
-  // Best to trap redirects and re-run against the final path.
-  $response = \Drupal::httpClient()->get($url . "?quant_revision=".$rid, [
-    'http_errors' => false,
-    'query' => ['quant_revision' => $rid ],
-    'headers' => [
-      'Host' => $hostname,
-    ],
-    'auth' => $auth
-  ]);
-
-  if ($response->getStatusCode() == 200) {
-    $markup = $response->getBody();
-  }
-  else {
-    $messenger = \Drupal::messenger();
-    $messenger->addMessage('Quant error: ' . $response->getStatusCode(), $messenger::TYPE_WARNING);
-    $messenger->addMessage('Quant error: ' . $response->getBody(), $messenger::TYPE_WARNING);
-  }
-
-  $meta = [];
-
-  $metaManager = \Drupal::service('plugin.manager.quant.metadata');
-  foreach ($metaManager->getDefinitions() as $pid => $def) {
-    $plugin = $metaManager->createInstance($pid);
-    if ($plugin->applies($entity)) {
-      $meta = array_merge($meta, $plugin->build($entity));
-    }
-  }
-
-  // This should get the entity alias.
-  $url = $entity->toUrl()->toString();
-
-  // Special case pages (front/403/404); 2x exports.
-  // One for alias associated with page, one for root domain.
-  $config = \Drupal::config('system.site');
-  $specialPages = [
-    '/' => $config->get('page.front'),
-    '/_quant404' => $config->get('page.404'),
-    '/_quant403' => $config->get('page.403'),
-  ];
-
-  foreach ($specialPages as $k => $v) {
-    if ((strpos($v, '/node/') === 0) && $entity->get('nid')->value == substr($v, 6)) {
-      \Drupal::service('event_dispatcher')->dispatch(\Drupal\quant\Event\QuantEvent::OUTPUT, new \Drupal\quant\Event\QuantEvent($markup, $k, $entity, $meta, $rid));
-    }
-  }
-
-  \Drupal::service('event_dispatcher')->dispatch(\Drupal\quant\Event\QuantEvent::OUTPUT, new \Drupal\quant\Event\QuantEvent($markup, $url, $entity, $meta, $rid));
+function _quant_post_node_entity_op($entity) {
+  Seed::seedNode($entity);
 }

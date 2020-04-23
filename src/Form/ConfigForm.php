@@ -56,13 +56,6 @@ class ConfigForm extends ConfigFormBase {
       '#default_value' => $config->get('asset_revisions'),
     ];
 
-    $form['drupal_revisions'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Use Drupal revision numbers'),
-      '#description' => $this->t('It is recommended to <em>leave this disabled</em>. Quant self-manages revisions by default. <a href="https://support.quantcdn.io/setup/drupal">More info.</a>'),
-      '#default_value' => $config->get('drupal_revisions'),
-    ];
-
     $form['local_server'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Webserver URL'),
@@ -88,7 +81,6 @@ class ConfigForm extends ConfigFormBase {
     $this->configFactory->getEditable(static::SETTINGS)
       ->set('content_revisions', $form_state->getValue('content_revisions'))
       ->set('asset_revisions', $form_state->getValue('asset_revisions'))
-      ->set('drupal_revisions', $form_state->getValue('drupal_revisions'))
       ->set('local_server', $form_state->getValue('local_server'))
       ->set('host_domain', $form_state->getValue('host_domain'))
       ->save();
