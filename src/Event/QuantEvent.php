@@ -40,13 +40,6 @@ final class QuantEvent extends Event {
   protected $contents;
 
   /**
-   * The entity object.
-   *
-   * @var \Drupal\Core\Entity\EntityInterface
-   */
-  protected $entity;
-
-  /**
    * The location.
    *
    * @var string
@@ -70,10 +63,9 @@ final class QuantEvent extends Event {
   /**
    * {@inheritdoc}
    */
-  public function __construct($contents, $location, EntityInterface $entity, $meta, $rid=null) {
+  public function __construct($contents, $location, $meta, $rid=null) {
     $this->contents = $contents;
     $this->location = $location;
-    $this->entity = $entity;
     $this->meta = $meta;
     $this->rid = $rid;
   }
@@ -96,16 +88,6 @@ final class QuantEvent extends Event {
    */
   public function getLocation() : string {
     return $this->location;
-  }
-
-  /**
-   * Get the inserted entity.
-   *
-   * @return \Drupal\Core\Entity\EntityInterface
-   *   The entity.
-   */
-  public function getEntity() {
-    return $this->entity;
   }
 
   /**

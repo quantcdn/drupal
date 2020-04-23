@@ -71,18 +71,19 @@ class QuantApi implements EventSubscriberInterface {
 
     $path = $event->getLocation();
     $content = $event->getContents();
-    $rid = $event->getRevisionId();
     $meta = $event->getMetadata();
-    $entity = $event->getEntity();
 
     $data = [
       'content' => $content,
       'url' => $path,
-      'revision' => $rid,
       'published' => $meta['published'],
       'transitions' => $meta['transitions'],
       'info' => $meta['info'],
     ];
+
+    if (!empty($rid = $event->getRevisionId())) {
+      $data['revision'] = $rid;
+    }
 
     try {
       $res = $this->client->send($data);
