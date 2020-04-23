@@ -82,6 +82,15 @@ class SeedForm extends FormBase {
       '#disabled' => TRUE,
     ];
 
+    $moduleHandler = \Drupal::moduleHandler();
+    if($moduleHandler->moduleExists('lunr')) {
+      $form['lunr'] = [
+        '#type' => 'checkbox',
+        '#title' => 'Export Lunr search data',
+        '#description' => $this->t('Submits the lunr search index to Quant for decoupled search.'),
+      ];
+    }
+
     $form['actions'] = [
       '#type' => 'actions',
     ];
@@ -109,10 +118,17 @@ class SeedForm extends FormBase {
 
     $nids = [];
     $assets = [];
+    $routes = [];
 
     // @todo: Separate plugins.
     if ($form_state->getValue('theme_assets')) {
       $assets = \Drupal\quant\Seed::findThemeAssets();
+    }
+
+    // Lunr.
+    if ($form_state->getValue('lunr')) {
+      $assets = array_merge($assets, \Drupal\quant\Seed::findLunrAssets());
+      //$routes = array_merge($routes, \Drupal\quant\Seed::findLunrRoutes());
     }
 
     if ($form_state->getValue('entity_node')) {
@@ -149,6 +165,11 @@ class SeedForm extends FormBase {
     // Add assets to export batch.
     foreach ($assets as $file) {
       $batch['operations'][] = ['\Drupal\quant\Seed::exportFile',[$file]];
+    }
+
+    // Add arbitrary routes to export batch.
+    foreach ($routes as $route) {
+      $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute',[$route]];
     }
 
     batch_set($batch);

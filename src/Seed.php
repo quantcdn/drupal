@@ -55,6 +55,44 @@ class Seed {
     drupal_set_message($message);
   }
 
+
+  /**
+   * Find lunr assets.
+   * This includes static output from the lunr module.
+   */
+  public static function findLunrAssets() {
+    $filesPath = \Drupal::service('file_system')->realpath(file_default_scheme() . "://lunr_search");
+
+    $files = [];
+    foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($filesPath)) as $filename) {
+      if ($filename->isDir()) continue;
+      $files[] = str_replace(DRUPAL_ROOT, '', $filename->getPathname());
+    }
+
+    $files[] = '/' . drupal_get_path('module', 'lunr') . '/js/search.worker.js';
+    $files[] = '/' . drupal_get_path('module', 'lunr') . '/js/vendor/lunr/lunr.min.js';
+
+    return $files;
+  }
+
+  /**
+   * Find lunr routes.
+   * Determine URLs lunr indexes are exposed on.
+   */
+  public static function findLunrRoutes() {
+
+    // $lunr_storage =  $entity_type_manager->getStorage('lunr_search');
+
+    // foreach ($this->lunrSearchStorage->loadMultiple() as $search) {
+    //   $directory = dirname($search->getBaseIndexPath());
+    //   foreach (array_keys(file_scan_directory($directory, '/.*/')) as $filename) {
+    //     $event->addPath(file_create_url($filename), ['language_processed' => 'language_processed']);
+    //   }
+    // }
+
+    return $files;
+  }
+
   /**
    * Find theme assets.
    * Currently supports fonts: ttf/woff/otf, images: png/jpeg/svg.
