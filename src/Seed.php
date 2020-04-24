@@ -87,6 +87,12 @@ class Seed {
   public static function findLunrAssets() {
     $filesPath = \Drupal::service('file_system')->realpath(file_default_scheme() . "://lunr_search");
 
+    if (!is_dir($filesPath)) {
+      $messenger = \Drupal::messenger();
+      $messenger->addMessage('Lunr files not found. Ensure an index has been run.', $messenger::TYPE_WARNING);
+      return [];
+    }
+
     $files = [];
     foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($filesPath)) as $filename) {
       if ($filename->isDir()) continue;
