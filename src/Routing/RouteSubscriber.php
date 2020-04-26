@@ -20,4 +20,5 @@ class RouteSubscriber extends RouteSubscriberBase {
       $route->setDefault('_controller', '\Drupal\quant\Controller\QuantNodeViewController::view');
     }
   }
+
 }

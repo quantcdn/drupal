@@ -30,7 +30,6 @@ interface QuantClientInterface {
    */
   public function send(array $data) : array;
 
-
   /**
    * Send a file to the API.
    *

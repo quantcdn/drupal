@@ -2,7 +2,6 @@
 
 namespace Drupal\quant\EventSubscriber;
 
-use Drupal\Core\Entity\EntityInterface;
 use Drupal\quant\Event\QuantEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 

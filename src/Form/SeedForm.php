@@ -2,9 +2,13 @@
 
 namespace Drupal\quant\Form;
 
+use Drupal\node\Entity\Node;
+use Drupal\quant\Seed;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\quant\QuantStaticTrait;
+use Drupal\quant_api\Client\QuantClientInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Contains a form for initializing a static build.
@@ -14,6 +18,24 @@ use Drupal\quant\QuantStaticTrait;
 class SeedForm extends FormBase {
 
   use QuantStaticTrait;
+
+  protected $client;
+
+  /**
+   * Build the form.
+   */
+  public function __construct(QuantClientInterface $client) {
+    $this->client = $client;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('quant_api.client')
+    );
+  }
 
   /**
    * {@inheritdoc}.
@@ -48,13 +70,15 @@ class SeedForm extends FormBase {
     }
 
     $form['entity_node'] = [
-      '#type' => 'checkbox', 
-      '#title' => $this->t('Export nodes'),
+      '#type' => 'checkbox',
+      '#title' => $this->t('Nodes'),
+      '#description' => $this->t('Exports the latest revision of each node.'),
     ];
 
     $form['entity_node_revisions'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Export historic node revisions'),
+      '#title' => $this->t('All revisions'),
+      '#description' => $this->t('Exports all historic revisions.'),
       '#states' => [
         'visible' => [
           ':input[name="entity_node"]' => ['checked' => TRUE],
@@ -66,28 +90,21 @@ class SeedForm extends FormBase {
     $form['theme_assets'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Theme assets'),
-      '#description' => $this->t('Theme images, fonts, favicon'),
+      '#description' => $this->t('Images, fonts and favicon in the public theme.'),
     ];
 
-    $form['entity_user'] = [
+    $form['views_pages'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Export user profiles'),
-      '#disabled' => TRUE,
-    ];
-
-    $form['entity_media'] = [
-      '#type' => 'checkbox',
-      '#title' => 'Export media',
-      '#description' => $this->t('Public media paths (e.g /media/123).'),
-      '#disabled' => TRUE,
+      '#title' => $this->t('Views (Pages)'),
+      '#description' => $this->t('Exports all views with a Page display accessible to anonymous users.'),
     ];
 
     $moduleHandler = \Drupal::moduleHandler();
-    if($moduleHandler->moduleExists('lunr')) {
+    if ($moduleHandler->moduleExists('lunr')) {
       $form['lunr'] = [
         '#type' => 'checkbox',
-        '#title' => 'Export Lunr search data',
-        '#description' => $this->t('Submits the lunr search index to Quant for decoupled search.'),
+        '#title' => 'Lunr search assets',
+        '#description' => $this->t('Exports required lunr javascript libraries and all search indexes for decoupled search.'),
       ];
     }
 
@@ -102,13 +119,11 @@ class SeedForm extends FormBase {
 
     return $form;
   }
-   
 
   /**
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-
   }
 
   /**
@@ -116,19 +131,33 @@ class SeedForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
+    $config = $this->config('quant_api.settings');
+
+    if ($config->get('api_token')) {
+      if (!$project = $this->client->ping()) {
+        \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
+        return;
+      }
+    }
+
     $nids = [];
     $assets = [];
     $routes = [];
 
     // @todo: Separate plugins.
     if ($form_state->getValue('theme_assets')) {
-      $assets = \Drupal\quant\Seed::findThemeAssets();
+      $assets = Seed::findThemeAssets();
     }
 
     // Lunr.
     if ($form_state->getValue('lunr')) {
-      $assets = array_merge($assets, \Drupal\quant\Seed::findLunrAssets());
-      $routes = array_merge($routes, \Drupal\quant\Seed::findLunrRoutes());
+      $assets = array_merge($assets, Seed::findLunrAssets());
+      $routes = array_merge($routes, Seed::findLunrRoutes());
+    }
+
+    // Views.
+    if ($form_state->getValue('views_pages')) {
+      $routes = array_merge($routes, Seed::findViewRoutes());
     }
 
     if ($form_state->getValue('entity_node')) {
@@ -136,18 +165,18 @@ class SeedForm extends FormBase {
       $nids = $query->execute();
     }
 
-    $batch = array(
+    $batch = [
       'title' => t('Exporting to Quant...'),
       'operations' => [],
       'init_message'     => t('Commencing'),
       'progress_message' => t('Processed @current out of @total.'),
       'error_message'    => t('An error occurred during processing'),
       'finished' => '\Drupal\quant\Seed::finishedSeedCallback',
-    );
+    ];
 
     // Add nodes to export batch.
     foreach ($nids as $key => $value) {
-      $node = \Drupal\node\Entity\Node::load($value);
+      $node = Node::load($value);
 
       // Export all node revisions.
       if ($form_state->getValue('entity_node_revisions')) {
@@ -155,21 +184,21 @@ class SeedForm extends FormBase {
 
         foreach ($vids as $vid) {
           $nr = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($vid);
-          $batch['operations'][] = ['\Drupal\quant\Seed::exportNode',[$nr]];
+          $batch['operations'][] = ['\Drupal\quant\Seed::exportNode', [$nr]];
         }
       }
       // Export current node revision.
-      $batch['operations'][] = ['\Drupal\quant\Seed::exportNode',[$node]];
+      $batch['operations'][] = ['\Drupal\quant\Seed::exportNode', [$node]];
     }
 
     // Add assets to export batch.
     foreach ($assets as $file) {
-      $batch['operations'][] = ['\Drupal\quant\Seed::exportFile',[$file]];
+      $batch['operations'][] = ['\Drupal\quant\Seed::exportFile', [$file]];
     }
 
     // Add arbitrary routes to export batch.
     foreach ($routes as $route) {
-      $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute',[$route]];
+      $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
     }
 
     batch_set($batch);

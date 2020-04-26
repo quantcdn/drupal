@@ -3,15 +3,12 @@
 namespace Drupal\quant\Controller;
 
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Entity\Controller\EntityViewController;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\node\Controller\NodeViewController;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\Core\Session\AccountSwitcherInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Defines a controller to render a single node.
@@ -35,7 +32,7 @@ class QuantNodeViewController extends NodeViewController {
   /**
    * The entity revision id.
    *
-   * @var integer
+   * @var int
    */
   protected $revisionId;
 

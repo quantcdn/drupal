@@ -3,7 +3,6 @@
 namespace Drupal\quant\Plugin\Quant\Metadata;
 
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\quant\Annotation\Metadata;
 use Drupal\quant\Plugin\MetadataBase;
 
 /**
@@ -29,4 +28,5 @@ class TransitionRevision extends MetadataBase {
   public function build(EntityInterface $entity): array {
     return ['transition_revision' => $entity->get('vid')->value];
   }
+
 }
