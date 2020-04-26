@@ -2,17 +2,19 @@
 
 namespace Drupal\quant;
 
-
-use Drupal\node\Entity\Node;
+use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\NodeInsertEvent;
 use Drupal\quant\Event\QuantFileEvent;
 
+/**
+ *
+ */
 class Seed {
 
   /**
    * Trigger export node via event dispatcher.
    */
-  public static function exportNode($node, &$context){
+  public static function exportNode($node, &$context) {
     $vid = $node->get('vid')->value;
     $message = "Processing {$node->title->value} (Revision: {$vid})";
 
@@ -27,7 +29,7 @@ class Seed {
   /**
    * Export arbitrary route (markup).
    */
-  public static function exportRoute($route, &$context){
+  public static function exportRoute($route, &$context) {
     $message = "Processing route: {$route}";
 
     $markup = self::markupFromRoute($route);
@@ -38,11 +40,11 @@ class Seed {
         'date_timestamp' => time(),
         'log' => '',
       ],
-      'published' => true,
+      'published' => TRUE,
       'transitions' => [],
     ];
 
-    \Drupal::service('event_dispatcher')->dispatch(\Drupal\quant\Event\QuantEvent::OUTPUT, new \Drupal\quant\Event\QuantEvent($markup, $route, $meta));
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $route, $meta));
 
     $context['message'] = $message;
     $context['results'][] = $route;
@@ -64,6 +66,9 @@ class Seed {
     $context['results'][] = $results;
   }
 
+  /**
+   *
+   */
   public static function finishedSeedCallback($success, $results, $operations) {
     // The 'success' parameter means no fatal PHP errors were detected. All
     // other error management should be handled using 'results'.
@@ -78,7 +83,6 @@ class Seed {
     }
     drupal_set_message($message);
   }
-
 
   /**
    * Find lunr assets.
@@ -95,7 +99,9 @@ class Seed {
 
     $files = [];
     foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($filesPath)) as $filename) {
-      if ($filename->isDir()) continue;
+      if ($filename->isDir()) {
+        continue;
+      }
       $files[] = str_replace(DRUPAL_ROOT, '', $filename->getPathname());
     }
 
@@ -111,7 +117,7 @@ class Seed {
    */
   public static function findLunrRoutes() {
 
-    $lunr_storage =  \Drupal::service('entity_type.manager')->getStorage('lunr_search');
+    $lunr_storage = \Drupal::service('entity_type.manager')->getStorage('lunr_search');
     $routes = [];
 
     foreach ($lunr_storage->loadMultiple() as $search) {
@@ -122,8 +128,40 @@ class Seed {
   }
 
   /**
+   * Find views routes.
+   */
+  public static function findViewRoutes() {
+    $views_storage = \Drupal::service('entity_type.manager')->getStorage('view');
+    $routes = [];
+
+    $anon = \Drupal\user\Entity\User::getAnonymousUser();
+
+    foreach ($views_storage->loadMultiple() as $view) {
+      $v = \Drupal\views\Views::getView($view->get('id'));
+
+      $displays = array_keys($v->storage->get('display'));
+
+      foreach ($displays as $display) {
+        $v->setDisplay($display);
+
+        if ($v->access($display, $anon) && $path = $v->getPath()) {
+          // Exclude contextual filters for now.
+          if (strpos($path, '%') !== false) {
+            continue;
+          }
+
+          $routes[] = "/".$path;
+        }
+      } 
+    }
+
+    return $routes;
+  }
+
+  /**
    * Find theme assets.
    * Currently supports fonts: ttf/woff/otf, images: png/jpeg/svg.
+   *
    * @todo: Make this configurable.
    */
   public static function findThemeAssets() {
@@ -144,17 +182,22 @@ class Seed {
     $iterator = new \RecursiveIteratorIterator($directoryIterator);
     $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.otf)$/i', \RecursiveRegexIterator::GET_MATCH);
 
-    foreach($regex as $name => $r) {
+    foreach ($regex as $name => $r) {
       $files[] = str_replace(DRUPAL_ROOT, '', $name);
     }
 
     // Include all aggregated css/js files.
-    $directoryIteratorCss = new \RecursiveDirectoryIterator($filesPath.'/css');
-    $directoryIteratorJs  = new \RecursiveDirectoryIterator($filesPath.'/js');
-
     $iterator = new \AppendIterator();
-    $iterator->append(new \RecursiveIteratorIterator( $directoryIteratorCss ));
-    $iterator->append(new \RecursiveIteratorIterator( $directoryIteratorJs ));
+
+    if (is_dir($filesPath . '/css')) {
+      $directoryIteratorCss = new \RecursiveDirectoryIterator($filesPath . '/css');
+      $iterator->append(new \RecursiveIteratorIterator($directoryIteratorCss));
+    }
+
+    if (is_dir($filesPath . '/js')) {
+      $directoryIteratorJs = new \RecursiveDirectoryIterator($filesPath . '/js');
+      $iterator->append(new \RecursiveIteratorIterator($directoryIteratorJs));
+    }
 
     foreach ($iterator as $fileInfo) {
       $files[] = str_replace(DRUPAL_ROOT, '', $fileInfo->getPathname());
@@ -162,7 +205,6 @@ class Seed {
 
     return $files;
   }
-
 
   /**
    * Trigger an internal http request to retrieve node markup.
@@ -182,7 +224,7 @@ class Seed {
       $url = "/";
     }
 
-    $markup = self::markupFromRoute($url, ['quant_revision' => $rid ]);
+    $markup = self::markupFromRoute($url, ['quant_revision' => $rid]);
     $meta = [];
 
     $metaManager = \Drupal::service('plugin.manager.quant.metadata');
@@ -208,24 +250,24 @@ class Seed {
 
     foreach ($specialPages as $k => $v) {
       if ((strpos($v, '/node/') === 0) && $entity->get('nid')->value == substr($v, 6)) {
-        \Drupal::service('event_dispatcher')->dispatch(\Drupal\quant\Event\QuantEvent::OUTPUT, new \Drupal\quant\Event\QuantEvent($markup, $k, $meta, $rid));
+        \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $k, $meta, $rid));
       }
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(\Drupal\quant\Event\QuantEvent::OUTPUT, new \Drupal\quant\Event\QuantEvent($markup, $url, $meta, $rid));
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid));
 
   }
-  
+
   /**
    * Returns markup for a given internal route.
    */
-  protected function markupFromRoute($route, $query=[]) {
+  protected function markupFromRoute($route, $query = []) {
 
     // Build internal request.
     $config = \Drupal::config('quant.settings');
     $local_host = $config->get('local_server') ?: 'http://localhost';
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-    $url = $local_host.$route;
+    $url = $local_host . $route;
 
     // Support basic auth if enabled (note: will not work via drush/cli).
     $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
@@ -233,13 +275,13 @@ class Seed {
     // @todo; Note: Passing in the Host header fixes issues with absolute links.
     // It may also cause some redirects to the real host.
     // Best to trap redirects and re-run against the final path.
-    $response = \Drupal::httpClient()->get($url . "?quant_revision=".$rid, [
-      'http_errors' => false,
+    $response = \Drupal::httpClient()->get($url . "?quant_revision=" . $rid, [
+      'http_errors' => FALSE,
       'query' => $query,
       'headers' => [
         'Host' => $hostname,
       ],
-      'auth' => $auth
+      'auth' => $auth,
     ]);
 
     $markup = '';
@@ -247,12 +289,13 @@ class Seed {
       $markup = $response->getBody();
     }
     else {
+      $markup = '';
       $messenger = \Drupal::messenger();
-      $messenger->addMessage('Quant error: ' . $response->getStatusCode(), $messenger::TYPE_WARNING);
-      $messenger->addMessage('Quant error: ' . $response->getBody(), $messenger::TYPE_WARNING);
+      $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
     }
 
     return $markup;
 
   }
+
 }

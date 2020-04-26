@@ -5,7 +5,6 @@ namespace Drupal\quant\Plugin\Quant\Metadata;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\quant\Annotation\Metadata;
 use Drupal\quant\Plugin\MetadataBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 

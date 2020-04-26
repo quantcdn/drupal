@@ -5,7 +5,6 @@ namespace Drupal\quant\EventSubscriber;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\quant\Event\NodeInsertEvent;
 use Drupal\quant\EntityRendererInterface;
-use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Plugin\QuantMetadataManager;
 use Drupal\quant\Seed;
 

@@ -9,6 +9,9 @@ use GuzzleHttp\Exception\RequestException;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
 
+/**
+ *
+ */
 class QuantClient implements QuantClientInterface {
 
   /**
@@ -58,16 +61,17 @@ class QuantClient implements QuantClientInterface {
   public function ping() {
 
     try {
-      $response = $this->client->get($this->endpoint."/ping", [
+      $response = $this->client->get($this->endpoint . "/ping", [
         RequestOptions::JSON => $data,
-        'http_errors' => false,
+        'http_errors' => FALSE,
         'headers' => [
           'Quant-Customer' => $this->username,
           'Quant-Token'    => $this->token,
         ],
-        'exceptions' => false,
+        'exceptions' => FALSE,
       ]);
-    } catch (RequestException $e) {
+    }
+    catch (RequestException $e) {
       \Drupal::messenger()->addError(t($e->getMessage()));
       return FALSE;
     }
@@ -79,7 +83,6 @@ class QuantClient implements QuantClientInterface {
 
     return FALSE;
   }
-
 
   /**
    * {@inheritdoc}

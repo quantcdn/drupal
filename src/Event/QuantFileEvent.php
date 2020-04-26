@@ -2,7 +2,6 @@
 
 namespace Drupal\quant\Event;
 
-use Drupal\Core\Entity\EntityInterface;
 use Symfony\Component\EventDispatcher\Event;
 
 /**
@@ -41,14 +40,14 @@ final class QuantFileEvent extends Event {
   /**
    * Entity revision id.
    *
-   * @var integer
+   * @var int
    */
   protected $rid;
 
   /**
    * {@inheritdoc}
    */
-  public function __construct($file, $url, $rid=null) {
+  public function __construct($file, $url, $rid = NULL) {
     $this->file = $file;
     $this->url = $url;
     $this->rid = $rid;
@@ -78,7 +77,7 @@ final class QuantFileEvent extends Event {
   /**
    * Get the revision id associated.
    *
-   * @return integer
+   * @return int
    *   The revision id.
    */
   public function getRevisionId() {

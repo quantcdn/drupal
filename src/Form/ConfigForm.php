@@ -12,21 +12,21 @@ use Drupal\Core\Form\FormStateInterface;
  */
 class ConfigForm extends ConfigFormBase {
 
-  /** 
+  /**
    * Config settings.
    *
    * @var string
    */
   const SETTINGS = 'quant.settings';
 
-  /** 
+  /**
    * {@inheritdoc}
    */
   public function getFormId() {
     return 'quant_config_form';
   }
 
-  /** 
+  /**
    * {@inheritdoc}
    */
   protected function getEditableConfigNames() {
@@ -35,7 +35,7 @@ class ConfigForm extends ConfigFormBase {
     ];
   }
 
-  /** 
+  /**
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
@@ -73,7 +73,7 @@ class ConfigForm extends ConfigFormBase {
     return parent::buildForm($form, $form_state);
   }
 
-  /** 
+  /**
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
@@ -87,6 +87,5 @@ class ConfigForm extends ConfigFormBase {
 
     parent::submitForm($form, $form_state);
   }
-
 
 }

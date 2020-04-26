@@ -38,4 +38,5 @@ class NodeInsertEvent extends Event {
   public function getEntity() {
     return $this->entity;
   }
+
 }

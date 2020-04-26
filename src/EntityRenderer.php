@@ -5,16 +5,7 @@ namespace Drupal\quant;
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityManagerInterface;
-use Drupal\Core\Render\MainContent\HtmlRenderer;
-use Drupal\Core\Render\RenderContext;
-use Drupal\Core\Render\RendererInterface;
-use Drupal\Core\Session\AccountSwitcherInterface;
-use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\Core\Theme\ThemeInitializationInterface;
-use Drupal\Core\Theme\ThemeManagerInterface;
-use Symfony\Component\HttpKernel\HttpKernelInterface;
-use Symfony\Component\HttpFoundation\Request;
 
 // @todo: Remove superfluous services.
 // @todo: Remove unused use statements.
@@ -51,7 +42,6 @@ class EntityRenderer implements EntityRendererInterface {
     $this->entityManager = $entity_manager;
   }
 
-
   /**
    * {@inheritdoc}
    */
@@ -66,17 +56,17 @@ class EntityRenderer implements EntityRendererInterface {
     $config = $this->configFactory->get('quant.settings');
     $local_host = $config->get('local_server') ?: 'http://localhost';
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-    $url = $local_host.$url;
+    $url = $local_host . $url;
 
     $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
 
     $response = \Drupal::httpClient()->get($url, [
-      'http_errors' => false,
-      'query' => ['quant_revision' => $rid ],
+      'http_errors' => FALSE,
+      'query' => ['quant_revision' => $rid],
       'headers' => [
         'Host' => $hostname,
       ],
-      'auth' => $auth
+      'auth' => $auth,
     ]);
 
     if ($response->getStatusCode() == 200) {

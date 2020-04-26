@@ -19,7 +19,7 @@ class QuantApi implements EventSubscriberInterface {
   /**
    * The HTTP client to make API requests.
    *
-   * @var \Drupal\quant_api\Client\QuantClientInterface;
+   * @var \Drupal\quant_api\Client\QuantClientInterface
    */
   protected $client;
 
@@ -122,9 +122,7 @@ class QuantApi implements EventSubscriberInterface {
     }
 
     // @todo: Report on forms that need proxying (attachments.forms).
-
   }
-
 
   /**
    * Trigger an API push with event data for file.
