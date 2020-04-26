@@ -71,12 +71,14 @@ class SeedForm extends FormBase {
 
     $form['entity_node'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Export nodes'),
+      '#title' => $this->t('Nodes'),
+      '#description' => $this->t('Exports the latest revision of each node.'),
     ];
 
     $form['entity_node_revisions'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Export historic node revisions'),
+      '#title' => $this->t('All revisions'),
+      '#description' => $this->t('Exports all historic revisions.'),
       '#states' => [
         'visible' => [
           ':input[name="entity_node"]' => ['checked' => TRUE],
@@ -88,34 +90,21 @@ class SeedForm extends FormBase {
     $form['theme_assets'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Theme assets'),
-      '#description' => $this->t('Theme images, fonts, favicon'),
+      '#description' => $this->t('Images, fonts and favicon in the public theme.'),
     ];
 
     $form['views_pages'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Views (Pages)'),
-      '#description' => $this->t('Export views pages'),
-    ];
-
-    $form['entity_user'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Export user profiles'),
-      '#disabled' => TRUE,
-    ];
-
-    $form['entity_media'] = [
-      '#type' => 'checkbox',
-      '#title' => 'Export media',
-      '#description' => $this->t('Public media paths (e.g /media/123).'),
-      '#disabled' => TRUE,
+      '#description' => $this->t('Exports all views with a Page display accessible to anonymous users.'),
     ];
 
     $moduleHandler = \Drupal::moduleHandler();
     if ($moduleHandler->moduleExists('lunr')) {
       $form['lunr'] = [
         '#type' => 'checkbox',
-        '#title' => 'Export Lunr search data',
-        '#description' => $this->t('Submits the lunr search index to Quant for decoupled search'),
+        '#title' => 'Lunr search assets',
+        '#description' => $this->t('Exports required lunr javascript libraries and all search indexes for decoupled search.'),
       ];
     }
 
