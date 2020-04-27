@@ -8,13 +8,6 @@ services:
     arguments:
       - '@config.factory'
       - '@entity.manager'
-      - '@renderer'
-      - '@main_content_renderer.html'
-      - '@plugin.manager.display_variant'
-      - '@theme.initialization'
-      - '@theme.manager'
-      - '@account_switcher'
-      - '@http_kernel'
 
   quant.node.insert:
     class: Drupal\quant\EventSubscriber\NodeInsertSubscriber
@@ -24,13 +17,6 @@ services:
     tags:
     - { name: 'event_subscriber' }
 
-  quant.output.filesystem:
-    class: Drupal\quant\EventSubscriber\QuantFilesystem
-    tags:
-      - { name: 'event_subscriber' }
-
-  ## Tmp: Fix by query param.
-  ## Context for block placement (and other things) depend on expected routes.
   quant.route_subscriber:
     class: Drupal\quant\Routing\RouteSubscriber
     tags:

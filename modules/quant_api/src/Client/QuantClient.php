@@ -102,6 +102,21 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
+  public function sendRedirect(array $data) : array {
+    $response = $this->client->post($this->endpoint . '/redirect', [
+      RequestOptions::JSON => $data,
+      'headers' => [
+        'Quant-Customer' => $this->username,
+        'Quant-Token'    => $this->token,
+      ],
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function sendFile(string $file, string $url, int $rid = NULL) : array {
 
     // Ensure the file is accessible before attempting to send to the API.

@@ -11,14 +11,14 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\quant\Seed;
 
 /**
- *
+ * Implements hook_node_insert().
  */
 function quant_node_insert(EntityInterface $entity) {
   drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
 }
 
 /**
- *
+ * Implements hook_node_update().
  */
 function quant_node_update(EntityInterface $entity) {
   drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
@@ -36,6 +36,21 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
   return AccessResult::allowed();
 }
 
+
+/**
+ * Implements hook_redirect_presave().
+ */
+function quant_redirect_presave($redirect) {
+  Seed::seedRedirect($redirect);
+}
+
+/**
+ * Implements hook_redirect_delete().
+ */
+function quant_redirect_delete($redirect) {
+  Seed::deleteRedirect($redirect);
+}
+
 /**
  * Post entity operation hook.
  *
@@ -45,3 +60,18 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
 function _quant_post_node_entity_op($entity) {
   Seed::seedNode($entity);
 }
+
+/**
+ * Post redirect operation hook (add/update).
+ */
+function _quant_post_redirect_update_op($redirect) {
+  Seed::seedRedirect($redirect);
+}
+
+/**
+ * Post redirect operation hook (delete).
+ */
+function _quant_post_redirect_delete_op($redirect) {
+
+}
+
