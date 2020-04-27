@@ -5,6 +5,7 @@ namespace Drupal\quant;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\NodeInsertEvent;
 use Drupal\quant\Event\QuantFileEvent;
+use Drupal\quant\Event\QuantRedirectEvent;
 
 /**
  *
@@ -22,6 +23,24 @@ class Seed {
     \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($node));
 
     $results = [$node->nid->value];
+    $context['message'] = $message;
+    $context['results'][] = $results;
+  }
+
+  /**
+   * Trigger export redirect via event dispatcher.
+   */
+  public static function exportRedirect($redirect, &$context) {
+    $source = $redirect->getSourcePathWithQuery();
+    $message = "Processing redirect: {$source}";
+
+    // Export via event dispatcher.
+    $source = $redirect->getSourcePathWithQuery();
+    $destination = $redirect->getRedirectUrl()->toString();
+    $statusCode = $redirect->getStatusCode();
+    \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($source, $destination, $statusCode));
+
+    $results = [$source];
     $context['message'] = $message;
     $context['results'][] = $results;
   }
@@ -116,7 +135,6 @@ class Seed {
    * Determine URLs lunr indexes are exposed on.
    */
   public static function findLunrRoutes() {
-
     $lunr_storage = \Drupal::service('entity_type.manager')->getStorage('lunr_search');
     $routes = [];
 
@@ -125,6 +143,16 @@ class Seed {
     }
 
     return $routes;
+  }
+
+
+  /**
+   * Find redirects.
+   * Return all existing redirects.
+   */
+  public static function findRedirects() {
+    $redirects_storage = \Drupal::service('entity_type.manager')->getStorage('redirect');
+    return $redirects_storage->loadMultiple();
   }
 
   /**
@@ -152,7 +180,7 @@ class Seed {
 
           $routes[] = "/".$path;
         }
-      } 
+      }
     }
 
     return $routes;
@@ -204,6 +232,25 @@ class Seed {
     }
 
     return $files;
+  }
+
+  /**
+   * Add/update redirect via API request.
+   */
+  public static function seedRedirect($redirect) {
+    $source = $redirect->getSourcePathWithQuery();
+    $destination = $redirect->getRedirectUrl()->toString();
+    $statusCode = $redirect->getStatusCode();
+    \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($source, $destination, $statusCode));
+  }
+
+  /**
+   * Delete existing redirects via API request.
+   */
+  public static function deleteRedirect($redirect) {
+    $source = $redirect->getSourcePathWithQuery();
+    $destination = $redirect->getRedirectUrl()->toString();
+    // @todo: Add event dispatch.
   }
 
   /**

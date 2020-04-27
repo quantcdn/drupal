@@ -4,6 +4,7 @@ namespace Drupal\quant_api\EventSubscriber;
 
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantFileEvent;
+use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Exception;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -58,8 +59,38 @@ class QuantApi implements EventSubscriberInterface {
   public static function getSubscribedEvents() {
     $events[QuantEvent::OUTPUT][] = ['onOutput'];
     $events[QuantFileEvent::OUTPUT][] = ['onMedia'];
+    $events[QuantRedirectEvent::UPDATE][] = ['onRedirect'];
     return $events;
   }
+
+  /**
+   * Trigger an API redirect update with event data.
+   *
+   * @param Drupal\quant\Event\QuantRedirectEvent $event
+   *   The redirect event.
+   */
+  public function onRedirect(QuantRedirectEvent $event) {
+    $source = $event->getSourceUrl();
+    $dest = $event->getDestinationUrl();
+    $statusCode = $event->getStatusCode();
+
+    $data = [
+      'url' => $source,
+      'redirect_url' => $dest,
+      'redirect_http_code' => (int)$statusCode,
+      'published' => TRUE,
+    ];
+
+    try {
+      $res = $this->client->sendRedirect($data);
+    }
+    catch (Exception $error) {
+      $this->logger->error($error->getMessage());
+    }
+
+    return $res;
+  }
+
 
   /**
    * Trigger an API request with the event data.
@@ -93,7 +124,6 @@ class QuantApi implements EventSubscriberInterface {
       return FALSE;
     }
 
-    // @todo: Obviously make this less ridiculous.
     $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents']);
 
     foreach ($media as $item) {

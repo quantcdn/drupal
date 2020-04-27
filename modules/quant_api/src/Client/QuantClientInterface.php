@@ -49,4 +49,15 @@ interface QuantClientInterface {
    */
   public function sendFile(string $file, string $url, int $rid = NULL) : array;
 
+  /**
+   * Send a redirect to the API.
+   *
+   * @param array $data
+   *   The data array to send.
+   *
+   * @throws \Drupal\quant_api\Exception\InvalidPayload
+   * @throws \Drupal\quant_api\Exception\InvalidResposne
+   */
+  public function sendRedirect(array $data) : array;
+
 }

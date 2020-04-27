@@ -99,6 +99,12 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports all views with a Page display accessible to anonymous users.'),
     ];
 
+    $form['redirects'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Redirects'),
+      '#description' => $this->t('Exports all existing redirects.'),
+    ];
+
     $moduleHandler = \Drupal::moduleHandler();
     if ($moduleHandler->moduleExists('lunr')) {
       $form['lunr'] = [
@@ -160,6 +166,10 @@ class SeedForm extends FormBase {
       $routes = array_merge($routes, Seed::findViewRoutes());
     }
 
+    if ($form_state->getValue('redirects')) {
+      $redirects = Seed::findRedirects();
+    }
+
     if ($form_state->getValue('entity_node')) {
       $query = \Drupal::entityQuery('node');
       $nids = $query->execute();
@@ -173,6 +183,11 @@ class SeedForm extends FormBase {
       'error_message'    => t('An error occurred during processing'),
       'finished' => '\Drupal\quant\Seed::finishedSeedCallback',
     ];
+
+    // Add redirects to export batch.
+    foreach ($redirects as $redirect) {
+      $batch['operations'][] = ['\Drupal\quant\Seed::exportRedirect', [$redirect]];
+    }
 
     // Add nodes to export batch.
     foreach ($nids as $key => $value) {
