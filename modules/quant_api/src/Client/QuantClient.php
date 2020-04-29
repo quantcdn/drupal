@@ -62,7 +62,6 @@ class QuantClient implements QuantClientInterface {
 
     try {
       $response = $this->client->get($this->endpoint . "/ping", [
-        RequestOptions::JSON => $data,
         'http_errors' => FALSE,
         'headers' => [
           'Quant-Customer' => $this->username,
