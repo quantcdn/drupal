@@ -6,7 +6,7 @@
  */
 
 /**
- * Form constructor for the configuraton form.
+ * Form constructor for the configuration form.
  *
  * @ingroup forms
  */
@@ -41,11 +41,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_hostname', $base_url),
   );
 
+  quant_test(6183);
+
   return system_settings_form($form);
 }
 
 /**
- * Form contstructor for the seed form.
+ * Form constructor for the seed form.
  *
  * @ingroup forms
  */
@@ -66,8 +68,16 @@ function quant_seed_settings() {
     '#default_value' => variable_get('quant_seed_theme_assets', FALSE),
   );
 
+  $form['quant_seed_views'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Export Views'),
+    '#default_value' => variable_get('quant_seed_views', FALSE),
+  );
+
+  // @TODO - Should we support user pages?
   $form['entity_users'] = array();
 
+  // @TODO - add media entity support.
   $form['entity_media'] = array();
 
   $form['quant_seed'] = array(

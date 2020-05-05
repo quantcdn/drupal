@@ -6,7 +6,7 @@
  */
 
 /**
- * The regular expression to find theme assests.
+ * The regular expression to find theme assets.
  *
  * @var string
  */
@@ -110,10 +110,9 @@ function quant_node_insert($node) {
   $entity_info = array(
     'entity' => $node,
     'type' => 'node',
-    'op' => 'update',
+    'op' => 'insert',
     'original' => $node,
   );
-
   drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
 }
 
@@ -128,7 +127,6 @@ function quant_node_update($node) {
     'op' => 'update',
     'original' => $original,
   );
-
   drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
 }
 
@@ -139,9 +137,10 @@ function quant_node_update($node) {
  * can operate after the db_transaction has finished.
  */
 function _quant_post_entity_op($entity_info) {
-  $entity = $entity_info['entity'];
   list($id) = entity_extract_ids($entity_info['type'], $entity_info['entity']);
   list($url, $context) = _quant_prepare_entity($entity_info['type'], $id);
+
+  file_put_contents('/tmp/test.txt', 'Exporting?');
 
   quant_seed($url, $context);
   quant_export_drupal_pages();
@@ -153,22 +152,20 @@ function _quant_post_entity_op($entity_info) {
  * @param string $url
  *   The url to seed.
  * @param array $context
- *   The context of the seed, usually incldues entity info.
+ *   The context of the seed, usually includes entity info.
  * @param array $batch_context
  *   The context of the batch process.
- *
- * @TODO: Should $url be path?
  */
 function quant_seed($url, $context = array(), $batch_context = array()) {
   global $base_url;
 
-  watchdog('quant', 'Preparing to send %url', array(
-    '%url' => $url,
-  ), WATCHDOG_INFO);
+  quant_log('Preparing to send !url', array(
+    '!url' => $url,
+  ));
 
   // This clears the message bag as we don't want this to be
   // rendered with the static output.
-  drupal_get_messages();
+  // drupal_get_messages();
 
   $options = array(
     'headers' => array(
@@ -178,6 +175,8 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   );
 
   $response = drupal_http_request($url . "?_quant=" . strtotime('now'), $options);
+
+  dpm($response);
 
   if (!property_exists($response, 'data')) {
     watchdog('quant', 'Unable to seed %url %error %request', array(
@@ -190,10 +189,14 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
   $markup = $response->data;
 
-  $meta = array();
-
   $alias = parse_url($url, PHP_URL_PATH);
   $alias = empty($alias) ? '/' : $alias;
+
+  $meta = [
+    'published' => null,
+    'transitions' => [],
+    'info' => [],
+  ];
 
   drupal_alter('quant_meta', $meta, $context);
   module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
@@ -203,6 +206,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
  * Prepare a file export.
  */
 function quant_seed_file($url, $context = array()) {
+  // @TODO: Files need different meta?
   $meta = array();
   drupal_alter('quant_file_meta', $meta, $context);
   module_invoke_all('quant_seed_file', $url, $context);
@@ -210,16 +214,9 @@ function quant_seed_file($url, $context = array()) {
 
 /**
  * Drush or watchdog logging.
- *
- * Choose the correct log function to use and centralise the verbosity
- * check.
  */
 function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
-  $verbosity = variable_get('quant_log_level');
-
-  if ($level < $verbosity) {
-    return;
-  }
+  // @TODO: Module configuration for verbosity - very verbose logging for now.
 
   if (drupal_is_cli()) {
     drush_log(t($message, $replacements), 'ok');
@@ -233,22 +230,15 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
  * Implements hook_quant_meta_alter().
  */
 function quant_quant_meta_alter(&$meta, $context) {
-  $meta = [
-    'published' => null,
-    'transitions' => [],
-    'info' => [],
-  ];
-
+  // @TODO: Maybe quant_entity_meta_alter?
+  // Everyone who implements meta alter will need to validate
+  // this to be sure otherwise.
   if (empty($context['entity'])) {
     return;
   }
 
   $meta['published'] = $context['entity']->status;
-
-  // @TODO: Transition support.
-  $meta['transitions'] = [];
-
-  $meta['published_revision'] = $context['entity']->vid;
+  $meta['published_revision'] = $context['entity']->status ? $context['entity']->vid : -1;
 
   $user = user_load($context['entity']->uid);
   $meta['info'] = [
@@ -265,9 +255,9 @@ function quant_quant_meta_alter(&$meta, $context) {
  */
 function _quant_prepare_entity($type, $entity_id) {
   global $base_url;
-  $entity = entity_load($type, [$entity_id]);
-
   $base = variable_get('quant_base_url', $base_url);
+
+  $entity = entity_load($type, [$entity_id]);
 
   if (empty($entity)) {
     return FALSE;
@@ -288,37 +278,88 @@ function _quant_prepare_entity($type, $entity_id) {
 /**
  * Prepare a batch process for the node entity type.
  *
- * @param array $nids
- *   A list of nodes to export.
+ * @param array $batch
+ *   The batch array.
  */
-function _quant_batch_nodes($nids = array()) {
+function _quant_batch_nodes(&$batch) {
   global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
 
-  $ops = array();
+  $nids = db_select('node', 'n')
+    ->fields('n', array('nid'))
+    ->condition('status', 1)
+    ->execute()
+    ->fetchCol();
+
+  // Add the homepage to the operations.
+  $batch['operations'][] = array('quant_seed', array("$base/", array()));
 
   foreach ($nids as $nid) {
-    $ops[] = array(
+    quant_log('Adding [!nid] to the list.', array('!nid' => $nid));
+    $batch['operations'][] = array(
       'quant_seed_batch',
       array($nid),
     );
   }
 
-  $req = variable_get('quant_base_url', $base_url);
-
-  // Batch the homepage.
-  $ops[] = array('quant_seed', array("$req/", array()));
-
-  $batch = array(
-    'title' => t('Quant seeding'),
-    'operations' => $ops,
-    'finished' => '_quant_batch_complete',
-    'init_message' => t('Initialising...'),
-    'progress_message' => t('Operation @current out of @total'),
-    'error_message' => t('Unable to export'),
-    'file' => drupal_get_path('module', 'quant') . 'quant.module',
-  );
-
   return $batch;
+}
+
+/**
+ * Prepare the images to seed via batch.
+ *
+ * @param array $batch
+ *   The batch array.
+ */
+function _quant_batch_images(&$batch) {
+  $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
+
+  $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
+
+  // Allow modules to provide some files if they need to.
+  drupal_alter('quant_seed_files', $file);
+
+  foreach ($files as $file) {
+    $path = urldecode($file->uri);
+
+    $context = array(
+      'location' => $file->uri,
+      'request' => str_replace(DRUPAL_ROOT, '', $file->uri),
+    );
+
+    quant_log('Preparing !path', array('!path' => $path));
+
+    $batch['operations'][] = array(
+      'quant_seed_file',
+      array($path, $context),
+    );
+  }
+}
+
+/**
+ * Get a list of views paths.
+ *
+ * @param array $batch
+ *   The batch array.
+ */
+function _quant_batch_views(&$batch) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+
+  $menus = array();
+  views_menu_alter($menus);
+
+  foreach ($menus as $path => $config) {
+    $url = "$base/$path";
+
+    // @TODO: We have menu access callbacks so we should
+    // validate anonymous has access before we add the operation.
+    // Pages will be exported to quant with 401.
+    $batch['operations'][] = array(
+      'quant_seed',
+      array($url, $config),
+    );
+  }
 }
 
 /**
@@ -343,37 +384,31 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
     return [];
   }
 
-  if (!variable_get('quant_seed_entity_node')) {
-    drupal_set_message(t('Nodes are not configured to be exported.'));
-    return [];
+  $batch = array(
+    'title' => t('Quant seeding'),
+    'operations' => array(),
+    'finished' => '_quant_batch_complete',
+    'init_message' => t('Initialising...'),
+    'progress_message' => t('Operation @current out of @total'),
+    'error_message' => t('Unable to export'),
+    'file' => drupal_get_path('module', 'quant') . 'quant.module',
+  );
+
+  if (variable_get('quant_seed_entity_node')) {
+    _quant_batch_nodes($batch);
   }
 
-  // Fetch the node ids.
-  $nids = db_select('node', 'n')
-    ->fields('n', array('nid'))
-    ->execute()
-    ->fetchCol();
-
-  $batch = _quant_batch_nodes($nids);
-
-  // Find theme assets.
-  if (!empty(variable_get('quant_seed_theme_assets'))) {
-    $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
-
-    foreach (file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK) as $file) {
-      $path = urldecode($file->uri);
-
-      $context = array(
-        'location' => $file->uri,
-        'request' => str_replace(DRUPAL_ROOT, '', $file->uri),
-      );
-
-      $batch['operations'][] = array(
-        'quant_seed_file',
-        array($path, $context),
-      );
-    }
+  if (variable_get('quant_seed_theme_assets')) {
+    _quant_batch_images($batch);
   }
+
+  if (variable_get('quant_seed_views')) {
+    _quant_batch_views($batch);
+  }
+
+  quant_log('Total operations [!total]', array(
+    '!total' => count($batch['operations']),
+  ));
 
   batch_set($batch);
 }
@@ -428,21 +463,10 @@ function quant_export_drupal_pages() {
   }
 }
 
+/**
+ * @TODO: remove.
+ */
 function quant_test($nid = 1) {
   list($url, $context) = _quant_prepare_entity('node', $nid);
   quant_seed($url, $context);
-  // dpm('and home');
-
-  // dpm(_quant_prepare_entity('node', 1));
-
-  // $aliases = [
-  //   '/file.jpg',
-  //   '/no-extension',
-  // ];
-
-  // foreach ($aliases as $a) {
-  //   $ext = strtolower(pathinfo($a, PATHINFO_EXTENSION));
-  //   dpm($ext);
-  // }
-
 }

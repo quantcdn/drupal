@@ -1,0 +1,6 @@
+name = Quant scheduler
+description = Support scheduler transitions.
+package = Quant
+core = 7.x
+dependencies[] = quant
+dependencies[] = scheduler

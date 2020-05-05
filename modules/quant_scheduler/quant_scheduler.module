@@ -1,0 +1,35 @@
+<?php
+/**
+ * @file
+ * Quant workbench moderation integration.
+ */
+
+/**
+ * Implements hook_quant_meta_alter().
+ */
+function quant_scheduler_quant_meta_alter(&$meta, $context) {
+  if (empty($context['entity'])) {
+    return;
+  }
+
+  if (empty($context['entity']->scheduler)) {
+    // This entity doesn't support workbench moderation.
+    return;
+  }
+
+  if (!empty($context['entity']->scheduler['published'])) {
+    $meta['transitions'][] = array(
+      'date_time_utc' => gmdate('Y-d-mTG:i:sz', $context['entity']->scheduler['publish_on']),
+      'state' => 'published',
+      'date_timestamp' => $context['entity']->scheduler['publish_on'],
+    );
+  }
+
+  if (!empty($context['entity']->scheduler['unpublished'])) {
+    $meta['transitions'][] = array(
+      'date_time_utc' => gmdate('Y-d-mTG:i:sz', $context['entity']->scheduler['unpublish_on']),
+      'state' => 'unpublished',
+      'date_timestamp' => $context['entity']->scheduler['unpublish_on'],
+    );
+  }
+}
