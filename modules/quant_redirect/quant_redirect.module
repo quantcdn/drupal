@@ -1,0 +1,62 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for Quant redirects.
+ */
+
+/**
+ * Implements hook_redirect_presave().
+ */
+function quant_redirect_redirect_presave($redirect) {
+  $status_code = empty($redirect->status_code) ? variable_get('redirect_default_status_code', 301) : $redirect->status_code;
+  quant_redirect_request($redirect->source, $redirect->redirect, $status_code, $redirect->status);
+}
+
+/**
+ * Implements hook_redirect_delete().
+ */
+function quant_redirect_redirect_delete($redirect) {
+  // Redirect should have a status => 0 during the delete
+  // however we hard code this to enure that the redirect is
+  // removed.
+  $status_code = empty($redirect->status_code) ? variable_get('redirect_default_status_code', 301) : $redirect->status_code;
+  quant_redirect_request($redirect->source, $redirect->redirect, $status_code, false);
+}
+
+/**
+ * Trigger an API request to Quant for a redirect.
+ */
+function quant_redirect_request($from, $to, $status = 301, $published = TRUE) {
+  $api = variable_get('quant_api_endpoint', QUANT_ENDPOINT_DEFAULT);
+
+  if (empty($api)) {
+    watchdog('quant_api', 'API endpoint is not configured.', [], 'info');
+    return;
+  }
+
+  $request = array(
+    'headers' => quant_api_get_request_headers() + array(
+      'content-type' => 'application/json',
+      'User-Agent' => 'Quant (+http://quant.io)',
+    ),
+    'method' => 'POST',
+    'data' => json_encode(array(
+      'url' => $from,
+      'redirect_url' => $to,
+      'redirect_http_code' => $status,
+      'published' => (bool) $published,
+    )),
+  );
+
+  $response = drupal_http_request($api, $request);
+
+  if (!empty($response->error)) {
+    watchdog('quant_api', 'Error sending request: %error %res', array(
+      '%error' => $response->error,
+      '%res' => json_encode($response),
+    ), WATCHDOG_ERROR);
+  }
+
+  return $response;
+}

@@ -1,0 +1,9 @@
+name = Quant Redirects
+description = Publish redirects to Quant.
+package = Quant
+core = 7.x
+configure = admin/config/services/quant
+
+dependencies[] = quant
+dependencies[] = quant_api
+dependencies[] = redirect
