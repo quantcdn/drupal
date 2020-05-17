@@ -32,6 +32,13 @@ function quant_api_settings() {
     '#default_value' => variable_get('quant_api_customer'),
   );
 
+  $form['quant_api_project'] = array(
+    '#type' => 'textfield',
+    '#title' => t('API Project'),
+    '#description' => t('The API project'),
+    '#default_value' => variable_get('quant_api_project'),
+  );
+
   $form['#validate'][] = 'quant_api_settings_validate';
 
   return system_settings_form($form);
@@ -56,6 +63,7 @@ function quant_api_settings_validate($form, &$form_state) {
     'headers' => array(
       'quant-customer' => $form_state['values']['quant_api_customer'],
       'quant-token' => $form_state['values']['quant_api_token'],
+      'quant-project' => $form_state['values']['quant_api_project'],
     ),
   );
 

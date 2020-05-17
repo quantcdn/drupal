@@ -159,6 +159,13 @@ function _quant_post_entity_op($entity_info) {
 function quant_seed($url, $context = array(), $batch_context = array()) {
   global $base_url;
 
+  $path = parse_url($url, PHP_URL_PATH);
+
+  if (path_is_admin($path)) {
+    quant_log('Skip: !path is an admin path', array('!path' => $path));
+    return;
+  }
+
   quant_log('Preparing to send !url', array(
     '!url' => $url,
   ));
@@ -176,9 +183,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
   $response = drupal_http_request($url . "?_quant=" . strtotime('now'), $options);
 
-  dpm($response);
-
-  if (!property_exists($response, 'data')) {
+  if (!property_exists($response, 'data') || $response->code > 400) {
     watchdog('quant', 'Unable to seed %url %error %request', array(
       '%url' => $url,
       '%error' => $response->error,

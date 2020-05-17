@@ -46,6 +46,7 @@ function quant_api_menu() {
 function quant_api_get_request_headers() {
   $token = variable_get('quant_api_token');
   $customer = variable_get('quant_api_customer');
+  $project = variable_get('quant_api_project');
 
   if (empty($token)) {
     watchdog('quant_api', 'API Token is not configured.', [], 'info');
@@ -57,9 +58,15 @@ function quant_api_get_request_headers() {
     return [];
   }
 
+  if (empty($project)) {
+    watchdog('quant_api', 'API Project is not configured', [], 'info');
+    return [];
+  }
+
   return array(
     'quant-customer' => $customer,
     'quant-token' => $token,
+    'quant-project' => $project,
   );
 }
 
