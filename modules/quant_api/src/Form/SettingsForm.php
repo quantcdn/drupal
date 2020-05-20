@@ -76,6 +76,12 @@ class SettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('api_account'),
     ];
 
+    $form['api_project'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('API Project'),
+      '#default_value' => $config->get('api_project'),
+    ];
+
     $form['api_token'] = [
       '#type' => 'password',
       '#title' => $this->t('API Token'),
@@ -92,7 +98,8 @@ class SettingsForm extends ConfigFormBase {
     // Retrieve the configuration.
     $this->configFactory->getEditable(self::SETTINGS)
       ->set('api_endpoint', $form_state->getValue('api_endpoint'))
-      ->set('api_token', $form_state->getValue('api_token'))
+      ->set('epi_token', $form_state->getValue('api_token'))
+      ->set('api_project', $form_state->getValue('api_project'))
       ->set('api_account', $form_state->getValue('api_account'))
       ->save();
 
