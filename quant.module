@@ -13,6 +13,13 @@
 define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.otf)$/i');
 
 /**
+ * The elapsed time a short-live token can be alive for.
+ *
+ * @var string
+ */
+define('QUANT_ELAPSED_TIME', '+5 minutes');
+
+/**
  * Implements hook_help().
  */
 function quant_help($section) {
@@ -75,6 +82,21 @@ function quant_menu() {
 }
 
 /**
+ * Implements hook_menu_alter().
+ *
+ * We intercept the standard route wildcard argument loader
+ * and replace it with quant_node_menu_load. This allows
+ * us to load a revision with a query parameter and have the
+ * standard router context continue to operate as expected.
+ */
+function quant_menu_alter(&$items) {
+  $node_route = $items['node/%node'];
+  unset($items['node/%node']);
+  // @TODO: Configuration value to prevent this override.
+  $items['node/%quant_node_menu'] = $node_route;
+}
+
+/**
  * Implements hook_admin_paths().
  */
 function quant_admin_paths() {
@@ -101,6 +123,46 @@ function quant_permission() {
       'restrict access' => TRUE,
     ),
   );
+}
+
+/**
+ * Wildcard menu node loader.
+ */
+function quant_node_menu_load($nid) {
+  $params = drupal_get_query_parameters();
+
+  if (isset($params['quant_revision'])) {
+    // Load the revision if possible.
+    return node_load($nid, $params['quant_revision']);
+  }
+
+  return node_load($nid);
+}
+
+/**
+ * Implements hook_node_access().
+ *
+ * This is not called for all users - if a user has the 'bypass node access'
+ * permission this will not be called (eg. uid 1).
+ *
+ * Additionally 'access content' needs to be given to anonymous for this to
+ * take effect.
+ *
+ * @see node_access
+ */
+function quant_node_access($node, $op, $account) {
+  $params = drupal_get_query_parameters();
+
+  if (empty($params['quant_revision']) || empty($node->nid)) {
+    return NODE_ACCESS_IGNORE;
+  }
+
+  if (empty($params['quant_token'])) {
+    return NODE_ACCESS_DENY;
+  }
+
+  $nid = $node->nid;
+  return quant_token_validate($nid) ? NODE_ACCESS_ALLOW : NODE_ACCESS_DENY;
 }
 
 /**
@@ -466,6 +528,76 @@ function quant_export_drupal_pages() {
     }
     quant_seed("{$base}{$path}", array());
   }
+}
+
+/**
+ * Add a short-lived token to the table.
+ *
+ * @return string
+ *   The generated token.
+ */
+function quant_token_create($nid) {
+  // This is slightly different to the D8 implementation
+  // openssl produces different characters that get_query_parameters
+  // cannot handle correctly so we just use random bytes.
+  if (function_exists('random_bytes')) {
+    $bytes = random_bytes(ceil(16 / 2));
+    $token = substr(bin2hex($bytes), 0, 16);
+  } else {
+    $token = bin2hex(random_bytes(16));
+  }
+
+  try {
+    db_insert('quant_token')
+      ->fields(array(
+        'token' => base64_encode($token),
+        'nid' => $nid,
+        'created' => REQUEST_TIME,
+      ))
+      ->execute();
+  }
+  catch (\Exception $error) {
+    var_dump($error->getMessage());
+  }
+
+  return $token;
+}
+
+/**
+ * Load and validate a token.
+ *
+ * @return bool
+ *   If the token is valid.
+ */
+function quant_token_validate($nid, $strict = TRUE) {
+  $params = drupal_get_query_parameters();
+
+  if (empty($params['quant_token'])) {
+    return FALSE;
+  }
+
+  $token = $params['quant_token'];
+
+  $record = db_select('quant_token', 'qt')
+    ->fields('qt', ['nid', 'created'])
+    ->condition('token', $token)
+    ->execute()
+    ->fetchAssoc();
+
+  if (empty($record) || empty($record['created']) || empty($record['nid'])) {
+    // Something went wrong, we don't have the fields we need.
+    return FALSE;
+  }
+
+  // Self-destruct for the token.
+  db_delete('quant_token')->condition('token', $token)->execute();
+
+  if (!$strict) {
+    return TRUE;
+  }
+
+  $valid_until = strtotime(QUANT_ELAPSED_TIME, $record['created']);
+  return REQUEST_TIME < $valid_until && $nid == $record['nid'];
 }
 
 /**
