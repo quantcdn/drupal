@@ -1,0 +1,56 @@
+<?php
+
+use Drupal\Core\Database\Database;
+
+/**
+ * @file
+ * Install hook definitions for Quant.
+ */
+
+/**
+ * Implements hook_schema().
+ *
+ * Defines a simple table to store salted tokens.
+ *
+ * @see hook_schema()
+ *
+ * @ingroup quant
+ */
+function quant_schema() {
+  $schema['quant_token'] = [
+    'description' => 'Stores short-lived access tokens.',
+    'fields' => [
+      'pid' => [
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary key: Unique token ID.',
+      ],
+      'token' => [
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => 255,
+        'default' => '',
+        'description' => 'The token value.',
+      ],
+      'nid' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The node that is to be accessed.',
+      ],
+      'created' => [
+        'mysql_type' => 'timestamp',
+        'pgqsl_type' => 'timestamp',
+        'sqlite_type' => 'datetime',
+        'not null' => TRUE,
+        'description' => 'When the token was created.',
+      ],
+    ],
+    'primary key' => ['pid'],
+    'indexes' => [
+      'token' => ['token'],
+    ],
+  ];
+
+  return $schema;
+}

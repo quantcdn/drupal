@@ -31,9 +31,15 @@ function quant_node_update(EntityInterface $entity) {
  * Access control is restricted in the route definition.
  */
 function quant_node_access(NodeInterface $node, $op, AccountInterface $account) {
-  // @todo: Urgent: Replace placeholder with real logic.
-  // Should only grant allowed access on custom route, view operation.
-  return AccessResult::allowed();
+  if (!\Drupal::request()->query->has('quant_revision')) {
+    return AccessResult::neutral();
+  }
+
+  if (\Drupal::service('quant.token_manager')->validate($node->id())) {
+    return AccessResult::allowed();
+  }
+
+  return AccessResult::forbidden();
 }
 
 
