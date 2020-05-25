@@ -104,6 +104,11 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
+    if (empty($response->data)) {
+      // This is a connection error between the drupal server and quant.
+      watchdog('quant_api', 'Connection error');
+      return;
+    }
     $body = json_decode($response->data);
     watchdog('quant_api', 'Error sending request: %error %res', array(
       '%error' => $body->errorMsg,
@@ -178,6 +183,11 @@ function quant_api_quant_seed_file($url, $context) {
   $response = drupal_http_request($api, $options);
 
   if (!empty($response->error)) {
+    if (empty($response->data)) {
+      // This is a connection error between the drupal server and quant.
+      watchdog('quant_api', 'Connection error');
+      return;
+    }
     $body = json_decode($response->data);
     watchdog('quant_api', 'Error sending request: %error', array(
       '%error' => $body->errorMsg,

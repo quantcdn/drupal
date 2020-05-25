@@ -132,8 +132,11 @@ function quant_node_menu_load($nid) {
   $params = drupal_get_query_parameters();
 
   if (isset($params['quant_revision'])) {
-    // Load the revision if possible.
-    return node_load($nid, $params['quant_revision']);
+    $node = node_load($nid, $params['quant_revision']);
+    // Override the status - this prevents drupal from adding the standard
+    // unpublished classes to the node.
+    $node->status = 1;
+    return $node;
   }
 
   return node_load($nid);
@@ -174,6 +177,7 @@ function quant_node_insert($node) {
     'type' => 'node',
     'op' => 'insert',
     'original' => $node,
+    'token' => quant_token_create($node->nid),
   );
   drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
 }
@@ -188,6 +192,7 @@ function quant_node_update($node) {
     'type' => 'node',
     'op' => 'update',
     'original' => $original,
+    'token' => quant_token_create($node->nid),
   );
   drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
 }
@@ -202,7 +207,11 @@ function _quant_post_entity_op($entity_info) {
   list($id) = entity_extract_ids($entity_info['type'], $entity_info['entity']);
   list($url, $context) = _quant_prepare_entity($entity_info['type'], $id);
 
-  file_put_contents('/tmp/test.txt', 'Exporting?');
+  if (isset($entity_info['token'])) {
+    // Shutdown functions can't interact with the DB so we have to create
+    // the token first and pass it through.
+    $context['token'] = $entity_info['token'];
+  }
 
   quant_seed($url, $context);
   quant_export_drupal_pages();
@@ -232,10 +241,6 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     '!url' => $url,
   ));
 
-  // This clears the message bag as we don't want this to be
-  // rendered with the static output.
-  // drupal_get_messages();
-
   $options = array(
     'headers' => array(
       'Host' => variable_get('quant_hostname', $base_url),
@@ -243,7 +248,17 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     ),
   );
 
-  $response = drupal_http_request($url . "?_quant=" . strtotime('now'), $options);
+  $query = array();
+  // This is a cache bust - prevent proxies from caching the request.
+  $query['_quant'] = strtotime('now');
+
+  // Check if we have a node context.
+  if (isset($context['token']) && isset($context['vid']) && $context['type'] == 'node') {
+    $query['quant_revision'] = $context['vid'];
+    $query['quant_token'] = $context['token'];
+  }
+
+  $response = drupal_http_request("$url?" . drupal_http_build_query($query), $options);
 
   if (!property_exists($response, 'data') || $response->code > 400) {
     watchdog('quant', 'Unable to seed %url %error %request', array(
@@ -334,10 +349,16 @@ function _quant_prepare_entity($type, $entity_id) {
   $uri = entity_uri($type, $entity);
   $path = $uri['path'];
   $alias = drupal_get_path_alias($path);
+
+  list($id, $vid) = entity_extract_ids($type, $entity);
+
   return [
     "$base/$alias",
     [
       'entity' => $entity,
+      'vid' => $vid,
+      'id' => $id,
+      'type' => $type,
     ],
   ];
 }
@@ -547,10 +568,12 @@ function quant_token_create($nid) {
     $token = bin2hex(random_bytes(16));
   }
 
+  $token = base64_encode($token);
+
   try {
     db_insert('quant_token')
       ->fields(array(
-        'token' => base64_encode($token),
+        'token' => $token,
         'nid' => $nid,
         'created' => REQUEST_TIME,
       ))
