@@ -85,8 +85,7 @@ class QuantClient implements QuantClientInterface {
     }
 
     if ($response->getStatusCode() == 200) {
-      $res = json_decode($response->getBody(), TRUE);
-      return $res['project'];
+      return TRUE;
     }
 
     return FALSE;
