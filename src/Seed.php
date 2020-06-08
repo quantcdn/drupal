@@ -8,7 +8,9 @@ use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 
 /**
+ * Seed Manager.
  *
+ * @todo define as a service and use dependency injection.
  */
 class Seed {
 
@@ -271,7 +273,13 @@ class Seed {
       $url = "/";
     }
 
-    $markup = self::markupFromRoute($url, ['quant_revision' => $rid]);
+    // Generate a request token.
+    $token = \Drupal::service('quant.token_manager')->create($nid);
+
+    $markup = self::markupFromRoute($url, [
+      'quant_revision' => $rid,
+      'quant_token' => $token,
+    ]);
     $meta = [];
 
     $metaManager = \Drupal::service('plugin.manager.quant.metadata');

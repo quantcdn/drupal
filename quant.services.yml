@@ -21,3 +21,9 @@ services:
     class: Drupal\quant\Routing\RouteSubscriber
     tags:
       - { name: 'event_subscriber' }
+
+  quant.token_manager:
+    class: Drupal\quant\TokenManager
+    arguments:
+      - '@database'
+      - '@request_stack'
