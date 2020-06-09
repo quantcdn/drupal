@@ -22,6 +22,13 @@ services:
     tags:
       - { name: 'event_subscriber' }
 
+  quant.collect_entity_subscriber:
+    class: Drupal\quant\EventSubscriber\CollectionSubscriber
+    arguments:
+      - '@entity_type.manager'
+    tags:
+      - { name: 'event_subscriber' }
+
   quant.token_manager:
     class: Drupal\quant\TokenManager
     arguments:
