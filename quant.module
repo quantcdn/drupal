@@ -14,6 +14,10 @@ use Drupal\quant\Seed;
  * Implements hook_node_insert().
  */
 function quant_node_insert(EntityInterface $entity) {
+  $disable_drafts = \Drupal::config('quant.settings')->get('disable_content_drafts');
+  if ($disable_drafts && !$entity->isPublished()) {
+    return;
+  }
   drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
 }
 
@@ -21,6 +25,10 @@ function quant_node_insert(EntityInterface $entity) {
  * Implements hook_node_update().
  */
 function quant_node_update(EntityInterface $entity) {
+  $disable_drafts = \Drupal::config('quant.settings')->get('disable_content_drafts');
+  if ($disable_drafts && !$entity->isPublished()) {
+    return;
+  }
   drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
 }
 

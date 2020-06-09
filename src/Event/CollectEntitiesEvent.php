@@ -23,11 +23,30 @@ class CollectEntitiesEvent extends Event {
    */
   protected $entities;
 
+
+  /**
+   * Include revisions.
+   *
+   * @var bool
+   */
+  protected $support_revisions;
+
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $entities = []) {
+  public function __construct(array $entities = [], $revisions = TRUE) {
     $this->entities = $entities;
+    $this->support_revisions = $revisions;
+  }
+
+  /**
+   * Return if the revisions are required.
+   *
+   * @return bool
+   *   If revisions are to be exported.
+   */
+  public function includeRevisions() {
+    return (bool) $this->support_revisions;
   }
 
   /**

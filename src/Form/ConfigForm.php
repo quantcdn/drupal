@@ -48,6 +48,13 @@ class ConfigForm extends ConfigFormBase {
       '#default_value' => $config->get('content_revisions'),
     ];
 
+    $form['disable_content_drafts'] = [
+      '#type' => 'checkbox',
+      '#title' => $thiis->t('Disable content drafts'),
+      '#description' => $this->t('Prevent draft content from being sent to Quant'),
+      '#default_value' => $config->get('content_drafts'),
+    ];
+
     // @todo: Should revisions be configured at the API level?
     $form['asset_revisions'] = [
       '#type' => 'checkbox',

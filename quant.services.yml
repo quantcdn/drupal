@@ -26,6 +26,7 @@ services:
     class: Drupal\quant\EventSubscriber\CollectionSubscriber
     arguments:
       - '@entity_type.manager'
+      - '@config.factory'
     tags:
       - { name: 'event_subscriber' }
 

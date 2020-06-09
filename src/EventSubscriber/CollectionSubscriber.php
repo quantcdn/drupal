@@ -24,10 +24,16 @@ class CollectioinSubscriber implements EventSubscriberInterface {
   protected $entityTypeManager;
 
   /**
+   * The config object.
+   */
+  protected $config;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct($entity_type_manager) {
+  public function __construct($entity_type_manager, $config_factory) {
     $this->entityTypeManager = $entity_type_manager;
+    $this->config = $config_factory->get('quant.settings');
   }
 
   /**
@@ -49,24 +55,27 @@ class CollectioinSubscriber implements EventSubscriberInterface {
     // @TODO: Dependency inject this.
     $query = \Drupal::entityQuery('node');
     $nids = $query->execute();
+    $disable_drafts = $this->config->get('disable_content_drafts');
 
     // Add nodes to export batch.
     foreach ($nids as $key => $value) {
       $node = Node::load($value);
 
-      // Export all node revisions.
-      if ($form_state->getValue('entity_node_revisions')) {
-        $vids = \Drupal::entityManager()->getStorage('node')->revisionIds($node);
+      if ($disable_drafts && !$node->isPublished()) {
+        continue;
+      }
 
+      if ($event->includeRevisions()) {
+        $vids = $this->entityManager->getStorage('node')->revisionIds($node);
         foreach ($vids as $vid) {
           $nr = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($vid);
           $event->addEntity($nr);
         }
       }
+
       // Export current node revision.
       $event->addEntity($node);
     }
-
   }
 
   /**

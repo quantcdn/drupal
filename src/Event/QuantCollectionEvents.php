@@ -16,7 +16,7 @@ final class QuantCollectionEvents {
    *
    * @var string
    */
-  const REDIRECT = 'quant.seed.redirect';
+  const REDIRECTS = 'quant.seed.redirects';
 
   /**
    * Name of the event when collecting entities.
@@ -27,7 +27,7 @@ final class QuantCollectionEvents {
    *
    * @var string
    */
-  const ENTITY = 'quant.seed.entity';
+  const ENTITIES = 'quant.seed.entities';
 
   /**
    * Name of the event when collecting files.
@@ -38,7 +38,7 @@ final class QuantCollectionEvents {
    *
    * @var string
    */
-  const FILE = 'quant.seed.file';
+  const FILES = 'quant.seed.files';
 
   /**
    * Name of the event when collecting routes.
@@ -49,5 +49,6 @@ final class QuantCollectionEvents {
    *
    * @var string
    */
-  const ROUTE = 'quant.seed.route';
+  const ROUTES = 'quant.seed.routes';
+
 }

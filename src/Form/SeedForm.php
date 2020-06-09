@@ -14,6 +14,7 @@ use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\QuantStaticTrait;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use
 
 /**
  * Contains a form for initializing a static build.
@@ -24,8 +25,16 @@ class SeedForm extends FormBase {
 
   use QuantStaticTrait;
 
+  /**
+   * The client.
+   *
+   * @var Drupal\quant_api\Client\QuantClientInterface
+   */
   protected $client;
 
+  /**
+   *
+   */
   protected $dispatcher;
 
   /**
@@ -114,7 +123,9 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports all existing redirects.'),
     ];
 
+    // @TODO: sub-module.
     $moduleHandler = \Drupal::moduleHandler();
+
     if ($moduleHandler->moduleExists('lunr')) {
       $form['lunr'] = [
         '#type' => 'checkbox',
@@ -145,6 +156,7 @@ class SeedForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+
 
     $config = $this->config('quant_api.settings');
 
@@ -177,28 +189,29 @@ class SeedForm extends FormBase {
     if ($form_state->getValue('redirects')) {
       // Collect the redirects for the seed.
       $event = new CollectRedirectsEvent();
-      $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECT, $event);
+      $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
       while ($redirect = $event->getEntity()) {
         $batch['operations'][] = ['\Drupal\quant\Seed::exportRedirect', [$redirect]];
       }
     }
 
     if ($form_state->getValue('entity_node')) {
-      $event = new CollectEntitiesEvent();
-      $this->dispatcher->dispatch(QuantCollectionEvents::ENTITY, $event);
+      $revisions = $form_state->getValue('entity_node_revisions');
+      $event = new CollectEntitiesEvent([], $revisions);
+      $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
       while ($entity = $event->getEntity()) {
         $batch['operations'][] = ['\Drupal\quant\Seed::exportNode', $entity];
       }
     }
 
     $event = new CollectRoutesEvent($routes);
-    $this->dispatcher->dispatch(QuantCollectionEvents::ROUTE, $event);
+    $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
     while ($route = $event->getRoute()) {
       $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
     }
 
     $event = new CollectFilesEvent($assets);
-    $this->dispatcher->dispatch(QuantCollectionEvents::FILE, $event);
+    $this->dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
     while ($file = $event->getFilePath()) {
       $batch['operations'][] = ['\Drupal\quant\Seed::exportFile', [$file]];
 
