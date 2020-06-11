@@ -36,6 +36,13 @@ class QuantClient implements QuantClientInterface {
   protected $token;
 
   /**
+   * The project in Quant.
+   *
+   * @var string
+   */
+  protected $project;
+
+  /**
    * The client endpoint.
    *
    * @var string
@@ -52,6 +59,7 @@ class QuantClient implements QuantClientInterface {
 
     $this->username = $config->get('api_account');
     $this->token = $config->get('api_token');
+    $this->project = $config->get('api_project');
     $this->endpoint = $config->get('api_endpoint');
   }
 
@@ -65,6 +73,7 @@ class QuantClient implements QuantClientInterface {
         'http_errors' => FALSE,
         'headers' => [
           'Quant-Customer' => $this->username,
+          'Quant-Project'  => $this->project,
           'Quant-Token'    => $this->token,
         ],
         'exceptions' => FALSE,
@@ -76,8 +85,7 @@ class QuantClient implements QuantClientInterface {
     }
 
     if ($response->getStatusCode() == 200) {
-      $res = json_decode($response->getBody(), TRUE);
-      return $res['project'];
+      return TRUE;
     }
 
     return FALSE;
@@ -91,6 +99,7 @@ class QuantClient implements QuantClientInterface {
       RequestOptions::JSON => $data,
       'headers' => [
         'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
       ],
     ]);
@@ -106,6 +115,7 @@ class QuantClient implements QuantClientInterface {
       RequestOptions::JSON => $data,
       'headers' => [
         'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
       ],
     ]);
@@ -127,6 +137,7 @@ class QuantClient implements QuantClientInterface {
       'headers' => [
         'Quant-File-Url' => $url,
         'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
       ],
       'multipart' => [
