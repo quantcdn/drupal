@@ -62,6 +62,12 @@ function quant_seed_settings() {
     '#default_value' => variable_get('quant_seed_entity_node', FALSE),
   );
 
+  $form['quant_seed_entity_taxonomy'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Export taxonomy terms'),
+    '#default_value' => variable_get('quant_seed_entity_taxonomy', FALSE),
+  );
+
   $form['quant_seed_theme_assets'] = array(
     '#type' => 'checkbox',
     '#title' => t('Theme assets'),
