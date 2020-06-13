@@ -88,13 +88,13 @@ function quant_menu() {
  * and replace it with quant_node_menu_load. This allows
  * us to load a revision with a query parameter and have the
  * standard router context continue to operate as expected.
- */
 function quant_menu_alter(&$items) {
   $node_route = $items['node/%node'];
   unset($items['node/%node']);
   // @TODO: Configuration value to prevent this override.
   $items['node/%quant_node_menu'] = $node_route;
 }
+*/
 
 /**
  * Implements hook_admin_paths().
@@ -179,7 +179,11 @@ function quant_node_insert($node) {
     'original' => $node,
     'token' => quant_token_create($node->nid),
   );
-  drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
+
+  if (!empty($node->op)) {
+    drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
+  }
+
 }
 
 /**
@@ -194,7 +198,10 @@ function quant_node_update($node) {
     'original' => $original,
     'token' => quant_token_create($node->nid),
   );
-  drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
+
+  if (!empty($node->op)) {
+    drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
+  }
 }
 
 /**
@@ -204,6 +211,7 @@ function quant_node_update($node) {
  * can operate after the db_transaction has finished.
  */
 function _quant_post_entity_op($entity_info) {
+
   list($id) = entity_extract_ids($entity_info['type'], $entity_info['entity']);
   list($url, $context) = _quant_prepare_entity($entity_info['type'], $id);
 
@@ -214,7 +222,9 @@ function _quant_post_entity_op($entity_info) {
   }
 
   quant_seed($url, $context);
-  quant_export_drupal_pages();
+
+  // This triggers on every page update/save/insert and causes slowness.
+  //quant_export_drupal_pages();
 }
 
 /**
@@ -385,13 +395,42 @@ function _quant_batch_nodes(&$batch) {
   foreach ($nids as $nid) {
     quant_log('Adding [!nid] to the list.', array('!nid' => $nid));
     $batch['operations'][] = array(
-      'quant_seed_batch',
+      'quant_seed_node_batch',
       array($nid),
     );
   }
 
   return $batch;
 }
+
+/**
+ * Prepare a batch process for taxonomy entities.
+ *
+ * @param array $batch
+ *   The batch array.
+ */
+function _quant_batch_taxonomy(&$batch) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+
+  // @todo: Support select vocabs.
+  $tids = db_select('taxonomy_term_data', 't')
+    ->fields('t', array('tid'))
+    ->execute()
+    ->fetchCol();
+
+  foreach ($tids as $tid) {
+    quant_log('Adding [!tid] to the list.', array('!tid' => $tid));
+    $batch['operations'][] = array(
+      'quant_seed_taxonomy_batch',
+      array($tid),
+    );
+  }
+
+  return $batch;
+
+}
+
 
 /**
  * Prepare the images to seed via batch.
@@ -453,8 +492,16 @@ function _quant_batch_views(&$batch) {
 /**
  * Batch processor for exporting nodes.
  */
-function quant_seed_batch($nid) {
+function quant_seed_node_batch($nid) {
   list($url, $context) = _quant_prepare_entity('node', $nid);
+  quant_seed($url, $context);
+}
+
+/**
+ * Batch processor for exporting taxonomy terms.
+ */
+function quant_seed_taxonomy_batch($tid) {
+  list($url, $context) = _quant_prepare_entity('taxonomy_term', $tid);
   quant_seed($url, $context);
 }
 
@@ -484,6 +531,10 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
 
   if (variable_get('quant_seed_entity_node')) {
     _quant_batch_nodes($batch);
+  }
+
+  if (variable_get('quant_seed_entity_taxonomy')) {
+    _quant_batch_taxonomy($batch);
   }
 
   if (variable_get('quant_seed_theme_assets')) {
