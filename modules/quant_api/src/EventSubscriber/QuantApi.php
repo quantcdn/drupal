@@ -112,8 +112,6 @@ class QuantApi implements EventSubscriberInterface {
       'info' => $meta['info'],
     ];
 
-    \kint($data);
-
     if (!empty($rid = $event->getRevisionId())) {
       $data['revision'] = $rid;
     }
