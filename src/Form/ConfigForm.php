@@ -50,7 +50,7 @@ class ConfigForm extends ConfigFormBase {
 
     $form['disable_content_drafts'] = [
       '#type' => 'checkbox',
-      '#title' => $thiis->t('Disable content drafts'),
+      '#title' => $this->t('Disable content drafts'),
       '#description' => $this->t('Prevent draft content from being sent to Quant'),
       '#default_value' => $config->get('content_drafts'),
     ];

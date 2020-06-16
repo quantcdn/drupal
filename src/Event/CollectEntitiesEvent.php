@@ -29,14 +29,14 @@ class CollectEntitiesEvent extends Event {
    *
    * @var bool
    */
-  protected $support_revisions;
+  protected $revisions;
 
   /**
    * {@inheritdoc}
    */
   public function __construct(array $entities = [], $revisions = TRUE) {
     $this->entities = $entities;
-    $this->support_revisions = $revisions;
+    $this->revisions = $revisions;
   }
 
   /**
@@ -46,7 +46,7 @@ class CollectEntitiesEvent extends Event {
    *   If revisions are to be exported.
    */
   public function includeRevisions() {
-    return (bool) $this->support_revisions;
+    return (bool) $this->revisions;
   }
 
   /**
@@ -69,6 +69,16 @@ class CollectEntitiesEvent extends Event {
    */
   public function getEntity() {
     return array_shift($this->entities);
+  }
+
+  /**
+   * The total number of entities found.
+   *
+   * @return int
+   *   The count.
+   */
+  public function total() {
+    return count($this->entities);
   }
 
 }

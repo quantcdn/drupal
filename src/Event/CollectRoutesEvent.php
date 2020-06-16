@@ -13,11 +13,7 @@ use Symfony\Component\EventDispatcher\Event;
 class CollectRoutesEvent extends Event {
 
   /**
-   * A list of entity ids that are to be exported.
-   *
-   * @TODO: See memory usage by storing a class list
-   * of all entities. We might need to simplify this
-   * hash to be [id, type].
+   * A list of routes that are to be exported.
    *
    * @var array
    */

@@ -227,7 +227,7 @@ class Seed {
   /**
    * Returns markup for a given internal route.
    */
-  protected function markupFromRoute($route, $query = []) {
+  protected static function markupFromRoute($route, $query = []) {
 
     // Build internal request.
     $config = \Drupal::config('quant.settings');

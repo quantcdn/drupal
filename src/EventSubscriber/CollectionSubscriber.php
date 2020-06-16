@@ -8,15 +8,17 @@ use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
-use Drupal\quant\Seed;
 use Drupal\user\Entity\User;
 use Drupal\views\Views;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\Config\ConfigFactory;
+use Drupal\Core\Entity\EntityTypeManager;
 
 /**
  * Event subscribers for the quant collection events.
  */
-class CollectioinSubscriber implements EventSubscriberInterface {
+class CollectionSubscriber implements EventSubscriberInterface {
 
   /**
    * The entity type manager.
@@ -24,26 +26,38 @@ class CollectioinSubscriber implements EventSubscriberInterface {
   protected $entityTypeManager;
 
   /**
-   * The config object.
+   * The config factory.
+   *
+   * @var Drupal\Core\Config\ConfigFactory
    */
-  protected $config;
+  protected $configFactory;
+
+  /**
+   * The query factory.
+   *
+   * @var Drupal\Core\Entity\Query\QueryFactory
+   */
+  protected $queryFactory;
 
   /**
    * {@inheritdoc}
    */
-  public function __construct($entity_type_manager, $config_factory) {
+  public function __construct(EntityTypeManager $entity_type_manager, ConfigFactory $config_factory, QueryFactory $query_factory) {
     $this->entityTypeManager = $entity_type_manager;
-    $this->config = $config_factory->get('quant.settings');
+    $this->configFactory = $config_factory;
+    $this->queryFactory = $query_factory;
   }
 
   /**
    * {@inheritdoc}
    */
   public static function getSubscribedEvents() {
-    $events[QuantCollectionEvents::ENTITY][] = ['collectEntities'];
-    $events[QuantCollectionEvents::FILE][] = ['collectFiles'];
-    $events[QuantCollectionEvents::REDIRECT][] = ['collectRedirects'];
-    $events[QuantCollectionEvents::ROUTE][] = ['collectRoutes'];
+    $events[QuantCollectionEvents::ENTITIES][] = ['collectEntities'];
+    $events[QuantCollectionEvents::FILES][] = ['collectFiles'];
+    $events[QuantCollectionEvents::REDIRECTS][] = ['collectRedirects'];
+    $events[QuantCollectionEvents::ROUTES][] = ['collectRoutes'];
+
+    return $events;
   }
 
   /**
@@ -52,10 +66,8 @@ class CollectioinSubscriber implements EventSubscriberInterface {
    * @TODO: This should support other entity types.
    */
   public function collectEntities(CollectEntitiesEvent $event) {
-    // @TODO: Dependency inject this.
-    $query = \Drupal::entityQuery('node');
-    $nids = $query->execute();
-    $disable_drafts = $this->config->get('disable_content_drafts');
+    $nids = $this->queryFactory->get('node')->execute();
+    $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
 
     // Add nodes to export batch.
     foreach ($nids as $key => $value) {
@@ -68,7 +80,7 @@ class CollectioinSubscriber implements EventSubscriberInterface {
       if ($event->includeRevisions()) {
         $vids = $this->entityManager->getStorage('node')->revisionIds($node);
         foreach ($vids as $vid) {
-          $nr = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($vid);
+          $nr = $this->entityTypeManager->getStorage('node')->loadRevision($vid);
           $event->addEntity($nr);
         }
       }
@@ -94,7 +106,7 @@ class CollectioinSubscriber implements EventSubscriberInterface {
   public function collectFiles(CollectFilesEvent $event) {
     // @todo: Find path programatically
     // @todo: Support multiple themes (e.g site may have multiple themes changing by route).
-    $config = \Drupal::config('system.theme');
+    $config = $this->configFactory->get('system.theme');
     $themeName = $config->get('default');
     $themePath = DRUPAL_ROOT . '/themes/custom/' . $themeName;
     $filesPath = \Drupal::service('file_system')->realpath(file_default_scheme() . "://");
@@ -139,7 +151,7 @@ class CollectioinSubscriber implements EventSubscriberInterface {
     $anon = User::getAnonymousUser();
 
     foreach ($views_storage->loadMultiple() as $view) {
-      $view = \Drupal\views\Views::getView($view->get('id'));
+      $view = Views::getView($view->get('id'));
       $displays = array_keys($view->storage->get('display'));
       foreach ($displays as $display) {
         $view->setDisplay($display);

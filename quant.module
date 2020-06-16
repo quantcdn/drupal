@@ -47,6 +47,8 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
     return AccessResult::allowed();
   }
 
+  \Drupal::messenger()->addMessage(t('Token validation failed.'), 'error');
+
   return AccessResult::forbidden();
 }
 

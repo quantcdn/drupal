@@ -14,7 +14,6 @@ use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\QuantStaticTrait;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use
 
 /**
  * Contains a form for initializing a static build.
