@@ -88,13 +88,18 @@ function quant_menu() {
  * and replace it with quant_node_menu_load. This allows
  * us to load a revision with a query parameter and have the
  * standard router context continue to operate as expected.
+ */
 function quant_menu_alter(&$items) {
+  // Altering the node route breaks displaysuite.
+  if (module_exists('ds')) {
+    return;
+  }
+
   $node_route = $items['node/%node'];
   unset($items['node/%node']);
   // @TODO: Configuration value to prevent this override.
   $items['node/%quant_node_menu'] = $node_route;
 }
-*/
 
 /**
  * Implements hook_admin_paths().
@@ -544,6 +549,9 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
   if (variable_get('quant_seed_views')) {
     _quant_batch_views($batch);
   }
+
+  // Allow module to alter the operation.
+  drupal_alter('quant_seed', $batch);
 
   quant_log('Total operations [!total]', array(
     '!total' => count($batch['operations']),
