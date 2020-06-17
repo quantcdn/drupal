@@ -13,7 +13,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @Metadata(
  *  id = "transitions",
- *  label = @Translation("Transitions")
+ *  label = @Translation("Transitions"),
+ *  description = @Translation("")
  * )
  */
 class Transitions extends MetadataBase implements ContainerFactoryPluginInterface {

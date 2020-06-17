@@ -14,6 +14,14 @@ quant.seed:
   requirements:
     _permission: 'bulk quant export'
 
+quant.metadata:
+  path: '/admin/config/quant/metadata'
+  defaults:
+    _form: 'Drupal\quant\Form\MetadataConfigForm'
+    _title: 'Metadata configuration'
+  requirements:
+    _permission: 'configure quant'
+
 quant.node.revision.view:
   path: '/node/{node}/quant/{quant_revision_id}'
   defaults:

@@ -13,7 +13,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @Metadata(
  *  id = "published",
- *  label = @Translation("Published")
+ *  label = @Translation("Published"),
+ *  description = @Translation("")
  * )
  */
 class Published extends MetadataBase implements ContainerFactoryPluginInterface {

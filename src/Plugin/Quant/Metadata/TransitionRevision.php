@@ -10,7 +10,8 @@ use Drupal\quant\Plugin\MetadataBase;
  *
  * @Metadata(
  *  id = "transition_revision",
- *  label = @Translation("Transitions")
+ *  label = @Translation("Transitions"),
+ *  description = @Translation("")
  * )
  */
 class TransitionRevision extends MetadataBase {

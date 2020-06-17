@@ -28,4 +28,12 @@ class Metadata extends Plugin {
    */
   public $label;
 
+
+  /**
+   * The plugin description.
+   *
+   * @var string
+   */
+  public $description;
+
 }

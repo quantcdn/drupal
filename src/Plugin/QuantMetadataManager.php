@@ -5,6 +5,7 @@ namespace Drupal\quant\Plugin;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\DefaultPluginManager;
+use Drupal\quant\Form\MetadataConfigForm;
 
 /**
  * Provides the Quant metadata manager.
@@ -24,6 +25,18 @@ class QuantMetadataManager extends DefaultPluginManager {
     );
     $this->alterInfo('quant_metadata_info');
     $this->setCacheBackend($cache_backend, 'quant_metadata_plugins');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function createInstance($plugin_id, array $configuration = array()) {
+    $plugin = parent::createInstance($plugin_id, $configuration);
+
+    $config = \Drupal::config(MetadataConfigForm::SETTINGS)->get($plugin_id) ?: [];
+    $plugin->setConfiguration($config);
+
+    return $plugin;
   }
 
 }
