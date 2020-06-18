@@ -229,7 +229,6 @@ function _quant_post_entity_op($entity_info) {
   quant_seed($url, $context);
 
   // This triggers on every page update/save/insert and causes slowness.
-  //quant_export_drupal_pages();
 }
 
 /**
