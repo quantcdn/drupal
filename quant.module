@@ -238,6 +238,7 @@ function _quant_post_entity_op($entity_info) {
  *   The context of the batch process.
  */
 function quant_seed($url, $context = array(), $batch_context = array()) {
+
   global $base_url;
 
   $path = parse_url($url, PHP_URL_PATH);
@@ -281,8 +282,42 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
   $markup = $response->data;
 
+  // Parse pages from Views and Taxonomy entities
+  if (isset($context['find_pager']) && $context['find_pager']) {
+
+    $document = new \DOMDocument();
+    @$document->loadHTML($markup);
+    $xpath = new \DOMXPath($document);
+
+    /** @var \DOMElement $node */
+    $pager_operations = [];
+    foreach ($xpath->query('//a[contains(@href,"page=")]') as $node) {
+
+      $original_href = $node->getAttribute('href');
+      if ($original_href[0] === '?') {
+        $new_href = strtok($path, '?') . $original_href;
+      }
+      else {
+        $new_href = $original_href;
+      }
+
+      global $base_url;
+      $base = variable_get('quant_base_url', $base_url);
+
+      // @todo: Create new batches. Superhack for now.
+      quant_seed($base.$new_href);
+    }
+
+  }
+
+
+
   $alias = parse_url($url, PHP_URL_PATH);
   $alias = empty($alias) ? '/' : $alias;
+
+  // Support query parameters (pagination).
+  $query = parse_url($url, PHP_URL_QUERY);
+  $alias = !empty($query) ? $alias . "?{$query}" : $alias;
 
   $meta = [
     'published' => null,
@@ -337,6 +372,16 @@ function quant_quant_meta_alter(&$meta, $context) {
     'author' => $user->mail,
     'date_timestamp' => $context['entity']->changed,
   ];
+}
+
+/**
+ * Prepare an arbitrary route for exporting.
+ *
+ * @return array
+ *   The path with context for seeding.
+ */
+function _quant_prepare_route($url) {
+
 }
 
 /**
@@ -478,6 +523,8 @@ function _quant_batch_views(&$batch) {
 
   foreach ($menus as $path => $config) {
     $url = "$base/$path";
+
+    $config['find_pager'] = TRUE;
 
     // @TODO: We have menu access callbacks so we should
     // validate anonymous has access before we add the operation.
