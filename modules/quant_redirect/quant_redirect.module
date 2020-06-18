@@ -60,3 +60,22 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE) {
 
   return $response;
 }
+
+/**
+ * Implements hook_quant_seed_alter().
+ */
+function quant_redirect_quant_seed_alter(&$batch) {
+  $redirects = db_select('redirect', 'r')
+    ->fields('r', array('source', 'redirect', 'status_code'))
+    ->condition('status', 1)
+    ->execute();
+
+  while ($redirect = $redirects->fetchAssoc()) {
+    $status_code = empty($redirect['status_code']) ? variable_get('redirect_default_status_code', 301) : $redirect['status_code'];
+
+    $batch['operations'][] = array(
+      'quant_redirect_request',
+      array($redirect['source'], $redirect['redirect'], $status_code),
+    );
+  }
+}
