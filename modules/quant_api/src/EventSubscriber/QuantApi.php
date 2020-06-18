@@ -124,7 +124,7 @@ class QuantApi implements EventSubscriberInterface {
       return FALSE;
     }
 
-    $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents']);
+    $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents'], $res['attachments']['media']['video']);
 
     foreach ($media as $item) {
       // @todo: Determine local vs. remote.
