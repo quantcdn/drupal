@@ -52,7 +52,7 @@ class ConfigForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Disable content drafts'),
       '#description' => $this->t('Prevent draft content from being sent to Quant'),
-      '#default_value' => $config->get('content_drafts'),
+      '#default_value' => $config->get('disable_content_drafts'),
     ];
 
     // @todo: Should revisions be configured at the API level?
@@ -90,6 +90,7 @@ class ConfigForm extends ConfigFormBase {
       ->set('asset_revisions', $form_state->getValue('asset_revisions'))
       ->set('local_server', $form_state->getValue('local_server'))
       ->set('host_domain', $form_state->getValue('host_domain'))
+      ->set('disable_content_drafts', $form_state->getValue('disable_content_drafts'))
       ->save();
 
     parent::submitForm($form, $form_state);
