@@ -27,6 +27,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_asset_revisions', FALSE),
   );
 
+  $form['quant_rewrite_relative'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable relative paths'),
+    '#description' => t('Ensure all assets are rewritten as relative paths.'),
+    '#default_value' => variable_get('quant_rewrite_relative', FALSE),
+  );
+
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),

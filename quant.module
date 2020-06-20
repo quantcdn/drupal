@@ -311,10 +311,16 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
       // @todo: Create new batches. Superhack for now.
       quant_seed($base.$new_href);
     }
-
   }
 
 
+  // Rewrite absolute URLs if relevant.
+  if (variable_get('quant_rewrite_relative', FALSE) {
+    $markup = _rewrite_relative($markup);
+  }
+
+  // Ensure quant query parameters are removed.
+  $markup = _remove_quant_params($markup);
 
   $alias = parse_url($url, PHP_URL_PATH);
   $alias = empty($alias) ? '/' : $alias;
@@ -735,3 +741,33 @@ function quant_test($nid = 1) {
   list($url, $context) = _quant_prepare_entity('node', $nid);
   quant_seed($url, $context);
 }
+
+/**
+ * Replaces absolute URLs with relative in markup.
+ */
+function _rewrite_relative($markup) {
+  $base = variable_get('quant_hostname', $base_url);
+  return str_replace($base, '', $markup);
+}
+
+/**
+ * Removes quant params from markup.
+ */
+function _remove_quant_params($markup) {
+  // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
+  $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
+  // Remove ?quant_revision=XX&quant_token=XX
+  $markup = preg_replace("/\?quant_revision=(.*&)quant_token=[^\"']*/i", '', $markup);
+  // Remove &quant_revision=XX&quant_token=XX with optional params
+  $markup = preg_replace("/\&quant_revision=(.*&)quant_token=[^\"'&]*/i", '', $markup);
+
+  // Replace ?quant_revision=XX&additional_params with ?
+  $markup = preg_replace('/\?quant_revision=(.*&)/i', '?', $markup);
+  // Remove ?quant_revision=XX
+  $markup = preg_replace("/\?quant_revision=[^\"']*/i", '', $markup);
+  // Remove &quant_revision=XX with optional params
+  $markup = preg_replace("/\&quant_revision=[^\"'&]*/i", '', $markup);
+
+  return $markup;
+}
+
