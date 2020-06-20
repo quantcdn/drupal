@@ -75,6 +75,27 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports the latest revision of each node.'),
     ];
 
+    // Seed by bundle.
+    $types = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+
+    foreach($types as $type) {
+      $content_types[$type->id()] = $type->label();
+    }
+
+    $form['entity_node_bundles'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Enabled bundles'),
+      '#description' => $this->t('Optionally restrict to these content types.'),
+      '#options' => $content_types,
+      '#states' => [
+        'visible' => [
+          ':input[name="entity_node"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
     $form['entity_node_revisions'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('All revisions'),
@@ -172,6 +193,13 @@ class SeedForm extends FormBase {
 
     if ($form_state->getValue('entity_node')) {
       $query = \Drupal::entityQuery('node');
+
+      // Restrict by bundle.
+      if (!empty($bundles = $form_state->getValue('entity_node_bundles'))) {
+        $bundles = array_filter($bundles);
+        $query->condition('type', array_keys($bundles), 'IN');
+      }
+
       $nids = $query->execute();
     }
 
