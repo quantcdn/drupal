@@ -309,8 +309,6 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
       global $base_url;
       $base = variable_get('quant_base_url', $base_url);
 
-      error_log("Finding: " . $base.$new_href);
-
       // @todo: Create new batches. Superhack for now.
       // Cannot pass in 'find_pager' to children; OOM errors.
       // Clearly need to find a way of attaching this to a new batch.
