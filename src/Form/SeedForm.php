@@ -50,6 +50,7 @@ class SeedForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
 
     $warnings = $this->getWarnings();
+    $config = $this->config('quant_api.settings');
 
     if (!empty($warnings)) {
       $form['warnings'] = [
@@ -126,6 +127,24 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports all existing redirects.'),
     ];
 
+    $form['routes'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Custom routes'),
+      '#description' => $this->t('Exports custom list of routes.'),
+    ];
+
+    $form['routes_textarea'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Routes'),
+      '#description' => $this->t('Add routes to export, each on a new line.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="routes"]' => ['checked' => TRUE],
+        ],
+      ],
+      '#default_value' => $config->get('routes_export', ''),
+    ];
+
     $moduleHandler = \Drupal::moduleHandler();
     if ($moduleHandler->moduleExists('lunr')) {
       $form['lunr'] = [
@@ -170,6 +189,7 @@ class SeedForm extends FormBase {
     $nids = [];
     $assets = [];
     $routes = [];
+    $redirects = [];
 
     // @todo: Separate plugins.
     if ($form_state->getValue('theme_assets')) {
@@ -202,6 +222,16 @@ class SeedForm extends FormBase {
       }
 
       $nids = $query->execute();
+    }
+
+    if ($form_state->getValue('routes_textarea')) {
+      foreach (explode(PHP_EOL, $form_state->getValue('routes_textarea')) as $route) {
+        if (strpos((trim($route)), '/') !== 0) {
+          continue;
+        }
+
+        $routes[] = trim($route);
+      }
     }
 
     $batch = [
