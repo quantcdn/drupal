@@ -69,6 +69,26 @@ function quant_seed_settings() {
     '#default_value' => variable_get('quant_seed_entity_node', FALSE),
   );
 
+  // Filter by node bundles.
+  $types = node_type_get_types();
+
+  $options = array();
+  foreach ($types as $typename => $type) {
+    $options[$typename] = $type->name;
+  }
+
+  $form['quant_seed_entity_node_bundles'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Enabled bundles'),
+    '#description' => t('Optionally restrict to these content types.'),
+    '#options' => $options,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="quant_seed_entity_node"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
   $form['quant_seed_entity_taxonomy'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export taxonomy terms'),

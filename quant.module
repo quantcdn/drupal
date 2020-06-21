@@ -265,7 +265,8 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
   $query = array();
   // This is a cache bust - prevent proxies from caching the request.
-  $query['_quant'] = strtotime('now');
+  // @todo: Do we need this? Quant requests should be internal only anyway..
+  //$query['_quant'] = strtotime('now');
 
   // Check if we have a node context.
   if (isset($context['token']) && isset($context['vid']) && $context['type'] == 'node') {
@@ -308,14 +309,18 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
       global $base_url;
       $base = variable_get('quant_base_url', $base_url);
 
+      error_log("Finding: " . $base.$new_href);
+
       // @todo: Create new batches. Superhack for now.
+      // Cannot pass in 'find_pager' to children; OOM errors.
+      // Clearly need to find a way of attaching this to a new batch.
       quant_seed($base.$new_href);
     }
   }
 
 
   // Rewrite absolute URLs if relevant.
-  if (variable_get('quant_rewrite_relative', FALSE) {
+  if (variable_get('quant_rewrite_relative', FALSE)) {
     $markup = _rewrite_relative($markup);
   }
 
@@ -559,6 +564,9 @@ function quant_seed_node_batch($nid) {
  */
 function quant_seed_taxonomy_batch($tid) {
   list($url, $context) = _quant_prepare_entity('taxonomy_term', $tid);
+
+  // Find pagination within taxonomy term pages.
+  $context['find_pager'] = TRUE;
   quant_seed($url, $context);
 }
 
@@ -603,7 +611,8 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
   }
 
   // Allow module to alter the operation.
-  drupal_alter('quant_seed', $batch);
+  // This seeds too much.
+  //drupal_alter('quant_seed', $batch);
 
   quant_log('Total operations [!total]', array(
     '!total' => count($batch['operations']),
@@ -746,8 +755,9 @@ function quant_test($nid = 1) {
  * Replaces absolute URLs with relative in markup.
  */
 function _rewrite_relative($markup) {
+  global $base_url;
   $base = variable_get('quant_hostname', $base_url);
-  return str_replace($base, '', $markup);
+  return preg_replace("/(https?:\/\/)?{$base}/i", '', $markup);
 }
 
 /**
