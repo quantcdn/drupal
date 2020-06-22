@@ -264,10 +264,6 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   );
 
   $query = array();
-  // This is a cache bust - prevent proxies from caching the request.
-  // @todo: Do we need this? Quant requests should be internal only anyway..
-  //$query['_quant'] = strtotime('now');
-
   // Check if we have a node context.
   if (isset($context['token']) && isset($context['vid']) && $context['type'] == 'node') {
     $query['quant_revision'] = $context['vid'];
@@ -609,8 +605,7 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
   }
 
   // Allow module to alter the operation.
-  // This seeds too much.
-  //drupal_alter('quant_seed', $batch);
+  drupal_alter('quant_seed', $batch);
 
   quant_log('Total operations [!total]', array(
     '!total' => count($batch['operations']),
