@@ -721,8 +721,6 @@ function quant_token_create($nid) {
     var_dump($error->getMessage());
   }
 
-  file_put_contents('/app/token.txt', $token);
-
   return $token;
 }
 
