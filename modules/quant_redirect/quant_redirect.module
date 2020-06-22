@@ -62,9 +62,24 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE) {
 }
 
 /**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function quant_form_quant_seed_settings_alter(&$form, $form_state) {
+  $form['quant_seed_redirects'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Export redirects'),
+    '#default_value' => variable_get('quant_seed_redirects', FALSE),
+  );
+}
+
+/**
  * Implements hook_quant_seed_alter().
  */
 function quant_redirect_quant_seed_alter(&$batch) {
+  if (!variable_get('quant_seed_redirects', FALSE)) {
+    return;
+  }
+
   $redirects = db_select('redirect', 'r')
     ->fields('r', array('source', 'redirect', 'status_code'))
     ->condition('status', 1)
