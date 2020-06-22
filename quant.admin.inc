@@ -16,7 +16,7 @@ function quant_config() {
   $form['quant_content_revisions'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable content revisions'),
-    '#description' => t('Any content change will create a new revision in Quant.'),
+    '#description' => t('Any content change will create a new revision in Quant, <i>experimental - this might have compatibility issues with your module setup</i>.'),
     '#default_value' => variable_get('quant_content_revisions', FALSE),
   );
 
@@ -40,8 +40,6 @@ function quant_config() {
     '#description' => t('Optionally provide the expected hostname for content served via quant, this ensures that absolute links in content point to the correct domain. This ensures absolute links in content point to the correct domain. e.g: www.example.com <a href="#">More info</a>'),
     '#default_value' => variable_get('quant_hostname', $base_url),
   );
-
-  quant_test(6183);
 
   return system_settings_form($form);
 }
@@ -70,7 +68,7 @@ function quant_seed_settings() {
 
   $form['quant_seed_theme_assets'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Theme assets'),
+    '#title' => t('Export theme assets'),
     '#default_value' => variable_get('quant_seed_theme_assets', FALSE),
   );
 
@@ -90,9 +88,12 @@ function quant_seed_settings() {
     '#type' => 'checkbox',
     '#title' => t('Trigger the batch'),
     '#description' => t('<strong>Note:</strong> This will attempt to trigger the seed from the UI, depending on the size of your site and PHP configuration this may not work.'),
+    '#weight' => 998,
   );
 
   $form = system_settings_form($form);
+
+  $form['actions']['#weight'] = 999;
 
   $form['#submit'][] = '_quant_seed_prepare';
 

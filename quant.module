@@ -17,7 +17,7 @@ define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.otf)$/i');
  *
  * @var string
  */
-define('QUANT_ELAPSED_TIME', '+5 minutes');
+define('QUANT_ELAPSED_TIME', '+60 minutes');
 
 /**
  * Implements hook_help().
@@ -91,13 +91,11 @@ function quant_menu() {
  */
 function quant_menu_alter(&$items) {
   // Altering the node route breaks displaysuite.
-  if (module_exists('ds')) {
+  if (!variable_get('quant_content_revisions', FALSE)) {
     return;
   }
-
   $node_route = $items['node/%node'];
   unset($items['node/%node']);
-  // @TODO: Configuration value to prevent this override.
   $items['node/%quant_node_menu'] = $node_route;
 }
 
@@ -148,6 +146,13 @@ function quant_node_menu_load($nid) {
 }
 
 /**
+ * Implements hook_cron().
+ */
+function quant_cron() {
+  db_query('TRUNCATE {quant_token}');
+}
+
+/**
  * Implements hook_node_access().
  *
  * This is not called for all users - if a user has the 'bypass node access'
@@ -161,16 +166,31 @@ function quant_node_menu_load($nid) {
 function quant_node_access($node, $op, $account) {
   $params = drupal_get_query_parameters();
 
-  if (empty($params['quant_revision']) || empty($node->nid)) {
+  if (!variable_get('quant_content_revisions', FALSE)) {
     return NODE_ACCESS_IGNORE;
   }
 
-  if (empty($params['quant_token'])) {
-    return NODE_ACCESS_DENY;
+  if (isset($params['quant_token'])) {
+    return quant_token_validate($node->nid) ? NODE_ACCESS_ALLOW : NODE_ACCESS_DENY;
   }
 
-  $nid = $node->nid;
-  return quant_token_validate($nid) ? NODE_ACCESS_ALLOW : NODE_ACCESS_DENY;
+  return NODE_ACCESS_IGNORE;
+}
+
+/**
+ * Implements hook_node_load().
+ */
+function quant_node_load($nodes) {
+  $params = drupal_get_query_parameters();
+  if (empty($params['quant_token'])) {
+    return;
+  }
+
+  foreach ($nodes as $node) {
+    if (quant_token_validate($node->nid)) {
+      $node->status = 1;
+    }
+  }
 }
 
 /**
@@ -182,7 +202,6 @@ function quant_node_insert($node) {
     'type' => 'node',
     'op' => 'insert',
     'original' => $node,
-    'token' => quant_token_create($node->nid),
   );
 
   if (!empty($node->op)) {
@@ -201,7 +220,6 @@ function quant_node_update($node) {
     'type' => 'node',
     'op' => 'update',
     'original' => $original,
-    'token' => quant_token_create($node->nid),
   );
 
   if (!empty($node->op)) {
@@ -226,9 +244,8 @@ function _quant_post_entity_op($entity_info) {
     $context['token'] = $entity_info['token'];
   }
 
+  $context['id'] = $id;
   quant_seed($url, $context);
-
-  // This triggers on every page update/save/insert and causes slowness.
 }
 
 /**
@@ -252,9 +269,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     return;
   }
 
-  quant_log('Preparing to send !url', array(
-    '!url' => $url,
-  ));
+  quant_log('Preparing to send !url', array('!url' => $url));
 
   $options = array(
     'headers' => array(
@@ -267,15 +282,21 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   // This is a cache bust - prevent proxies from caching the request.
   $query['_quant'] = strtotime('now');
 
-  // Check if we have a node context.
-  if (isset($context['token']) && isset($context['vid']) && $context['type'] == 'node') {
-    $query['quant_revision'] = $context['vid'];
+  if (isset($context['token'])) {
     $query['quant_token'] = $context['token'];
+  }
+  elseif (isset($context['id'])) {
+    // Create a short-lived token to grant node access.
+    $query['quant_token'] = quant_token_create($context['id']);
+  }
+
+  if (isset($context['vid']) && $context['type'] == 'node') {
+    $query['quant_revision'] = $context['vid'];
   }
 
   $response = drupal_http_request("$url?" . drupal_http_build_query($query), $options);
 
-  if (!property_exists($response, 'data') || $response->code > 400) {
+  if (!property_exists($response, 'data') || $response->code >= 400) {
     watchdog('quant', 'Unable to seed %url %error %request', array(
       '%url' => $url,
       '%error' => $response->error,
@@ -397,7 +418,6 @@ function _quant_prepare_route($url) {
 function _quant_prepare_entity($type, $entity_id) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
-
   $entity = entity_load($type, [$entity_id]);
 
   if (empty($entity)) {
@@ -688,6 +708,8 @@ function quant_token_create($nid) {
     var_dump($error->getMessage());
   }
 
+  file_put_contents('/app/token.txt', $token);
+
   return $token;
 }
 
@@ -704,11 +726,9 @@ function quant_token_validate($nid, $strict = TRUE) {
     return FALSE;
   }
 
-  $token = $params['quant_token'];
-
   $record = db_select('quant_token', 'qt')
     ->fields('qt', ['nid', 'created'])
-    ->condition('token', $token)
+    ->condition('token', $params['quant_token'])
     ->execute()
     ->fetchAssoc();
 
@@ -718,7 +738,7 @@ function quant_token_validate($nid, $strict = TRUE) {
   }
 
   // Self-destruct for the token.
-  db_delete('quant_token')->condition('token', $token)->execute();
+  // db_delete('quant_token')->condition('token', $params['quant_token'])->execute();
 
   if (!$strict) {
     return TRUE;
@@ -726,12 +746,4 @@ function quant_token_validate($nid, $strict = TRUE) {
 
   $valid_until = strtotime(QUANT_ELAPSED_TIME, $record['created']);
   return REQUEST_TIME < $valid_until && $nid == $record['nid'];
-}
-
-/**
- * @TODO: remove.
- */
-function quant_test($nid = 1) {
-  list($url, $context) = _quant_prepare_entity('node', $nid);
-  quant_seed($url, $context);
 }
