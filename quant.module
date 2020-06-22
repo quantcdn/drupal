@@ -17,7 +17,7 @@ define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.otf)$/i');
  *
  * @var string
  */
-define('QUANT_ELAPSED_TIME', '+60 minutes');
+define('QUANT_ELAPSED_TIME', '+1 minute');
 
 /**
  * Implements hook_help().
@@ -149,6 +149,10 @@ function quant_node_menu_load($nid) {
  * Implements hook_cron().
  */
 function quant_cron() {
+  // Tokens can be used multiple times in a single request, this causes issues
+  // with the access check by removing the token clean up to core cron we can
+  // persist a single token for multiple uses, the 1 minute timeout still ensures
+  // that the token will expire naturally.
   db_query('TRUNCATE {quant_token}');
 }
 
@@ -180,13 +184,12 @@ function quant_node_access($node, $op, $account) {
 /**
  * Implements hook_node_load().
  */
-function quant_node_load($nodes) {
+function quant_node_load(&$nodes) {
   $params = drupal_get_query_parameters();
   if (empty($params['quant_token'])) {
     return;
   }
-
-  foreach ($nodes as $node) {
+  foreach ($nodes as &$node) {
     if (quant_token_validate($node->nid)) {
       $node->status = 1;
     }
@@ -205,9 +208,8 @@ function quant_node_insert($node) {
   );
 
   if (!empty($node->op)) {
-    drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
+    drupal_register_shutdown_function('_quant_shutdown', $entity_info);
   }
-
 }
 
 /**
@@ -223,8 +225,19 @@ function quant_node_update($node) {
   );
 
   if (!empty($node->op)) {
-    drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
+    drupal_register_shutdown_function('_quant_shutdown', $entity_info);
   }
+}
+
+/**
+ * Intermediary shutdown function.
+ *
+ * This is an intermediary shutdown function to ensure that quants
+ * export will always be run after other processes.
+ *
+ */
+function _quant_shutdown($entity_info) {
+  drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
 }
 
 /**
