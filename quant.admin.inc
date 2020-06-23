@@ -16,7 +16,7 @@ function quant_config() {
   $form['quant_content_revisions'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable content revisions'),
-    '#description' => t('Any content change will create a new revision in Quant.'),
+    '#description' => t('Any content change will create a new revision in Quant, <i>experimental - this might have compatibility issues with your module setup</i>.'),
     '#default_value' => variable_get('quant_content_revisions', FALSE),
   );
 
@@ -25,6 +25,13 @@ function quant_config() {
     '#title' => t('Enable asset revisions'),
     '#description' => t('Media revisions will be tracked when files/images/etc change.'),
     '#default_value' => variable_get('quant_asset_revisions', FALSE),
+  );
+
+  $form['quant_rewrite_relative'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable relative paths'),
+    '#description' => t('Ensure all assets are rewritten as relative paths.'),
+    '#default_value' => variable_get('quant_rewrite_relative', FALSE),
   );
 
   $form['quant_base_url'] = array(
@@ -40,8 +47,6 @@ function quant_config() {
     '#description' => t('Optionally provide the expected hostname for content served via quant, this ensures that absolute links in content point to the correct domain. This ensures absolute links in content point to the correct domain. e.g: www.example.com <a href="#">More info</a>'),
     '#default_value' => variable_get('quant_hostname', $base_url),
   );
-
-  quant_test(6183);
 
   return system_settings_form($form);
 }
@@ -62,6 +67,26 @@ function quant_seed_settings() {
     '#default_value' => variable_get('quant_seed_entity_node', FALSE),
   );
 
+  // Filter by node bundles.
+  $types = node_type_get_types();
+
+  $options = array();
+  foreach ($types as $typename => $type) {
+    $options[$typename] = $type->name;
+  }
+
+  $form['quant_seed_entity_node_bundles'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Enabled bundles'),
+    '#description' => t('Optionally restrict to these content types.'),
+    '#options' => $options,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="quant_seed_entity_node"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
   $form['quant_seed_entity_taxonomy'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export taxonomy terms'),
@@ -70,7 +95,7 @@ function quant_seed_settings() {
 
   $form['quant_seed_theme_assets'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Theme assets'),
+    '#title' => t('Export theme assets'),
     '#default_value' => variable_get('quant_seed_theme_assets', FALSE),
   );
 
@@ -90,9 +115,12 @@ function quant_seed_settings() {
     '#type' => 'checkbox',
     '#title' => t('Trigger the batch'),
     '#description' => t('<strong>Note:</strong> This will attempt to trigger the seed from the UI, depending on the size of your site and PHP configuration this may not work.'),
+    '#weight' => 998,
   );
 
   $form = system_settings_form($form);
+
+  $form['actions']['#weight'] = 999;
 
   $form['#submit'][] = '_quant_seed_prepare';
 

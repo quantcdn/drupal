@@ -35,6 +35,8 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE) {
     return;
   }
 
+  $api .= '/redirect';
+
   $request = array(
     'headers' => quant_api_get_request_headers() + array(
       'content-type' => 'application/json',
@@ -62,9 +64,24 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE) {
 }
 
 /**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function quant_form_quant_seed_settings_alter(&$form, $form_state) {
+  $form['quant_seed_redirects'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Export redirects'),
+    '#default_value' => variable_get('quant_seed_redirects', FALSE),
+  );
+}
+
+/**
  * Implements hook_quant_seed_alter().
  */
 function quant_redirect_quant_seed_alter(&$batch) {
+  if (!variable_get('quant_seed_redirects', FALSE)) {
+    return;
+  }
+
   $redirects = db_select('redirect', 'r')
     ->fields('r', array('source', 'redirect', 'status_code'))
     ->condition('status', 1)
@@ -72,6 +89,15 @@ function quant_redirect_quant_seed_alter(&$batch) {
 
   while ($redirect = $redirects->fetchAssoc()) {
     $status_code = empty($redirect['status_code']) ? variable_get('redirect_default_status_code', 301) : $redirect['status_code'];
+
+    // Strange behaviour; to/from are swapped.
+    if (strpos($redirect['redirect'], 'node') === 0 && $redirect['status_code'] == 0) {
+      $redirect = array(
+        'redirect' => $redirect['source'],
+        'source' => $redirect['redirect'],
+        'status_code' => 301,
+      );
+    }
 
     $batch['operations'][] = array(
       'quant_redirect_request',
