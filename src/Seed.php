@@ -55,6 +55,10 @@ class Seed {
 
     $markup = self::markupFromRoute($route);
 
+    if (empty($markup)) {
+      return;
+    }
+
     $meta = [
       'info' => [
         'author' => '',
@@ -282,6 +286,10 @@ class Seed {
     ]);
     $meta = [];
 
+    if (empty($markup)) {
+      return;
+    }
+
     $metaManager = \Drupal::service('plugin.manager.quant.metadata');
     foreach ($metaManager->getDefinitions() as $pid => $def) {
       $plugin = $metaManager->createInstance($pid);
@@ -341,7 +349,7 @@ class Seed {
 
     $markup = '';
     if ($response->getStatusCode() == 200) {
-      $markup = $response->getBody();
+      $markup = self::removeQuantParams($response->getBody());
     }
     else {
       $markup = '';
@@ -351,6 +359,27 @@ class Seed {
 
     return $markup;
 
+  }
+
+  /**
+   * Returns markup with quant params removed.
+   */
+  private function removeQuantParams($markup) {
+    // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
+    $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
+    // Remove ?quant_revision=XX&quant_token=XX
+    $markup = preg_replace("/\?quant_revision=(.*&)quant_token=[^\"']*/i", '', $markup);
+    // Remove &quant_revision=XX&quant_token=XX with optional params
+    $markup = preg_replace("/\&quant_revision=(.*&)quant_token=[^\"'&]*/i", '', $markup);
+
+    // Replace ?quant_revision=XX&additional_params with ?
+    $markup = preg_replace('/\?quant_revision=(.*&)/i', '?', $markup);
+    // Remove ?quant_revision=XX
+    $markup = preg_replace("/\?quant_revision=[^\"']*/i", '', $markup);
+    // Remove &quant_revision=XX with optional params
+    $markup = preg_replace("/\&quant_revision=[^\"'&]*/i", '', $markup);
+
+    return $markup;
   }
 
 }

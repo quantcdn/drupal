@@ -50,6 +50,7 @@ class SeedForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
 
     $warnings = $this->getWarnings();
+    $config = $this->config('quant_api.settings');
 
     if (!empty($warnings)) {
       $form['warnings'] = [
@@ -73,6 +74,27 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Nodes'),
       '#description' => $this->t('Exports the latest revision of each node.'),
+    ];
+
+    // Seed by bundle.
+    $types = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+
+    foreach($types as $type) {
+      $content_types[$type->id()] = $type->label();
+    }
+
+    $form['entity_node_bundles'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Enabled bundles'),
+      '#description' => $this->t('Optionally restrict to these content types.'),
+      '#options' => $content_types,
+      '#states' => [
+        'visible' => [
+          ':input[name="entity_node"]' => ['checked' => TRUE],
+        ],
+      ],
     ];
 
     $form['entity_node_revisions'] = [
@@ -103,6 +125,24 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Redirects'),
       '#description' => $this->t('Exports all existing redirects.'),
+    ];
+
+    $form['routes'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Custom routes'),
+      '#description' => $this->t('Exports custom list of routes.'),
+    ];
+
+    $form['routes_textarea'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Routes'),
+      '#description' => $this->t('Add routes to export, each on a new line.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="routes"]' => ['checked' => TRUE],
+        ],
+      ],
+      '#default_value' => $config->get('routes_export', ''),
     ];
 
     $moduleHandler = \Drupal::moduleHandler();
@@ -149,6 +189,7 @@ class SeedForm extends FormBase {
     $nids = [];
     $assets = [];
     $routes = [];
+    $redirects = [];
 
     // @todo: Separate plugins.
     if ($form_state->getValue('theme_assets')) {
@@ -172,7 +213,25 @@ class SeedForm extends FormBase {
 
     if ($form_state->getValue('entity_node')) {
       $query = \Drupal::entityQuery('node');
+
+      // Restrict by bundle.
+      if (!empty($bundles = array_filter($form_state->getValue('entity_node_bundles')))) {
+        if (!empty($bundles)) {
+          $query->condition('type', array_keys($bundles), 'IN');
+        }
+      }
+
       $nids = $query->execute();
+    }
+
+    if ($form_state->getValue('routes_textarea')) {
+      foreach (explode(PHP_EOL, $form_state->getValue('routes_textarea')) as $route) {
+        if (strpos((trim($route)), '/') !== 0) {
+          continue;
+        }
+
+        $routes[] = trim($route);
+      }
     }
 
     $batch = [
