@@ -126,7 +126,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     $on_disk = parse_url($file, PHP_URL_PATH);
     $domain = parse_url($file, PHP_URL_HOST);
 
-    if (stripos($base_url, $domain) == -1) {
+    if (!empty($domain) && stripos($base_url, $domain) == -1) {
       // @todo: Determine local vs. remote.
       continue;
     }
