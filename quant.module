@@ -318,7 +318,6 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     return;
   }
 
-
   if (!property_exists($response, 'data') || $response->code >= 400) {
     watchdog('quant', 'Unable to seed %url %error %request', array(
       '%url' => $url,
@@ -339,6 +338,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
     /** @var \DOMElement $node */
     $pager_operations = [];
+    $page_urls = isset($context['page_urls']) ? $context['page_urls'] : [];
     foreach ($xpath->query('//a[contains(@href,"page=")]') as $node) {
 
       $original_href = $node->getAttribute('href');
@@ -351,12 +351,37 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
       global $base_url;
       $base = variable_get('quant_base_url', $base_url);
+      $pager_url = $base.$new_href;
 
-      // @todo: Create new batches. Superhack for now.
-      // Cannot pass in 'find_pager' to children; OOM errors.
-      // Clearly need to find a way of attaching this to a new batch.
-      quant_seed($base.$new_href);
+      if (in_array($pager_url, $page_urls)) {
+        error_log("$pager_url already tracked, skipping");
+        continue;
+      }
+
+      error_log("Adding: " . $pager_url);
+
+
+      $page_urls[] = $pager_url;
+      $pager_operations[] = array(
+       'quant_seed',
+        array($pager_url, [
+          'find_pager' => TRUE,
+          'page_urls' => $page_urls,
+        ]),
+      );
+
     }
+
+    $b = array(
+      'title' => t('Seeding views (Pages)'),
+      'operations' => $pager_operations,
+      'finished' => '_quant_batch_complete',
+      'init_message' => t('Initialising...'),
+      'progress_message' => t('Exporting views page @current out of @total'),
+      'error_message' => t('Unable to export'),
+      'file' => drupal_get_path('module', 'quant') . 'quant.module',
+    );
+    batch_set($b);
   }
 
 
