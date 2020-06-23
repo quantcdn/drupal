@@ -306,6 +306,19 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
   $response = drupal_http_request("$url?" . drupal_http_build_query($query), $options);
 
+  // Add a redirect if 301|302.
+  if (isset($response->redirect_code) && ($response->redirect_code == 301 || $response->redirect_code == 302)) {
+    // Strip quant params from destination.
+    $dest = _remove_quant_params($response->redirect_url);
+
+    if (module_exists('quant_redirect')) {
+      quant_redirect_request($path, $dest, (int)$response->redirect_code);
+    }
+
+    return;
+  }
+
+
   if (!property_exists($response, 'data') || $response->code >= 400) {
     watchdog('quant', 'Unable to seed %url %error %request', array(
       '%url' => $url,
@@ -793,6 +806,13 @@ function _remove_quant_params($markup) {
   $markup = preg_replace("/\?quant_revision=[^\"']*/i", '', $markup);
   // Remove &quant_revision=XX with optional params
   $markup = preg_replace("/\&quant_revision=[^\"'&]*/i", '', $markup);
+
+  // Replace ?quant_token=XX&additional_params with ?
+  $markup = preg_replace('/\?quant_token=(.*&)/i', '?', $markup);
+  // Remove ?quant_token=XX
+  $markup = preg_replace("/\?quant_token=[^\"']*/i", '', $markup);
+  // Remove &quant_token=XX with optional params
+  $markup = preg_replace("/\&quant_token=[^\"'&]*/i", '', $markup);
 
   return $markup;
 }
