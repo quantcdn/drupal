@@ -1,0 +1,9 @@
+name = Quant File
+description = Publish file displays to quant
+package = quant
+core = 7.x
+configure = admin/config/service/quant/seed
+
+dependencies[] = quant
+dependencies[] = quant_api
+dependencies[] = file

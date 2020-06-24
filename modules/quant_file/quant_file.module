@@ -1,0 +1,72 @@
+<?php
+
+/**
+ * @file
+ * Module functions for quant_file.
+ */
+
+/**
+ * Implements hook_file_insert().
+ */
+function quant_file_file_insert($file) {
+  $entity_info = array(
+    'entity' => $file,
+    'type' => 'file',
+    'op' => 'insert',
+    'original' => NULL,
+  );
+
+  if (!empty($file->op)) {
+    drupal_register_shutdown_function('_quant_shutdown', $entity_info);
+  }
+}
+
+/**
+ * Implements hook_file_update().
+ */
+function quant_file_file_update($file) {
+  $original = isset($file->original) ? $file->original : NULL;
+  $entity_info = array(
+    'entity' => $file,
+    'type' => 'file',
+    'op' => 'insert',
+    'original' => $original,
+  );
+
+  if (!empty($file->op)) {
+    drupal_register_shutdown_function('_quant_shutdown', $entity_info);
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function quant_file_form_quant_seed_settings_alter(&$form, $form_state) {
+  $form['quant_seed_files'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Export file pages'),
+    '#default_value' => variable_get('quant_seed_files', FALSE),
+  );
+}
+
+/**
+ * Implements hook_quant_seed_alter().
+ */
+function quant_file_quant_seed_alter(&$batch) {
+  if (!variable_get('quant_seed_files', FALSE)) {
+    return;
+  }
+
+  $files = db_select('file_managed', 'f')
+    ->fields('f', array('fid', 'status'))
+    ->condition('status', 1)
+    ->execute();
+
+  while($file = $files->fetchAssoc()) {
+    list($url, $context) = _quant_prepare_entity('file', $file['fid']);
+    $batch['operations'][] = array(
+      'quant_seed',
+      array($url, $context),
+    );
+  }
+}
