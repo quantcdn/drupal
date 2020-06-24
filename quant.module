@@ -10,7 +10,7 @@
  *
  * @var string
  */
-define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.otf)$/i');
+define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf)$/i');
 
 /**
  * The elapsed time a short-live token can be alive for.
@@ -311,11 +311,22 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     // Strip quant params from destination.
     $dest = _remove_quant_params($response->redirect_url);
 
+    // Ensure relative for internal redirect.
+    $dest = _rewrite_relative($dest);
+
     if (module_exists('quant_redirect')) {
       quant_redirect_request($path, $dest, (int)$response->redirect_code);
     }
 
-    return;
+    // Ensure internal redirects have their destination seeded.
+    if (_is_url_internal($dest)) {
+      $dest_path = parse_url($dest, PHP_URL_PATH);
+      $base = variable_get('quant_base_url', $base_url);
+      quant_seed("{$base}{$dest_path}", array());
+    }
+    else {
+      return;
+    }
   }
 
   if (!property_exists($response, 'data') || $response->code >= 400) {
@@ -504,13 +515,19 @@ function _quant_prepare_entity($type, $entity_id) {
  * @param array $batch
  *   The batch array.
  */
-function _quant_batch_nodes(&$batch) {
+function _quant_batch_nodes(&$batch, $bundles = array()) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
-  $nids = db_select('node', 'n')
+  $query = db_select('node', 'n')
     ->fields('n', array('nid'))
-    ->condition('status', 1)
+    ->condition('status', 1);
+
+  if (!empty($bundles)) {
+    $query->condition('n.type', array_keys($bundles), 'IN');
+  }
+
+  $nids = $query
     ->execute()
     ->fetchCol();
 
@@ -659,8 +676,9 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
     'file' => drupal_get_path('module', 'quant') . 'quant.module',
   );
 
+  $node_bundles = array_filter(variable_get('quant_seed_entity_node_bundles'));
   if (variable_get('quant_seed_entity_node')) {
-    _quant_batch_nodes($batch);
+    _quant_batch_nodes($batch, $node_bundles);
   }
 
   if (variable_get('quant_seed_entity_taxonomy')) {
@@ -812,6 +830,23 @@ function _rewrite_relative($markup) {
   global $base_url;
   $base = variable_get('quant_hostname', $base_url);
   return preg_replace("/(https?:\/\/)?{$base}/i", '', $markup);
+}
+
+/**
+ * Determines whether a URL is internal or external.
+ */
+function _is_url_internal($url) {
+  global $base_url;
+  $base = variable_get('quant_hostname', $base_url);
+  if (preg_match("/(https?:\/\/)?{$base}/i", $url)) {
+    return TRUE;
+  }
+
+  if (strpos($url, '/') === 0) {
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 /**
