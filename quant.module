@@ -230,6 +230,34 @@ function quant_node_update($node) {
 }
 
 /**
+ * Implements hook_taxonomy_term_insert().
+ */
+function quant_taxonomy_term_insert($term) {
+  $entity_info = array(
+    'entity' => $term,
+    'type' => 'taxonomy_term',
+    'op' => 'insert',
+    'original' => $term,
+  );
+
+  drupal_register_shutdown_function('_quant_shutdown', $entity_info);
+}
+
+/**
+ * Implements hook_taxonomy_term_update().
+ */
+function quant_taxonomy_term_update($term) {
+  $entity_info = array(
+    'entity' => $term,
+    'type' => 'taxonomy_term',
+    'op' => 'insert',
+    'original' => $term,
+  );
+
+  drupal_register_shutdown_function('_quant_shutdown', $entity_info);
+}
+
+/**
  * Intermediary shutdown function.
  *
  * This is an intermediary shutdown function to ensure that quants
@@ -851,6 +879,10 @@ function _is_url_internal($url) {
  * Removes quant params from markup.
  */
 function _remove_quant_params($markup) {
+
+  // Ensure &amp; is replaced with &
+  $markup = preg_replace('/&amp;/i', '&', $markup);
+
   // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
   $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
   // Remove ?quant_revision=XX&quant_token=XX

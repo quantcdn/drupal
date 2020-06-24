@@ -118,7 +118,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
   }
 
   $data = json_decode($response->data, TRUE);
-  $media = array_merge($data['attachments']['js'], $data['attachments']['css'], $data['attachments']['media']['images'], $data['attachments']['media']['documents'], $data['attachments']['media']['video']);
+  $media = array_merge($data['attachments']['js'], $data['attachments']['css'], $data['attachments']['media']['images'], $data['attachments']['media']['documents'], $data['attachments']['media']['video'], $data['attachments']['media']['audio']);
 
   foreach ($media as $item) {
     // @todo: Configurable to disallow remote files.
