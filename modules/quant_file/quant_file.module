@@ -53,14 +53,13 @@ function quant_file_form_quant_seed_settings_alter(&$form, $form_state) {
  * Implements hook_quant_seed_alter().
  */
 function quant_file_quant_seed_alter(&$batch) {
-  // if (!variable_get('quant_seed_files', FALSE)) {
-  //   return;
-  // }
+  if (!variable_get('quant_seed_files', FALSE)) {
+    return;
+  }
 
   $files = db_select('file_managed', 'f')
     ->fields('f', array('fid', 'status'))
     ->condition('status', 1)
-    ->range(0, 1)
     ->execute();
 
   while($file = $files->fetchAssoc()) {
