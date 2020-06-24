@@ -318,13 +318,20 @@ class Seed {
     }
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid));
-
   }
 
   /**
-   * Returns markup for a given internal route.
+   * Returns markup for a given route.
+   *
+   * @param string $route
+   *   The route to collect markup from.
+   * @param array $query
+   *   Query parameters to add to the route.
+   *
+   * @return string|bool
+   *   The markup from the $route.
    */
-  protected function markupFromRoute($route, $query = []) {
+  protected static function markupFromRoute($route, array $query = []) {
 
     // Build internal request.
     $config = \Drupal::config('quant.settings');
@@ -345,14 +352,21 @@ class Seed {
         'Host' => $hostname,
       ],
       'auth' => $auth,
+      'allow_redirects' => FALSE,
     ]);
 
     $markup = '';
+
+    if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
+      $destination = reset($response->getHeader('Location'));
+      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
+      return FALSE;
+    }
+
     if ($response->getStatusCode() == 200) {
       $markup = self::removeQuantParams($response->getBody());
     }
     else {
-      $markup = '';
       $messenger = \Drupal::messenger();
       $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
     }
@@ -363,8 +377,14 @@ class Seed {
 
   /**
    * Returns markup with quant params removed.
+   *
+   * @param string $markup
+   *   The markup to search and remove query params from.
+   *
+   * @return string
+   *   Sanitised markup string.
    */
-  private function removeQuantParams($markup) {
+  private static function removeQuantParams($markup) {
     // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
     $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
     // Remove ?quant_revision=XX&quant_token=XX
