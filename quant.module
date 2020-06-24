@@ -252,8 +252,6 @@ function _quant_post_entity_op($entity_info) {
   list($url, $context) = _quant_prepare_entity($entity_info['type'], $id);
 
   if (isset($entity_info['token'])) {
-    // Shutdown functions can't interact with the DB so we have to create
-    // the token first and pass it through.
     $context['token'] = $entity_info['token'];
   }
 
@@ -262,7 +260,7 @@ function _quant_post_entity_op($entity_info) {
 }
 
 /**
- * Seed a node.
+ * Seed a url.
  *
  * @param string $url
  *   The url to seed.
