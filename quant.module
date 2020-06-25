@@ -376,7 +376,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     /** @var \DOMElement $node */
     $pager_operations = [];
     $page_urls = isset($context['page_urls']) ? $context['page_urls'] : [];
-    foreach ($xpath->query('//a[contains(@href,"page=")]') as $node) {
+    foreach ($xpath->query('//a[contains(@href,"page=") and contains(text(), "next")]') as $node) {
 
       $original_href = $node->getAttribute('href');
       if ($original_href[0] === '?') {
