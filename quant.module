@@ -330,7 +330,12 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     $query['quant_revision'] = $context['vid'];
   }
 
-  $response = drupal_http_request("$url?" . drupal_http_build_query($query), $options);
+  if (strpos($url, '?') === false) {
+    $response = drupal_http_request("$url?" . drupal_http_build_query($query), $options);
+  }
+  else {
+    $response = drupal_http_request("$url&" . drupal_http_build_query($query), $options);
+  }
 
   // Add a redirect if 301|302.
   if (isset($response->redirect_code) && ($response->redirect_code == 301 || $response->redirect_code == 302)) {
@@ -660,6 +665,32 @@ function _quant_batch_views(&$batch) {
 }
 
 /**
+ * Generate a batch of arbitrary routes.
+ *
+ * @param array $batch
+ *   The batch array.
+ * @param string $routes
+ *   Textarea entered routes.
+ */
+function _quant_batch_routes(&$batch, $routes) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+
+  foreach (explode(PHP_EOL, $routes) as $route) {
+    if (strpos((trim($route)), '/') !== 0) {
+      continue;
+    }
+
+    $url = $base . $route;
+
+    $batch['operations'][] = array(
+      'quant_seed',
+      array(trim($url)),
+    );
+  }
+}
+
+/**
  * Batch processor for exporting nodes.
  */
 function quant_seed_node_batch($nid) {
@@ -717,6 +748,10 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
 
   if (variable_get('quant_seed_views')) {
     _quant_batch_views($batch);
+  }
+
+  if (variable_get('quant_custom_routes')) {
+    _quant_batch_routes($batch, variable_get('quant_custom_routes'));
   }
 
   // Allow module to alter the operation.

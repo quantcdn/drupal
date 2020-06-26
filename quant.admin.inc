@@ -111,6 +111,25 @@ function quant_seed_settings() {
   // @TODO - add media entity support.
   $form['entity_media'] = array();
 
+  $form['routes'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Custom routes'),
+    '#description' => t('Exports custom list of routes.'),
+  ];
+
+  $form['quant_custom_routes'] = [
+    '#type' => 'textarea',
+    '#title' => t('Routes'),
+    '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g: /about-us'),
+    '#states' => [
+      'visible' => [
+        ':input[name="routes"]' => ['checked' => TRUE],
+      ],
+    ],
+    '#default_value' => variable_get('quant_custom_routes', FALSE),
+  ];
+
+
   $form['quant_seed'] = array(
     '#type' => 'checkbox',
     '#title' => t('Trigger the batch'),
