@@ -318,6 +318,7 @@ class Seed {
     }
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid));
+
   }
 
   /**
@@ -332,6 +333,9 @@ class Seed {
    *   The markup from the $route.
    */
   protected static function markupFromRoute($route, array $query = []) {
+
+    // Cleanse route.
+    $route = str_replace('//', '/', $route);
 
     // Build internal request.
     $config = \Drupal::config('quant.settings');
@@ -359,6 +363,13 @@ class Seed {
 
     if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
       $destination = reset($response->getHeader('Location'));
+
+      // Strip quant params from destination.
+      $destination = self::removeQuantParams($destination);
+
+      // Ensure relative for internal redirect.
+      $destination = self::rewriteRelative($destination);
+
       \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
       return FALSE;
     }
@@ -400,6 +411,21 @@ class Seed {
     $markup = preg_replace("/\&quant_revision=[^\"'&]*/i", '', $markup);
 
     return $markup;
+  }
+
+  /**
+   * Replaces absolute URLs with relative in markup.
+   *
+   * @param string $markup
+   *   The markup to search and rewrie relative paths for.
+   *
+   * @return string
+   *   Sanitised markup string.
+   */
+  private static function rewriteRelative($markup) {
+    $config = \Drupal::config('quant.settings');
+    $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
+    return preg_replace("/(https?:\/\/)?{$hostname}/i", '', $markup);
   }
 
 }
