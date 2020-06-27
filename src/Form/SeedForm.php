@@ -215,7 +215,7 @@ class SeedForm extends FormBase {
       $query = \Drupal::entityQuery('node');
 
       // Restrict by bundle.
-      if (!empty($bundles = array_filter($form_state->getValue('entity_node_bundles')))) {
+      if ($bundles = array_filter($form_state->getValue('entity_node_bundles'))) {
         if (!empty($bundles)) {
           $query->condition('type', array_keys($bundles), 'IN');
         }
