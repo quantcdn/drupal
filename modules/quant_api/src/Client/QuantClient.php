@@ -152,4 +152,26 @@ class QuantClient implements QuantClientInterface {
     return json_decode($response->getBody(), TRUE);
   }
 
+  /**
+   * Send an unpublish request to Quant.
+   *
+   * @param string $url
+   *   The url to unpublish.
+   *
+   * @return array
+   *   The API response.
+   */
+  public function unpublish(string $url) : array {
+    $response = $this->client->patch($this->endpoint . '/unpublish', [
+      'headers' => [
+        'Quant-Url' => $url,
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+      ]
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
 }

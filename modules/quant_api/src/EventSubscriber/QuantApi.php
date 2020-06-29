@@ -60,6 +60,7 @@ class QuantApi implements EventSubscriberInterface {
     $events[QuantEvent::OUTPUT][] = ['onOutput'];
     $events[QuantFileEvent::OUTPUT][] = ['onMedia'];
     $events[QuantRedirectEvent::UPDATE][] = ['onRedirect'];
+    $events[QuantEvent::UNPUBLISH][] = ['onUnpublish'];
     return $events;
   }
 
@@ -170,6 +171,22 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (InvalidPayload $error) {
       $this->logger->error($error->getMessage());
+    }
+    catch (Exception $error) {
+      $this->logger->error($error->getMessage());
+    }
+
+    return $res;
+  }
+
+  /**
+   * Trigger an API request to unpublish a route.
+   */
+  public function onUnpublish(QuantEvent $event) {
+    $url = $event->getLocation();
+
+    try {
+      $res = $this->client->unpublish($url);
     }
     catch (Exception $error) {
       $this->logger->error($error->getMessage());
