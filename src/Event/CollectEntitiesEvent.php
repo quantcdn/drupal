@@ -2,7 +2,7 @@
 
 namespace Drupal\quant\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use Drupal\Core\Form\FormStateInterface;
 
 /**
  * Collect entities event.
@@ -10,7 +10,7 @@ use Symfony\Component\EventDispatcher\Event;
  * This is triggered when we need to gather all entities
  * to export to Quant.
  */
-class CollectEntitiesEvent extends Event {
+class CollectEntitiesEvent extends ConfigFormEventBase {
 
   /**
    * A list of entity ids that are to be exported.
@@ -34,7 +34,8 @@ class CollectEntitiesEvent extends Event {
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $entities = [], $revisions = TRUE) {
+  public function __construct(array $entities = [], $revisions = TRUE, FormStateInterface $state = NULL) {
+    parent::__construct($state);
     $this->entities = $entities;
     $this->revisions = $revisions;
   }

@@ -155,8 +155,6 @@ class SeedForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-
-
     $config = $this->config('quant_api.settings');
 
     if ($config->get('api_token')) {
@@ -187,7 +185,7 @@ class SeedForm extends FormBase {
 
     if ($form_state->getValue('redirects')) {
       // Collect the redirects for the seed.
-      $event = new CollectRedirectsEvent();
+      $event = new CollectRedirectsEvent([], $form_state);
       $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
       while ($redirect = $event->getEntity()) {
         $batch['operations'][] = ['\Drupal\quant\Seed::exportRedirect', [$redirect]];
@@ -196,24 +194,23 @@ class SeedForm extends FormBase {
 
     if ($form_state->getValue('entity_node')) {
       $revisions = $form_state->getValue('entity_node_revisions');
-      $event = new CollectEntitiesEvent([], $revisions);
+      $event = new CollectEntitiesEvent([], $revisions, $form_state);
       $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
       while ($entity = $event->getEntity()) {
         $batch['operations'][] = ['\Drupal\quant\Seed::exportNode', $entity];
       }
     }
 
-    $event = new CollectRoutesEvent($routes);
+    $event = new CollectRoutesEvent($routes, $form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
     while ($route = $event->getRoute()) {
       $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
     }
 
-    $event = new CollectFilesEvent($assets);
+    $event = new CollectFilesEvent($assets, $form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
     while ($file = $event->getFilePath()) {
       $batch['operations'][] = ['\Drupal\quant\Seed::exportFile', [$file]];
-
     }
 
     batch_set($batch);

@@ -2,7 +2,7 @@
 
 namespace Drupal\quant\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use Drupal\Core\Form\FormStateInterface;
 
 /**
  * Collect entities event.
@@ -10,7 +10,7 @@ use Symfony\Component\EventDispatcher\Event;
  * This is triggered when we need to gather all entities
  * to export to Quant.
  */
-class CollectFilesEvent extends Event {
+class CollectFilesEvent extends ConfigFormEventBase {
 
   /**
    * A list of file paths to send to quant.
@@ -22,7 +22,8 @@ class CollectFilesEvent extends Event {
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $filePaths = []) {
+  public function __construct(array $filePaths = [], FormStateInterface $state = NULL) {
+    parent::__construct($state);
     $this->filePaths = $filePaths;
   }
 

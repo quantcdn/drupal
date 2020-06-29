@@ -78,7 +78,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
 
       if ($event->includeRevisions()) {
-        $vids = $this->entityManager->getStorage('node')->revisionIds($node);
+        $vids = $this->entityTypeManager->getStorage('node')->revisionIds($node);
         foreach ($vids as $vid) {
           $nr = $this->entityTypeManager->getStorage('node')->loadRevision($vid);
           $event->addEntity($nr);
@@ -104,6 +104,10 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * Collect files for quant seeding.
    */
   public function collectFiles(CollectFilesEvent $event) {
+    if (!$event->getFormState()->getValue('theme_assets')) {
+      return;
+    }
+
     // @todo: Find path programatically
     // @todo: Support multiple themes (e.g site may have multiple themes changing by route).
     $config = $this->configFactory->get('system.theme');
@@ -147,6 +151,10 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * Collect the standard routes.
    */
   public function collectRoutes(CollectRoutesEvent $event) {
+    if (!$event->getFormState()->getValue('views_pages')) {
+      return;
+    }
+
     $views_storage = $this->entityTypeManager->getStorage('view');
     $anon = User::getAnonymousUser();
 
