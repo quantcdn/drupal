@@ -67,6 +67,7 @@ class SeedForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
 
     $warnings = $this->getWarnings();
+    $config = $this->config('quant_api.settings');
 
     if (!empty($warnings)) {
       $form['warnings'] = [
@@ -90,6 +91,27 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Nodes'),
       '#description' => $this->t('Exports the latest revision of each node.'),
+    ];
+
+    // Seed by bundle.
+    $types = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+
+    foreach($types as $type) {
+      $content_types[$type->id()] = $type->label();
+    }
+
+    $form['entity_node_bundles'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Enabled bundles'),
+      '#description' => $this->t('Optionally restrict to these content types.'),
+      '#options' => $content_types,
+      '#states' => [
+        'visible' => [
+          ':input[name="entity_node"]' => ['checked' => TRUE],
+        ],
+      ],
     ];
 
     $form['entity_node_revisions'] = [
@@ -122,7 +144,24 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports all existing redirects.'),
     ];
 
-    // @TODO: sub-module.
+    $form['routes'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Custom routes'),
+      '#description' => $this->t('Exports custom list of routes.'),
+    ];
+
+    $form['routes_textarea'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Routes'),
+      '#description' => $this->t('Add routes to export, each on a new line.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="routes"]' => ['checked' => TRUE],
+        ],
+      ],
+      '#default_value' => $config->get('routes_export', ''),
+    ];
+
     $moduleHandler = \Drupal::moduleHandler();
 
     if ($moduleHandler->moduleExists('lunr')) {
@@ -155,23 +194,34 @@ class SeedForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $config = $this->config('quant_api.settings');
+    // $config = $this->config('quant_api.settings');
 
-    if ($config->get('api_token')) {
-      if (!$project = $this->client->ping()) {
-        \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
-        return;
-      }
-    }
+    // if ($config->get('api_token')) {
+    //   if (!$project = $this->client->ping()) {
+    //     \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
+    //     return;
+    //   }
+    // }
 
     $assets = [];
     $routes = [];
+    $redirects = [];
 
     // Lunr.
     if ($form_state->getValue('lunr')) {
       // @TODO Sub-module for lunr support using the events.
       $assets = array_merge($assets, Seed::findLunrAssets());
       $routes = array_merge($routes, Seed::findLunrRoutes());
+    }
+
+    if ($form_state->getValue('routes_textarea')) {
+      foreach (explode(PHP_EOL, $form_state->getValue('routes_textarea')) as $route) {
+        if (strpos((trim($route)), '/') !== 0) {
+          continue;
+        }
+
+        $routes[] = trim($route);
+      }
     }
 
     $batch = [
@@ -213,7 +263,10 @@ class SeedForm extends FormBase {
       $batch['operations'][] = ['\Drupal\quant\Seed::exportFile', [$file]];
     }
 
-    batch_set($batch);
+    var_dump(count($batch['operations']));
+    exit;
+
+    // batch_set($batch);
   }
 
 }

@@ -66,8 +66,16 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * @TODO: This should support other entity types.
    */
   public function collectEntities(CollectEntitiesEvent $event) {
-    $nids = $this->queryFactory->get('node')->execute();
+    $query = $this->queryFactory->get('node');
     $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
+
+    $bundles = array_filter($event->getFormState()->getValue('entity_node_bundles'));
+
+    if (!empty($bundles)) {
+      $query->condition('type', array_keys($bundles), 'IN');
+    }
+
+    $nids = $query->execute();
 
     // Add nodes to export batch.
     foreach ($nids as $key => $value) {
@@ -151,25 +159,32 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * Collect the standard routes.
    */
   public function collectRoutes(CollectRoutesEvent $event) {
-    if (!$event->getFormState()->getValue('views_pages')) {
-      return;
+    if ($event->getFormState()->getValue('routes_textarea')) {
+      foreach (explode(PHP_EOL, $event->getFormState()->getValue('routes_textarea')) as $route) {
+        if (strpos((trim($route)), '/') !== 0) {
+          continue;
+        }
+        $event->addRoute(trim($route));
+      }
     }
 
-    $views_storage = $this->entityTypeManager->getStorage('view');
-    $anon = User::getAnonymousUser();
+    if ($event->getFormState()->getValue('views_pages')) {
+      $views_storage = $this->entityTypeManager->getStorage('view');
+      $anon = User::getAnonymousUser();
 
-    foreach ($views_storage->loadMultiple() as $view) {
-      $view = Views::getView($view->get('id'));
-      $displays = array_keys($view->storage->get('display'));
-      foreach ($displays as $display) {
-        $view->setDisplay($display);
-        if ($view->access($display, $anon) && $path = $view->getPath()) {
-          // Exclude contextual filters for now.
-          if (strpos($path, '%') !== FALSE) {
-            continue;
+      foreach ($views_storage->loadMultiple() as $view) {
+        $view = Views::getView($view->get('id'));
+        $displays = array_keys($view->storage->get('display'));
+        foreach ($displays as $display) {
+          $view->setDisplay($display);
+          if ($view->access($display, $anon) && $path = $view->getPath()) {
+            // Exclude contextual filters for now.
+            if (strpos($path, '%') !== FALSE) {
+              continue;
+            }
+
+            $event->addRoute("/{$path}");
           }
-
-          $event->addRoute("/{$path}");
         }
       }
     }

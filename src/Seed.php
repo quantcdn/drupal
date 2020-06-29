@@ -55,6 +55,10 @@ class Seed {
 
     $markup = self::markupFromRoute($route);
 
+    if (empty($markup)) {
+      return;
+    }
+
     $meta = [
       'info' => [
         'author' => '',
@@ -193,6 +197,10 @@ class Seed {
     ]);
     $meta = [];
 
+    if (empty($markup)) {
+      return;
+    }
+
     $metaManager = \Drupal::service('plugin.manager.quant.metadata');
     foreach ($metaManager->getDefinitions() as $pid => $def) {
       $plugin = $metaManager->createInstance($pid);
@@ -225,9 +233,20 @@ class Seed {
   }
 
   /**
-   * Returns markup for a given internal route.
+   * Returns markup for a given route.
+   *
+   * @param string $route
+   *   The route to collect markup from.
+   * @param array $query
+   *   Query parameters to add to the route.
+   *
+   * @return string|bool
+   *   The markup from the $route.
    */
-  protected static function markupFromRoute($route, $query = []) {
+  protected static function markupFromRoute($route, array $query = []) {
+
+    // Cleanse route.
+    $route = str_replace('//', '/', $route);
 
     // Build internal request.
     $config = \Drupal::config('quant.settings');
@@ -248,20 +267,76 @@ class Seed {
         'Host' => $hostname,
       ],
       'auth' => $auth,
+      'allow_redirects' => FALSE,
     ]);
 
     $markup = '';
+
+    if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
+      $destination = reset($response->getHeader('Location'));
+
+      // Strip quant params from destination.
+      $destination = self::removeQuantParams($destination);
+
+      // Ensure relative for internal redirect.
+      $destination = self::rewriteRelative($destination);
+
+      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
+      return FALSE;
+    }
+
     if ($response->getStatusCode() == 200) {
-      $markup = $response->getBody();
+      $markup = self::removeQuantParams($response->getBody());
     }
     else {
-      $markup = '';
       $messenger = \Drupal::messenger();
       $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
     }
 
     return $markup;
 
+  }
+
+  /**
+   * Returns markup with quant params removed.
+   *
+   * @param string $markup
+   *   The markup to search and remove query params from.
+   *
+   * @return string
+   *   Sanitised markup string.
+   */
+  private static function removeQuantParams($markup) {
+    // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
+    $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
+    // Remove ?quant_revision=XX&quant_token=XX
+    $markup = preg_replace("/\?quant_revision=(.*&)quant_token=[^\"']*/i", '', $markup);
+    // Remove &quant_revision=XX&quant_token=XX with optional params
+    $markup = preg_replace("/\&quant_revision=(.*&)quant_token=[^\"'&]*/i", '', $markup);
+
+    // Replace ?quant_revision=XX&additional_params with ?
+    $markup = preg_replace('/\?quant_revision=(.*&)/i', '?', $markup);
+    // Remove ?quant_revision=XX
+    $markup = preg_replace("/\?quant_revision=[^\"']*/i", '', $markup);
+    // Remove &quant_revision=XX with optional params
+    $markup = preg_replace("/\&quant_revision=[^\"'&]*/i", '', $markup);
+
+    return $markup;
+  }
+
+  /**
+   * Replaces absolute URLs with relative in markup.
+   *
+   * @param string $markup
+   *   The markup to search and rewrie relative paths for.
+   *
+   * @return string
+   *   Sanitised markup string.
+   */
+  private static function rewriteRelative($markup) {
+    $config = \Drupal::config('quant.settings');
+    $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
+    return preg_replace("/(https?:\/\/)?{$hostname}/i", '', $markup);
   }
 
 }
