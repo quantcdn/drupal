@@ -73,7 +73,7 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
     return AccessResult::neutral();
   }
 
-  if (\Drupal::service('quant.token_manager')->validate($node->id())) {
+  if (\Drupal::service('quant.token_manager')->validate($node->id(), FALSE)) {
     return AccessResult::allowed();
   }
 
