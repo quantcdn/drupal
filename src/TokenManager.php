@@ -136,12 +136,14 @@ class TokenManager {
       return FALSE;
     }
 
+    $valid_until = strtotime(self::ELAPSED, strtotime($record->created));
+
     if (!$strict) {
+      // Ensure the token is valid.
       return $time < $valid_until;
     }
 
     // Ensure the token is valid and the entity matches.
-    $valid_until = strtotime(self::ELAPSED, strtotime($record->created));
     return $time < $valid_until && $entity_id == $record->nid;
   }
 
