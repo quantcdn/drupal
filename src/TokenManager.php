@@ -137,9 +137,7 @@ class TokenManager {
     }
 
     if (!$strict) {
-      // With strict checking disabled we validate the token and provide
-      // access to the content.
-      return TRUE;
+      return $time < $valid_until;
     }
 
     // Ensure the token is valid and the entity matches.
