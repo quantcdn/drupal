@@ -382,6 +382,12 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     }
   }
 
+  if ($response->code == 404) {
+    // Ensure that the route is not accessible in Quant.
+    quant_api_unpublish_route($url);
+    return FALSE;
+  }
+
   if (!property_exists($response, 'data') || $response->code >= 400) {
     watchdog('quant', 'Unable to seed %url %error %request', array(
       '%url' => $url,
