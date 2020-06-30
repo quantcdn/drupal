@@ -94,7 +94,6 @@ class TokenManager {
       $query->execute();
     }
     catch (\Exception $error) {
-      var_dump($error->getMessage());
       return FALSE;
     }
 
