@@ -263,10 +263,7 @@ class SeedForm extends FormBase {
       $batch['operations'][] = ['\Drupal\quant\Seed::exportFile', [$file]];
     }
 
-    var_dump(count($batch['operations']));
-    exit;
-
-    // batch_set($batch);
+    batch_set($batch);
   }
 
 }
