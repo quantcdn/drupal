@@ -15,7 +15,7 @@ class TokenManager {
   /**
    * Token timeout.
    */
-  const ELAPSED = '+5 minutes';
+  const ELAPSED = '+1 minute';
 
   /**
    * The database connection.
@@ -49,11 +49,12 @@ class TokenManager {
    *   The token.
    */
   protected function generate() {
-    if (is_callable('openssl_random_pseudo_bytes')) {
-      $hash = openssl_random_pseudo_bytes(32);
+    if (function_exists('random_bytes')) {
+      $bytes = random_bytes(ceil(16 / 2));
+      $hash = substr(bin2hex($bytes), 0, 16);
     }
     else {
-      $hash = bin2hex(random_bytes(32));
+      $hash = bin2hex(random_bytes(16));
     }
     return base64_encode($hash);
   }
@@ -135,18 +136,22 @@ class TokenManager {
       return FALSE;
     }
 
-    // This token will self-destruct after it has been used.
-    $this->delete($token);
+    $valid_until = strtotime(self::ELAPSED, strtotime($record->created));
 
     if (!$strict) {
-      // With strict checking disabled we validate the token and provide
-      // access to the content.
-      return TRUE;
+      // Ensure the token is valid.
+      return $time < $valid_until;
     }
 
     // Ensure the token is valid and the entity matches.
-    $valid_until = strtotime(self::ELAPSED, strtotime($record->created));
     return $time < $valid_until && $entity_id == $record->nid;
+  }
+
+  /**
+   * Release tokens that have been created.
+   */
+  public function release() {
+    return $this->connection->query('TRUNCATE quant_token');
   }
 
 }

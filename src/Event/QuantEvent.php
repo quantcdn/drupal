@@ -32,6 +32,13 @@ final class QuantEvent extends Event {
   const OUTPUT = 'quant.output';
 
   /**
+   * Event name for unpublish.
+   *
+   * @var string
+   */
+  const UNPUBLISH = 'quant.unpublish';
+
+  /**
    * The markup string.
    *
    * @var string

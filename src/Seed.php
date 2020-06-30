@@ -6,6 +6,7 @@ use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\NodeInsertEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
+use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Seed Manager.
@@ -230,6 +231,24 @@ class Seed {
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid));
 
+  }
+
+  /**
+   * Delete the path from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The entity.
+   */
+  public static function deleteNode(EntityInterface $entity) {
+    // @TODO: This should be a quant service.
+    $url = $entity->toUrl()->toString();
+    $site_config = \Drupal::config('system.site');
+    $front = $site_config->get('page.front');
+    if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
+      $url = "/";
+    }
+
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $url, [], NULL));
   }
 
   /**

@@ -9,6 +9,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\node\NodeInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\quant\Seed;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 /**
  * Implements hook_node_insert().
@@ -18,7 +19,13 @@ function quant_node_insert(EntityInterface $entity) {
   if ($disable_drafts && !$entity->isPublished()) {
     return;
   }
-  drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
+
+  $context = [
+    'callback' => '_quant_entity_update_op',
+    'args' => $entity,
+  ];
+
+  drupal_register_shutdown_function('quant_shutdown', $context);
 }
 
 /**
@@ -29,25 +36,59 @@ function quant_node_update(EntityInterface $entity) {
   if ($disable_drafts && !$entity->isPublished()) {
     return;
   }
-  drupal_register_shutdown_function('_quant_post_node_entity_op', $entity);
+
+  $context = [
+    'callback' => '_quant_entity_update_op',
+    'args' => $entity,
+  ];
+
+  drupal_register_shutdown_function('quant_shutdown', $context);
+}
+
+/**
+ * Implements hook_entity_predelete().
+ */
+function quant_entity_predelete(EntityInterface $entity) {
+  // This needs to not be a shutdown hook and also needs to be on
+  // the predelete hook as the path alias is removed in the entity
+  // delete clean-up.
+  _quant_entity_delete_op($entity);
+}
+
+/**
+ * Intermediary shutdown function.
+ *
+ * This is used to register another shutdown function. Some modules perform
+ * actions during the shutdown to ensure that we have the correct hydration
+ * state we use this to register the seed after all other functions.
+ */
+function quant_shutdown(array $context = []) {
+  if (is_callable($context['callback'])) {
+    drupal_register_shutdown_function($context['callback'], $context['args']);
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function quant_cron() {
+  \Drupal::service('quant.token_manager')->release();
 }
 
 /**
  * Implements hook_node_access().
- *
- * Grants access to users to view any node/revision.
- * Access control is restricted in the route definition.
  */
 function quant_node_access(NodeInterface $node, $op, AccountInterface $account) {
-  if (!\Drupal::request()->query->has('quant_revision')) {
+  $request = \Drupal::request();
+  if (!$request->query->has('quant_revision') || !$request->query->has('quant_token')) {
     return AccessResult::neutral();
   }
 
-  if (\Drupal::service('quant.token_manager')->validate($node->id())) {
+  if (\Drupal::service('quant.token_manager')->validate($node->id(), FALSE)) {
     return AccessResult::allowed();
   }
 
-  return AccessResult::forbidden();
+  throw new ServiceUnavailableHttpException(3600, t('Service route is not available.'));
 }
 
 
@@ -66,13 +107,40 @@ function quant_redirect_delete($redirect) {
 }
 
 /**
- * Post entity operation hook.
+ * Entity update operation hook.
  *
  * This should be registered as a shutdown function so that it
  * can operate after the db_transaction has finished.
+ *
+ * @TODO: Entity support.
+ *
+ * @param Drupal\Core\Entity\EntityInterface $entity
+ *   The entity.
  */
-function _quant_post_node_entity_op($entity) {
+function _quant_entity_update_op($entity) {
+  if ($entity->getEntityTypeId() != 'node') {
+    return;
+  }
+
   Seed::seedNode($entity);
+}
+
+/**
+ * Entity delete operation hook.
+ *
+ * Used to trigger an unpublish from the Quant API.
+ *
+ * @TODO: Entity support.
+ *
+ * @param Drupal\Core\Entity\EntityInterface $entity
+ *   The entity.
+ */
+function _quant_entity_delete_op($entity) {
+  if ($entity->getEntityTypeId() != 'node') {
+    return;
+  }
+
+  Seed::deleteNode($entity);
 }
 
 /**

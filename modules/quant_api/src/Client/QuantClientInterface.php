@@ -60,4 +60,15 @@ interface QuantClientInterface {
    */
   public function sendRedirect(array $data) : array;
 
+  /**
+   * Send an unpublish request to Quant.
+   *
+   * @param string $url
+   *   The url to unpublish.
+   *
+   * @return array
+   *   The API response.
+   */
+  public function unpublish(string $url) : array;
+
 }
