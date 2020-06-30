@@ -959,3 +959,34 @@ function _remove_quant_params($markup) {
 
   return $markup;
 }
+
+/**
+ * Implements hook_form_FORM_ID_alert().
+ */
+function quant_form_workbench_moderation_moderate_form_alter(&$form, $form_state, $id) {
+  $form['#submit'][] = 'quant_workbench_moderation_submit';
+}
+
+/**
+ * Form submission handler.
+ *
+ * @see workbench_moderation_moderate_form_submit
+ */
+function quant_workbench_moderation_submit($form, $form_state) {
+  $node = $form['node']['#value'];
+
+  $entity_info = array(
+    'entity' => $node,
+    'type' => 'node',
+    'op' => 'update',
+    'original' => $node->original,
+  );
+
+  if ($form_state['values']['state'] == workbench_moderation_state_published()) {
+    drupal_register_shutdown_function('_quant_shutdown', $entity_info);
+  }
+  else {
+    list($url) = _quant_prepare_entity('node', $form['node']['#value']->nid);
+    quant_api_unpublish_route($form_state['values']['alias']);
+  }
+}
