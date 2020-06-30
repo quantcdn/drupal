@@ -15,7 +15,7 @@ class TokenManager {
   /**
    * Token timeout.
    */
-  const ELAPSED = '+120 days';
+  const ELAPSED = '+1 minute';
 
   /**
    * The database connection.
