@@ -33,6 +33,15 @@ function quant_node_insert(EntityInterface $entity) {
  */
 function quant_node_update(EntityInterface $entity) {
   $disable_drafts = \Drupal::config('quant.settings')->get('disable_content_drafts');
+
+  // If entity default revision is unpublished then unpublish in quant.
+  if (!$entity->isPublished() && $entity->isDefaultRevision()) {
+    // Trigger an unpublish event.
+    Seed::deleteNode($entity);
+    return;
+  }
+
+  // Exclude draft revisions from Quant if enabled.
   if ($disable_drafts && !$entity->isPublished()) {
     return;
   }
