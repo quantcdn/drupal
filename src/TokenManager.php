@@ -15,7 +15,7 @@ class TokenManager {
   /**
    * Token timeout.
    */
-  const ELAPSED = '+1 minute';
+  const ELAPSED = '+120 days';
 
   /**
    * The database connection.
@@ -137,9 +137,7 @@ class TokenManager {
     }
 
     if (!$strict) {
-      // With strict checking disabled we validate the token and provide
-      // access to the content.
-      return TRUE;
+      return $time < $valid_until;
     }
 
     // Ensure the token is valid and the entity matches.
