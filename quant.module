@@ -418,12 +418,8 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
       $pager_url = _remove_quant_params($base.$new_href);
 
       if (in_array($pager_url, $page_urls)) {
-        error_log("$pager_url already tracked, skipping");
         continue;
       }
-
-      error_log("Adding: " . $pager_url);
-
 
       $page_urls[] = $pager_url;
       $pager_operations[] = array(
