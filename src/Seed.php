@@ -415,6 +415,10 @@ class Seed {
    *   Sanitised markup string.
    */
   private static function removeQuantParams($markup) {
+
+    // Ensure &amp; is replaced with &
+    $markup = preg_replace('/&amp;/i', '&', $markup);
+
     // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
     $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
     // Remove ?quant_revision=XX&quant_token=XX
