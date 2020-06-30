@@ -240,3 +240,40 @@ function quant_api_multipart_enc_file($path) {
   $data .= file_get_contents($path) . "\r\n";
   return $data;
 }
+
+/**
+ * Unpublish a quant route.
+ *
+ * @param string $url
+ *   The URL to unpublish.
+ *
+ * @return bool
+ *   If the request was successful.
+ */
+function quant_api_unpublish_route($url) {
+  $api = variable_get('quant_api_endpoint', QUANT_ENDPOINT_DEFAULT);
+
+  $options = array(
+    'headers' => quant_api_get_request_headers() + array(
+      'Quant-Url' => parse_url($url, PHP_URL_PATH),
+      'User-Agent' => 'Quant (+http://quant.io)',
+    ),
+    'method' => 'PATCH',
+  );
+
+  $response = drupal_http_request("$api/unpublish", $options);
+  if (!empty($response->error)) {
+    if (empty($response->data)) {
+      // This is a connection error between the drupal server and quant.
+      watchdog('quant_api', 'Connection error');
+      return FALSE;
+    }
+    $body = json_decode($response->data);
+    watchdog('quant_api', 'Error sending request: %error', array(
+      '%error' => $body->errorMsg,
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  return TRUE;
+}
