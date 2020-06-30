@@ -194,14 +194,14 @@ class SeedForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // $config = $this->config('quant_api.settings');
+    $config = $this->config('quant_api.settings');
 
-    // if ($config->get('api_token')) {
-    //   if (!$project = $this->client->ping()) {
-    //     \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
-    //     return;
-    //   }
-    // }
+    if ($config->get('api_token')) {
+      if (!$project = $this->client->ping()) {
+        \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
+        return;
+      }
+    }
 
     $assets = [];
     $routes = [];
@@ -247,7 +247,7 @@ class SeedForm extends FormBase {
       $event = new CollectEntitiesEvent([], $revisions, $form_state);
       $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
       while ($entity = $event->getEntity()) {
-        $batch['operations'][] = ['\Drupal\quant\Seed::exportNode', $entity];
+        $batch['operations'][] = ['\Drupal\quant\Seed::exportNode', [$entity]];
       }
     }
 
