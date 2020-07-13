@@ -130,10 +130,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
     $directoryIterator = new \RecursiveDirectoryIterator($themePath);
     $iterator = new \RecursiveIteratorIterator($directoryIterator);
-    $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.otf)$/i', \RecursiveRegexIterator::GET_MATCH);
+    $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf)$/i', \RecursiveRegexIterator::GET_MATCH);
 
     foreach ($regex as $name => $r) {
-      $files[] = str_replace(DRUPAL_ROOT, '', $name);
+      $path = str_replace(DRUPAL_ROOT, '', $name);
+      $event->addFilePath($path);
     }
 
     // Include all aggregated css/js files.

@@ -60,6 +60,9 @@ class Seed {
       return;
     }
 
+    $config = \Drupal::config('quant.settings');
+    $proxy_override = boolval($config->get('proxy_override', false));
+
     $meta = [
       'info' => [
         'author' => '',
@@ -68,6 +71,7 @@ class Seed {
       ],
       'published' => TRUE,
       'transitions' => [],
+      'proxy_override' => $proxy_override,
     ];
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $route, $meta));

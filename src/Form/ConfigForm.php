@@ -51,7 +51,7 @@ class ConfigForm extends ConfigFormBase {
     $form['disable_content_drafts'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Disable content drafts'),
-      '#description' => $this->t('Prevent draft content from being sent to Quant'),
+      '#description' => $this->t('Prevent draft content from being sent to Quant.'),
       '#default_value' => $config->get('disable_content_drafts'),
     ];
 
@@ -61,6 +61,13 @@ class ConfigForm extends ConfigFormBase {
       '#title' => $this->t('Enable asset revisions'),
       '#description' => $this->t('Media revisions will be tracked when files/images/etc change.'),
       '#default_value' => $config->get('asset_revisions'),
+    ];
+
+    $form['proxy_override'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Override existing proxies'),
+      '#description' => $this->t('Overrides proxies created via the dashboard.'),
+      '#default_value' => $config->get('proxy_override'),
     ];
 
     $form['local_server'] = [
@@ -88,6 +95,7 @@ class ConfigForm extends ConfigFormBase {
     $this->configFactory->getEditable(static::SETTINGS)
       ->set('content_revisions', $form_state->getValue('content_revisions'))
       ->set('asset_revisions', $form_state->getValue('asset_revisions'))
+      ->set('proxy_override', $form_state->getValue('proxy_override'))
       ->set('local_server', $form_state->getValue('local_server'))
       ->set('host_domain', $form_state->getValue('host_domain'))
       ->set('disable_content_drafts', $form_state->getValue('disable_content_drafts'))
