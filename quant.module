@@ -511,14 +511,16 @@ function quant_quant_meta_alter(&$meta, $context) {
     return;
   }
 
-  $meta['published'] = $context['entity']->status;
+  $meta['published'] = boolval($context['entity']->status);
   $meta['published_revision'] = $context['entity']->status ? $context['entity']->vid : -1;
+  $meta['proxy_override'] = boolval(variable_get('quant_proxy_override', FALSE));
 
   $user = user_load($context['entity']->uid);
   $meta['info'] = [
-    'author' => $user->mail,
+    'author' => $user->uid,
     'date_timestamp' => $context['entity']->changed,
   ];
+
 }
 
 /**
