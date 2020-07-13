@@ -34,6 +34,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_rewrite_relative', FALSE),
   );
 
+  $form['quant_proxy_override'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Override existing proxies'),
+    '#description' => t('Overrides proxies created via the dashboard.'),
+    '#default_value' => variable_get('quant_proxy_override', FALSE),
+  );
+
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
