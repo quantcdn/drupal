@@ -8,6 +8,8 @@ use GuzzleHttp\RequestOptions;
 use GuzzleHttp\Exception\RequestException;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
+use GuzzleHttp\Psr7;
+use GuzzleHttp\Psr7\Request;
 
 /**
  *
@@ -133,21 +135,31 @@ class QuantClient implements QuantClientInterface {
       throw new InvalidPayload($file);
     }
 
-    $response = $this->client->post($this->endpoint, [
-      'headers' => [
-        'Quant-File-Url' => $url,
-        'Quant-Customer' => $this->username,
-        'Quant-Project'  => $this->project,
-        'Quant-Token'    => $this->token,
-      ],
-      'multipart' => [
+    // Prepare a stream.
+    $resource = fopen($file, 'r');
+    $stream = Psr7\stream_for($resource);
+
+    $headers = [
+      'Quant-File-Url' => $url,
+      'Quant-Customer' => $this->username,
+      'Quant-Project' => $this->project,
+      'Quant-Token' => $this->token,
+    ];
+
+    $request = new Request(
+      'POST',
+      $this->endpoint,
+      $headers,
+      new Psr7\MultipartStream([
         [
-          'name' => 'filename',
+          'name' => basename($file),
           'filename' => basename($file),
-          'contents' => fopen($file, 'r'),
+          'contents' => $stream,
         ],
-      ],
-    ]);
+      ])
+    );
+
+    $response = $this->client->send($request);
 
     return json_decode($response->getBody(), TRUE);
   }
