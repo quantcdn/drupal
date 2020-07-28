@@ -71,8 +71,9 @@ function quant_api_settings_validate($form, &$form_state) {
   $body = json_decode($response->data);
 
   if (!empty($response->error)) {
+    $message = !empty($body->errorMsg) ? $body->errorMsg : 'Unauthorised';
     form_set_error('quant_api_token', 'Unable to connect to the QuantAPI please check the API token and customer match.');
-    drupal_set_message('QuantAPI error: ' . $body->errorMsg, 'error');
+    drupal_set_message('QuantAPI error: ' . $message, 'error');
   } else {
     drupal_set_message('QuantAPI: Successfully connected to ' . $body->project);
   }

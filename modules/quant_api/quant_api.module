@@ -168,6 +168,11 @@ function quant_api_quant_seed_file($url, $context) {
     return;
   }
 
+  if (empty($context['location'])) {
+    quant_log('Unable to upload %u, location not specified', ['%u' => $url]);
+    return;
+  }
+
   $headers = quant_api_get_request_headers() + array(
     'Quant-File-Url' => $context['request'],
     'User-Agent' => 'Quant (+http://quant.io)',
@@ -186,73 +191,33 @@ function quant_api_quant_seed_file($url, $context) {
   curl_setopt($ch, CURLOPT_HTTPHEADER, $curl_headers);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 
-  foreach ($context as $key => $value) {
-    $data = array('data' => curl_file_create($value, mime_content_type($value), basename($value)));
-  }
+  $data['data'] = curl_file_create(
+    $context['location'],
+    mime_content_type($context['location']),
+    basename($context['location'])
+  );
 
   curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 
   $result = curl_exec($ch);
+  $info = curl_getinfo($ch);
   curl_close($ch);
+
   $response = json_decode($result);
 
+  if ($info['http_code'] == 413) {
+    quant_log('Upload too large.');
+    return FALSE;
+  }
+
   if (!empty($response->error)) {
-    if (empty($response->data)) {
-      // This is a connection error between the drupal server and quant.
-      watchdog('quant_api', 'Connection error');
-      return;
-    }
-    $body = json_decode($response->data);
-    watchdog('quant_api', 'Error sending request: %error', array(
-      '%error' => $body->errorMsg,
+    quant_log('quant_api', 'Error sending request: %error', array(
+      '%error' => $response->errorMsg,
     ), WATCHDOG_ERROR);
-    return;
+    return FALSE;
   }
-}
 
-/**
- * Encode the file.
- *
- * @param string $boundary
- *   The boundary placeholder.
- * @param array $params
- *   Params to include the location of the file.
- *
- * @return string
- *   The encoded file.
- */
-function quant_api_encode_file($boundary, $params) {
-  $output = "";
-  foreach ($params as $key => $value) {
-    $output .= "--$boundary\r\n";
-    if ($key == 'location') {
-      $output .= quant_api_multipart_enc_file($value);
-    }
-  }
-  $output .= "--$boundary--";
-  return $output;
-}
-
-/**
- * Loads the file.
- *
- * @param string $path
- *   The file path.
- *
- * @return string
- *   Encoded file.
- */
-function quant_api_multipart_enc_file($path) {
-  if (substr($path, 0, 1) == "@") {
-    $path = substr($path, 1);
-  }
-  $filename = basename($path);
-  $mimetype = "application/octet-stream";
-  $data = "Content-Disposition: form-data; name=\"file\"; filename=\"$filename\"\r\n";
-  $data .= "Content-Transfer-Encoding: binary\r\n";
-  $data .= "Content-Type: $mimetype\r\n\r\n";
-  $data .= file_get_contents($path) . "\r\n";
-  return $data;
+  return $response;
 }
 
 /**
