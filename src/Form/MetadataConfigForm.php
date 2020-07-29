@@ -70,9 +70,10 @@ class MetadataConfigForm extends ConfigFormBase {
     $values = $form_state->getValues();
     $meta = \Drupal::service('plugin.manager.quant.metadata');
     foreach ($meta->getDefinitions() as $pid => $def) {
-      $config->set($pid, $values[$pid]);
+      if (isset($values[$pid])) {
+        $config->set($pid, $values[$pid]);
+      }
     }
-
     $config->save();
     parent::submitForm($form, $form_state);
   }
