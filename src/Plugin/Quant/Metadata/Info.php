@@ -112,7 +112,7 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
     }
 
     if (!empty($this->getConfig('date'))) {
-      $meta['info']['date_timestamp'] = $this->token->replace($this->getConfig('date'), $ctx);
+      $meta['info']['date_timestamp'] = strtotime($this->token->replace($this->getConfig('date'), $ctx));
     }
 
     $meta['info']['log'] = $log;
