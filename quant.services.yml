@@ -7,7 +7,7 @@ services:
     class: Drupal\quant\EntityRenderer
     arguments:
       - '@config.factory'
-      - '@entity.manager'
+      - '@entity_type.manager'
 
   quant.node.insert:
     class: Drupal\quant\EventSubscriber\NodeInsertSubscriber
@@ -27,7 +27,6 @@ services:
     arguments:
       - '@entity_type.manager'
       - '@config.factory'
-      - '@entity.query'
     tags:
       - { name: 'event_subscriber' }
 
