@@ -474,6 +474,9 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     'info' => [],
   ];
 
+  if (isset($context['type'])) {
+    drupal_alter("quant_meta_{$context['type']}", $meta, $context);
+  }
   drupal_alter('quant_meta', $meta, $context);
   module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
 }
@@ -503,47 +506,36 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
 }
 
 /**
+ * Implements hook_quant_meta_TYPE_alter().
+ */
+function quant_quant_meta_node_alter(&$meta, $context) {
+  $meta['published'] = boolval($context['entity']->status);
+  $meta['info'] = [
+    'author' => empty($context['entity']->revision_uid) ? $context['entity']->uid : $context['entity']->revision_uid,
+    'date_timestamp' => $context['entity']->changed,
+  ];
+}
+
+/**
+ * Implements hook_quant_meta_TYPE_alter().
+ */
+function quant_quant_meta_taxonomy_term(&$meta, $context) {
+  global $user;
+  $meta['info'] = [
+    'author' => $user->uid,
+    'date_timestamp' => time(),
+  ];
+}
+
+/**
  * Implements hook_quant_meta_alter().
  */
 function quant_quant_meta_alter(&$meta, $context) {
-
   $meta['proxy_override'] = boolval(variable_get('quant_proxy_override', FALSE));
-
-  // Assume content is published by default.
-  $meta['published'] = TRUE;
-
-  // @TODO: Maybe quant_entity_meta_alter?
-  // Everyone who implements meta alter will need to validate
-  // this to be sure otherwise.
-  if (empty($context['entity'])) {
-    return;
+  if (!isset($meta['published'])) {
+    // Assume the asset is to be published if not set.
+    $meta['published'] = TRUE;
   }
-
-  // @todo: Split into entity type hooks.
-  switch ($context['type']) {
-
-    case 'taxonomy_term':
-      global $user;
-
-      $meta['info'] = [
-        'author' => $user->uid,
-        'date_timestamp' => time(),
-      ];
-    break;
-
-    case 'node':
-
-      // Nodes are the only entities with published flags at present.
-      $meta['published'] = boolval($context['entity']->status);
-
-      $meta['info'] = [
-        'author' => empty($context['entity']->revision_uid) ? $context['entity']->uid : $context['entity']->revision_uid,
-        'date_timestamp' => $context['entity']->changed,
-      ];
-    break;
-
-  }
-
 }
 
 /**

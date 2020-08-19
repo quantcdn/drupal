@@ -72,15 +72,9 @@ function quant_file_quant_seed_alter(&$batch) {
 }
 
 /**
- * Implements hook_quant_meta_alter().
+ * Implements hook_quant_meta_TYPE_alter().
  */
-function quant_file_quant_meta_alter(&$meta, $context) {
-
-  // Only hook on file entities.
-  if ($context['type'] != 'file') {
-    return;
-  }
-
+function quant_file_quant_meta_file_alter(&$meta, $context) {
   $meta['published'] = boolval($context['entity']->status);
   $meta['info'] = [
     'author' => $context['entity']->uid,
