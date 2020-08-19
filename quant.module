@@ -537,7 +537,7 @@ function quant_quant_meta_alter(&$meta, $context) {
       $meta['published'] = boolval($context['entity']->status);
 
       $meta['info'] = [
-        'author' => $context['entity']->uid,
+        'author' => empty($context['entity']->revision_uid) ? $context['entity']->uid : $context['entity']->revision_uid,
         'date_timestamp' => $context['entity']->changed,
       ];
     break;
