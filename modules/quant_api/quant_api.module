@@ -10,7 +10,7 @@
  *
  * @var string
  */
-define('QUANT_ENDPOINT_DEFAULT', 'http://localhost:8081/');
+define('QUANT_ENDPOINT_DEFAULT', 'https://api.quantcdn.io/');
 
 /**
  * Implements hook_help()

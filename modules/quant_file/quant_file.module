@@ -70,3 +70,14 @@ function quant_file_quant_seed_alter(&$batch) {
     );
   }
 }
+
+/**
+ * Implements hook_quant_meta_alter().
+ */
+function quant_file_quant_meta_alter(&$meta, $context) {
+  $meta['published'] = boolval($context['entity']->status);
+  $meta['info'] = [
+    'author' => $context['entity']->uid,
+    'date_timestamp' => $context['entity']->timestamp,
+  ];
+}

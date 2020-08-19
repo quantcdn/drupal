@@ -13,18 +13,11 @@
 function quant_config() {
   global $base_url;
 
-  $form['quant_content_revisions'] = array(
+  $form['quant_draft_revisions'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Enable content revisions'),
-    '#description' => t('Any content change will create a new revision in Quant, <i>experimental - this might have compatibility issues with your module setup</i>.'),
-    '#default_value' => variable_get('quant_content_revisions', FALSE),
-  );
-
-  $form['quant_asset_revisions'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Enable asset revisions'),
-    '#description' => t('Media revisions will be tracked when files/images/etc change.'),
-    '#default_value' => variable_get('quant_asset_revisions', FALSE),
+    '#title' => t('Push draft revisions'),
+    '#description' => t('Support draft node revisions. <i>experimental - this might have compatibility issues with your module setup</i>.'),
+    '#default_value' => variable_get('quant_draft_revisions', FALSE),
   );
 
   $form['quant_rewrite_relative'] = array(

@@ -90,8 +90,9 @@ function quant_menu() {
  * standard router context continue to operate as expected.
  */
 function quant_menu_alter(&$items) {
+
   // Altering the node route breaks displaysuite.
-  if (!variable_get('quant_content_revisions', FALSE)) {
+  if (!variable_get('quant_draft_revisions', FALSE)) {
     return;
   }
   $node_route = $items['node/%node'];
@@ -170,7 +171,7 @@ function quant_cron() {
 function quant_node_access($node, $op, $account) {
   $params = drupal_get_query_parameters();
 
-  if (!variable_get('quant_content_revisions', FALSE)) {
+  if (!variable_get('quant_draft_revisions', FALSE)) {
     return NODE_ACCESS_IGNORE;
   }
 
@@ -504,6 +505,9 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
  * Implements hook_quant_meta_alter().
  */
 function quant_quant_meta_alter(&$meta, $context) {
+
+  $meta['proxy_override'] = boolval(variable_get('quant_proxy_override', FALSE));
+
   // @TODO: Maybe quant_entity_meta_alter?
   // Everyone who implements meta alter will need to validate
   // this to be sure otherwise.
@@ -511,15 +515,29 @@ function quant_quant_meta_alter(&$meta, $context) {
     return;
   }
 
-  $meta['published'] = boolval($context['entity']->status);
-  $meta['published_revision'] = $context['entity']->status ? $context['entity']->vid : -1;
-  $meta['proxy_override'] = boolval(variable_get('quant_proxy_override', FALSE));
+  // @todo: Split into entity type hooks.
+  switch ($context['type']) {
 
-  $user = user_load($context['entity']->uid);
-  $meta['info'] = [
-    'author' => $user->uid,
-    'date_timestamp' => $context['entity']->changed,
-  ];
+    case 'taxonomy_term':
+      global $user;
+
+      $meta['published'] = TRUE;
+      $meta['info'] = [
+        'author' => $user->uid,
+        'date_timestamp' => time(),
+      ];
+    break;
+
+    case 'node':
+      $meta['published'] = boolval($context['entity']->status);
+
+      $meta['info'] = [
+        'author' => $context['entity']->uid,
+        'date_timestamp' => $context['entity']->changed,
+      ];
+    break;
+
+  }
 
 }
 
