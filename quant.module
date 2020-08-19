@@ -433,6 +433,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
        'quant_seed',
         array($pager_url, [
           'find_pager' => TRUE,
+          'type' => 'view',
           'page_urls' => $page_urls,
         ]),
       );
@@ -468,7 +469,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   $alias = !empty($query) ? $alias . "?{$query}" : $alias;
 
   $meta = [
-    'published' => null,
+    'published' => TRUE,
     'transitions' => [],
     'info' => [],
   ];
@@ -508,6 +509,9 @@ function quant_quant_meta_alter(&$meta, $context) {
 
   $meta['proxy_override'] = boolval(variable_get('quant_proxy_override', FALSE));
 
+  // Assume content is published by default.
+  $meta['published'] = TRUE;
+
   // @TODO: Maybe quant_entity_meta_alter?
   // Everyone who implements meta alter will need to validate
   // this to be sure otherwise.
@@ -521,7 +525,6 @@ function quant_quant_meta_alter(&$meta, $context) {
     case 'taxonomy_term':
       global $user;
 
-      $meta['published'] = TRUE;
       $meta['info'] = [
         'author' => $user->uid,
         'date_timestamp' => time(),
@@ -529,6 +532,8 @@ function quant_quant_meta_alter(&$meta, $context) {
     break;
 
     case 'node':
+
+      // Nodes are the only entities with published flags at present.
       $meta['published'] = boolval($context['entity']->status);
 
       $meta['info'] = [
@@ -697,6 +702,7 @@ function _quant_batch_views(&$batch) {
     $url = "$base/$path";
 
     $config['find_pager'] = TRUE;
+    $config['type'] = 'view';
 
     // @TODO: We have menu access callbacks so we should
     // validate anonymous has access before we add the operation.
@@ -750,6 +756,8 @@ function quant_seed_taxonomy_batch($tid) {
 
   // Find pagination within taxonomy term pages.
   $context['find_pager'] = TRUE;
+  $context['type'] = 'taxonomy_term';
+
   quant_seed($url, $context);
 }
 
