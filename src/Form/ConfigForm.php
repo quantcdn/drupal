@@ -41,26 +41,11 @@ class ConfigForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config(static::SETTINGS);
 
-    $form['content_revisions'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Enable content revisions'),
-      '#description' => $this->t('Any content change will create a new revision in Quant.'),
-      '#default_value' => $config->get('content_revisions'),
-    ];
-
     $form['disable_content_drafts'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Disable content drafts'),
       '#description' => $this->t('Prevent draft content from being sent to Quant.'),
       '#default_value' => $config->get('disable_content_drafts'),
-    ];
-
-    // @todo: Should revisions be configured at the API level?
-    $form['asset_revisions'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Enable asset revisions'),
-      '#description' => $this->t('Media revisions will be tracked when files/images/etc change.'),
-      '#default_value' => $config->get('asset_revisions'),
     ];
 
     $form['proxy_override'] = [
@@ -93,8 +78,6 @@ class ConfigForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // Retrieve the configuration.
     $this->configFactory->getEditable(static::SETTINGS)
-      ->set('content_revisions', $form_state->getValue('content_revisions'))
-      ->set('asset_revisions', $form_state->getValue('asset_revisions'))
       ->set('proxy_override', $form_state->getValue('proxy_override'))
       ->set('local_server', $form_state->getValue('local_server'))
       ->set('host_domain', $form_state->getValue('host_domain'))

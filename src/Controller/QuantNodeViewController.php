@@ -80,8 +80,6 @@ class QuantNodeViewController extends NodeViewController {
     if (!empty($this->revisionId)) {
       // Override the node with a custom revision.
       $node = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($this->revisionId);
-
-      // @todo: AccountSwitcher to render as a QuantUserSession.
       $this->accountSwitcher->switchTo(new AnonymousUserSession());
     }
 

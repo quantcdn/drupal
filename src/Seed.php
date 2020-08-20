@@ -286,7 +286,7 @@ class Seed {
     // @todo; Note: Passing in the Host header fixes issues with absolute links.
     // It may also cause some redirects to the real host.
     // Best to trap redirects and re-run against the final path.
-    $response = \Drupal::httpClient()->get($url . "?quant_revision=" . $rid, [
+    $response = \Drupal::httpClient()->get($url, [
       'http_errors' => FALSE,
       'query' => $query,
       'headers' => [
