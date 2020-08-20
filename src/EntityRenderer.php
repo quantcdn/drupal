@@ -4,7 +4,7 @@ namespace Drupal\quant;
 
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Entity\EntityManager;
+use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 // @todo: Remove superfluous services.
@@ -27,7 +27,7 @@ class EntityRenderer implements EntityRendererInterface {
   /**
    * The entity manager object.
    *
-   * @var \Drupal\Core\Entity\EntityManager
+   * @var \Drupal\Core\Entity\EntityTypeManager
    */
   protected $entityManager;
 
@@ -37,7 +37,7 @@ class EntityRenderer implements EntityRendererInterface {
    * @param Drupal\Core\Config\ConfigFactory $config_factory
    *   The configuration factory.
    */
-  public function __construct(ConfigFactory $config_factory, EntityManager $entity_manager) {
+  public function __construct(ConfigFactory $config_factory, EntityTypeManager $entity_manager) {
     $this->configFactory = $config_factory;
     $this->entityManager = $entity_manager;
   }
