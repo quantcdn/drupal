@@ -69,7 +69,6 @@ class Transitions extends MetadataBase implements ContainerFactoryPluginInterfac
       $dt = new \DateTime($date[$delta]['value'], new \DateTimeZone('UTC'));
       $dt->setTimeZone(new \DateTimeZone($timezone));
       $meta['transitions'][] = [
-        'date_time_utc' => $date[$delta]['value'],
         'date_timestamp' => $dt->getTimestamp(),
         'state' => $state[$delta]['value'],
       ];

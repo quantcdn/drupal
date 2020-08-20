@@ -11,7 +11,6 @@ use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\user\Entity\User;
 use Drupal\views\Views;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
 
@@ -33,19 +32,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
   protected $configFactory;
 
   /**
-   * The query factory.
-   *
-   * @var Drupal\Core\Entity\Query\QueryFactory
-   */
-  protected $queryFactory;
-
-  /**
    * {@inheritdoc}
    */
-  public function __construct(EntityTypeManager $entity_type_manager, ConfigFactory $config_factory, QueryFactory $query_factory) {
+  public function __construct(EntityTypeManager $entity_type_manager, ConfigFactory $config_factory) {
     $this->entityTypeManager = $entity_type_manager;
     $this->configFactory = $config_factory;
-    $this->queryFactory = $query_factory;
   }
 
   /**
@@ -66,7 +57,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * @TODO: This should support other entity types.
    */
   public function collectEntities(CollectEntitiesEvent $event) {
-    $query = $this->queryFactory->get('node');
+    $query = $this->entityTypeManager->getStorage('node')->getQuery();
     $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
 
     $bundles = array_filter($event->getFormState()->getValue('entity_node_bundles'));
@@ -116,7 +107,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
       return;
     }
 
-    // @todo: Find path programatically
+    // @todo: Find path programmatically.
     // @todo: Support multiple themes (e.g site may have multiple themes changing by route).
     $config = $this->configFactory->get('system.theme');
     $themeName = $config->get('default');
