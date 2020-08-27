@@ -12,6 +12,15 @@ use Drupal\quant\Seed;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 /**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function quant_menu_local_tasks_alter(&$data, $route_name) {
+  if (\Drupal::currentUser()->isAnonymous()) {
+    unset($data['tabs']);
+  }
+}
+
+/**
  * Implements hook_node_insert().
  */
 function quant_node_insert(EntityInterface $entity) {
@@ -38,7 +47,6 @@ function quant_node_update(EntityInterface $entity) {
   if (!$entity->isPublished() && $entity->isDefaultRevision()) {
     // Trigger an unpublish event.
     Seed::deleteNode($entity);
-    return;
   }
 
   // Exclude draft revisions from Quant if enabled.
@@ -94,7 +102,14 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
   }
 
   if (\Drupal::service('quant.token_manager')->validate($node->id(), FALSE)) {
-    return AccessResult::allowed();
+    // Node access override only applies to the currently viewed node.
+    $routeNode = \Drupal::routeMatch()->getParameter('node');
+    $nid = $routeNode->id();
+    if ($nid == $node->id()) {
+      return AccessResult::allowed();
+    }
+
+    return AccessResult::neutral();
   }
 
   throw new ServiceUnavailableHttpException(3600, t('Service route is not available.'));

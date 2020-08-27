@@ -64,9 +64,8 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
    */
   public function defaultConfiguration() {
     return [
-      'author' => '[node:author:name]',
-      'date' => '[node:created]',
-      'log' => '[node:revision_log]',
+      'author' => '[user:name]',
+      'include_revision_log' => TRUE,
     ];
   }
 
@@ -81,18 +80,11 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
       '#default_value' => $this->getConfig('author'),
     ];
 
-    $form['date'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Date'),
-      '#description' => $this->t('A string to use for the date, can use node tokens'),
-      '#default_value' => $this->getConfig('date'),
-    ];
-
-    $form['log'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Log'),
-      '#description' => $this->t('A string to use for the revision log, can use node tokens'),
-      '#default_value' => $this->getConfig('log'),
+    $form['include_revision_log'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Include revision log'),
+      '#description' => $this->t('Include revision log message in metadata'),
+      '#default_value' => $this->getConfig('include_revision_log'),
     ];
 
     return $form;
@@ -104,18 +96,24 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
   public function build(EntityInterface $entity) : array {
     $meta = ['info' => []];
 
+    $author = $entity->getRevisionUser();
     $ctx[$entity->getEntityTypeId()] = $entity;
+    $date = $entity->getRevisionCreationTime();
+
+    // Provide an author context.
+    $ctx['user'] = $author;
+
     $log = $entity->getRevisionLogMessage();
 
     if (!empty($this->getConfig('author'))) {
       $meta['info']['author'] = $this->token->replace($this->getConfig('author'), $ctx);
     }
 
-    if (!empty($this->getConfig('date'))) {
-      $meta['info']['date_timestamp'] = strtotime($this->token->replace($this->getConfig('date'), $ctx));
-    }
+    $meta['info']['date_timestamp'] = $date;
 
-    $meta['info']['log'] = $log;
+    if ($this->getConfig('include_revision_log')) {
+      $meta['info']['log'] = $entity->getRevisionLogMessage();
+    }
 
     return $meta;
   }
