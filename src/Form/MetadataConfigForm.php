@@ -7,7 +7,7 @@ use Drupal\Core\Form\FormStateInterface;
 
 class MetadataConfigForm extends ConfigFormBase {
 
-  const SETTINGS = 'quant_metadata.settings';
+  const SETTINGS = 'quant.metadata.settings';
 
   /**
    * {@inheritdoc}
