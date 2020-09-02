@@ -185,12 +185,12 @@ function quant_node_access($node, $op, $account) {
 /**
  * Implements hook_node_load().
  */
-function quant_node_load(&$nodes) {
+function quant_node_load($nodes) {
   $params = drupal_get_query_parameters();
   if (empty($params['quant_token'])) {
     return;
   }
-  foreach ($nodes as &$node) {
+  foreach ($nodes as $node) {
     if (quant_token_validate($node->nid)) {
       $node->status = 1;
     }
