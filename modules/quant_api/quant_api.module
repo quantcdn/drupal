@@ -211,7 +211,7 @@ function quant_api_quant_seed_file($url, $context) {
   }
 
   if (!empty($response->error)) {
-    quant_log('quant_api', 'Error sending request: %error', array(
+    quant_log('Error sending request: %error', array(
       '%error' => $response->errorMsg,
     ), WATCHDOG_ERROR);
     return FALSE;
@@ -248,6 +248,7 @@ function quant_api_unpublish_route($url) {
       return FALSE;
     }
     $body = json_decode($response->data);
+
     watchdog('quant_api', 'Error sending request: %error', array(
       '%error' => $body->errorMsg,
     ), WATCHDOG_ERROR);
