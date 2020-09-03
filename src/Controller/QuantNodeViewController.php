@@ -11,8 +11,10 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\node\Controller\NodeViewController;
 use Drupal\Core\Session\AnonymousUserSession;
+use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Defines a controller to render a single node.
@@ -79,7 +81,18 @@ class QuantNodeViewController extends NodeViewController {
     if (!empty($this->revisionId)) {
       $rev = $this->entityTypeManager->getStorage('node')->loadRevision($this->revisionId);
       $lang = $node->language()->getId();
-      $node = $rev->getTranslation($lang);
+
+      if ($node->id() !== $rev->id()) {
+        // Loading the revision ID directly is not safe when we're expecting to
+        // load a node at a particular revision.
+        throw new NotFoundHttpException();
+      }
+      try {
+        $node = $rev->getTranslation($lang);
+      }
+      catch (InvalidArgumentException $error) {
+        throw new NotFoundHttpException();
+      }
       $this->accountSwitcher->switchTo(new AnonymousUserSession());
     }
 
