@@ -7,6 +7,8 @@ use Drupal\quant\Event\NodeInsertEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Url;
+
 
 /**
  * Seed Manager.
@@ -111,7 +113,7 @@ class Seed {
     else {
       $message = t('Finished with an error.');
     }
-    drupal_set_message($message);
+    \Drupal::messenger()->addMessage($message);
   }
 
   /**
@@ -119,7 +121,8 @@ class Seed {
    * This includes static output from the lunr module.
    */
   public static function findLunrAssets() {
-    $filesPath = \Drupal::service('file_system')->realpath(file_default_scheme() . "://lunr_search");
+    $scheme = \Drupal::config('system.file')->get('default_scheme');
+    $filesPath = \Drupal::service('file_system')->realpath($scheme . "://lunr_search");
 
     if (!is_dir($filesPath)) {
       $messenger = \Drupal::messenger();
@@ -183,15 +186,19 @@ class Seed {
 
     $nid = $entity->get('nid')->value;
     $rid = $entity->get('vid')->value;
-    $url = $entity->toUrl()->toString();
 
     // Special case for home-page, rewrite alias to /.
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
 
-    if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
-      $url = "/";
-    }
+    // Can pass in 'language' here to get language alias.
+    // Unable to determine language based on revision id though..?
+    $options = ['absolute' => FALSE];
+    $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
+
+   if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
+       $url = "/";
+   }
 
     // Generate a request token.
     $token = \Drupal::service('quant.token_manager')->create($nid);
@@ -214,9 +221,6 @@ class Seed {
       }
     }
 
-    // This should get the entity alias.
-    $url = $entity->toUrl()->toString();
-
     // Special case pages (403/404); 2x exports.
     // One for alias associated with page, one for "special" URLs.
     $site_config = \Drupal::config('system.site');
@@ -237,7 +241,6 @@ class Seed {
 
     // Always create canonical redirects.
     \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/node/{$nid}", $url, 301));
-
   }
 
   /**

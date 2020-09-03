@@ -68,6 +68,7 @@ class SeedForm extends FormBase {
 
     $warnings = $this->getWarnings();
     $config = $this->config('quant_api.settings');
+    $moduleHandler = \Drupal::moduleHandler();
 
     if (!empty($warnings)) {
       $form['warnings'] = [
@@ -138,11 +139,13 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports all views with a Page display accessible to anonymous users.'),
     ];
 
-    $form['redirects'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Redirects'),
-      '#description' => $this->t('Exports all existing redirects.'),
-    ];
+    if ($moduleHandler->moduleExists('redirect')) {
+      $form['redirects'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Redirects'),
+        '#description' => $this->t('Exports all existing redirects.'),
+      ];
+    }
 
     $form['routes'] = [
       '#type' => 'checkbox',
@@ -161,8 +164,6 @@ class SeedForm extends FormBase {
       ],
       '#default_value' => $config->get('routes_export', ''),
     ];
-
-    $moduleHandler = \Drupal::moduleHandler();
 
     if ($moduleHandler->moduleExists('lunr')) {
       $form['lunr'] = [

@@ -57,7 +57,7 @@ class QuantNodeViewController extends NodeViewController {
    *   The entity repository.
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager, RendererInterface $renderer, AccountInterface $current_user = NULL, EntityRepositoryInterface $entity_repository = NULL) {
-    parent::__construct($entity_type_manager, $renderer);
+    parent::__construct($entity_type_manager, $renderer, $current_user, $entity_repository);
     $this->currentUser = $current_user ?: \Drupal::currentUser();
     if (!$entity_repository) {
       @trigger_error('The entity.repository service must be passed to NodeViewController::__construct(), it is required before Drupal 9.0.0. See https://www.drupal.org/node/2549139.', E_USER_DEPRECATED);

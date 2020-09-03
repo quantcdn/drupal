@@ -28,4 +28,4 @@ quant.node.revision.view:
     _controller: '\Drupal\quant\Controller\QuantNodeViewController::view'
     revision_id: latest
   requirements:
-    _permission: 'access content' # @todo: Fix.
+    _permission: 'access content'

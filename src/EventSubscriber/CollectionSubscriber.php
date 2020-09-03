@@ -111,8 +111,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
     // @todo: Support multiple themes (e.g site may have multiple themes changing by route).
     $config = $this->configFactory->get('system.theme');
     $themeName = $config->get('default');
-    $themePath = DRUPAL_ROOT . '/themes/custom/' . $themeName;
-    $filesPath = \Drupal::service('file_system')->realpath(file_default_scheme() . "://");
+    $path = \Drupal::service('theme_handler')->getTheme($themeName)->getPath();
+
+    $themePath = DRUPAL_ROOT . '/' . $path;
+    $scheme = \Drupal::config('system.file')->get('default_scheme');
+    $filesPath = \Drupal::service('file_system')->realpath($scheme . "://");
 
     if (!is_dir($themePath)) {
       echo "Theme dir does not exist";
