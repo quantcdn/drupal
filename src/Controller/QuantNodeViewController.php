@@ -80,6 +80,10 @@ class QuantNodeViewController extends NodeViewController {
     if (!empty($this->revisionId)) {
       // Override the node with a custom revision.
       $node = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($this->revisionId);
+
+      // @todo: Look into why langcode is not being passed in correctly.
+      $lang = \Drupal::languageManager()->getCurrentLanguage()->getId();
+      $node = $node->getTranslation($lang);
       $this->accountSwitcher->switchTo(new AnonymousUserSession());
     }
 
