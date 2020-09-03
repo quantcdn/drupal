@@ -94,11 +94,38 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports the latest revision of each node.'),
     ];
 
+    // Seed by language.
+    // Only active if there are more than one active languages.
+    $languages = \Drupal::languageManager()->getLanguages();
+
+    if (count($languages) > 1) {
+      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+      $language_codes = [];
+
+      foreach ($languages as $langcode => $language) {
+        $default = ($defaultLanguage->getId() == $langcode) ? ' (Default)' : '';
+        $language_codes[$langcode] = $language->getName() . $default;
+      }
+
+      $form['entity_node_languages'] = [
+        '#type' => 'checkboxes',
+        '#title' => $this->t('Languages'),
+        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be exported.'),
+        '#options' => $language_codes,
+        '#states' => [
+          'visible' => [
+            ':input[name="entity_node"]' => ['checked' => TRUE],
+          ],
+        ],
+      ];
+    }
+
     // Seed by bundle.
     $types = \Drupal::entityTypeManager()
       ->getStorage('node_type')
       ->loadMultiple();
 
+    $content_types = [];
     foreach($types as $type) {
       $content_types[$type->id()] = $type->label();
     }

@@ -20,13 +20,20 @@ class NodeInsertEvent extends Event {
   protected $entity;
 
   /**
+   * Language code for export.
+   *
+   * @var string $langcode
+   */
+
+  /**
    * Constructs a node insertion demo event object.
    *
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The entity object.
    */
-  public function __construct(EntityInterface $entity) {
+  public function __construct(EntityInterface $entity, $langcode=NULL) {
     $this->entity = $entity;
+    $this->langcode = $langcode;
   }
 
   /**
@@ -37,6 +44,15 @@ class NodeInsertEvent extends Event {
    */
   public function getEntity() {
     return $this->entity;
+  }
+
+  /**
+   * Get the language code associated with the event.
+   *
+   * @return string
+   */
+  public function getLangcode() {
+    return $this->langcode;
   }
 
 }

@@ -72,20 +72,44 @@ class CollectionSubscriber implements EventSubscriberInterface {
     foreach ($nids as $key => $value) {
       $node = Node::load($value);
 
-      if ($disable_drafts && !$node->isPublished()) {
-        continue;
-      }
+      // Iterate translations if enabled.
+      $languageFilter = array_filter($event->getFormState()->getValue('entity_node_languages'));
 
-      if ($event->includeRevisions()) {
-        $vids = $this->entityTypeManager->getStorage('node')->revisionIds($node);
-        foreach ($vids as $vid) {
-          $nr = $this->entityTypeManager->getStorage('node')->loadRevision($vid);
-          $event->addEntity($nr);
+      foreach ($node->getTranslationLanguages() as $langcode => $language) {
+
+        // Skip languages excluded from the filter.
+        if (!empty($languageFilter) && !in_array($langcode, $languageFilter)) {
+          continue;
         }
-      }
 
-      // Export current node revision.
-      $event->addEntity($node);
+        // Retrieve the translated version.
+        $node = $node->getTranslation($langcode);
+
+        if ($disable_drafts && !$node->isPublished()) {
+          continue;
+        }
+
+        if ($event->includeRevisions()) {
+          $vids = $this->entityTypeManager->getStorage('node')->revisionIds($node);
+
+          foreach ($vids as $vid) {
+            $nr = $this->entityTypeManager->getStorage('node')->loadRevision($vid);
+
+            foreach ($nr->getTranslationLanguages() as $trLangcode => $trLanguage) {
+              if (!empty($languageFilter) && !in_array($trLangcode, $languageFilter)) {
+                continue;
+              }
+
+              $nr = $nr->getTranslation($trLangcode);
+              $event->addEntity($nr, $trLangcode);
+            }
+          }
+        }
+
+        // Export current node revision.
+        $event->addEntity($node, $langcode);
+
+      }
     }
   }
 

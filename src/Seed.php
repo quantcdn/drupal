@@ -21,11 +21,15 @@ class Seed {
    * Trigger export node via event dispatcher.
    */
   public static function exportNode($node, &$context) {
+
+    $langcode = $node['langcode'];
+    $node = $node['entity'];
+
     $vid = $node->get('vid')->value;
     $message = "Processing {$node->title->value} (Revision: {$vid})";
 
     // Export via event dispatcher.
-    \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($node));
+    \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($node, $langcode));
 
     $results = [$node->nid->value];
     $context['message'] = $message;
@@ -182,7 +186,7 @@ class Seed {
    * Trigger an internal http request to retrieve node markup.
    * Seeds an individual node update to Quant.
    */
-  public static function seedNode($entity) {
+  public static function seedNode($entity, $langcode=NULL) {
 
     $nid = $entity->get('nid')->value;
     $rid = $entity->get('vid')->value;
@@ -194,11 +198,17 @@ class Seed {
     // Can pass in 'language' here to get language alias.
     // Unable to determine language based on revision id though..?
     $options = ['absolute' => FALSE];
+
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
     $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
 
-   if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
+    if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
        $url = "/";
-   }
+    }
 
     // Generate a request token.
     $token = \Drupal::service('quant.token_manager')->create($nid);

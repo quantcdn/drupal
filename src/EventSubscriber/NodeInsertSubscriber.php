@@ -33,7 +33,8 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
    */
   public function onNodeInsert(NodeInsertEvent $event) {
     $entity = $event->getEntity();
-    Seed::seedNode($entity);
+    $langcode = $event->getLangcode();
+    Seed::seedNode($entity, $langcode);
   }
 
   /**
