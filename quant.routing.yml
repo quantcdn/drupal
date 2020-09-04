@@ -21,11 +21,3 @@ quant.metadata:
     _title: 'Metadata configuration'
   requirements:
     _permission: 'configure quant'
-
-quant.node.revision.view:
-  path: '/node/{node}/quant/{quant_revision_id}'
-  defaults:
-    _controller: '\Drupal\quant\Controller\QuantNodeViewController::view'
-    revision_id: latest
-  requirements:
-    _permission: 'access content'

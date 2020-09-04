@@ -214,9 +214,10 @@ class Seed {
     $token = \Drupal::service('quant.token_manager')->create($nid);
 
     $markup = self::markupFromRoute($url, [
-      'quant_revision' => $rid,
-      'quant_token' => $token,
+      'quant-revision' => $rid,
+      'quant-token' => $token,
     ]);
+
     $meta = [];
 
     if (empty($markup)) {
@@ -282,7 +283,7 @@ class Seed {
    * @return string|bool
    *   The markup from the $route.
    */
-  protected static function markupFromRoute($route, array $query = []) {
+  protected static function markupFromRoute($route, array $headers = []) {
 
     // Cleanse route.
     $route = str_replace('//', '/', $route);
@@ -293,6 +294,8 @@ class Seed {
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
     $url = $local_host . $route;
 
+    $headers['Host'] = $hostname;
+
     // Support basic auth if enabled (note: will not work via drush/cli).
     $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
 
@@ -301,10 +304,7 @@ class Seed {
     // Best to trap redirects and re-run against the final path.
     $response = \Drupal::httpClient()->get($url, [
       'http_errors' => FALSE,
-      'query' => $query,
-      'headers' => [
-        'Host' => $hostname,
-      ],
+      'headers' => $headers,
       'auth' => $auth,
       'allow_redirects' => FALSE,
     ]);
@@ -314,9 +314,6 @@ class Seed {
     if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
       $destination = reset($response->getHeader('Location'));
 
-      // Strip quant params from destination.
-      $destination = self::removeQuantParams($destination);
-
       // Ensure relative for internal redirect.
       $destination = self::rewriteRelative($destination);
 
@@ -325,7 +322,7 @@ class Seed {
     }
 
     if ($response->getStatusCode() == 200) {
-      $markup = self::removeQuantParams($response->getBody());
+      $markup = $response->getBody();
     }
     else {
       $messenger = \Drupal::messenger();
@@ -334,37 +331,6 @@ class Seed {
 
     return $markup;
 
-  }
-
-  /**
-   * Returns markup with quant params removed.
-   *
-   * @param string $markup
-   *   The markup to search and remove query params from.
-   *
-   * @return string
-   *   Sanitised markup string.
-   */
-  private static function removeQuantParams($markup) {
-
-    // Ensure &amp; is replaced with &
-    $markup = preg_replace('/&amp;/i', '&', $markup);
-
-    // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
-    $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
-    // Remove ?quant_revision=XX&quant_token=XX
-    $markup = preg_replace("/\?quant_revision=(.*&)quant_token=[^\"']*/i", '', $markup);
-    // Remove &quant_revision=XX&quant_token=XX with optional params
-    $markup = preg_replace("/\&quant_revision=(.*&)quant_token=[^\"'&]*/i", '', $markup);
-
-    // Replace ?quant_revision=XX&additional_params with ?
-    $markup = preg_replace('/\?quant_revision=(.*&)/i', '?', $markup);
-    // Remove ?quant_revision=XX
-    $markup = preg_replace("/\?quant_revision=[^\"']*/i", '', $markup);
-    // Remove &quant_revision=XX with optional params
-    $markup = preg_replace("/\&quant_revision=[^\"'&]*/i", '', $markup);
-
-    return $markup;
   }
 
   /**

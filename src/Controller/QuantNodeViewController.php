@@ -52,10 +52,9 @@ class QuantNodeViewController extends NodeViewController {
     parent::__construct($entity_type_manager, $renderer, $current_user, $entity_repository);
 
     $this->accountSwitcher = $account_switcher;
-    $this->revisionId = $route_match->getParameter('quant_revision_id');
 
-    if ($request_stack->getCurrentRequest()->query->has('quant_revision')) {
-      $this->revisionId = intval($request_stack->getCurrentRequest()->query->get('quant_revision'));
+    if ($request_stack->getCurrentRequest()->headers->has('quant-revision')) {
+      $this->revisionId = intval($request_stack->getCurrentRequest()->headers->get('quant-revision'));
     }
   }
 

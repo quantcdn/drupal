@@ -116,7 +116,8 @@ class TokenManager {
    *   If the token is valid.
    */
   public function validate($entity_id = NULL, $strict = TRUE) {
-    $token = $this->request->getCurrentRequest()->get('quant_token');
+
+    $token = $this->request->getCurrentRequest()->headers->get('quant-token');
     $time = $this->request->getCurrentRequest()->server->get('REQUEST_TIME');
 
     if (empty($token)) {

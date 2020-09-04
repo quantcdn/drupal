@@ -97,7 +97,8 @@ function quant_cron() {
  */
 function quant_node_access(NodeInterface $node, $op, AccountInterface $account) {
   $request = \Drupal::request();
-  if (!$request->query->has('quant_revision') || !$request->query->has('quant_token')) {
+
+  if (!$request->headers->has('quant-revision') || !$request->headers->has('quant-token')) {
     return AccessResult::neutral();
   }
 
