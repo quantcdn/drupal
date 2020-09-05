@@ -167,19 +167,3 @@ function _quant_entity_delete_op($entity) {
 
   Seed::unpublishRoute($entity);
 }
-
-/**
- * Post redirect operation hook (add/update).
- */
-function _quant_post_redirect_update_op($redirect) {
-  Seed::seedRedirect($redirect);
-}
-
-/**
- * Post redirect operation hook (delete).
- */
-function _quant_post_redirect_delete_op($redirect) {
-  // Trigger an unpublish event.
-  Seed::unpublishRoute($redirect);
-}
-

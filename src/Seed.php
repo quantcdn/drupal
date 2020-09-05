@@ -179,7 +179,7 @@ class Seed {
   public static function deleteRedirect($redirect) {
     $source = $redirect->getSourcePathWithQuery();
     $destination = $redirect->getRedirectUrl()->toString();
-    // @todo: Add event dispatch.
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $source, [], NULL));
   }
 
   /**
