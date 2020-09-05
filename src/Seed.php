@@ -250,17 +250,23 @@ class Seed {
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid));
 
-    // Always create canonical redirects.
-    \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/node/{$nid}", $url, 301));
+    // Create canonical redirects from node/123 to the published revision route.
+    $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+
+    if ($entity->isPublished() && $entity->isDefaultRevision()) {
+      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+      $defaultUrl = Url::fromRoute('entity.node.canonical', ['node' => $nid], ['language' => $defaultLanguage])->toString();
+      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/node/{$nid}", $url, 301));
+    }
   }
 
   /**
-   * Delete the path from Quant.
+   * Unpublish the path from Quant.
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
    *   The entity.
    */
-  public static function deleteNode(EntityInterface $entity) {
+  public static function unpublishRoute(EntityInterface $entity) {
     // @TODO: This should be a quant service.
     $url = $entity->toUrl()->toString();
     $site_config = \Drupal::config('system.site');
@@ -302,7 +308,7 @@ class Seed {
     // @todo; Note: Passing in the Host header fixes issues with absolute links.
     // It may also cause some redirects to the real host.
     // Best to trap redirects and re-run against the final path.
-    $response = \Drupal::httpClient()->get($url, [
+    $response = \Drupal::httpClient()->post($url, [
       'http_errors' => FALSE,
       'headers' => $headers,
       'auth' => $auth,

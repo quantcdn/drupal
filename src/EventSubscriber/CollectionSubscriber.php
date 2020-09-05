@@ -90,24 +90,25 @@ class CollectionSubscriber implements EventSubscriberInterface {
         }
 
         if ($event->includeRevisions()) {
+
           $vids = $this->entityTypeManager->getStorage('node')->revisionIds($node);
 
           foreach ($vids as $vid) {
             $nr = $this->entityTypeManager->getStorage('node')->loadRevision($vid);
 
-            foreach ($nr->getTranslationLanguages() as $trLangcode => $trLanguage) {
-              if (!empty($languageFilter) && !in_array($trLangcode, $languageFilter)) {
-                continue;
-              }
-
-              $nr = $nr->getTranslation($trLangcode);
-              $event->addEntity($nr, $trLangcode);
+            if ($nr->hasTranslation($langcode) && $nr->getTranslation($langcode)->isRevisionTranslationAffected()) {
+              // Published revision.
+              $nr = $nr->getTranslation($langcode);
+              $event->addEntity($nr, $langcode);
             }
           }
         }
-
-        // Export current node revision.
-        $event->addEntity($node, $langcode);
+        else {
+          // Export current node revision.
+          if ($node->hasTranslation($langcode)) {
+            $event->addEntity($node, $langcode);
+          }
+        }
 
       }
     }

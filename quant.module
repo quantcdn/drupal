@@ -46,7 +46,7 @@ function quant_node_update(EntityInterface $entity) {
   // If entity default revision is unpublished then unpublish in quant.
   if (!$entity->isPublished() && $entity->isDefaultRevision()) {
     // Trigger an unpublish event.
-    Seed::deleteNode($entity);
+    Seed::unpublishRoute($entity);
   }
 
   // Exclude draft revisions from Quant if enabled.
@@ -165,7 +165,7 @@ function _quant_entity_delete_op($entity) {
     return;
   }
 
-  Seed::deleteNode($entity);
+  Seed::unpublishRoute($entity);
 }
 
 /**
@@ -179,6 +179,7 @@ function _quant_post_redirect_update_op($redirect) {
  * Post redirect operation hook (delete).
  */
 function _quant_post_redirect_delete_op($redirect) {
-
+  // Trigger an unpublish event.
+  Seed::unpublishRoute($redirect);
 }
 
