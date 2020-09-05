@@ -204,6 +204,14 @@ class CollectionSubscriber implements EventSubscriberInterface {
             }
 
             $event->addRoute("/{$path}");
+
+            // Languge negotiation may also provide path prefixes.
+            if ($prefixes = \Drupal::config('language.negotiation')->get('url.prefixes')) {
+              foreach ($prefixes as $prefix) {
+                $event->addRoute("/{$prefix}/{$path}");
+              }
+            }
+
           }
         }
       }
