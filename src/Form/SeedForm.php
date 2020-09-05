@@ -153,6 +153,12 @@ class SeedForm extends FormBase {
       ],
     ];
 
+    $form['entity_taxonomy_term'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Taxonomy terms'),
+      '#description' => $this->t('Exports taxonomy term pages.'),
+    ];
+
     // @todo: Implement these as plugins.
     $form['theme_assets'] = [
       '#type' => 'checkbox',

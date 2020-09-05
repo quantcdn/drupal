@@ -13,6 +13,7 @@ use Drupal\views\Views;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
+use Drupal\Core\Url;
 
 /**
  * Event subscribers for the quant collection events.
@@ -179,6 +180,29 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * Collect the standard routes.
    */
   public function collectRoutes(CollectRoutesEvent $event) {
+
+    if ($event->getFormState()->getValue('entity_taxonomy_term')) {
+      $taxonomy_storage = $this->entityTypeManager->getStorage('taxonomy_term');
+
+      foreach ($taxonomy_storage->loadMultiple() as $term) {
+        foreach ($term->getTranslationLanguages() as $langcode => $language) {
+          // Retrieve the translated version.
+          $term = $term->getTranslation($langcode);
+          $tid = $term->id();
+
+          $options = ['absolute' => FALSE];
+
+          if (!empty($langcode)) {
+            $language = \Drupal::languageManager()->getLanguage($langcode);
+            $options['language'] = $language;
+          }
+
+          $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+          $event->addRoute($url);
+        }
+      }
+    }
+
     if ($event->getFormState()->getValue('routes_textarea')) {
       foreach (explode(PHP_EOL, $event->getFormState()->getValue('routes_textarea')) as $route) {
         if (strpos((trim($route)), '/') !== 0) {
