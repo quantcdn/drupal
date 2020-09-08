@@ -285,15 +285,6 @@ class SeedForm extends FormBase {
       }
     }
 
-    if ($form_state->getValue('entity_taxonomy_term')) {
-      $event = new CollectTaxonomyEvent([], $form_state);
-      $this->dispatcher->dispatch(QuantCollectionEvents::TAXONOMY, $event);
-      while ($entity = $event->getEntity()) {
-        $batch['operations'][] = ['\Drupal\quant\Seed::exportTaxonomyTerm', [$entity]];
-      }
-
-    }
-
     $event = new CollectRoutesEvent($routes, $form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
     while ($route = $event->getRoute()) {
