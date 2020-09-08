@@ -34,6 +34,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_proxy_override', FALSE),
   );
 
+  $form['quant_verbose_logging'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable verbose logging'),
+    '#description' => t('Adds more information to logging outputs for each API call.'),
+    '#default_value' => variable_get('quant_verbose_logging', FALSE),
+  );
+
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
