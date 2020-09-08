@@ -24,6 +24,13 @@ function quant_menu_local_tasks_alter(&$data, $route_name) {
  * Implements hook_node_insert().
  */
 function quant_node_insert(EntityInterface $entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_node_enabled = \Drupal::config('quant.settings')->get('quant_enabled_nodes');
+
+  if (!$quant_enabled || !$quant_node_enabled) {
+    return;
+  }
+
   $disable_drafts = \Drupal::config('quant.settings')->get('disable_content_drafts');
   if ($disable_drafts && !$entity->isPublished()) {
     return;
@@ -41,6 +48,13 @@ function quant_node_insert(EntityInterface $entity) {
  * Implements hook_node_update().
  */
 function quant_node_update(EntityInterface $entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_node_enabled = \Drupal::config('quant.settings')->get('quant_enabled_nodes');
+
+  if (!$quant_enabled || !$quant_node_enabled) {
+    return;
+  }
+
   $disable_drafts = \Drupal::config('quant.settings')->get('disable_content_drafts');
 
   // If entity default revision is unpublished then unpublish in quant.
@@ -62,10 +76,56 @@ function quant_node_update(EntityInterface $entity) {
   drupal_register_shutdown_function('quant_shutdown', $context);
 }
 
+
+/**
+ * Implements hook_taxonomy_term_insert().
+ */
+function quant_taxonomy_term_insert(EntityInterface $entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_taxonomy_enabled = \Drupal::config('quant.settings')->get('quant_enabled_taxonomy');
+
+  if (!$quant_enabled || !$quant_taxonomy_enabled) {
+    return;
+  }
+
+  $context = [
+    'callback' => '_quant_entity_update_op',
+    'args' => $entity,
+  ];
+
+  drupal_register_shutdown_function('quant_shutdown', $context);
+}
+
+/**
+ * Implements hook_taxonomy_term_update().
+ */
+function quant_taxonomy_term_update(EntityInterface $entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_taxonomy_enabled = \Drupal::config('quant.settings')->get('quant_enabled_taxonomy');
+
+  if (!$quant_enabled || !$quant_taxonomy_enabled) {
+    return;
+  }
+
+  $context = [
+    'callback' => '_quant_entity_update_op',
+    'args' => $entity,
+  ];
+
+  drupal_register_shutdown_function('quant_shutdown', $context);
+}
+
 /**
  * Implements hook_entity_predelete().
  */
 function quant_entity_predelete(EntityInterface $entity) {
+
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+
+  if (!$quant_enabled) {
+    return;
+  }
+
   // This needs to not be a shutdown hook and also needs to be on
   // the predelete hook as the path alias is removed in the entity
   // delete clean-up.
@@ -80,6 +140,13 @@ function quant_entity_predelete(EntityInterface $entity) {
  * state we use this to register the seed after all other functions.
  */
 function quant_shutdown(array $context = []) {
+
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+
+  if (!$quant_enabled) {
+    return;
+  }
+
   if (is_callable($context['callback'])) {
     drupal_register_shutdown_function($context['callback'], $context['args']);
   }
@@ -121,6 +188,13 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
  * Implements hook_redirect_presave().
  */
 function quant_redirect_presave($redirect) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_redirect_enabled = \Drupal::config('quant.settings')->get('quant_enabled_redirects');
+
+  if (!$quant_enabled || !$quant_redirect_enabled) {
+    return;
+  }
+
   Seed::seedRedirect($redirect);
 }
 
@@ -128,6 +202,13 @@ function quant_redirect_presave($redirect) {
  * Implements hook_redirect_delete().
  */
 function quant_redirect_delete($redirect) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_redirect_enabled = \Drupal::config('quant.settings')->get('quant_enabled_redirects');
+
+  if (!$quant_enabled || !$quant_redirect_enabled) {
+    return;
+  }
+
   Seed::deleteRedirect($redirect);
 }
 
@@ -143,11 +224,16 @@ function quant_redirect_delete($redirect) {
  *   The entity.
  */
 function _quant_entity_update_op($entity) {
-  if ($entity->getEntityTypeId() != 'node') {
-    return;
+
+  switch($entity->getEntityTypeId()) {
+    case 'node':
+      Seed::seedNode($entity);
+    break;
+    case 'taxonomy_term':
+      Seed::seedTaxonomyTerm($entity);
+    break;
   }
 
-  Seed::seedNode($entity);
 }
 
 /**

@@ -183,6 +183,38 @@ class Seed {
   }
 
   /**
+   * Seeds taxonomy term.
+   */
+  public static function seedTaxonomyTerm($entity, $langcode=NULL) {
+    $tid = $entity->get('tid')->value;
+
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+    $markup = self::markupFromRoute($url);
+
+    $meta = [];
+
+    if (empty($markup)) {
+      return;
+    }
+
+    $metaManager = \Drupal::service('plugin.manager.quant.metadata');
+    foreach ($metaManager->getDefinitions() as $pid => $def) {
+      $plugin = $metaManager->createInstance($pid);
+      if ($plugin->applies($entity)) {
+        $meta = array_merge($meta, $plugin->build($entity));
+      }
+    }
+
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta));
+  }
+
+  /**
    * Trigger an internal http request to retrieve node markup.
    * Seeds an individual node update to Quant.
    */
@@ -195,10 +227,7 @@ class Seed {
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
 
-    // Can pass in 'language' here to get language alias.
-    // Unable to determine language based on revision id though..?
     $options = ['absolute' => FALSE];
-
     if (!empty($langcode)) {
       $language = \Drupal::languageManager()->getLanguage($langcode);
       $options['language'] = $language;
@@ -253,6 +282,7 @@ class Seed {
     // Create canonical redirects from node/123 to the published revision route.
     $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
 
+    // @todo: Exclude when node has no alias defined.
     if ($entity->isPublished() && $entity->isDefaultRevision()) {
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $defaultUrl = Url::fromRoute('entity.node.canonical', ['node' => $nid], ['language' => $defaultLanguage])->toString();
