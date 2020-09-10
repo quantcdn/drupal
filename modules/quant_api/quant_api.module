@@ -49,17 +49,17 @@ function quant_api_get_request_headers() {
   $project = variable_get('quant_api_project');
 
   if (empty($token)) {
-    watchdog('quant_api', 'API Token is not configured.', [], 'info');
+    quant_log('API Token is not configured.');
     return [];
   }
 
   if (empty($customer)) {
-    watchdog('quant_api', 'API Customer is not configured', [], 'info');
+    quant_log('API Customer is not configured');
     return [];
   }
 
   if (empty($project)) {
-    watchdog('quant_api', 'API Project is not configured', [], 'info');
+    quant_log('API Project is not configured');
     return [];
   }
 
@@ -79,7 +79,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
   $api = variable_get('quant_api_endpoint', QUANT_ENDPOINT_DEFAULT);
 
   if (empty($api)) {
-    watchdog('quant_api', 'API endpoint is not configured.', [], 'info');
+    quant_log('API endpoint is not configured.');
     return;
   }
 
@@ -102,16 +102,18 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     )),
   );
 
+  quant_log('%request_options', array('%request_options' => json_encode($request)), QUANT_VERBOSE);
+
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
     if (empty($response->data)) {
       // This is a connection error between the drupal server and quant.
-      watchdog('quant_api', 'Connection error');
+      quant_log('Connection error', [], WATCHDOG_ERROR);
       return;
     }
     $body = json_decode($response->data);
-    watchdog('quant_api', 'Error sending request: %error %res', array(
+    quant_log('Error sending request: %error %res', array(
       '%error' => $body->errorMsg,
       '%res' => json_encode($response),
     ), WATCHDOG_ERROR);
@@ -135,7 +137,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     $loc = DRUPAL_ROOT . $on_disk;
 
     if (!file_exists($loc)) {
-      watchdog('quant_api', 'File not found: %file', array(
+      quant_log('File not found: %file', array(
         '%file' => $file,
       ));
       continue;
@@ -164,7 +166,7 @@ function quant_api_quant_seed_file($url, $context) {
   $api = variable_get('quant_api_endpoint', QUANT_ENDPOINT_DEFAULT);
 
   if (empty($api)) {
-    watchdog('quant_api', 'API endpoint is not configured.', [], 'info');
+    quant_log('API endpoint is not configured.', [], 'info');
     return;
   }
 
@@ -244,12 +246,11 @@ function quant_api_unpublish_route($url) {
   if (!empty($response->error)) {
     if (empty($response->data)) {
       // This is a connection error between the drupal server and quant.
-      watchdog('quant_api', 'Connection error');
+      quant_log('Connection error');
       return FALSE;
     }
     $body = json_decode($response->data);
-
-    watchdog('quant_api', 'Error sending request: %error', array(
+    quant_log('Error sending request: %error', array(
       '%error' => $body->errorMsg,
     ), WATCHDOG_ERROR);
     return FALSE;

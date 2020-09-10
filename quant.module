@@ -13,6 +13,11 @@
 define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf)$/i');
 
 /**
+ * Quant verbose logging.
+ */
+define('QUANT_VERBOSE', 'verbose');
+
+/**
  * The elapsed time a short-live token can be alive for.
  *
  * @var string
@@ -147,6 +152,16 @@ function quant_node_menu_load($nid) {
 }
 
 /**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function quant_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  $params = drupal_get_query_parameters();
+  if (isset($params['quant_token'])) {
+    unset($data['tabs']);
+  }
+}
+
+/**
  * Implements hook_cron().
  */
 function quant_cron() {
@@ -170,6 +185,10 @@ function quant_cron() {
  */
 function quant_node_access($node, $op, $account) {
   $params = drupal_get_query_parameters();
+
+  if (is_string($node)) {
+    return NODE_ACCESS_IGNORE;
+  }
 
   if (!variable_get('quant_draft_revisions', FALSE)) {
     return NODE_ACCESS_IGNORE;
@@ -390,7 +409,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   }
 
   if (!property_exists($response, 'data') || $response->code >= 400) {
-    watchdog('quant', 'Unable to seed %url %error %request', array(
+    quant_log('Unable to seed %url %error %request', array(
       '%url' => $url,
       '%error' => $response->error,
       '%request' => json_encode($response),
@@ -495,7 +514,15 @@ function quant_seed_file($url, $context = array()) {
  * Drush or watchdog logging.
  */
 function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
-  // @TODO: Module configuration for verbosity - very verbose logging for now.
+  $vvv = variable_get('quant_verbose_logging', FALSE);
+
+  if ($level == QUANT_VERBOSE && !$vvv) {
+    return;
+  }
+
+  if ($level == QUANT_VERBOSE) {
+    $level = WATCHDOG_INFO;
+  }
 
   if (drupal_is_cli()) {
     drush_log(t($message, $replacements), 'ok');
@@ -688,7 +715,10 @@ function _quant_batch_views(&$batch) {
   $base = variable_get('quant_base_url', $base_url);
 
   $menus = array();
-  views_menu_alter($menus);
+
+  if (module_exists('views')) {
+    views_menu_alter($menus);
+  }
 
   foreach ($menus as $path => $config) {
     $url = "$base/$path";
