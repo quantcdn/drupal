@@ -223,10 +223,6 @@ class Seed {
     $nid = $entity->get('nid')->value;
     $rid = $entity->get('vid')->value;
 
-    // Special case for home-page, rewrite alias to /.
-    $site_config = \Drupal::config('system.site');
-    $front = $site_config->get('page.front');
-
     $options = ['absolute' => FALSE];
     if (!empty($langcode)) {
       $language = \Drupal::languageManager()->getLanguage($langcode);
@@ -235,8 +231,16 @@ class Seed {
 
     $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
 
+    // Special case for home-page, rewrite URL as /.
+    $site_config = \Drupal::config('system.site');
+    $front = $site_config->get('page.front');
+
     if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
-       $url = "/";
+      if ($entity->isPublished() && $entity->isDefaultRevision()) {
+        // Trigger redirect event from alias to home.
+         \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($url, "/", 301));
+      }
+      $url = "/";
     }
 
     // Generate a request token.
@@ -261,10 +265,7 @@ class Seed {
       }
     }
 
-    // Special case pages (403/404); 2x exports.
-    // One for alias associated with page, one for "special" URLs.
-    $site_config = \Drupal::config('system.site');
-
+    // Special case pages (403/404/Home)
     $specialPages = [
       '/' => $site_config->get('page.front'),
       '/_quant404' => $site_config->get('page.404'),
@@ -273,7 +274,7 @@ class Seed {
 
     foreach ($specialPages as $k => $v) {
       if ((strpos($v, '/node/') === 0) && $entity->get('nid')->value == substr($v, 6)) {
-        \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $k, $meta, $rid));
+        $url = $k;
       }
     }
 
