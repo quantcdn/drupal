@@ -74,7 +74,9 @@ class CollectionSubscriber implements EventSubscriberInterface {
       $node = Node::load($value);
 
       // Iterate translations if enabled.
-      $languageFilter = array_filter($event->getFormState()->getValue('entity_node_languages'));
+      if (!empty($event->getFormState()->getValue('entity_node_languages'))) {
+        $languageFilter = array_filter($event->getFormState()->getValue('entity_node_languages'));
+      }
 
       foreach ($node->getTranslationLanguages() as $langcode => $language) {
 
