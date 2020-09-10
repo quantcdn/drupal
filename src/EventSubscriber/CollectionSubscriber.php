@@ -13,6 +13,7 @@ use Drupal\views\Views;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
+use Drupal\Core\Url;
 
 /**
  * Event subscribers for the quant collection events.
@@ -72,20 +73,45 @@ class CollectionSubscriber implements EventSubscriberInterface {
     foreach ($nids as $key => $value) {
       $node = Node::load($value);
 
-      if ($disable_drafts && !$node->isPublished()) {
-        continue;
-      }
+      // Iterate translations if enabled.
+      $languageFilter = array_filter($event->getFormState()->getValue('entity_node_languages'));
 
-      if ($event->includeRevisions()) {
-        $vids = $this->entityTypeManager->getStorage('node')->revisionIds($node);
-        foreach ($vids as $vid) {
-          $nr = $this->entityTypeManager->getStorage('node')->loadRevision($vid);
-          $event->addEntity($nr);
+      foreach ($node->getTranslationLanguages() as $langcode => $language) {
+
+        // Skip languages excluded from the filter.
+        if (!empty($languageFilter) && !in_array($langcode, $languageFilter)) {
+          continue;
         }
-      }
 
-      // Export current node revision.
-      $event->addEntity($node);
+        // Retrieve the translated version.
+        $node = $node->getTranslation($langcode);
+
+        if ($disable_drafts && !$node->isPublished()) {
+          continue;
+        }
+
+        if ($event->includeRevisions()) {
+
+          $vids = $this->entityTypeManager->getStorage('node')->revisionIds($node);
+
+          foreach ($vids as $vid) {
+            $nr = $this->entityTypeManager->getStorage('node')->loadRevision($vid);
+
+            if ($nr->hasTranslation($langcode) && $nr->getTranslation($langcode)->isRevisionTranslationAffected()) {
+              // Published revision.
+              $nr = $nr->getTranslation($langcode);
+              $event->addEntity($nr, $langcode);
+            }
+          }
+        }
+        else {
+          // Export current node revision.
+          if ($node->hasTranslation($langcode)) {
+            $event->addEntity($node, $langcode);
+          }
+        }
+
+      }
     }
   }
 
@@ -111,8 +137,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
     // @todo: Support multiple themes (e.g site may have multiple themes changing by route).
     $config = $this->configFactory->get('system.theme');
     $themeName = $config->get('default');
-    $themePath = DRUPAL_ROOT . '/themes/custom/' . $themeName;
-    $filesPath = \Drupal::service('file_system')->realpath(file_default_scheme() . "://");
+    $path = \Drupal::service('theme_handler')->getTheme($themeName)->getPath();
+
+    $themePath = DRUPAL_ROOT . '/' . $path;
+    $scheme = \Drupal::config('system.file')->get('default_scheme');
+    $filesPath = \Drupal::service('file_system')->realpath($scheme . "://");
 
     if (!is_dir($themePath)) {
       echo "Theme dir does not exist";
@@ -121,7 +150,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
     $directoryIterator = new \RecursiveDirectoryIterator($themePath);
     $iterator = new \RecursiveIteratorIterator($directoryIterator);
-    $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf)$/i', \RecursiveRegexIterator::GET_MATCH);
+    $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.ico)$/i', \RecursiveRegexIterator::GET_MATCH);
 
     foreach ($regex as $name => $r) {
       $path = str_replace(DRUPAL_ROOT, '', $name);
@@ -151,6 +180,29 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * Collect the standard routes.
    */
   public function collectRoutes(CollectRoutesEvent $event) {
+
+    if ($event->getFormState()->getValue('entity_taxonomy_term')) {
+      $taxonomy_storage = $this->entityTypeManager->getStorage('taxonomy_term');
+
+      foreach ($taxonomy_storage->loadMultiple() as $term) {
+        foreach ($term->getTranslationLanguages() as $langcode => $language) {
+          // Retrieve the translated version.
+          $term = $term->getTranslation($langcode);
+          $tid = $term->id();
+
+          $options = ['absolute' => FALSE];
+
+          if (!empty($langcode)) {
+            $language = \Drupal::languageManager()->getLanguage($langcode);
+            $options['language'] = $language;
+          }
+
+          $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+          $event->addRoute($url);
+        }
+      }
+    }
+
     if ($event->getFormState()->getValue('routes_textarea')) {
       foreach (explode(PHP_EOL, $event->getFormState()->getValue('routes_textarea')) as $route) {
         if (strpos((trim($route)), '/') !== 0) {
@@ -176,6 +228,14 @@ class CollectionSubscriber implements EventSubscriberInterface {
             }
 
             $event->addRoute("/{$path}");
+
+            // Languge negotiation may also provide path prefixes.
+            if ($prefixes = \Drupal::config('language.negotiation')->get('url.prefixes')) {
+              foreach ($prefixes as $prefix) {
+                $event->addRoute("/{$prefix}/{$path}");
+              }
+            }
+
           }
         }
       }

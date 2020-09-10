@@ -7,6 +7,8 @@ use Drupal\quant\Event\NodeInsertEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Url;
+
 
 /**
  * Seed Manager.
@@ -19,11 +21,15 @@ class Seed {
    * Trigger export node via event dispatcher.
    */
   public static function exportNode($node, &$context) {
+
+    $langcode = $node['langcode'];
+    $node = $node['entity'];
+
     $vid = $node->get('vid')->value;
     $message = "Processing {$node->title->value} (Revision: {$vid})";
 
     // Export via event dispatcher.
-    \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($node));
+    \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($node, $langcode));
 
     $results = [$node->nid->value];
     $context['message'] = $message;
@@ -111,7 +117,7 @@ class Seed {
     else {
       $message = t('Finished with an error.');
     }
-    drupal_set_message($message);
+    \Drupal::messenger()->addMessage($message);
   }
 
   /**
@@ -119,7 +125,8 @@ class Seed {
    * This includes static output from the lunr module.
    */
   public static function findLunrAssets() {
-    $filesPath = \Drupal::service('file_system')->realpath(file_default_scheme() . "://lunr_search");
+    $scheme = \Drupal::config('system.file')->get('default_scheme');
+    $filesPath = \Drupal::service('file_system')->realpath($scheme . "://lunr_search");
 
     if (!is_dir($filesPath)) {
       $messenger = \Drupal::messenger();
@@ -172,34 +179,24 @@ class Seed {
   public static function deleteRedirect($redirect) {
     $source = $redirect->getSourcePathWithQuery();
     $destination = $redirect->getRedirectUrl()->toString();
-    // @todo: Add event dispatch.
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $source, [], NULL));
   }
 
   /**
-   * Trigger an internal http request to retrieve node markup.
-   * Seeds an individual node update to Quant.
+   * Seeds taxonomy term.
    */
-  public static function seedNode($entity) {
+  public static function seedTaxonomyTerm($entity, $langcode=NULL) {
+    $tid = $entity->get('tid')->value;
 
-    $nid = $entity->get('nid')->value;
-    $rid = $entity->get('vid')->value;
-    $url = $entity->toUrl()->toString();
-
-    // Special case for home-page, rewrite alias to /.
-    $site_config = \Drupal::config('system.site');
-    $front = $site_config->get('page.front');
-
-    if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
-      $url = "/";
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
     }
 
-    // Generate a request token.
-    $token = \Drupal::service('quant.token_manager')->create($nid);
+    $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+    $markup = self::markupFromRoute($url);
 
-    $markup = self::markupFromRoute($url, [
-      'quant_revision' => $rid,
-      'quant_token' => $token,
-    ]);
     $meta = [];
 
     if (empty($markup)) {
@@ -214,13 +211,61 @@ class Seed {
       }
     }
 
-    // This should get the entity alias.
-    $url = $entity->toUrl()->toString();
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta));
+  }
 
-    // Special case pages (403/404); 2x exports.
-    // One for alias associated with page, one for "special" URLs.
+  /**
+   * Trigger an internal http request to retrieve node markup.
+   * Seeds an individual node update to Quant.
+   */
+  public static function seedNode($entity, $langcode=NULL) {
+
+    $nid = $entity->get('nid')->value;
+    $rid = $entity->get('vid')->value;
+
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
+
+    // Special case for home-page, rewrite URL as /.
     $site_config = \Drupal::config('system.site');
+    $front = $site_config->get('page.front');
 
+    if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
+      if ($entity->isPublished() && $entity->isDefaultRevision()) {
+        // Trigger redirect event from alias to home.
+         \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($url, "/", 301));
+      }
+      $url = "/";
+    }
+
+    // Generate a request token.
+    $token = \Drupal::service('quant.token_manager')->create($nid);
+
+    $markup = self::markupFromRoute($url, [
+      'quant-revision' => $rid,
+      'quant-token' => $token,
+    ]);
+
+    $meta = [];
+
+    if (empty($markup)) {
+      return;
+    }
+
+    $metaManager = \Drupal::service('plugin.manager.quant.metadata');
+    foreach ($metaManager->getDefinitions() as $pid => $def) {
+      $plugin = $metaManager->createInstance($pid);
+      if ($plugin->applies($entity)) {
+        $meta = array_merge($meta, $plugin->build($entity));
+      }
+    }
+
+    // Special case pages (403/404/Home)
     $specialPages = [
       '/' => $site_config->get('page.front'),
       '/_quant404' => $site_config->get('page.404'),
@@ -229,24 +274,30 @@ class Seed {
 
     foreach ($specialPages as $k => $v) {
       if ((strpos($v, '/node/') === 0) && $entity->get('nid')->value == substr($v, 6)) {
-        \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $k, $meta, $rid));
+        $url = $k;
       }
     }
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid));
 
-    // Always create canonical redirects.
-    \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/node/{$nid}", $url, 301));
+    // Create canonical redirects from node/123 to the published revision route.
+    $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
 
+    // @todo: Exclude when node has no alias defined.
+    if ($entity->isPublished() && $entity->isDefaultRevision()) {
+      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+      $defaultUrl = Url::fromRoute('entity.node.canonical', ['node' => $nid], ['language' => $defaultLanguage])->toString();
+      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/node/{$nid}", $url, 301));
+    }
   }
 
   /**
-   * Delete the path from Quant.
+   * Unpublish the path from Quant.
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
    *   The entity.
    */
-  public static function deleteNode(EntityInterface $entity) {
+  public static function unpublishRoute(EntityInterface $entity) {
     // @TODO: This should be a quant service.
     $url = $entity->toUrl()->toString();
     $site_config = \Drupal::config('system.site');
@@ -269,7 +320,7 @@ class Seed {
    * @return string|bool
    *   The markup from the $route.
    */
-  protected static function markupFromRoute($route, array $query = []) {
+  protected static function markupFromRoute($route, array $headers = []) {
 
     // Cleanse route.
     $route = str_replace('//', '/', $route);
@@ -280,18 +331,17 @@ class Seed {
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
     $url = $local_host . $route;
 
+    $headers['Host'] = $hostname;
+
     // Support basic auth if enabled (note: will not work via drush/cli).
     $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
 
     // @todo; Note: Passing in the Host header fixes issues with absolute links.
     // It may also cause some redirects to the real host.
     // Best to trap redirects and re-run against the final path.
-    $response = \Drupal::httpClient()->get($url, [
+    $response = \Drupal::httpClient()->post($url, [
       'http_errors' => FALSE,
-      'query' => $query,
-      'headers' => [
-        'Host' => $hostname,
-      ],
+      'headers' => $headers,
       'auth' => $auth,
       'allow_redirects' => FALSE,
     ]);
@@ -301,9 +351,6 @@ class Seed {
     if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
       $destination = reset($response->getHeader('Location'));
 
-      // Strip quant params from destination.
-      $destination = self::removeQuantParams($destination);
-
       // Ensure relative for internal redirect.
       $destination = self::rewriteRelative($destination);
 
@@ -312,7 +359,7 @@ class Seed {
     }
 
     if ($response->getStatusCode() == 200) {
-      $markup = self::removeQuantParams($response->getBody());
+      $markup = $response->getBody();
     }
     else {
       $messenger = \Drupal::messenger();
@@ -321,37 +368,6 @@ class Seed {
 
     return $markup;
 
-  }
-
-  /**
-   * Returns markup with quant params removed.
-   *
-   * @param string $markup
-   *   The markup to search and remove query params from.
-   *
-   * @return string
-   *   Sanitised markup string.
-   */
-  private static function removeQuantParams($markup) {
-
-    // Ensure &amp; is replaced with &
-    $markup = preg_replace('/&amp;/i', '&', $markup);
-
-    // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
-    $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
-    // Remove ?quant_revision=XX&quant_token=XX
-    $markup = preg_replace("/\?quant_revision=(.*&)quant_token=[^\"']*/i", '', $markup);
-    // Remove &quant_revision=XX&quant_token=XX with optional params
-    $markup = preg_replace("/\&quant_revision=(.*&)quant_token=[^\"'&]*/i", '', $markup);
-
-    // Replace ?quant_revision=XX&additional_params with ?
-    $markup = preg_replace('/\?quant_revision=(.*&)/i', '?', $markup);
-    // Remove ?quant_revision=XX
-    $markup = preg_replace("/\?quant_revision=[^\"']*/i", '', $markup);
-    // Remove &quant_revision=XX with optional params
-    $markup = preg_replace("/\&quant_revision=[^\"'&]*/i", '', $markup);
-
-    return $markup;
   }
 
   /**

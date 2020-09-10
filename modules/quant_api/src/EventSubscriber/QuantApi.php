@@ -131,7 +131,15 @@ class QuantApi implements EventSubscriberInterface {
       // @todo: Determine local vs. remote.
       // @todo: Configurable to disallow remote files.
       // @todo: Strip base domain.
-      $file = urldecode($item['path']);
+      $url = urldecode($item['path']);
+
+      // Ignore anything that isn't relative for now.
+      if (substr($url, 0, 1) != "/") {
+        continue;
+      }
+
+      // Strip query params.
+      $file = strtok($url, '?');
 
       if (isset($item['existing_md5'])) {
         if (file_exists(DRUPAL_ROOT . $file) && md5_file(DRUPAL_ROOT . $file) == $item['existing_md5']) {
@@ -139,16 +147,35 @@ class QuantApi implements EventSubscriberInterface {
         }
       }
 
-      // Ignore anything that isn't relative for now.
-      if (substr($file, 0, 1) != "/") {
-        continue;
-      }
-
-      // Strip query params.
-      $file = strtok($file, '?');
-
       if (file_exists(DRUPAL_ROOT . $file)) {
         $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
+      }
+      else if (strpos($url, '/styles/')) {
+        // Image style derivative does not exist.
+        // Quant API returns an expected full_path item which allows for image generation.
+        if (isset($item['full_path'])) {
+          // Build internal request.
+          $config = \Drupal::config('quant.settings');
+          $local_host = $config->get('local_server') ?: 'http://localhost';
+          $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
+          $image_style_url = $local_host . $item['full_path'];
+
+          $headers['Host'] = $hostname;
+
+          // Support basic auth if enabled (note: will not work via drush/cli).
+          $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
+          $response = \Drupal::httpClient()->get($image_style_url, [
+            'http_errors' => FALSE,
+            'headers' => $headers,
+            'auth' => $auth,
+            'allow_redirects' => FALSE,
+          ]);
+
+          // If image style creation succeeds trigger a new file output event.
+          if (file_exists(DRUPAL_ROOT . $file)) {
+            $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
+          }
+        }
       }
     }
 

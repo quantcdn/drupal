@@ -55,11 +55,17 @@ class CollectEntitiesEvent extends ConfigFormEventBase {
    *
    * @var mixed $entity
    *   The entity object.
+   * @var string $langcode
+   *   The language code of the entity.
    *
    * @return self
    */
-  public function addEntity($entity) {
-    $this->entities[] = $entity;
+  public function addEntity($entity, $langcode=NULL) {
+    $this->entities[] = [
+      'entity' => $entity,
+      'langcode' => $langcode,
+    ];
+
     return $this;
   }
 

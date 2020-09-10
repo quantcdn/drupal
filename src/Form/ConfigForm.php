@@ -41,6 +41,47 @@ class ConfigForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config(static::SETTINGS);
 
+    $form['quant_enabled'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Track content change'),
+      '#description' => $this->t('Automatically push content changes to Quant (recommended).'),
+      '#default_value' => $config->get('quant_enabled', TRUE),
+    ];
+
+    $form['tracking_fieldset'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Tracked entities'),
+      '#states' => [
+        'visible' => [
+          ':input[name="quant_enabled"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $form['tracking_fieldset']['quant_enabled_nodes'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Nodes'),
+      '#default_value' => $config->get('quant_enabled_nodes'),
+    ];
+
+    $form['tracking_fieldset']['quant_enabled_taxonomy'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Taxonomy Terms'),
+      '#default_value' => $config->get('quant_enabled_taxonomy'),
+    ];
+
+    $form['tracking_fieldset']['quant_enabled_redirects'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Redirects'),
+      '#default_value' => $config->get('quant_enabled_redirects'),
+    ];
+
+    $form['tracking_fieldset']['quant_enabled_views'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Views'),
+      '#default_value' => $config->get('quant_enabled_views'),
+    ];
+
     $form['disable_content_drafts'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Disable content drafts'),
@@ -78,6 +119,11 @@ class ConfigForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // Retrieve the configuration.
     $this->configFactory->getEditable(static::SETTINGS)
+      ->set('quant_enabled', $form_state->getValue('quant_enabled'))
+      ->set('quant_enabled_nodes', $form_state->getValue('quant_enabled_nodes'))
+      ->set('quant_enabled_taxonomy', $form_state->getValue('quant_enabled_taxonomy'))
+      ->set('quant_enabled_views', $form_state->getValue('quant_enabled_views'))
+      ->set('quant_enabled_redirects', $form_state->getValue('quant_enabled_redirects'))
       ->set('proxy_override', $form_state->getValue('proxy_override'))
       ->set('local_server', $form_state->getValue('local_server'))
       ->set('host_domain', $form_state->getValue('host_domain'))

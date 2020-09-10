@@ -68,6 +68,7 @@ class SeedForm extends FormBase {
 
     $warnings = $this->getWarnings();
     $config = $this->config('quant_api.settings');
+    $moduleHandler = \Drupal::moduleHandler();
 
     if (!empty($warnings)) {
       $form['warnings'] = [
@@ -93,11 +94,38 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports the latest revision of each node.'),
     ];
 
+    // Seed by language.
+    // Only active if there are more than one active languages.
+    $languages = \Drupal::languageManager()->getLanguages();
+
+    if (count($languages) > 1) {
+      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+      $language_codes = [];
+
+      foreach ($languages as $langcode => $language) {
+        $default = ($defaultLanguage->getId() == $langcode) ? ' (Default)' : '';
+        $language_codes[$langcode] = $language->getName() . $default;
+      }
+
+      $form['entity_node_languages'] = [
+        '#type' => 'checkboxes',
+        '#title' => $this->t('Languages'),
+        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be exported.'),
+        '#options' => $language_codes,
+        '#states' => [
+          'visible' => [
+            ':input[name="entity_node"]' => ['checked' => TRUE],
+          ],
+        ],
+      ];
+    }
+
     // Seed by bundle.
     $types = \Drupal::entityTypeManager()
       ->getStorage('node_type')
       ->loadMultiple();
 
+    $content_types = [];
     foreach($types as $type) {
       $content_types[$type->id()] = $type->label();
     }
@@ -125,6 +153,12 @@ class SeedForm extends FormBase {
       ],
     ];
 
+    $form['entity_taxonomy_term'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Taxonomy terms'),
+      '#description' => $this->t('Exports taxonomy term pages.'),
+    ];
+
     // @todo: Implement these as plugins.
     $form['theme_assets'] = [
       '#type' => 'checkbox',
@@ -138,11 +172,13 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports all views with a Page display accessible to anonymous users.'),
     ];
 
-    $form['redirects'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Redirects'),
-      '#description' => $this->t('Exports all existing redirects.'),
-    ];
+    if ($moduleHandler->moduleExists('redirect')) {
+      $form['redirects'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Redirects'),
+        '#description' => $this->t('Exports all existing redirects.'),
+      ];
+    }
 
     $form['routes'] = [
       '#type' => 'checkbox',
@@ -161,8 +197,6 @@ class SeedForm extends FormBase {
       ],
       '#default_value' => $config->get('routes_export', ''),
     ];
-
-    $moduleHandler = \Drupal::moduleHandler();
 
     if ($moduleHandler->moduleExists('lunr')) {
       $form['lunr'] = [

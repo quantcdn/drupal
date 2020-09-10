@@ -16,13 +16,10 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
   /**
    * Constructs a node insertion event object.
    *
-   * @param \Drupal\quant\EntityRendererInterface $renderer
-   *   The renderer service.
    * @param \Drupal\quant\Plugin\QuantMetadataManager $metadata_manager
    *   The metadata plugin manager.
    */
-  public function __construct(EntityRendererInterface $renderer, QuantMetadataManager $metadata_manager) {
-    $this->renderer = $renderer;
+  public function __construct(QuantMetadataManager $metadata_manager) {
     $this->metadataManager = $metadata_manager;
   }
 
@@ -33,7 +30,8 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
    */
   public function onNodeInsert(NodeInsertEvent $event) {
     $entity = $event->getEntity();
-    Seed::seedNode($entity);
+    $langcode = $event->getLangcode();
+    Seed::seedNode($entity, $langcode);
   }
 
   /**
