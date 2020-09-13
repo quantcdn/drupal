@@ -539,7 +539,7 @@ function quant_quant_meta_node_alter(&$meta, $context) {
   $meta['published'] = boolval($context['entity']->status);
   $meta['info'] = [
     'author' => empty($context['entity']->revision_uid) ? $context['entity']->uid : $context['entity']->revision_uid,
-    'date_timestamp' => $context['entity']->changed,
+    'content_timestamp' => $context['entity']->changed,
   ];
 }
 
@@ -550,7 +550,7 @@ function quant_quant_meta_taxonomy_term(&$meta, $context) {
   global $user;
   $meta['info'] = [
     'author' => $user->uid,
-    'date_timestamp' => time(),
+    'content_timestamp' => time(),
   ];
 }
 
