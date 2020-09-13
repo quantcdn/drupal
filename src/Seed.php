@@ -72,7 +72,7 @@ class Seed {
     $meta = [
       'info' => [
         'author' => '',
-        'date_timestamp' => time(),
+        'content_timestamp' => time(),
         'log' => '',
       ],
       'published' => TRUE,
