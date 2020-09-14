@@ -76,8 +76,8 @@ function quant_file_quant_seed_alter(&$batch) {
  */
 function quant_file_quant_meta_file_alter(&$meta, $context) {
   $meta['published'] = boolval($context['entity']->status);
+  $meta['content_timestamp'] = $context['entity']->timestamp;
   $meta['info'] = [
     'author' => $context['entity']->uid,
-    'date_timestamp' => $context['entity']->timestamp,
   ];
 }
