@@ -72,12 +72,12 @@ class Seed {
     $meta = [
       'info' => [
         'author' => '',
-        'date_timestamp' => time(),
         'log' => '',
       ],
       'published' => TRUE,
       'transitions' => [],
       'proxy_override' => $proxy_override,
+      'content_timestamp' => time(),
     ];
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $route, $meta));

@@ -1,0 +1,5 @@
+quant_enabled: 1
+quant_enabled_nodes: 1
+quant_enabled_taxonomy: 1
+quant_enabled_views: 1
+quant_enabled_redirects: 1
