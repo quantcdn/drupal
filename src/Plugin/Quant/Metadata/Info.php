@@ -109,7 +109,7 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
       $meta['info']['author'] = $this->token->replace($this->getConfig('author'), $ctx);
     }
 
-    $meta['info']['content_timestamp'] = $date;
+    $meta['content_timestamp'] = $date;
 
     if ($this->getConfig('include_revision_log')) {
       $meta['info']['log'] = $entity->getRevisionLogMessage();
