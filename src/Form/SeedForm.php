@@ -294,7 +294,6 @@ class SeedForm extends FormBase {
     $event = new CollectRoutesEvent($routes, $form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
     while ($route = $event->getRoute()) {
-      \Drupal::service('messenger')->addMessage($route);
       $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
     }
 
