@@ -198,6 +198,12 @@ class SeedForm extends FormBase {
       '#default_value' => $config->get('routes_export', ''),
     ];
 
+    $form['robots'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Robots.txt'),
+      '#description' => $this->t('Export robots.txt to Quant.'),
+    ];
+
     if ($moduleHandler->moduleExists('lunr')) {
       $form['lunr'] = [
         '#type' => 'checkbox',
@@ -288,6 +294,7 @@ class SeedForm extends FormBase {
     $event = new CollectRoutesEvent($routes, $form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
     while ($route = $event->getRoute()) {
+      \Drupal::service('messenger')->addMessage($route);
       $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
     }
 
