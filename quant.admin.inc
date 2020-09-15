@@ -136,6 +136,11 @@ function quant_seed_settings() {
     '#default_value' => variable_get('quant_custom_routes', FALSE),
   ];
 
+  $form['quant_robots'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Export robots.txt'),
+    '#default_value' => variable_geT('quant_robots', FALSE),
+  ];
 
   $form['quant_seed'] = array(
     '#type' => 'checkbox',

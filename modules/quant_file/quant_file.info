@@ -1,6 +1,6 @@
 name = Quant File
 description = Publish file displays to quant
-package = quant
+package = Quant
 core = 7.x
 configure = admin/config/service/quant/seed
 
