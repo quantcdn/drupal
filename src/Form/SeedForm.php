@@ -184,6 +184,7 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Custom routes'),
       '#description' => $this->t('Exports custom list of routes.'),
+      '#default_value' => !empty($config->get('routes_export', '')),
     ];
 
     $form['routes_textarea'] = [
@@ -229,6 +230,7 @@ class SeedForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->config('quant_api.settings');
+    $conf = $this->configFactory->getEditable('quant_api.settings');
 
     if ($config->get('api_token')) {
       if (!$project = $this->client->ping()) {
@@ -249,6 +251,7 @@ class SeedForm extends FormBase {
     }
 
     if ($form_state->getValue('routes_textarea')) {
+      $conf->set('routes_export', $form_state->getValue('routes_textarea'))->save();
       foreach (explode(PHP_EOL, $form_state->getValue('routes_textarea')) as $route) {
         if (strpos((trim($route)), '/') !== 0) {
           continue;
