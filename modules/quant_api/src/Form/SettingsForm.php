@@ -6,8 +6,6 @@ use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Url;
-
 
 /**
  * Quant configuration form.
@@ -89,16 +87,6 @@ class SettingsForm extends ConfigFormBase {
       '#title' => $this->t('API Token'),
       '#default_value' => $config->get('api_token'),
     ];
-
-    $n = \Drupal::entityTypeManager()->getStorage('node')->load(19);
-    $a = Url::fromRoute('entity.node.canonical', ['node' => $n->id()])->toString();
-    $alias = \Drupal::service('path_alias.manager')->getAliasByPath($a);
-    var_dump($a);
-    var_dump($alias);
-    $alias = \Drupal::service('path_alias.manager')->getAliasByPath('/node/19', $n->get('langcode')->value);
-    var_dump($alias);
-    exit;
-
 
     return parent::buildForm($form, $form_state);
   }
