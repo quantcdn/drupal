@@ -42,7 +42,6 @@ class CollectionSubscriber implements EventSubscriberInterface {
    */
   public function collectRoutes(CollectRoutesEvent $event) {
     if (empty($event->getFormState()->getValue('export_sitemap'))) {
-      \Drupal::service('messenger')->addMessage('no export sitemap');
       return;
     }
 

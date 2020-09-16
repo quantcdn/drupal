@@ -235,7 +235,7 @@ class Seed {
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
 
-    if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
+    if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
       if ($entity->isPublished() && $entity->isDefaultRevision()) {
         // Trigger redirect event from alias to home.
          \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($url, "/", 301));
@@ -281,13 +281,10 @@ class Seed {
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid));
 
     // Create canonical redirects from node/123 to the published revision route.
-    $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
-
-    // @todo: Exclude when node has no alias defined.
-    if ($entity->isPublished() && $entity->isDefaultRevision()) {
+    if ("/node/{$nid}" != $url && $entity->isPublished() && $entity->isDefaultRevision()) {
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $defaultUrl = Url::fromRoute('entity.node.canonical', ['node' => $nid], ['language' => $defaultLanguage])->toString();
-      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/node/{$nid}", $url, 301));
+      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/node/{$nid}", $defaultUrl, 301));
     }
   }
 
