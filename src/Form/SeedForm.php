@@ -255,8 +255,8 @@ class SeedForm extends FormBase {
       $routes = array_merge($routes, Seed::findLunrRoutes());
     }
 
+    $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
     if ($form_state->getValue('routes_textarea')) {
-      $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
       foreach (explode(PHP_EOL, $form_state->getValue('routes_textarea')) as $route) {
         if (strpos((trim($route)), '/') !== 0) {
           continue;
