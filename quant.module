@@ -828,6 +828,10 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
     _quant_batch_routes($batch, variable_get('quant_custom_routes'));
   }
 
+  if (variable_get('quant_robots')) {
+    _quant_batch_routes($batch, array('/robots.txt'));
+  }
+
   // Allow module to alter the operation.
   drupal_alter('quant_seed', $batch);
 
