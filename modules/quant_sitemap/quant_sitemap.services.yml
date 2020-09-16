@@ -1,0 +1,8 @@
+services:
+
+  quant_sitemap.collection_subscriber:
+    class: Drupal\quant_sitemap\EventSubscriber\CollectionSubscriber
+    arguments:
+      - '@simple_sitemap.manager'
+    tags:
+      - { name: 'event_subscriber' }

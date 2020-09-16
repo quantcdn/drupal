@@ -214,6 +214,10 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
 
+    if ($event->getFormState()->getValue('robots')) {
+      $event->addRoute('/robots.txt');
+    }
+
     if ($event->getFormState()->getValue('views_pages')) {
       $views_storage = $this->entityTypeManager->getStorage('view');
       $anon = User::getAnonymousUser();
