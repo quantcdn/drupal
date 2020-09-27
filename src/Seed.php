@@ -8,7 +8,8 @@ use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Url;
-
+use Drupal\Core\File\Exception\FileException;
+use Drupal\Core\File\FileSystemInterface;
 
 /**
  * Seed Manager.
@@ -84,6 +85,39 @@ class Seed {
 
     $context['message'] = $message;
     $context['results'][] = $route;
+  }
+
+  /**
+   * Trigger an export for an arbitrary route.
+   *
+   * @param string $route
+   *   The route.
+   * @param array &$context
+   *   The batch context.
+   */
+  public function exportBinaryFile($route, array &$context) {
+    $config = \Drupal::config('quant.settings');
+    $host = $config->get('local_server') ?: 'http://localhost';
+    $route = '/' . ltrim($route, '/');
+
+    $file_data = @file_get_contents("$host$route");
+    if (empty($file_data)) {
+      return;
+    }
+
+    try {
+      // Can't use file_save_data until core patch.
+      // @see https://www.drupal.org/project/drupal/issues/1659116
+      $uri = \Drupal::service('file_system')->saveData($file_data, "temporary://", FileSystemInterface::EXISTS_RENAME);
+    } catch (FileException $error) {
+      return;
+    }
+
+    $event = new QuantFileEvent($uri, $route);
+    \Drupal::service('event_dispatcher')->dispatch(QuantFileEvent::OUTPUT, $event);
+
+    $context['message'] = "Processing binary route: $route";
+    $context['results'][] = [$route];
   }
 
   /**

@@ -20,11 +20,19 @@ class CollectRoutesEvent extends ConfigFormEventBase {
   protected $routes;
 
   /**
+   * A list of binary routes.
+   *
+   * @var array
+   */
+  protected $binaryRoutes;
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(array $routes = [], FormStateInterface $state = NULL) {
     parent::__construct($state);
     $this->routes = $routes;
+    $this->binaryRoutes = [];
   }
 
   /**
@@ -43,7 +51,8 @@ class CollectRoutesEvent extends ConfigFormEventBase {
    * @var string $route
    *   The entity object.
    *
-   * @return self
+   * @return Drupal\quant\Event\CollectRoutesEvent
+   *   The route collection event.
    */
   public function addRoute($route) {
     $this->routes[] = $route;
@@ -51,12 +60,37 @@ class CollectRoutesEvent extends ConfigFormEventBase {
   }
 
   /**
-   * Get an entity from the evetn.
+   * Add a route as a binary file.
+   *
+   * @var string $route
+   *   The route to retrieve.
+   *
+   * @return Drupal\quant\Event\CollectRoutesEvent
+   *   The route collection event.
+   */
+  public function addBinaryRoute($route) {
+    $this->binaryRoutes[] = $route;
+    return $this;
+  }
+
+  /**
+   * Get an route from the event.
    *
    * @return string
+   *   A route.
    */
   public function getRoute() {
     return array_shift($this->routes);
+  }
+
+  /**
+   * Get a binary route from the event.
+   *
+   * @return string
+   *   A route.
+   */
+  public function getBinaryRoute() {
+    return array_shift($this->binaryRoutes);
   }
 
 }

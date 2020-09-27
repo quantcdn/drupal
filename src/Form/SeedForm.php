@@ -295,8 +295,13 @@ class SeedForm extends FormBase {
 
     $event = new CollectRoutesEvent($routes, $form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
+    $this->dispatcher->dispatch(QuantCollectionEvents::BINARY_ROUTES, $event);
+
     while ($route = $event->getRoute()) {
       $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
+    }
+    while ($bin_route = $event->getBinaryRoute()) {
+      $batch['operations'][] = ['\Drupal\quant\Seed::exportBinaryRoute', [$bin_route]];
     }
 
     $event = new CollectFilesEvent($assets, $form_state);
