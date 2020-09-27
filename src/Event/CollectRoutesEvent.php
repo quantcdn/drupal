@@ -29,10 +29,10 @@ class CollectRoutesEvent extends ConfigFormEventBase {
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $routes = [], FormStateInterface $state = NULL) {
+  public function __construct(array $routes = [], array $binary_routes = [], FormStateInterface $state = NULL) {
     parent::__construct($state);
     $this->routes = $routes;
-    $this->binaryRoutes = [];
+    $this->binaryRoutes = $binary_routes;
   }
 
   /**

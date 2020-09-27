@@ -199,6 +199,18 @@ class SeedForm extends FormBase {
       '#default_value' => $config->get('routes_export', ''),
     ];
 
+    $form['binary_routes_textarea'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('File Routes'),
+      '#description' => $this->t('Add file routes to export, each on a new line.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="routes"]' => ['checked' => TRUE],
+        ],
+      ],
+      '#default_value' => $config->get('binary_routes_export', ''),
+    ];
+
     $form['robots'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Robots.txt'),
@@ -246,6 +258,7 @@ class SeedForm extends FormBase {
 
     $assets = [];
     $routes = [];
+    $binary_routes = [];
     $redirects = [];
 
     // Lunr.
@@ -261,8 +274,16 @@ class SeedForm extends FormBase {
         if (strpos((trim($route)), '/') !== 0) {
           continue;
         }
-
         $routes[] = trim($route);
+      }
+    }
+
+    if ($form_state->getValue('binary_routes_textarea')) {
+      foreach (explode(PHP_EOL, $form_state->getValue('binary_routes_textarea')) as $route) {
+        if (strpos((trim($route)), '/') !== 0) {
+          continue;
+        }
+        $binary_routes[] = trim($route);
       }
     }
 
@@ -293,7 +314,7 @@ class SeedForm extends FormBase {
       }
     }
 
-    $event = new CollectRoutesEvent($routes, $form_state);
+    $event = new CollectRoutesEvent($routes, $binary_routes, $form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
     $this->dispatcher->dispatch(QuantCollectionEvents::BINARY_ROUTES, $event);
 
