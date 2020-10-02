@@ -4,6 +4,6 @@ quant_api.settings_form:
     _form: '\Drupal\quant_api\Form\SettingsForm'
     _title: 'Quant API Configuration'
   requirements:
-    _permission: 'access administration pages'
+    _permission: 'configure quant'
   options:
     _admin_route: TRUE
