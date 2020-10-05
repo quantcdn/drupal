@@ -29,7 +29,7 @@ function quant_sitemap_quant_seed_alter(&$batch) {
   foreach ($sitemaps as $sitemap) {
     $batch['operations'][] = array(
       'quant_seed',
-      url($sitemap->uri['path'], $sitemap->uri['options'])
+      array(url($sitemap->uri['path'], $sitemap->uri['options'])),
     );
   }
 }

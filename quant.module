@@ -493,6 +493,10 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     'info' => [],
   ];
 
+  if (!empty($response->headers['content-type'])) {
+    $meta['content_type'] = $response->headers['content-type'];
+  }
+
   if (isset($context['type'])) {
     drupal_alter("quant_meta_{$context['type']}", $meta, $context);
   }
@@ -748,7 +752,9 @@ function _quant_batch_routes(&$batch, $routes) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
-  foreach (explode(PHP_EOL, $routes) as $route) {
+  $routes = is_array($routes) ? $routes : explode(PHP_EOL, $routes);
+
+  foreach ($routes as $route) {
     if (strpos((trim($route)), '/') !== 0) {
       continue;
     }

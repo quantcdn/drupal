@@ -92,18 +92,24 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       'User-Agent' => 'Quant (+http://quant.io)',
     ),
     'method' => 'POST',
-    'data' => json_encode(array(
+    'data' => array(
       'content' => $data,
       'url' => $location,
       'published' => $meta['published'],
       'transitions' => $meta['transitions'],
       'info' => $meta['info'],
       'proxy_override' => $meta['proxy_override'],
-    )),
+    ),
   );
 
-  quant_log('%request_options', array('%request_options' => json_encode($request)), QUANT_VERBOSE);
+  if (isset($meta['content_type'])) {
+    $request['data']['headers']['content_type'] = $meta['content_type'];
+  }
 
+  drupal_alter('quant_api_data', $request['data']);
+  $request['data'] = json_encode($request['data']);
+
+  quant_log('%request_options', array('%request_options' => json_encode($request)), QUANT_VERBOSE);
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
