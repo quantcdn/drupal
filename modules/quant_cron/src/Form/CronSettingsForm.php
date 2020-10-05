@@ -134,7 +134,7 @@ class CronSettingsForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Custom routes'),
       '#description' => $this->t('Exports custom list of routes.'),
-      '#default_value' => !empty($config->get('routes_export', '')),
+      '#default_value' => !empty($config->get('routes_export')),
     ];
 
     $form['routes_textarea'] = [
@@ -146,14 +146,14 @@ class CronSettingsForm extends FormBase {
           ':input[name="routes"]' => ['checked' => TRUE],
         ],
       ],
-      '#default_value' => $config->get('routes_export', ''),
+      '#default_value' => $config->get('routes_export'),
     ];
 
     $form['robots'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Robots.txt'),
       '#description' => $this->t('Export robots.txt to Quant.'),
-      '#default_value' => $config->get('robots', ''),
+      '#default_value' => $config->get('robots'),
     ];
 
     if ($moduleHandler->moduleExists('lunr')) {
@@ -161,7 +161,7 @@ class CronSettingsForm extends FormBase {
         '#type' => 'checkbox',
         '#title' => 'Lunr search assets',
         '#description' => $this->t('Exports required lunr javascript libraries and all search indexes for decoupled search.'),
-        '#default_value' => $config->get('lunr', ''),
+        '#default_value' => $config->get('lunr'),
       ];
     }
 
