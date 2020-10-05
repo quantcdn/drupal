@@ -114,6 +114,10 @@ class QuantApi implements EventSubscriberInterface {
       'proxy_override' => $meta['proxy_override'],
     ];
 
+    if (isset($meta['content_type'])) {
+      $data['headers']['content_type'] = $meta['content_type'];
+    }
+
     if (!empty($rid = $event->getRevisionId())) {
       $data['revision'] = $rid;
     }

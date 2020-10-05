@@ -215,7 +215,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
     }
 
     if ($event->getFormState()->getValue('robots')) {
-      $event->addBinaryRoute('/robots.txt');
+      $event->addRoute('/robots.txt');
     }
 
     if ($event->getFormState()->getValue('views_pages')) {

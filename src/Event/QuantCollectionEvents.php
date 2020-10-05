@@ -51,15 +51,4 @@ final class QuantCollectionEvents {
    */
   const ROUTES = 'quant.seed.routes';
 
-  /**
-   * Name of the event when collecting the routes to push as files.
-   *
-   * @Event
-   *
-   * @see Drupal\quant\Event\CollectRoutesEvent
-   *
-   * @var string
-   */
-  const BINARY_ROUTES = 'quant.seed.binary_routes';
-
 }
