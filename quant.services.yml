@@ -1,0 +1,30 @@
+services:
+  plugin.manager.quant.metadata:
+    class: Drupal\quant\Plugin\QuantMetadataManager
+    parent: default_plugin_manager
+
+  quant.node.insert:
+    class: Drupal\quant\EventSubscriber\NodeInsertSubscriber
+    arguments:
+      - '@plugin.manager.quant.metadata'
+    tags:
+    - { name: 'event_subscriber' }
+
+  quant.route_subscriber:
+    class: Drupal\quant\Routing\RouteSubscriber
+    tags:
+      - { name: 'event_subscriber' }
+
+  quant.collect_entity_subscriber:
+    class: Drupal\quant\EventSubscriber\CollectionSubscriber
+    arguments:
+      - '@entity_type.manager'
+      - '@config.factory'
+    tags:
+      - { name: 'event_subscriber' }
+
+  quant.token_manager:
+    class: Drupal\quant\TokenManager
+    arguments:
+      - '@database'
+      - '@request_stack'

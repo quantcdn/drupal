@@ -1,0 +1,14 @@
+quant.config:
+  route_name: quant.config
+  title: 'Configure'
+  base_route: quant.config
+
+quant.seed:
+  route_name: quant.seed
+  title: 'Seed'
+  base_route: quant.config
+
+quant.metadata:
+  route_name: quant.metadata
+  title: Metadata
+  base_route: quant.config

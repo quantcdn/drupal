@@ -1,0 +1,6 @@
+configure quant:
+  title: 'Administer Quant configuration'
+  restrict access: true
+bulk quant export:
+  title: 'Trigger a bulk export/seed via Quant'
+  restrict access: true

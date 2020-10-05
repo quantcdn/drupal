@@ -1,0 +1,18 @@
+<?php
+
+/**
+ * Hook implementations for Quant sitemap.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function quant_sitemap_form_quant_seed_form_alter(&$form, FormStateInterface $form_state) {
+  $form['export_sitemap'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Sitemaps'),
+    '#description' => t('Export all sitemap variants to quant'),
+  ];
+}

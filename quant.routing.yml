@@ -1,0 +1,23 @@
+quant.config:
+  path: '/admin/config/quant'
+  defaults:
+    _form: 'Drupal\quant\Form\ConfigForm'
+    _title: 'Quant configuration'
+  requirements:
+    _permission: 'configure quant'
+
+quant.seed:
+  path: '/admin/config/quant/seed'
+  defaults:
+    _form: 'Drupal\quant\Form\SeedForm'
+    _title: 'Quant seed'
+  requirements:
+    _permission: 'bulk quant export'
+
+quant.metadata:
+  path: '/admin/config/quant/metadata'
+  defaults:
+    _form: 'Drupal\quant\Form\MetadataConfigForm'
+    _title: 'Metadata configuration'
+  requirements:
+    _permission: 'configure quant'

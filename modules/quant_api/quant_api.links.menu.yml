@@ -1,0 +1,6 @@
+quant_api.settings_form:
+  title: 'Quant API'
+  route_name: quant_api.settings_form
+  description: 'API connectivity with the hosted Quant service'
+  parent: quant
+  weight: 2

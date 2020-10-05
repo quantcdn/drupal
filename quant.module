@@ -1,0 +1,255 @@
+<?php
+
+/**
+ * @file
+ */
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\node\NodeInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\quant\Seed;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function quant_menu_local_tasks_alter(&$data, $route_name) {
+  if (\Drupal::currentUser()->isAnonymous()) {
+    unset($data['tabs']);
+  }
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function quant_node_insert(EntityInterface $entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_node_enabled = \Drupal::config('quant.settings')->get('quant_enabled_nodes');
+
+  if (!$quant_enabled || !$quant_node_enabled) {
+    return;
+  }
+
+  $disable_drafts = \Drupal::config('quant.settings')->get('disable_content_drafts');
+  if ($disable_drafts && !$entity->isPublished()) {
+    return;
+  }
+
+  $context = [
+    'callback' => '_quant_entity_update_op',
+    'args' => $entity,
+  ];
+
+  drupal_register_shutdown_function('quant_shutdown', $context);
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function quant_node_update(EntityInterface $entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_node_enabled = \Drupal::config('quant.settings')->get('quant_enabled_nodes');
+
+  if (!$quant_enabled || !$quant_node_enabled) {
+    return;
+  }
+
+  $disable_drafts = \Drupal::config('quant.settings')->get('disable_content_drafts');
+
+  // If entity default revision is unpublished then unpublish in quant.
+  if (!$entity->isPublished() && $entity->isDefaultRevision()) {
+    // Trigger an unpublish event.
+    Seed::unpublishRoute($entity);
+  }
+
+  // Exclude draft revisions from Quant if enabled.
+  if ($disable_drafts && !$entity->isPublished()) {
+    return;
+  }
+
+  $context = [
+    'callback' => '_quant_entity_update_op',
+    'args' => $entity,
+  ];
+
+  drupal_register_shutdown_function('quant_shutdown', $context);
+}
+
+
+/**
+ * Implements hook_taxonomy_term_insert().
+ */
+function quant_taxonomy_term_insert(EntityInterface $entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_taxonomy_enabled = \Drupal::config('quant.settings')->get('quant_enabled_taxonomy');
+
+  if (!$quant_enabled || !$quant_taxonomy_enabled) {
+    return;
+  }
+
+  $context = [
+    'callback' => '_quant_entity_update_op',
+    'args' => $entity,
+  ];
+
+  drupal_register_shutdown_function('quant_shutdown', $context);
+}
+
+/**
+ * Implements hook_taxonomy_term_update().
+ */
+function quant_taxonomy_term_update(EntityInterface $entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_taxonomy_enabled = \Drupal::config('quant.settings')->get('quant_enabled_taxonomy');
+
+  if (!$quant_enabled || !$quant_taxonomy_enabled) {
+    return;
+  }
+
+  $context = [
+    'callback' => '_quant_entity_update_op',
+    'args' => $entity,
+  ];
+
+  drupal_register_shutdown_function('quant_shutdown', $context);
+}
+
+/**
+ * Implements hook_entity_predelete().
+ */
+function quant_entity_predelete(EntityInterface $entity) {
+
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+
+  if (!$quant_enabled) {
+    return;
+  }
+
+  // This needs to not be a shutdown hook and also needs to be on
+  // the predelete hook as the path alias is removed in the entity
+  // delete clean-up.
+  _quant_entity_delete_op($entity);
+}
+
+/**
+ * Intermediary shutdown function.
+ *
+ * This is used to register another shutdown function. Some modules perform
+ * actions during the shutdown to ensure that we have the correct hydration
+ * state we use this to register the seed after all other functions.
+ */
+function quant_shutdown(array $context = []) {
+
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+
+  if (!$quant_enabled) {
+    return;
+  }
+
+  if (is_callable($context['callback'])) {
+    drupal_register_shutdown_function($context['callback'], $context['args']);
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function quant_cron() {
+  \Drupal::service('quant.token_manager')->release();
+}
+
+/**
+ * Implements hook_node_access().
+ */
+function quant_node_access(NodeInterface $node, $op, AccountInterface $account) {
+  $request = \Drupal::request();
+
+  if (!$request->headers->has('quant-revision') || !$request->headers->has('quant-token')) {
+    return AccessResult::neutral();
+  }
+
+  if (\Drupal::service('quant.token_manager')->validate($node->id(), FALSE)) {
+    // Node access override only applies to the currently viewed node.
+    $routeNode = \Drupal::routeMatch()->getParameter('node');
+    $nid = $routeNode->id();
+    if ($nid == $node->id()) {
+      return AccessResult::allowed();
+    }
+
+    return AccessResult::neutral();
+  }
+
+  throw new ServiceUnavailableHttpException(3600, t('Service route is not available.'));
+}
+
+
+/**
+ * Implements hook_redirect_presave().
+ */
+function quant_redirect_presave($redirect) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_redirect_enabled = \Drupal::config('quant.settings')->get('quant_enabled_redirects');
+
+  if (!$quant_enabled || !$quant_redirect_enabled) {
+    return;
+  }
+
+  Seed::seedRedirect($redirect);
+}
+
+/**
+ * Implements hook_redirect_delete().
+ */
+function quant_redirect_delete($redirect) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_redirect_enabled = \Drupal::config('quant.settings')->get('quant_enabled_redirects');
+
+  if (!$quant_enabled || !$quant_redirect_enabled) {
+    return;
+  }
+
+  Seed::deleteRedirect($redirect);
+}
+
+/**
+ * Entity update operation hook.
+ *
+ * This should be registered as a shutdown function so that it
+ * can operate after the db_transaction has finished.
+ *
+ * @TODO: Entity support.
+ *
+ * @param Drupal\Core\Entity\EntityInterface $entity
+ *   The entity.
+ */
+function _quant_entity_update_op($entity) {
+
+  switch($entity->getEntityTypeId()) {
+    case 'node':
+      Seed::seedNode($entity);
+    break;
+    case 'taxonomy_term':
+      Seed::seedTaxonomyTerm($entity);
+    break;
+  }
+
+}
+
+/**
+ * Entity delete operation hook.
+ *
+ * Used to trigger an unpublish from the Quant API.
+ *
+ * @TODO: Entity support.
+ *
+ * @param Drupal\Core\Entity\EntityInterface $entity
+ *   The entity.
+ */
+function _quant_entity_delete_op($entity) {
+  if ($entity->getEntityTypeId() != 'node') {
+    return;
+  }
+
+  Seed::unpublishRoute($entity);
+}
