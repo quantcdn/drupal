@@ -47,6 +47,12 @@ class QuantNodeViewController extends NodeViewController {
    *   this will be removed before Drupal 9.0.0.
    * @param \Drupal\Core\Entity\EntityRepositoryInterface $entity_repository
    *   The entity repository.
+   * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
+   *   The request stack.
+   * @param \Drupal\Core\Routing\CurrentRouteMatch $route_match
+   *   The route matching service.
+   * @param \Drupal\Core\Session\AccountSwitcherInterface $account_switcher
+   *   The account switcher service.
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager, RendererInterface $renderer, AccountInterface $current_user = NULL, EntityRepositoryInterface $entity_repository = NULL, RequestStack $request_stack, CurrentRouteMatch $route_match, AccountSwitcherInterface $account_switcher) {
     parent::__construct($entity_type_manager, $renderer, $current_user, $entity_repository);

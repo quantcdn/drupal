@@ -1,6 +1,7 @@
 <?php
 
 /**
+ * @file
  * Hook implementations for Quant sitemap.
  */
 

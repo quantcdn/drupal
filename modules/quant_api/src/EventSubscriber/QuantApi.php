@@ -34,18 +34,22 @@ class QuantApi implements EventSubscriberInterface {
   /**
    * The event dispatcher.
    *
-   * @var \Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
    */
   protected $eventDispatcher;
 
   /**
-   * QuantAPI event subcsriber.
+   * QuantAPI event subscriber.
    *
    * Listens to Quant events and triggers requests to the configured
    * API endpoint for different operations.
    *
-   * @param \Drupal\quant_api\Client\QuantClientInterface $client
+   * @param Drupal\quant_api\Client\QuantClientInterface $client
    *   The Drupal HTTP Client to make requests.
+   * @param Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   *   The logger factory.
+   * @param Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher $event_dispatcher
+   *   The event dispatcher.
    */
   public function __construct(QuantClientInterface $client, LoggerChannelFactoryInterface $logger_factory, ContainerAwareEventDispatcher $event_dispatcher) {
     $this->client = $client;
@@ -78,7 +82,7 @@ class QuantApi implements EventSubscriberInterface {
     $data = [
       'url' => $source,
       'redirect_url' => $dest,
-      'redirect_http_code' => (int)$statusCode,
+      'redirect_http_code' => (int) $statusCode,
       'published' => TRUE,
     ];
 
@@ -91,7 +95,6 @@ class QuantApi implements EventSubscriberInterface {
 
     return $res;
   }
-
 
   /**
    * Trigger an API request with the event data.
@@ -151,9 +154,9 @@ class QuantApi implements EventSubscriberInterface {
       if (file_exists(DRUPAL_ROOT . $file)) {
         $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
       }
-      else if (strpos($url, '/styles/')) {
-        // Image style derivative does not exist.
-        // Quant API returns an expected full_path item which allows for image generation.
+      elseif (strpos($url, '/styles/')) {
+        // Image style derivative does not exist. Quant API returns an expected
+        // full_path item which allows for image generation.
         if (isset($item['full_path'])) {
           // Build internal request.
           $config = \Drupal::config('quant.settings');

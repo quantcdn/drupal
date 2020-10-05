@@ -15,11 +15,11 @@ class CollectEntitiesEvent extends ConfigFormEventBase {
   /**
    * A list of entity ids that are to be exported.
    *
+   * @var array
+   *
    * @TODO: See memory usage by storing a class list
    * of all entities. We might need to simplify this
    * hash to be [id, type].
-   *
-   * @var array
    */
   protected $entities;
 
@@ -59,8 +59,9 @@ class CollectEntitiesEvent extends ConfigFormEventBase {
    *   The language code of the entity.
    *
    * @return self
+   *   The collection event instance.
    */
-  public function addEntity($entity, $langcode=NULL) {
+  public function addEntity($entity, $langcode = NULL) {
     $this->entities[] = [
       'entity' => $entity,
       'langcode' => $langcode,
@@ -73,6 +74,7 @@ class CollectEntitiesEvent extends ConfigFormEventBase {
    * Get an entity from the evetn.
    *
    * @return mixed
+   *   An entity.
    */
   public function getEntity() {
     return array_shift($this->entities);

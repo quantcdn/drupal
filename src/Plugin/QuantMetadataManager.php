@@ -30,7 +30,7 @@ class QuantMetadataManager extends DefaultPluginManager {
   /**
    * {@inheritdoc}
    */
-  public function createInstance($plugin_id, array $configuration = array()) {
+  public function createInstance($plugin_id, array $configuration = []) {
     $plugin = parent::createInstance($plugin_id, $configuration);
 
     $config = \Drupal::config(MetadataConfigForm::SETTINGS)->get($plugin_id) ?: [];

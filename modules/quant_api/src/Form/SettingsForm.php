@@ -56,7 +56,9 @@ class SettingsForm extends ConfigFormBase {
 
     if ($config->get('api_token')) {
       if ($project = $this->client->ping()) {
-        \Drupal::messenger()->addMessage(t('Successfully connected to ' . $config->get('api_project')));
+        \Drupal::messenger()->addMessage(t('Successfully connected to @project', [
+          '@project' => $config->get('api_project'),
+        ]));
       }
       else {
         \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));

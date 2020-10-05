@@ -33,7 +33,8 @@ class CollectRedirectsEvent extends ConfigFormEventBase {
    * @var mixed $entity
    *   The entity object.
    *
-   * @return self
+   * @return Drupal\quant\Event\CollectRedirectsEvent
+   *   The redirect event.
    */
   public function addEntity($entity) {
     $this->entities[] = $entity;
@@ -44,6 +45,7 @@ class CollectRedirectsEvent extends ConfigFormEventBase {
    * Get an entity from the evetn.
    *
    * @return mixed
+   *   A valid entity for this event.
    */
   public function getEntity() {
     return array_shift($this->entities);

@@ -68,7 +68,7 @@ class Seed {
     }
 
     $config = \Drupal::config('quant.settings');
-    $proxy_override = boolval($config->get('proxy_override', false));
+    $proxy_override = boolval($config->get('proxy_override', FALSE));
 
     $meta = [
       'info' => [
@@ -109,7 +109,8 @@ class Seed {
       // Can't use file_save_data until core patch.
       // @see https://www.drupal.org/project/drupal/issues/1659116
       $uri = \Drupal::service('file_system')->saveData($file_data, "temporary://", FileSystemInterface::EXISTS_RENAME);
-    } catch (FileException $error) {
+    }
+    catch (FileException $error) {
       return;
     }
 
@@ -137,7 +138,7 @@ class Seed {
   }
 
   /**
-   *
+   * Shutdown function for the batch process.
    */
   public static function finishedSeedCallback($success, $results, $operations) {
     // The 'success' parameter means no fatal PHP errors were detected. All
@@ -156,6 +157,7 @@ class Seed {
 
   /**
    * Find lunr assets.
+   *
    * This includes static output from the lunr module.
    */
   public static function findLunrAssets() {
@@ -184,6 +186,7 @@ class Seed {
 
   /**
    * Find lunr routes.
+   *
    * Determine URLs lunr indexes are exposed on.
    */
   public static function findLunrRoutes() {
@@ -219,7 +222,7 @@ class Seed {
   /**
    * Seeds taxonomy term.
    */
-  public static function seedTaxonomyTerm($entity, $langcode=NULL) {
+  public static function seedTaxonomyTerm($entity, $langcode = NULL) {
     $tid = $entity->get('tid')->value;
 
     $options = ['absolute' => FALSE];
@@ -250,9 +253,10 @@ class Seed {
 
   /**
    * Trigger an internal http request to retrieve node markup.
+   *
    * Seeds an individual node update to Quant.
    */
-  public static function seedNode($entity, $langcode=NULL) {
+  public static function seedNode($entity, $langcode = NULL) {
 
     $nid = $entity->get('nid')->value;
     $rid = $entity->get('vid')->value;
@@ -272,7 +276,7 @@ class Seed {
     if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
       if ($entity->isPublished() && $entity->isDefaultRevision()) {
         // Trigger redirect event from alias to home.
-         \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($url, "/", 301));
+        \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($url, "/", 301));
       }
       $url = "/";
     }
@@ -345,8 +349,8 @@ class Seed {
    *
    * @param string $route
    *   The route to collect markup from.
-   * @param array $query
-   *   Query parameters to add to the route.
+   * @param array $headers
+   *   Headers to add to the request.
    *
    * @return string|bool
    *   The markup from the $route.

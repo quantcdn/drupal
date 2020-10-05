@@ -22,6 +22,8 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
   /**
    * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected $entityTypeManager;
 

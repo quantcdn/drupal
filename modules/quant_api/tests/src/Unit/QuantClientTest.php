@@ -11,7 +11,6 @@ use Drupal\Core\Config\ImmutableConfig;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\RequestOptions;
-use Drupal\quant_api\Exception\InvalidPayload;
 
 /**
  * Ensure that the client responds correctly.
@@ -21,7 +20,8 @@ class QuantClientTest extends UnitTestCase {
   /**
    * Get a stubbed config factory.
    *
-   * @return ConfigFactoryInterface
+   * @return \Drupal\Core\Config\ConfigFactoryInterface
+   *   The config interface.
    */
   protected function getConfigStub($default = []) {
     $value = [
@@ -45,12 +45,13 @@ class QuantClientTest extends UnitTestCase {
    * Get a successful project response.
    *
    * @return GuzzleHttp\Psr7\Response
+   *   A response object.
    */
   protected function getProjectResponse() {
     // @TODO - should these be fixtures.
     $body = [
       'project' => 'test',
-      'error' => false,
+      'error' => FALSE,
       'errorMsg' => '',
     ];
 
@@ -65,6 +66,7 @@ class QuantClientTest extends UnitTestCase {
    * A valid redirect response.
    *
    * @return GuzzleHttp\Psr7\Response
+   *   A response object.
    */
   protected function getRedirectResponse() {
     $body = [
@@ -73,7 +75,7 @@ class QuantClientTest extends UnitTestCase {
       'url' => '/a',
       'redirect_http_code' => 302,
       'errorMsg' => '',
-      'error' => false,
+      'error' => FALSE,
     ];
 
     $res = $this->prophesize(Response::class);
@@ -87,10 +89,11 @@ class QuantClientTest extends UnitTestCase {
    * Get an invalid response.
    *
    * @return GuzzleHttp\Psr7\Response
+   *   A response object.
    */
   protected function getInvalidResponse() {
     $body = [
-      'error' => true,
+      'error' => TRUE,
       'errorMsg' => 'Error',
     ];
 
@@ -239,7 +242,7 @@ class QuantClientTest extends UnitTestCase {
       'url' => '/a',
       'redirect_http_code' => 302,
       'errorMsg' => '',
-      'error' => false,
+      'error' => FALSE,
     ], $redirect);
   }
 
@@ -272,7 +275,9 @@ class QuantClientTest extends UnitTestCase {
    * @expectedException Drupal\quant_api\Exception\InvalidPayload
    */
   public function testSendFileFileNoExist() {
+    // phpcs:ignore
     global $exists_return;
+    // phpcs:ignore
     global $readable_return;
 
     $exists_return = FALSE;
@@ -290,7 +295,9 @@ class QuantClientTest extends UnitTestCase {
    * Ensure files are validated before sending.
    */
   public function testSendFileValid() {
+    // phpcs:ignore
     global $exists_return;
+    // phpcs:ignore
     global $readable_return;
 
     $exists_return = TRUE;
@@ -332,6 +339,7 @@ namespace Drupal\quant_api\Client;
  * Stub file_exists.
  */
 function file_exists($path) {
+    // phpcs:ignore
   global $exists_return;
   if (isset($exists_return)) {
     return $exists_return;
@@ -343,6 +351,7 @@ function file_exists($path) {
  * Stub is_readable.
  */
 function is_readable($path) {
+  // phpcs:ignore
   global $readable_return;
   if (isset($readable_return)) {
     return $readable_return;

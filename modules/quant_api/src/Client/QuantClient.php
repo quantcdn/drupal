@@ -2,6 +2,7 @@
 
 namespace Drupal\quant_api\Client;
 
+use Psr7\MultipartStream;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\RequestOptions;
@@ -12,7 +13,7 @@ use GuzzleHttp\Psr7;
 use GuzzleHttp\Psr7\Request;
 
 /**
- *
+ * Service responsible for API interaction.
  */
 class QuantClient implements QuantClientInterface {
 
@@ -82,7 +83,7 @@ class QuantClient implements QuantClientInterface {
       ]);
     }
     catch (RequestException $e) {
-      \Drupal::messenger()->addError(t($e->getMessage()));
+      \Drupal::messenger()->addError($e->getMessage());
       return FALSE;
     }
 
@@ -150,7 +151,7 @@ class QuantClient implements QuantClientInterface {
       'POST',
       $this->endpoint,
       $headers,
-      new Psr7\MultipartStream([
+      new MultipartStream([
         [
           'name' => basename($file),
           'filename' => basename($file),
@@ -180,7 +181,7 @@ class QuantClient implements QuantClientInterface {
         'Quant-Customer' => $this->username,
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
-      ]
+      ],
     ]);
 
     return json_decode($response->getBody(), TRUE);

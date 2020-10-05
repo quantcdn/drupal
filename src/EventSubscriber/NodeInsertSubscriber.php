@@ -4,7 +4,6 @@ namespace Drupal\quant\EventSubscriber;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\quant\Event\NodeInsertEvent;
-use Drupal\quant\EntityRendererInterface;
 use Drupal\quant\Plugin\QuantMetadataManager;
 use Drupal\quant\Seed;
 
@@ -27,6 +26,7 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
    * Log the creation of a new node.
    *
    * @param \Drupal\quant\Event\NodeInsertEvent $event
+   *   The insert event.
    */
   public function onNodeInsert(NodeInsertEvent $event) {
     $entity = $event->getEntity();
