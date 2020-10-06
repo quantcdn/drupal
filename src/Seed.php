@@ -60,12 +60,13 @@ class Seed {
    */
   public static function exportRoute($route, &$context) {
     $message = "Processing route: {$route}";
+    $response = self::markupFromRoute($route);
 
-    $markup = self::markupFromRoute($route);
-
-    if (empty($markup)) {
+    if (empty($response)) {
       return;
     }
+
+    list($markup, $content_type) = $response;
 
     $config = \Drupal::config('quant.settings');
     $proxy_override = boolval($config->get('proxy_override', false));
@@ -79,7 +80,7 @@ class Seed {
       'transitions' => [],
       'proxy_override' => $proxy_override,
       'content_timestamp' => time(),
-      'content_type' => \Drupal::service('quant.mime_type')->get($route),
+      'content_type' => $content_type,
     ];
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $route, $meta));
@@ -197,12 +198,16 @@ class Seed {
     }
 
     $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
-    $markup = self::markupFromRoute($url);
+    $response = self::markupFromRoute($url);
+    if (empty($response)) {
+      return;
+    }
 
     $meta = [];
+    list($markup, $content_type) = $response;
 
-    if (empty($markup)) {
-      return;
+    if (!empty($content_type)) {
+      $meta['content_type'] = $content_type;
     }
 
     $metaManager = \Drupal::service('plugin.manager.quant.metadata');
@@ -248,15 +253,19 @@ class Seed {
     // Generate a request token.
     $token = \Drupal::service('quant.token_manager')->create($nid);
 
-    $markup = self::markupFromRoute($url, [
+    $response = self::markupFromRoute($url, [
       'quant-revision' => $rid,
       'quant-token' => $token,
     ]);
 
     $meta = [];
-
-    if (empty($markup)) {
+    if (empty($response)) {
       return;
+    }
+    list($markup, $content_type) = $response;
+
+    if (!empty($content_type)) {
+      $meta['content_type'] = $content_type;
     }
 
     $metaManager = \Drupal::service('plugin.manager.quant.metadata');
@@ -345,27 +354,28 @@ class Seed {
       'allow_redirects' => FALSE,
     ]);
 
-    $markup = '';
+    $markup = $content_type = '';
+
+    $response->getHeader('content-type');
 
     if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
       $destination = reset($response->getHeader('Location'));
-
       // Ensure relative for internal redirect.
       $destination = self::rewriteRelative($destination);
-
       \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
       return FALSE;
     }
 
     if ($response->getStatusCode() == 200) {
       $markup = $response->getBody();
+      $content_type = $response->getHeader('content-type');
     }
     else {
       $messenger = \Drupal::messenger();
       $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
     }
 
-    return $markup;
+    return [$markup, $content_type];
 
   }
 

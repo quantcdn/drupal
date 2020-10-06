@@ -20,13 +20,6 @@ class CollectRoutesEvent extends ConfigFormEventBase {
   protected $routes;
 
   /**
-   * A list of binary routes.
-   *
-   * @var array
-   */
-  protected $binaryRoutes;
-
-  /**
    * {@inheritdoc}
    */
   public function __construct(array $routes = [], FormStateInterface $state = NULL) {
@@ -59,20 +52,6 @@ class CollectRoutesEvent extends ConfigFormEventBase {
   }
 
   /**
-   * Add a route as a binary file.
-   *
-   * @var string $route
-   *   The route to retrieve.
-   *
-   * @return Drupal\quant\Event\CollectRoutesEvent
-   *   The route collection event.
-   */
-  public function addBinaryRoute($route) {
-    $this->binaryRoutes[] = $route;
-    return $this;
-  }
-
-  /**
    * Get an route from the event.
    *
    * @return string
@@ -80,16 +59,6 @@ class CollectRoutesEvent extends ConfigFormEventBase {
    */
   public function getRoute() {
     return array_shift($this->routes);
-  }
-
-  /**
-   * Get a binary route from the event.
-   *
-   * @return string
-   *   A route.
-   */
-  public function getBinaryRoute() {
-    return array_shift($this->binaryRoutes);
   }
 
 }

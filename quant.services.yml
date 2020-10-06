@@ -28,6 +28,3 @@ services:
     arguments:
       - '@database'
       - '@request_stack'
-
-  quant.mime_type:
-    class: Drupal\quant\Service\MimeType
