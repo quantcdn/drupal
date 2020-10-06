@@ -184,7 +184,7 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Custom routes'),
       '#description' => $this->t('Exports custom list of routes.'),
-      '#default_value' => !empty($config->get('routes_export', '')),
+      '#default_value' => $config->get('routes'),
     ];
 
     $form['routes_textarea'] = [
@@ -196,7 +196,7 @@ class SeedForm extends FormBase {
           ':input[name="routes"]' => ['checked' => TRUE],
         ],
       ],
-      '#default_value' => $config->get('routes_export', ''),
+      '#default_value' => $config->get('routes_export'),
     ];
 
     $form['robots'] = [
@@ -256,15 +256,7 @@ class SeedForm extends FormBase {
     }
 
     $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
-    if ($form_state->getValue('routes_textarea')) {
-      foreach (explode(PHP_EOL, $form_state->getValue('routes_textarea')) as $route) {
-        if (strpos((trim($route)), '/') !== 0) {
-          continue;
-        }
-
-        $routes[] = trim($route);
-      }
-    }
+    $config->set('routes', $form_state->getValue('routes'))->save();
 
     $batch = [
       'title' => t('Exporting to Quant...'),

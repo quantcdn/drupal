@@ -205,7 +205,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
 
-    if ($event->getFormState()->getValue('routes_textarea')) {
+    if ($event->getFormState()->getValue('routes')) {
       foreach (explode(PHP_EOL, $event->getFormState()->getValue('routes_textarea')) as $route) {
         if (strpos((trim($route)), '/') !== 0) {
           continue;
@@ -218,12 +218,15 @@ class CollectionSubscriber implements EventSubscriberInterface {
       $event->addRoute('/robots.txt');
     }
 
+    $routes = [];
     if ($event->getFormState()->getValue('views_pages')) {
       $views_storage = $this->entityTypeManager->getStorage('view');
       $anon = User::getAnonymousUser();
 
       foreach ($views_storage->loadMultiple() as $view) {
         $view = Views::getView($view->get('id'));
+
+        $paths = [];
         $displays = array_keys($view->storage->get('display'));
         foreach ($displays as $display) {
           $view->setDisplay($display);
@@ -233,6 +236,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
               continue;
             }
 
+            if (in_array($path, $paths)) {
+              continue;
+            }
+
+            $paths[] = $path;
             $event->addRoute("/{$path}");
 
             // Languge negotiation may also provide path prefixes.
