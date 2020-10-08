@@ -173,6 +173,12 @@ class Seed {
     $source = $redirect->getSourcePathWithQuery();
     $destination = $redirect->getRedirectUrl()->toString();
     $statusCode = $redirect->getStatusCode();
+
+    if (!(bool) $statusCode && !$redirect->isNew()) {
+      \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $source, [], NULL));
+      return;
+    }
+
     \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($source, $destination, $statusCode));
   }
 
@@ -181,7 +187,6 @@ class Seed {
    */
   public static function deleteRedirect($redirect) {
     $source = $redirect->getSourcePathWithQuery();
-    $destination = $redirect->getRedirectUrl()->toString();
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $source, [], NULL));
   }
 
