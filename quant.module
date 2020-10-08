@@ -376,7 +376,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   // Add a redirect if 301|302.
   if (isset($response->redirect_code) && ($response->redirect_code == 301 || $response->redirect_code == 302)) {
     // Strip quant params from destination.
-    $dest = _remove_quant_params($response->redirect_url);
+    $dest = $response->redirect_url;
 
     // Ensure relative for internal redirect.
     $dest = _rewrite_relative($dest);
@@ -435,7 +435,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
       global $base_url;
       $base = variable_get('quant_base_url', $base_url);
-      $pager_url = _remove_quant_params($base.$new_href);
+      $pager_url = $base.$new_href;
 
       if (in_array($pager_url, $page_urls)) {
         continue;
@@ -471,9 +471,6 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     $markup = _rewrite_relative($markup);
   }
 
-  // Ensure quant query parameters are removed.
-  $markup = _remove_quant_params($markup);
-
   $alias = parse_url($url, PHP_URL_PATH);
   $alias = empty($alias) ? '/' : $alias;
 
@@ -494,6 +491,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   if (isset($context['type'])) {
     drupal_alter("quant_meta_{$context['type']}", $meta, $context);
   }
+
   drupal_alter('quant_meta', $meta, $context);
   module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
 }
@@ -983,38 +981,6 @@ function _is_url_internal($url) {
   }
 
   return FALSE;
-}
-
-/**
- * Removes quant params from markup.
- */
-function _remove_quant_params($markup) {
-
-  // Ensure &amp; is replaced with &
-  $markup = preg_replace('/&amp;/i', '&', $markup);
-
-  // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
-  $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
-  // Remove ?quant_revision=XX&quant_token=XX
-  $markup = preg_replace("/\?quant_revision=(.*&)quant_token=[^\"']*/i", '', $markup);
-  // Remove &quant_revision=XX&quant_token=XX with optional params
-  $markup = preg_replace("/\&quant_revision=(.*&)quant_token=[^\"'&]*/i", '', $markup);
-
-  // Replace ?quant_revision=XX&additional_params with ?
-  $markup = preg_replace('/\?quant_revision=(.*&)/i', '?', $markup);
-  // Remove ?quant_revision=XX
-  $markup = preg_replace("/\?quant_revision=[^\"']*/i", '', $markup);
-  // Remove &quant_revision=XX with optional params
-  $markup = preg_replace("/\&quant_revision=[^\"'&]*/i", '', $markup);
-
-  // Replace ?quant_token=XX&additional_params with ?
-  $markup = preg_replace('/\?quant_token=(.*&)/i', '?', $markup);
-  // Remove ?quant_token=XX
-  $markup = preg_replace("/\?quant_token=[^\"']*/i", '', $markup);
-  // Remove &quant_token=XX with optional params
-  $markup = preg_replace("/\&quant_token=[^\"'&]*/i", '', $markup);
-
-  return $markup;
 }
 
 /**
