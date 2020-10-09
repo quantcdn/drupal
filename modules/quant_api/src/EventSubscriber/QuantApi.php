@@ -181,7 +181,6 @@ class QuantApi implements EventSubscriberInterface {
     }
 
     // Pagination support.
-    // @todo: Determine when we need to run this.
     $document = new \DOMDocument();
     @$document->loadHTML($content);
     $xpath = new \DOMXPath($document);
@@ -189,7 +188,6 @@ class QuantApi implements EventSubscriberInterface {
     /** @var \DOMElement $node */
     $pager_operations = [];
     // @todo: Make this xpath configurable.
-    // @todo: Check this xpath works for core taxonomy listing (and elsewhere pagination appears).
     // This supports the use case for core views output (mini and standard pager).
     foreach ($xpath->query('//a[contains(@href,"page=") and (./span[contains(text(), "Next")])]') as $node) {
       $original_href = $node->getAttribute('href');
