@@ -10,12 +10,16 @@ use Drupal\quant\Event\QuantCollectionEvents;
 
 function quant_cron_cron() {
 
+  // Quant cron only supported via CLI.
+  if (PHP_SAPI != 'cli') {
+    return;
+  }
+
   // Load the settings form.
   $form_state = new FormState();
   $form_state->setRebuild();
   \Drupal::formBuilder()->buildForm('Drupal\quant_cron\Form\CronSettingsForm', $form_state);
   $event_dispatcher = \Drupal::service('event_dispatcher');
-
 
   $batch = [
     'title' => t('Exporting to Quant...'),

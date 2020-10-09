@@ -180,6 +180,41 @@ class QuantApi implements EventSubscriberInterface {
       }
     }
 
+    // Pagination support.
+    $document = new \DOMDocument();
+    @$document->loadHTML($content);
+    $xpath = new \DOMXPath($document);
+
+    /** @var \DOMElement $node */
+    $pager_operations = [];
+    // @todo: Make this xpath configurable.
+    // This supports the use case for core views output (mini and standard pager).
+    foreach ($xpath->query('//a[contains(@href,"page=") and (./span[contains(text(), "Next")])]') as $node) {
+      $original_href = $node->getAttribute('href');
+      if ($original_href[0] === '?') {
+        $new_href = strtok($path, '?') . $original_href;
+      }
+      else {
+        $new_href = $original_href;
+      }
+
+      $pager_operations[] = ['\Drupal\quant\Seed::exportRoute', [$new_href]];
+    }
+
+    if (!empty($pager_operations)) {
+      $batch = [
+        'title' => t('Exporting pagination page...'),
+        'init_message'     => t('Commencing'),
+        'progress_message' => t('Processed @current out of @total.'),
+        'error_message'    => t('An error occurred during processing'),
+        'finished' => '\Drupal\quant\Seed::finishedSeedCallback',
+        'operations' => $pager_operations,
+      ];
+
+      batch_set($batch);
+    }
+
+
     // @todo: Report on forms that need proxying (attachments.forms).
   }
 
