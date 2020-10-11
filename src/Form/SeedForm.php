@@ -13,6 +13,7 @@ use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\QuantStaticTrait;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Contains a form for initializing a static build.
@@ -31,14 +32,16 @@ class SeedForm extends FormBase {
   protected $client;
 
   /**
+   * The event dispatcher.
    *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
    */
   protected $dispatcher;
 
   /**
    * Build the form.
    */
-  public function __construct(QuantClientInterface $client, $event_dispatcher) {
+  public function __construct(QuantClientInterface $client, EventDispatcherInterface $event_dispatcher) {
     $this->client = $client;
     $this->dispatcher = $event_dispatcher;
   }
@@ -54,14 +57,14 @@ class SeedForm extends FormBase {
   }
 
   /**
-   * {@inheritdoc}.
+   * {@inheritdoc}
    */
   public function getFormId() {
     return 'quant_seed_form';
   }
 
   /**
-   * {@inheritdoc}.
+   * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
 
@@ -125,7 +128,7 @@ class SeedForm extends FormBase {
       ->loadMultiple();
 
     $content_types = [];
-    foreach($types as $type) {
+    foreach ($types as $type) {
       $content_types[$type->id()] = $type->label();
     }
 

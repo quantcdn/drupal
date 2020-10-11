@@ -47,6 +47,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * Get the simple sitemap manager.
    *
    * @return Drupal\simple_sitemap\SimplesitemapManager
+   *   The sitemap manager.
    */
   public function getSitemapManager() {
     return \Drupal::service('simple_sitemap.manager');
@@ -56,6 +57,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * The entity type manager.
    *
    * @return Drupal\Core\Entity\EntityTypeManager
+   *   The entity type manager.
    */
   public function getEntityTypeManager() {
     return $this->entityTypeManager;
@@ -111,7 +113,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
     if ($this->moduleHandler->moduleExists('simple_sitemap')) {
       $items = $this->getSimpleSitemapItems();
     }
-    else if ($this->moduleHandler->moduleExists('xmlsitemap')) {
+    elseif ($this->moduleHandler->moduleExists('xmlsitemap')) {
       $items = $this->getXmlsitemapItems();
     }
 

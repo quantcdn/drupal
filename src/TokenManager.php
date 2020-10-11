@@ -34,8 +34,10 @@ class TokenManager {
   /**
    * Construct a TokenManager instance.
    *
-   * @param Drupal\Core\Database\Connection $connection
+   * @param \Drupal\Core\Database\Connection $connection
    *   The database connection.
+   * @param \Symfony\Component\HttpFoundation\RequestStack $request
+   *   The current request stack.
    */
   public function __construct(Connection $connection, RequestStack $request) {
     $this->connection = $connection;

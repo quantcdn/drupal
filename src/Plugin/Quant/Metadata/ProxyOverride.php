@@ -20,7 +20,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class ProxyOverride extends MetadataBase implements ContainerFactoryPluginInterface {
 
   /**
-   * @var EntityStorage
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected $entityManager;
 
@@ -48,10 +50,10 @@ class ProxyOverride extends MetadataBase implements ContainerFactoryPluginInterf
    * {@inheritdoc}
    */
   public function build(EntityInterface $entity) : array {
-    // Proxies are created manually and usually not something you want to replace.
-    // This is a globally configurable to allow override, just in case.
+    // Proxies are created manually and usually not something you want to
+    // replace. This is a globally configurable to allow override just in case.
     $config = \Drupal::config('quant.settings');
-    $proxy_override = boolval($config->get('proxy_override', true));
+    $proxy_override = boolval($config->get('proxy_override', TRUE));
     return ['proxy_override' => $proxy_override];
   }
 
