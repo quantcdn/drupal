@@ -13,11 +13,46 @@
 function quant_config() {
   global $base_url;
 
-  $form['quant_draft_revisions'] = array(
+  $form['quant_enabled'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Push draft revisions'),
-    '#description' => t('Support draft node revisions. <i>experimental - this might have compatibility issues with your module setup</i>.'),
-    '#default_value' => variable_get('quant_draft_revisions', FALSE),
+    '#title' => t('Track content changes'),
+    '#description' => t('Automatically push content changes to Quant (recommended).'),
+    '#default_value' => variable_get('quant_enabled', FALSE),
+  );
+
+  $form['tracking_fieldset'] = [
+    '#type' => 'fieldset',
+    '#title' => t('Tracked entities'),
+    '#states' => [
+      'visible' => [
+        ':input[name="quant_enabled"]' => ['checked' => TRUE],
+      ],
+    ],
+  ];
+
+  $form['tracking_fieldset']['quant_enabled_nodes'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Nodes'),
+    '#default_value' => variable_get('quant_enabled_nodes'),
+  ];
+
+  $form['tracking_fieldset']['quant_enabled_taxonomy'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Taxonomy Terms'),
+    '#default_value' => variable_get('quant_enabled_taxonomy'),
+  ];
+
+  $form['tracking_fieldset']['quant_enabled_views'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Views'),
+    '#default_value' => variable_get('quant_enabled_views'),
+  ];
+
+  $form['disable_content_drafts'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Disable content drafts'),
+    '#description' => t('Prevent draft content from being sent to Quant.'),
+    '#default_value' => variable_get('disable_content_drafts', FALSE),
   );
 
   $form['quant_rewrite_relative'] = array(

@@ -97,7 +97,7 @@ function quant_menu() {
 function quant_menu_alter(&$items) {
 
   // Altering the node route breaks displaysuite.
-  if (!variable_get('quant_draft_revisions', FALSE)) {
+  if (variable_get('disable_content_drafts', FALSE)) {
     return;
   }
   $node_route = $items['node/%node'];
@@ -190,7 +190,7 @@ function quant_node_access($node, $op, $account) {
     return NODE_ACCESS_IGNORE;
   }
 
-  if (!variable_get('quant_draft_revisions', FALSE)) {
+  if (variable_get('disable_content_drafts', FALSE)) {
     return NODE_ACCESS_IGNORE;
   }
 
@@ -220,6 +220,10 @@ function quant_node_load($nodes) {
  * Implements hook_node_insert().
  */
 function quant_node_insert($node) {
+  if (!quant_is_enabled('nodes')) {
+    return;
+  }
+
   $entity_info = array(
     'entity' => $node,
     'type' => 'node',
@@ -236,6 +240,10 @@ function quant_node_insert($node) {
  * Implements hook_node_update().
  */
 function quant_node_update($node) {
+  if (!quant_is_enabled('nodes')) {
+    return;
+  }
+
   $original = isset($entity->original) ? $entity->original : NULL;
   $entity_info = array(
     'entity' => $node,
@@ -253,6 +261,10 @@ function quant_node_update($node) {
  * Implements hook_form_FORM_ID_alter().
  */
 function quant_form_node_delete_confirm_alter(&$form, $form_state, $id) {
+  if (!quant_is_enabled('nodes')) {
+    return;
+  }
+
   list($url) = _quant_prepare_entity('node', $form['nid']['#value']);
   $form['alias'] = [
     '#type' => 'value',
@@ -276,6 +288,10 @@ function quant_node_delete_form_action($form, $form_state) {
  * Implements hook_taxonomy_term_insert().
  */
 function quant_taxonomy_term_insert($term) {
+  if (!quant_is_enabled('taxonomy')) {
+    return;
+  }
+
   $entity_info = array(
     'entity' => $term,
     'type' => 'taxonomy_term',
@@ -290,6 +306,10 @@ function quant_taxonomy_term_insert($term) {
  * Implements hook_taxonomy_term_update().
  */
 function quant_taxonomy_term_update($term) {
+  if (!quant_is_enabled('nodes')) {
+    return;
+  }
+
   $entity_info = array(
     'entity' => $term,
     'type' => 'taxonomy_term',
@@ -318,7 +338,6 @@ function _quant_shutdown($entity_info) {
  * can operate after the db_transaction has finished.
  */
 function _quant_post_entity_op($entity_info) {
-
   list($id) = entity_extract_ids($entity_info['type'], $entity_info['entity']);
   list($url, $context) = _quant_prepare_entity($entity_info['type'], $id);
 
@@ -1012,4 +1031,23 @@ function quant_workbench_moderation_submit($form, $form_state) {
     list($url) = _quant_prepare_entity('node', $form['node']['#value']->nid);
     quant_api_unpublish_route($form_state['values']['alias']);
   }
+}
+
+/**
+ * Determine if quant is enabled.
+ *
+ * @param string $type
+ *   A type of entity that is to be exported.
+ *
+ * @return bool
+ *   If quant is enabled.
+ */
+function quant_is_enabled($type = NULL) {
+  $quant_enabled = variable_get('quant_enabled', TRUE);
+
+  if (is_null($type)) {
+    return $quant_enabled;
+  }
+
+  return (bool) ($quant_enabled && variable_get('quant_enabled_' . $type, FALSE));
 }
