@@ -22,7 +22,7 @@ function quant_drush_command() {
 }
 
 /**
- *
+ * Callback function to seed quant content via drush.
  */
 function drush_quant_seed() {
   drush_log('Quant: Seed starting!', 'ok');

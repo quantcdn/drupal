@@ -117,7 +117,7 @@ function quant_admin_paths() {
 }
 
 /**
- * Implements hook_permission()
+ * Implements hook_permission().
  */
 function quant_permission() {
   return array(
@@ -167,8 +167,8 @@ function quant_menu_local_tasks_alter(&$data, $router_item, $root_path) {
 function quant_cron() {
   // Tokens can be used multiple times in a single request, this causes issues
   // with the access check by removing the token clean up to core cron we can
-  // persist a single token for multiple uses, the 1 minute timeout still ensures
-  // that the token will expire naturally.
+  // persist a single token for multiple uses, the 1 minute timeout still
+  // ensures that the token will expire naturally.
   db_query('TRUNCATE {quant_token}');
 }
 
@@ -283,7 +283,6 @@ function quant_node_delete_form_action($form, $form_state) {
   quant_api_unpublish_route($form_state['values']['alias']);
 }
 
-
 /**
  * Implements hook_taxonomy_term_insert().
  */
@@ -325,7 +324,6 @@ function quant_taxonomy_term_update($term) {
  *
  * This is an intermediary shutdown function to ensure that quants
  * export will always be run after other processes.
- *
  */
 function _quant_shutdown($entity_info) {
   drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
@@ -359,7 +357,7 @@ function _quant_post_entity_op($entity_info) {
  * @param array $batch_context
  *   The context of the batch process.
  */
-function quant_seed($url, $context = array(), $batch_context = array()) {
+function quant_seed($url, array $context = array(), array $batch_context = array()) {
   global $base_url;
 
   $path = parse_url($url, PHP_URL_PATH);
@@ -374,7 +372,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   $options = array(
     'headers' => array(
       'Host' => variable_get('quant_hostname', $base_url),
-      'User-Agent' => 'Quant (+http://quantcdn.io)'
+      'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
   );
 
@@ -401,7 +399,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     $dest = _rewrite_relative($dest);
 
     if (module_exists('quant_redirect')) {
-      quant_redirect_request($path, $dest, (int)$response->redirect_code);
+      quant_redirect_request($path, $dest, (int) $response->redirect_code);
     }
 
     // Ensure internal redirects have their destination seeded.
@@ -432,7 +430,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
   $markup = $response->data;
 
-  // Parse pages from Views and Taxonomy entities
+  // Parse pages from Views and Taxonomy entities.
   if (isset($context['find_pager']) && $context['find_pager']) {
 
     $document = new \DOMDocument();
@@ -454,7 +452,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
       global $base_url;
       $base = variable_get('quant_base_url', $base_url);
-      $pager_url = $base.$new_href;
+      $pager_url = $base . $new_href;
 
       if (in_array($pager_url, $page_urls)) {
         continue;
@@ -462,12 +460,13 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
       $page_urls[] = $pager_url;
       $pager_operations[] = array(
-       'quant_seed',
+        'quant_seed',
         array($pager_url, [
           'find_pager' => TRUE,
           'type' => 'view',
           'page_urls' => $page_urls,
-        ]),
+        ],
+        ),
       );
 
     }
@@ -483,7 +482,6 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     );
     batch_set($b);
   }
-
 
   // Rewrite absolute URLs if relevant.
   if (variable_get('quant_rewrite_relative', FALSE)) {
@@ -540,6 +538,7 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
   }
 
   if (drupal_is_cli()) {
+    // phpcs:ignore
     drush_log(t($message, $replacements), 'ok');
     return;
   }
@@ -581,16 +580,6 @@ function quant_quant_meta_alter(&$meta, $context) {
 }
 
 /**
- * Prepare an arbitrary route for exporting.
- *
- * @return array
- *   The path with context for seeding.
- */
-function _quant_prepare_route($url) {
-
-}
-
-/**
  * Prepare an entity for exporting.
  *
  * @return array
@@ -628,8 +617,10 @@ function _quant_prepare_entity($type, $entity_id) {
  *
  * @param array $batch
  *   The batch array.
+ * @param array $bundles
+ *   Optionally filter by node bundles.
  */
-function _quant_batch_nodes(&$batch, $bundles = array()) {
+function _quant_batch_nodes(array &$batch, array $bundles = array()) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
@@ -665,7 +656,7 @@ function _quant_batch_nodes(&$batch, $bundles = array()) {
  * @param array $batch
  *   The batch array.
  */
-function _quant_batch_taxonomy(&$batch) {
+function _quant_batch_taxonomy(array &$batch) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
@@ -687,14 +678,13 @@ function _quant_batch_taxonomy(&$batch) {
 
 }
 
-
 /**
  * Prepare the images to seed via batch.
  *
  * @param array $batch
  *   The batch array.
  */
-function _quant_batch_images(&$batch) {
+function _quant_batch_images(array &$batch) {
   $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
 
   $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
@@ -725,7 +715,7 @@ function _quant_batch_images(&$batch) {
  * @param array $batch
  *   The batch array.
  */
-function _quant_batch_views(&$batch) {
+function _quant_batch_views(array &$batch) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
@@ -759,7 +749,7 @@ function _quant_batch_views(&$batch) {
  * @param string $routes
  *   Textarea entered routes.
  */
-function _quant_batch_routes(&$batch, $routes) {
+function _quant_batch_routes(array &$batch, $routes) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
@@ -808,7 +798,7 @@ function quant_seed_taxonomy_batch($tid) {
  * @param array $form_state
  *   The submitted form values.
  */
-function _quant_seed_prepare($form = array(), $form_state = array()) {
+function _quant_seed_prepare(array $form = array(), array $form_state = array()) {
   if (!empty($form_state['values']) && $form_state['values']['quant_seed'] == 0) {
     drupal_set_message('Quant: Skipping the batch process.', 'warning');
     return [];
@@ -865,7 +855,7 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
  * @param array &$form
  *   The form render array.
  */
-function _quant_get_seed_warnings(&$form) {
+function _quant_get_seed_warnings(array &$form) {
   $cssagg = variable_get('preprocess_css');
   $jsagg = variable_get('preprocess_js');
 
@@ -922,7 +912,8 @@ function quant_token_create($nid) {
   if (function_exists('random_bytes')) {
     $bytes = random_bytes(ceil(16 / 2));
     $token = substr(bin2hex($bytes), 0, 16);
-  } else {
+  }
+  else {
     $token = bin2hex(random_bytes(16));
   }
 
@@ -1041,7 +1032,7 @@ function quant_form_system_site_information_settings_alter(&$form, $form_state) 
 }
 
 /**
- * Seed error pages when they're updated
+ * Seed error pages when they're updated.
  */
 function quant_seed_errors() {
   global $base_url;
@@ -1049,10 +1040,6 @@ function quant_seed_errors() {
   if (variable_get('site_404', FALSE)) {
     quant_seed("$base/_quant404");
   }
-}
-
-function quant_form_alter($f, $fs, $i) {
-  // dpm($i);
 }
 
 /**

@@ -29,6 +29,7 @@ function hook_quant_seed($location, $data) {
  * @param array $meta
  *   The metadata array.
  */
+// phpcs:ignore
 function hook_quant_meta_alter($meta) {
   // Change add to the meta array.
 }

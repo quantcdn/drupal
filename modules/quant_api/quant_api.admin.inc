@@ -16,7 +16,7 @@ function quant_api_settings() {
     '#required' => TRUE,
     '#title' => t('API Endpoint'),
     '#description' => t('The FQDN for the API endpoint'),
-    '#default_value' => variable_get('quant_api_endpoint', QUANT_ENDPOINT_DEFAULT),
+    '#default_value' => variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT),
   );
 
   $form['quant_api_token'] = array(
@@ -74,7 +74,8 @@ function quant_api_settings_validate($form, &$form_state) {
     $message = !empty($body->errorMsg) ? $body->errorMsg : 'Unauthorised';
     form_set_error('quant_api_token', 'Unable to connect to the QuantAPI please check the API token and customer match.');
     drupal_set_message('QuantAPI error: ' . $message, 'error');
-  } else {
+  }
+  else {
     drupal_set_message('QuantAPI: Successfully connected to ' . $body->project);
   }
 }

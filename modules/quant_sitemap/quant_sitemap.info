@@ -6,4 +6,3 @@ configure = admin/config/services/quant/seed
 
 dependencies[] = quant
 dependencies[] = xmlsitemap
-

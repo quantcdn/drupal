@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file
+ * Provide cron support for Quant processing.
+ */
+
+/**
  * Implements hook_menu().
  */
 function quant_cron_menu() {
@@ -27,7 +32,9 @@ function quant_cron_cron() {
   _quant_cron_seed_prepare();
 }
 
-
+/**
+ * Prepare the quant seeding batch process.
+ */
 function _quant_cron_seed_prepare() {
 
   $node_bundles = array_filter(variable_get('quant_cron_entity_node_bundles'));
@@ -59,4 +66,3 @@ function _quant_cron_seed_prepare() {
   drush_backend_batch_process();
 
 }
-
