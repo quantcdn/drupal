@@ -415,13 +415,13 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     }
   }
 
-  if ($response->code == 404) {
+  if ($response->code == 404 && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
     return FALSE;
   }
 
-  if (!property_exists($response, 'data') || $response->code >= 400) {
+  if (!property_exists($response, 'data') || $response->code > 404) {
     quant_log('Unable to seed %url %error %request', array(
       '%url' => $url,
       '%error' => $response->error,
@@ -1031,6 +1031,28 @@ function quant_workbench_moderation_submit($form, $form_state) {
     list($url) = _quant_prepare_entity('node', $form['node']['#value']->nid);
     quant_api_unpublish_route($form_state['values']['alias']);
   }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function quant_form_system_site_information_settings_alter(&$form, $form_state) {
+  $form['#submit'][] = 'quant_seed_errors';
+}
+
+/**
+ * Seed error pages when they're updated
+ */
+function quant_seed_errors() {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+  if (variable_get('site_404', FALSE)) {
+    quant_seed("$base/_quant404");
+  }
+}
+
+function quant_form_alter($f, $fs, $i) {
+  // dpm($i);
 }
 
 /**
