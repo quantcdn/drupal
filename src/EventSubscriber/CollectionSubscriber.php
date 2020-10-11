@@ -150,7 +150,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
       die;
     }
 
-    $directoryIterator = new \RecursiveDirectoryIterator($themePath);
+    $directoryIterator = new \RecursiveDirectoryIterator($themePath, \RecursiveDirectoryIterator::SKIP_DOTS);
     $iterator = new \RecursiveIteratorIterator($directoryIterator);
     $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.ico)$/i', \RecursiveRegexIterator::GET_MATCH);
 
@@ -163,12 +163,12 @@ class CollectionSubscriber implements EventSubscriberInterface {
     $iterator = new \AppendIterator();
 
     if (is_dir($filesPath . '/css')) {
-      $directoryIteratorCss = new \RecursiveDirectoryIterator($filesPath . '/css');
+      $directoryIteratorCss = new \RecursiveDirectoryIterator($filesPath . '/css', \RecursiveDirectoryIterator::SKIP_DOTS);
       $iterator->append(new \RecursiveIteratorIterator($directoryIteratorCss));
     }
 
     if (is_dir($filesPath . '/js')) {
-      $directoryIteratorJs = new \RecursiveDirectoryIterator($filesPath . '/js');
+      $directoryIteratorJs = new \RecursiveDirectoryIterator($filesPath . '/js', \RecursiveDirectoryIterator::SKIP_DOTS);
       $iterator->append(new \RecursiveIteratorIterator($directoryIteratorJs));
     }
 
@@ -205,7 +205,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
 
-    if ($event->getFormState()->getValue('routes_textarea')) {
+    if ($event->getFormState()->getValue('routes')) {
       foreach (explode(PHP_EOL, $event->getFormState()->getValue('routes_textarea')) as $route) {
         if (strpos((trim($route)), '/') !== 0) {
           continue;
@@ -218,12 +218,15 @@ class CollectionSubscriber implements EventSubscriberInterface {
       $event->addRoute('/robots.txt');
     }
 
+    $routes = [];
     if ($event->getFormState()->getValue('views_pages')) {
       $views_storage = $this->entityTypeManager->getStorage('view');
       $anon = User::getAnonymousUser();
 
       foreach ($views_storage->loadMultiple() as $view) {
         $view = Views::getView($view->get('id'));
+
+        $paths = [];
         $displays = array_keys($view->storage->get('display'));
         foreach ($displays as $display) {
           $view->setDisplay($display);
@@ -233,6 +236,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
               continue;
             }
 
+            if (in_array($path, $paths)) {
+              continue;
+            }
+
+            $paths[] = $path;
             $event->addRoute("/{$path}");
 
             // Languge negotiation may also provide path prefixes.

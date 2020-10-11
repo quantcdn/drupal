@@ -1,63 +1,27 @@
 <?php
 
-namespace Drupal\quant\Form;
+namespace Drupal\quant_cron\Form;
 
+use Drupal\node\Entity\Node;
 use Drupal\quant\Seed;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\quant\Event\CollectEntitiesEvent;
-use Drupal\quant\Event\CollectFilesEvent;
-use Drupal\quant\Event\CollectRedirectsEvent;
-use Drupal\quant\Event\CollectRoutesEvent;
-use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\QuantStaticTrait;
-use Drupal\quant_api\Client\QuantClientInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Contains a form for initializing a static build.
+ * Contains a form for configuring cron events.
  *
  * @internal
  */
-class SeedForm extends FormBase {
+class CronSettingsForm extends FormBase {
 
   use QuantStaticTrait;
-
-  /**
-   * The client.
-   *
-   * @var Drupal\quant_api\Client\QuantClientInterface
-   */
-  protected $client;
-
-  /**
-   *
-   */
-  protected $dispatcher;
-
-  /**
-   * Build the form.
-   */
-  public function __construct(QuantClientInterface $client, $event_dispatcher) {
-    $this->client = $client;
-    $this->dispatcher = $event_dispatcher;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container) {
-    return new static(
-      $container->get('quant_api.client'),
-      $container->get('event_dispatcher')
-    );
-  }
 
   /**
    * {@inheritdoc}.
    */
   public function getFormId() {
-    return 'quant_seed_form';
+    return 'quant_cron_settings_form';
   }
 
   /**
@@ -66,7 +30,7 @@ class SeedForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
 
     $warnings = $this->getWarnings();
-    $config = $this->config('quant_api.settings');
+    $config = $this->config('quant_cron.settings');
     $moduleHandler = \Drupal::moduleHandler();
 
     if (!empty($warnings)) {
@@ -91,6 +55,7 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Nodes'),
       '#description' => $this->t('Exports the latest revision of each node.'),
+      '#default_value' => !empty($config->get('entity_node', '')),
     ];
 
     // Seed by language.
@@ -116,6 +81,7 @@ class SeedForm extends FormBase {
             ':input[name="entity_node"]' => ['checked' => TRUE],
           ],
         ],
+        '#default_value' => $config->get('entity_node_languages'),
       ];
     }
 
@@ -139,23 +105,14 @@ class SeedForm extends FormBase {
           ':input[name="entity_node"]' => ['checked' => TRUE],
         ],
       ],
-    ];
-
-    $form['entity_node_revisions'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('All revisions'),
-      '#description' => $this->t('Exports all historic revisions.'),
-      '#states' => [
-        'visible' => [
-          ':input[name="entity_node"]' => ['checked' => TRUE],
-        ],
-      ],
+      '#default_value' => $config->get('entity_node_bundles'),
     ];
 
     $form['entity_taxonomy_term'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Taxonomy terms'),
       '#description' => $this->t('Exports taxonomy term pages.'),
+      '#default_value' => $config->get('entity_taxonomy_term'),
     ];
 
     // @todo: Implement these as plugins.
@@ -163,27 +120,21 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Theme assets'),
       '#description' => $this->t('Images, fonts and favicon in the public theme.'),
+      '#default_value' => $config->get('theme_assets'),
     ];
 
     $form['views_pages'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Views (Pages)'),
       '#description' => $this->t('Exports all views with a Page display accessible to anonymous users.'),
+      '#default_value' => $config->get('views_pages'),
     ];
-
-    if ($moduleHandler->moduleExists('redirect')) {
-      $form['redirects'] = [
-        '#type' => 'checkbox',
-        '#title' => $this->t('Redirects'),
-        '#description' => $this->t('Exports all existing redirects.'),
-      ];
-    }
 
     $form['routes'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Custom routes'),
       '#description' => $this->t('Exports custom list of routes.'),
-      '#default_value' => $config->get('routes'),
+      '#default_value' => !empty($config->get('routes_export')),
     ];
 
     $form['routes_textarea'] = [
@@ -202,6 +153,7 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Robots.txt'),
       '#description' => $this->t('Export robots.txt to Quant.'),
+      '#default_value' => $config->get('robots'),
     ];
 
     if ($moduleHandler->moduleExists('lunr')) {
@@ -209,6 +161,7 @@ class SeedForm extends FormBase {
         '#type' => 'checkbox',
         '#title' => 'Lunr search assets',
         '#description' => $this->t('Exports required lunr javascript libraries and all search indexes for decoupled search.'),
+        '#default_value' => $config->get('lunr'),
       ];
     }
 
@@ -218,7 +171,7 @@ class SeedForm extends FormBase {
 
     $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Start batch'),
+      '#value' => $this->t('Save cron settings'),
     ];
 
     return $form;
@@ -234,77 +187,16 @@ class SeedForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $config = $this->configFactory->getEditable('quant_api.settings');
-
-    if ($config->get('api_token')) {
-      if (!$project = $this->client->ping()) {
-        \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
-        return;
-      }
-    }
-
-    $assets = [];
-    $routes = [];
-    $redirects = [];
-
-    // Lunr.
-    if ($form_state->getValue('lunr')) {
-      // @TODO Sub-module for lunr support using the events.
-      $assets = array_merge($assets, Seed::findLunrAssets());
-      $routes = array_merge($routes, Seed::findLunrRoutes());
-    }
-
-    $config->set('routes', $form_state->getValue('routes'))->save();
-    if ($form_state->getValue('routes_textarea')) {
-      foreach (explode(PHP_EOL, $form_state->getValue('routes')) as $route) {
-        if (strpos((trim($route)), '/') !== 0) {
-          continue;
-        }
-        $routes[] = trim($route);
-      }
-    }
-
-    $batch = [
-      'title' => t('Exporting to Quant...'),
-      'operations' => [],
-      'init_message'     => t('Commencing'),
-      'progress_message' => t('Processed @current out of @total.'),
-      'error_message'    => t('An error occurred during processing'),
-      'finished' => '\Drupal\quant\Seed::finishedSeedCallback',
-    ];
-
-    if ($form_state->getValue('redirects')) {
-      // Collect the redirects for the seed.
-      $event = new CollectRedirectsEvent([], $form_state);
-      $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
-      while ($redirect = $event->getEntity()) {
-        $batch['operations'][] = ['\Drupal\quant\Seed::exportRedirect', [$redirect]];
-      }
-    }
-
-    if ($form_state->getValue('entity_node')) {
-      $revisions = $form_state->getValue('entity_node_revisions');
-      $event = new CollectEntitiesEvent([], $revisions, $form_state);
-      $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
-      while ($entity = $event->getEntity()) {
-        $batch['operations'][] = ['\Drupal\quant\Seed::exportNode', [$entity]];
-      }
-    }
-
-    $event = new CollectRoutesEvent($routes, $form_state);
-    $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
-
-    while ($route = $event->getRoute()) {
-      $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
-    }
-
-    $event = new CollectFilesEvent($assets, $form_state);
-    $this->dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
-    while ($file = $event->getFilePath()) {
-      $batch['operations'][] = ['\Drupal\quant\Seed::exportFile', [$file]];
-    }
-
-    batch_set($batch);
+    $config = $this->configFactory->getEditable('quant_cron.settings');
+    $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
+    $config->set('entity_node', $form_state->getValue('entity_node'))->save();
+    $config->set('entity_node_languages', $form_state->getValue('entity_node_languages'))->save();
+    $config->set('entity_node_bundles', $form_state->getValue('entity_node_bundles'))->save();
+    $config->set('entity_taxonomy_term', $form_state->getValue('entity_taxonomy_term'))->save();
+    $config->set('theme_assets', $form_state->getValue('theme_assets'))->save();
+    $config->set('views_pages', $form_state->getValue('views_pages'))->save();
+    $config->set('robots', $form_state->getValue('robots'))->save();
+    $config->set('lunr', $form_state->getValue('lunr'))->save();
   }
 
 }
