@@ -305,7 +305,7 @@ function quant_taxonomy_term_insert($term) {
  * Implements hook_taxonomy_term_update().
  */
 function quant_taxonomy_term_update($term) {
-  if (!quant_is_enabled('nodes')) {
+  if (!quant_is_enabled('taxonomy')) {
     return;
   }
 
