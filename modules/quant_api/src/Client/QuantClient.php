@@ -2,7 +2,6 @@
 
 namespace Drupal\quant_api\Client;
 
-use Psr7\MultipartStream;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\RequestOptions;
@@ -11,6 +10,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
 use GuzzleHttp\Psr7;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\MultipartStream;
 
 /**
  * Quant API client.
@@ -94,6 +94,11 @@ class QuantClient implements QuantClientInterface {
     if ($response->getStatusCode() == 402) {
       // Emit a subscription invalid warning.
       \Drupal::messenger()->addError(t('Your Quant subscription is invalid. Please check the dashboard.'));
+    }
+
+    if ($response->getStatusCode() == 410) {
+      // Emit a deleted project warning.
+      \Drupal::messenger()->addError(t('Project is deleted. Please check the dashboard for restoration options.'));
     }
 
     return FALSE;
