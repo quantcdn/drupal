@@ -91,6 +91,11 @@ class QuantClient implements QuantClientInterface {
       return TRUE;
     }
 
+    if ($response->getStatusCode() == 402) {
+      // Emit a subscription invalid warning.
+      \Drupal::messenger()->addError(t('Your Quant subscription is invalid. Please check the dashboard.'));
+    }
+
     return FALSE;
   }
 
