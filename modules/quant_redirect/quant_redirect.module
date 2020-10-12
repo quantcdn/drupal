@@ -20,7 +20,7 @@ function quant_redirect_form_quant_config_alter(&$form, $form_state) {
  * Implements hook_redirect_presave().
  */
 function quant_redirect_redirect_presave($redirect) {
-  if (!quant_is_enabled('nodes')) {
+  if (!quant_is_enabled('redirects')) {
     return;
   }
 
@@ -32,7 +32,7 @@ function quant_redirect_redirect_presave($redirect) {
  * Implements hook_redirect_delete().
  */
 function quant_redirect_redirect_delete($redirect) {
-  if (!quant_is_enabled('nodes')) {
+  if (!quant_is_enabled('redirects')) {
     return;
   }
 
