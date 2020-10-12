@@ -258,6 +258,8 @@ class SeedForm extends FormBase {
     }
 
     $config->set('routes', $form_state->getValue('routes'))->save();
+    $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
+
     if ($form_state->getValue('routes_textarea')) {
       foreach (explode(PHP_EOL, $form_state->getValue('routes')) as $route) {
         if (strpos((trim($route)), '/') !== 0) {
