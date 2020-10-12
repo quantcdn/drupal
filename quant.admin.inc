@@ -11,7 +11,6 @@
  * @ingroup forms
  */
 function quant_config() {
-  global $base_url;
 
   $form['quant_enabled'] = array(
     '#type' => 'checkbox',
@@ -80,14 +79,14 @@ function quant_config() {
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
     '#description' => t('Provide the FQDN that internal requests may route to. e.g: http://localhost, http://nginx:8080, http:127.0.0.1. <a href="#">More info</a>'),
-    '#default_value' => variable_get('quant_base_url'),
+    '#default_value' => variable_get('quant_base_url', 'http://localhost'),
   );
 
   $form['quant_hostname'] = array(
     '#type' => 'textfield',
     '#title' => t('Hostname'),
     '#description' => t('Optionally provide the expected hostname for content served via quant, this ensures that absolute links in content point to the correct domain. This ensures absolute links in content point to the correct domain. e.g: www.example.com <a href="#">More info</a>'),
-    '#default_value' => variable_get('quant_hostname', $base_url),
+    '#default_value' => variable_get('quant_hostname', 'www.example.com'),
   );
 
   return system_settings_form($form);

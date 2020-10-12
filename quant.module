@@ -138,10 +138,10 @@ function quant_permission() {
  * Wildcard menu node loader.
  */
 function quant_node_menu_load($nid) {
-  $headers = getallheaders();
 
-  if (isset($headers['x-quant-revision'])) {
-    $node = node_load($nid, $headers['x-quant-revision']);
+  $revision = _quant_get_request_header('quant-revision');
+  if (!empty($revision)) {
+    $node = node_load($nid, $revision);
     // Override the status - this prevents drupal from adding the standard
     // unpublished classes to the node.
     $node->status = 1;
@@ -155,8 +155,8 @@ function quant_node_menu_load($nid) {
  * Implements hook_menu_local_tasks_alter().
  */
 function quant_menu_local_tasks_alter(&$data, $router_item, $root_path) {
-  $headers = getallheaders();
-  if (isset($headers['x-quant-token'])) {
+  $token = _quant_get_request_header('quant-token');
+  if (!empty($token)) {
     unset($data['tabs']);
   }
 }
@@ -184,7 +184,6 @@ function quant_cron() {
  * @see node_access
  */
 function quant_node_access($node, $op, $account) {
-  $headers = getallheaders();
 
   if (is_string($node)) {
     return NODE_ACCESS_IGNORE;
@@ -194,7 +193,7 @@ function quant_node_access($node, $op, $account) {
     return NODE_ACCESS_IGNORE;
   }
 
-  if (isset($headers['x-quant-token'])) {
+  if (!empty(_quant_get_request_header('quant-token'))) {
     return quant_token_validate($node->nid) ? NODE_ACCESS_ALLOW : NODE_ACCESS_DENY;
   }
 
@@ -205,8 +204,7 @@ function quant_node_access($node, $op, $account) {
  * Implements hook_node_load().
  */
 function quant_node_load($nodes) {
-  $headers = getallheaders();
-  if (empty($headers['x-quant-token'])) {
+  if (empty(_quant_get_request_header('quant-token'))) {
     return;
   }
   foreach ($nodes as $node) {
@@ -377,15 +375,15 @@ function quant_seed($url, array $context = array(), array $batch_context = array
   );
 
   if (isset($context['token'])) {
-    $options['headers']['x-quant-token'] = $context['token'];
+    $options['headers']['quant-token'] = $context['token'];
   }
   elseif (isset($context['id'])) {
     // Create a short-lived token to grant node access.
-    $options['headers']['x-quant-token'] = quant_token_create($context['id']);
+    $options['headers']['quant-token'] = quant_token_create($context['id']);
   }
 
   if (isset($context['vid']) && $context['type'] == 'node') {
-    $options['headers']['x-quant-revision'] = $context['vid'];
+    $options['headers']['quant-revision'] = $context['vid'];
   }
 
   $response = drupal_http_request($url, $options);
@@ -942,15 +940,14 @@ function quant_token_create($nid) {
  *   If the token is valid.
  */
 function quant_token_validate($nid, $strict = TRUE) {
-  $headers = getallheaders();
 
-  if (empty($headers['x-quant-token'])) {
+  if (empty(_quant_get_request_header('quant-token'))) {
     return FALSE;
   }
 
   $record = db_select('quant_token', 'qt')
     ->fields('qt', ['nid', 'created'])
-    ->condition('token', $headers['x-quant-token'])
+    ->condition('token', $headers['quant-token'])
     ->execute()
     ->fetchAssoc();
 
@@ -1059,4 +1056,23 @@ function quant_is_enabled($type = NULL) {
   }
 
   return (bool) ($quant_enabled && variable_get('quant_enabled_' . $type, FALSE));
+}
+
+/**
+ * Helper function to retrieve request header value.
+ *
+ * @param string $header
+ *   The name of a request header to retrieve.
+ *
+ * @return mixed
+ *   FALSE if not present, else the value of the header.
+ */
+function _quant_get_request_header($header) {
+  foreach ($_SERVER as $name => $value) {
+    /* RFC2616 (HTTP/1.1) defines header fields as case-insensitive entities. */
+    if (strtolower(str_replace('_', '-', substr($name, 5))) == strtolower($header)) {
+      return $value;
+    }
+  }
+  return FALSE;
 }
