@@ -411,7 +411,7 @@ function quant_seed($url, array $context = array(), array $batch_context = array
     }
   }
 
-  if ($response->code == 404 && strpos($url, '/_quant404') === FALSE) {
+  if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
     return FALSE;
