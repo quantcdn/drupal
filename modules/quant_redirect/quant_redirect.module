@@ -6,29 +6,45 @@
  */
 
 /**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function quant_redirect_form_quant_config_alter(&$form, $form_state) {
+  $form['tracking_fieldset']['quant_enabled_redirects'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Redirects'),
+    '#default_value' => variable_get('quant_enabled_redirects'),
+  ];
+}
+
+/**
  * Implements hook_redirect_presave().
  */
 function quant_redirect_redirect_presave($redirect) {
+  if (!quant_is_enabled('redirects')) {
+    return;
+  }
+
   $status_code = empty($redirect->status_code) ? variable_get('redirect_default_status_code', 301) : $redirect->status_code;
-  quant_redirect_request($redirect->source, $redirect->redirect, $status_code, $redirect->status);
+  quant_redirect_request($redirect->source, $redirect->redirect, $status_code, $redirect->status, $redirect->is_new);
 }
 
 /**
  * Implements hook_redirect_delete().
  */
 function quant_redirect_redirect_delete($redirect) {
-  // Redirect should have a status => 0 during the delete
-  // however we hard code this to enure that the redirect is
-  // removed.
+  if (!quant_is_enabled('redirects')) {
+    return;
+  }
+
   $status_code = empty($redirect->status_code) ? variable_get('redirect_default_status_code', 301) : $redirect->status_code;
-  quant_redirect_request($redirect->source, $redirect->redirect, $status_code, false);
+  quant_redirect_request($redirect->source, $redirect->redirect, $status_code, FALSE);
 }
 
 /**
  * Trigger an API request to Quant for a redirect.
  */
-function quant_redirect_request($from, $to, $status = 301, $published = TRUE) {
-  $api = variable_get('quant_api_endpoint', QUANT_ENDPOINT_DEFAULT);
+function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $is_new = FALSE) {
+  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT);
 
   if (empty($api)) {
     quant_log('API endpoint is not configured.');
@@ -44,18 +60,33 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE) {
     ),
     'method' => 'POST',
     'data' => json_encode(array(
-      'url' => $from,
+      'url' => '/' . ltrim($from, '/'),
       'redirect_url' => $to,
       'redirect_http_code' => $status,
       'published' => (bool) $published,
     )),
   );
 
+  // If the redirect is not new then we need to unpublish the URL
+  // in quant to ensure that the redirect is no longer visible.
+  if (!(bool) $published && !(bool) $is_new) {
+    $api = str_replace('redirect', 'unpublish', $api);
+    $request = array(
+      'headers' => quant_api_get_request_headers() + array(
+        'content-type' => 'application/json',
+        'User-Agent' => 'Quant (+http://quant.io)',
+        'Quant-Url' => '/' . ltrim($from, '/'),
+      ),
+      'method' => 'PATCH',
+    );
+  }
+
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
-    quant_log('Error sending request: %error %res', array(
+    quant_log('Unable to seed redirect: %error %payload %res', array(
       '%error' => $response->error,
+      '%payload' => json_encode($request),
       '%res' => json_encode($response),
     ), WATCHDOG_ERROR);
   }

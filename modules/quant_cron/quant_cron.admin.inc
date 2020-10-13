@@ -83,4 +83,3 @@ function quant_cron_settings() {
 
   return system_settings_form($form);
 }
-

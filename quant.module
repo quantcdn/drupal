@@ -97,7 +97,7 @@ function quant_menu() {
 function quant_menu_alter(&$items) {
 
   // Altering the node route breaks displaysuite.
-  if (!variable_get('quant_draft_revisions', FALSE)) {
+  if (variable_get('disable_content_drafts', FALSE)) {
     return;
   }
   $node_route = $items['node/%node'];
@@ -117,7 +117,7 @@ function quant_admin_paths() {
 }
 
 /**
- * Implements hook_permission()
+ * Implements hook_permission().
  */
 function quant_permission() {
   return array(
@@ -138,10 +138,10 @@ function quant_permission() {
  * Wildcard menu node loader.
  */
 function quant_node_menu_load($nid) {
-  $params = drupal_get_query_parameters();
 
-  if (isset($params['quant_revision'])) {
-    $node = node_load($nid, $params['quant_revision']);
+  $revision = _quant_get_request_header('quant-revision');
+  if (!empty($revision)) {
+    $node = node_load($nid, $revision);
     // Override the status - this prevents drupal from adding the standard
     // unpublished classes to the node.
     $node->status = 1;
@@ -155,8 +155,8 @@ function quant_node_menu_load($nid) {
  * Implements hook_menu_local_tasks_alter().
  */
 function quant_menu_local_tasks_alter(&$data, $router_item, $root_path) {
-  $params = drupal_get_query_parameters();
-  if (isset($params['quant_token'])) {
+  $token = _quant_get_request_header('quant-token');
+  if (!empty($token)) {
     unset($data['tabs']);
   }
 }
@@ -167,8 +167,8 @@ function quant_menu_local_tasks_alter(&$data, $router_item, $root_path) {
 function quant_cron() {
   // Tokens can be used multiple times in a single request, this causes issues
   // with the access check by removing the token clean up to core cron we can
-  // persist a single token for multiple uses, the 1 minute timeout still ensures
-  // that the token will expire naturally.
+  // persist a single token for multiple uses, the 1 minute timeout still
+  // ensures that the token will expire naturally.
   db_query('TRUNCATE {quant_token}');
 }
 
@@ -184,17 +184,16 @@ function quant_cron() {
  * @see node_access
  */
 function quant_node_access($node, $op, $account) {
-  $params = drupal_get_query_parameters();
 
   if (is_string($node)) {
     return NODE_ACCESS_IGNORE;
   }
 
-  if (!variable_get('quant_draft_revisions', FALSE)) {
+  if (variable_get('disable_content_drafts', FALSE)) {
     return NODE_ACCESS_IGNORE;
   }
 
-  if (isset($params['quant_token'])) {
+  if (!empty(_quant_get_request_header('quant-token'))) {
     return quant_token_validate($node->nid) ? NODE_ACCESS_ALLOW : NODE_ACCESS_DENY;
   }
 
@@ -205,8 +204,7 @@ function quant_node_access($node, $op, $account) {
  * Implements hook_node_load().
  */
 function quant_node_load($nodes) {
-  $params = drupal_get_query_parameters();
-  if (empty($params['quant_token'])) {
+  if (empty(_quant_get_request_header('quant-token'))) {
     return;
   }
   foreach ($nodes as $node) {
@@ -220,6 +218,10 @@ function quant_node_load($nodes) {
  * Implements hook_node_insert().
  */
 function quant_node_insert($node) {
+  if (!quant_is_enabled('nodes')) {
+    return;
+  }
+
   $entity_info = array(
     'entity' => $node,
     'type' => 'node',
@@ -236,6 +238,10 @@ function quant_node_insert($node) {
  * Implements hook_node_update().
  */
 function quant_node_update($node) {
+  if (!quant_is_enabled('nodes')) {
+    return;
+  }
+
   $original = isset($entity->original) ? $entity->original : NULL;
   $entity_info = array(
     'entity' => $node,
@@ -253,6 +259,10 @@ function quant_node_update($node) {
  * Implements hook_form_FORM_ID_alter().
  */
 function quant_form_node_delete_confirm_alter(&$form, $form_state, $id) {
+  if (!quant_is_enabled('nodes')) {
+    return;
+  }
+
   list($url) = _quant_prepare_entity('node', $form['nid']['#value']);
   $form['alias'] = [
     '#type' => 'value',
@@ -271,11 +281,14 @@ function quant_node_delete_form_action($form, $form_state) {
   quant_api_unpublish_route($form_state['values']['alias']);
 }
 
-
 /**
  * Implements hook_taxonomy_term_insert().
  */
 function quant_taxonomy_term_insert($term) {
+  if (!quant_is_enabled('taxonomy')) {
+    return;
+  }
+
   $entity_info = array(
     'entity' => $term,
     'type' => 'taxonomy_term',
@@ -290,6 +303,10 @@ function quant_taxonomy_term_insert($term) {
  * Implements hook_taxonomy_term_update().
  */
 function quant_taxonomy_term_update($term) {
+  if (!quant_is_enabled('taxonomy')) {
+    return;
+  }
+
   $entity_info = array(
     'entity' => $term,
     'type' => 'taxonomy_term',
@@ -305,7 +322,6 @@ function quant_taxonomy_term_update($term) {
  *
  * This is an intermediary shutdown function to ensure that quants
  * export will always be run after other processes.
- *
  */
 function _quant_shutdown($entity_info) {
   drupal_register_shutdown_function('_quant_post_entity_op', $entity_info);
@@ -318,7 +334,6 @@ function _quant_shutdown($entity_info) {
  * can operate after the db_transaction has finished.
  */
 function _quant_post_entity_op($entity_info) {
-
   list($id) = entity_extract_ids($entity_info['type'], $entity_info['entity']);
   list($url, $context) = _quant_prepare_entity($entity_info['type'], $id);
 
@@ -340,7 +355,7 @@ function _quant_post_entity_op($entity_info) {
  * @param array $batch_context
  *   The context of the batch process.
  */
-function quant_seed($url, $context = array(), $batch_context = array()) {
+function quant_seed($url, array $context = array(), array $batch_context = array()) {
   global $base_url;
 
   $path = parse_url($url, PHP_URL_PATH);
@@ -355,40 +370,34 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
   $options = array(
     'headers' => array(
       'Host' => variable_get('quant_hostname', $base_url),
-      'User-Agent' => 'Quant (+http://quantcdn.io)'
+      'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
   );
 
-  $query = array();
   if (isset($context['token'])) {
-    $query['quant_token'] = $context['token'];
+    $options['headers']['quant-token'] = $context['token'];
   }
   elseif (isset($context['id'])) {
     // Create a short-lived token to grant node access.
-    $query['quant_token'] = quant_token_create($context['id']);
+    $options['headers']['quant-token'] = quant_token_create($context['id']);
   }
 
   if (isset($context['vid']) && $context['type'] == 'node') {
-    $query['quant_revision'] = $context['vid'];
+    $options['headers']['quant-revision'] = $context['vid'];
   }
 
-  if (strpos($url, '?') === false) {
-    $response = drupal_http_request("$url?" . drupal_http_build_query($query), $options);
-  }
-  else {
-    $response = drupal_http_request("$url&" . drupal_http_build_query($query), $options);
-  }
+  $response = drupal_http_request($url, $options);
 
   // Add a redirect if 301|302.
   if (isset($response->redirect_code) && ($response->redirect_code == 301 || $response->redirect_code == 302)) {
     // Strip quant params from destination.
-    $dest = _remove_quant_params($response->redirect_url);
+    $dest = $response->redirect_url;
 
     // Ensure relative for internal redirect.
     $dest = _rewrite_relative($dest);
 
     if (module_exists('quant_redirect')) {
-      quant_redirect_request($path, $dest, (int)$response->redirect_code);
+      quant_redirect_request($path, $dest, (int) $response->redirect_code);
     }
 
     // Ensure internal redirects have their destination seeded.
@@ -402,13 +411,13 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     }
   }
 
-  if ($response->code == 404) {
+  if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
     return FALSE;
   }
 
-  if (!property_exists($response, 'data') || $response->code >= 400) {
+  if (!property_exists($response, 'data') || $response->code > 404) {
     quant_log('Unable to seed %url %error %request', array(
       '%url' => $url,
       '%error' => $response->error,
@@ -419,7 +428,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
   $markup = $response->data;
 
-  // Parse pages from Views and Taxonomy entities
+  // Parse pages from Views and Taxonomy entities.
   if (isset($context['find_pager']) && $context['find_pager']) {
 
     $document = new \DOMDocument();
@@ -441,7 +450,7 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
       global $base_url;
       $base = variable_get('quant_base_url', $base_url);
-      $pager_url = _remove_quant_params($base.$new_href);
+      $pager_url = $base . $new_href;
 
       if (in_array($pager_url, $page_urls)) {
         continue;
@@ -449,12 +458,13 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
 
       $page_urls[] = $pager_url;
       $pager_operations[] = array(
-       'quant_seed',
+        'quant_seed',
         array($pager_url, [
           'find_pager' => TRUE,
           'type' => 'view',
           'page_urls' => $page_urls,
-        ]),
+        ],
+        ),
       );
 
     }
@@ -471,14 +481,10 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     batch_set($b);
   }
 
-
   // Rewrite absolute URLs if relevant.
   if (variable_get('quant_rewrite_relative', FALSE)) {
     $markup = _rewrite_relative($markup);
   }
-
-  // Ensure quant query parameters are removed.
-  $markup = _remove_quant_params($markup);
 
   $alias = parse_url($url, PHP_URL_PATH);
   $alias = empty($alias) ? '/' : $alias;
@@ -493,9 +499,14 @@ function quant_seed($url, $context = array(), $batch_context = array()) {
     'info' => [],
   ];
 
+  if (!empty($response->headers['content-type'])) {
+    $meta['content_type'] = $response->headers['content-type'];
+  }
+
   if (isset($context['type'])) {
     drupal_alter("quant_meta_{$context['type']}", $meta, $context);
   }
+
   drupal_alter('quant_meta', $meta, $context);
   module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
 }
@@ -525,6 +536,7 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
   }
 
   if (drupal_is_cli()) {
+    // phpcs:ignore
     drush_log(t($message, $replacements), 'ok');
     return;
   }
@@ -566,16 +578,6 @@ function quant_quant_meta_alter(&$meta, $context) {
 }
 
 /**
- * Prepare an arbitrary route for exporting.
- *
- * @return array
- *   The path with context for seeding.
- */
-function _quant_prepare_route($url) {
-
-}
-
-/**
  * Prepare an entity for exporting.
  *
  * @return array
@@ -613,8 +615,10 @@ function _quant_prepare_entity($type, $entity_id) {
  *
  * @param array $batch
  *   The batch array.
+ * @param array $bundles
+ *   Optionally filter by node bundles.
  */
-function _quant_batch_nodes(&$batch, $bundles = array()) {
+function _quant_batch_nodes(array &$batch, array $bundles = array()) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
@@ -650,7 +654,7 @@ function _quant_batch_nodes(&$batch, $bundles = array()) {
  * @param array $batch
  *   The batch array.
  */
-function _quant_batch_taxonomy(&$batch) {
+function _quant_batch_taxonomy(array &$batch) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
@@ -672,14 +676,13 @@ function _quant_batch_taxonomy(&$batch) {
 
 }
 
-
 /**
  * Prepare the images to seed via batch.
  *
  * @param array $batch
  *   The batch array.
  */
-function _quant_batch_images(&$batch) {
+function _quant_batch_images(array &$batch) {
   $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
 
   $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
@@ -710,7 +713,7 @@ function _quant_batch_images(&$batch) {
  * @param array $batch
  *   The batch array.
  */
-function _quant_batch_views(&$batch) {
+function _quant_batch_views(array &$batch) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
@@ -744,11 +747,13 @@ function _quant_batch_views(&$batch) {
  * @param string $routes
  *   Textarea entered routes.
  */
-function _quant_batch_routes(&$batch, $routes) {
+function _quant_batch_routes(array &$batch, $routes) {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
 
-  foreach (explode(PHP_EOL, $routes) as $route) {
+  $routes = is_array($routes) ? $routes : explode(PHP_EOL, $routes);
+
+  foreach ($routes as $route) {
     if (strpos((trim($route)), '/') !== 0) {
       continue;
     }
@@ -791,7 +796,7 @@ function quant_seed_taxonomy_batch($tid) {
  * @param array $form_state
  *   The submitted form values.
  */
-function _quant_seed_prepare($form = array(), $form_state = array()) {
+function _quant_seed_prepare(array $form = array(), array $form_state = array()) {
   if (!empty($form_state['values']) && $form_state['values']['quant_seed'] == 0) {
     drupal_set_message('Quant: Skipping the batch process.', 'warning');
     return [];
@@ -848,7 +853,7 @@ function _quant_seed_prepare($form = array(), $form_state = array()) {
  * @param array &$form
  *   The form render array.
  */
-function _quant_get_seed_warnings(&$form) {
+function _quant_get_seed_warnings(array &$form) {
   $cssagg = variable_get('preprocess_css');
   $jsagg = variable_get('preprocess_js');
 
@@ -905,7 +910,8 @@ function quant_token_create($nid) {
   if (function_exists('random_bytes')) {
     $bytes = random_bytes(ceil(16 / 2));
     $token = substr(bin2hex($bytes), 0, 16);
-  } else {
+  }
+  else {
     $token = bin2hex(random_bytes(16));
   }
 
@@ -934,15 +940,14 @@ function quant_token_create($nid) {
  *   If the token is valid.
  */
 function quant_token_validate($nid, $strict = TRUE) {
-  $params = drupal_get_query_parameters();
 
-  if (empty($params['quant_token'])) {
+  if (empty(_quant_get_request_header('quant-token'))) {
     return FALSE;
   }
 
   $record = db_select('quant_token', 'qt')
     ->fields('qt', ['nid', 'created'])
-    ->condition('token', $params['quant_token'])
+    ->condition('token', $headers['quant-token'])
     ->execute()
     ->fetchAssoc();
 
@@ -950,9 +955,6 @@ function quant_token_validate($nid, $strict = TRUE) {
     // Something went wrong, we don't have the fields we need.
     return FALSE;
   }
-
-  // Self-destruct for the token.
-  // db_delete('quant_token')->condition('token', $params['quant_token'])->execute();
 
   if (!$strict) {
     return TRUE;
@@ -989,38 +991,6 @@ function _is_url_internal($url) {
 }
 
 /**
- * Removes quant params from markup.
- */
-function _remove_quant_params($markup) {
-
-  // Ensure &amp; is replaced with &
-  $markup = preg_replace('/&amp;/i', '&', $markup);
-
-  // Replace ?quant_revision=XX&quant_token=XX&additional_params with ?
-  $markup = preg_replace('/\?quant_revision=(.*&)quant_token=(.*&)/i', '?', $markup);
-  // Remove ?quant_revision=XX&quant_token=XX
-  $markup = preg_replace("/\?quant_revision=(.*&)quant_token=[^\"']*/i", '', $markup);
-  // Remove &quant_revision=XX&quant_token=XX with optional params
-  $markup = preg_replace("/\&quant_revision=(.*&)quant_token=[^\"'&]*/i", '', $markup);
-
-  // Replace ?quant_revision=XX&additional_params with ?
-  $markup = preg_replace('/\?quant_revision=(.*&)/i', '?', $markup);
-  // Remove ?quant_revision=XX
-  $markup = preg_replace("/\?quant_revision=[^\"']*/i", '', $markup);
-  // Remove &quant_revision=XX with optional params
-  $markup = preg_replace("/\&quant_revision=[^\"'&]*/i", '', $markup);
-
-  // Replace ?quant_token=XX&additional_params with ?
-  $markup = preg_replace('/\?quant_token=(.*&)/i', '?', $markup);
-  // Remove ?quant_token=XX
-  $markup = preg_replace("/\?quant_token=[^\"']*/i", '', $markup);
-  // Remove &quant_token=XX with optional params
-  $markup = preg_replace("/\&quant_token=[^\"'&]*/i", '', $markup);
-
-  return $markup;
-}
-
-/**
  * Implements hook_form_FORM_ID_alert().
  */
 function quant_form_workbench_moderation_moderate_form_alter(&$form, $form_state, $id) {
@@ -1049,4 +1019,60 @@ function quant_workbench_moderation_submit($form, $form_state) {
     list($url) = _quant_prepare_entity('node', $form['node']['#value']->nid);
     quant_api_unpublish_route($form_state['values']['alias']);
   }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function quant_form_system_site_information_settings_alter(&$form, $form_state) {
+  $form['#submit'][] = 'quant_seed_errors';
+}
+
+/**
+ * Seed error pages when they're updated.
+ */
+function quant_seed_errors() {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+  if (variable_get('site_404', FALSE)) {
+    quant_seed("$base/_quant404");
+  }
+}
+
+/**
+ * Determine if quant is enabled.
+ *
+ * @param string $type
+ *   A type of entity that is to be exported.
+ *
+ * @return bool
+ *   If quant is enabled.
+ */
+function quant_is_enabled($type = NULL) {
+  $quant_enabled = variable_get('quant_enabled', TRUE);
+
+  if (is_null($type)) {
+    return $quant_enabled;
+  }
+
+  return (bool) ($quant_enabled && variable_get('quant_enabled_' . $type, FALSE));
+}
+
+/**
+ * Helper function to retrieve request header value.
+ *
+ * @param string $header
+ *   The name of a request header to retrieve.
+ *
+ * @return mixed
+ *   FALSE if not present, else the value of the header.
+ */
+function _quant_get_request_header($header) {
+  foreach ($_SERVER as $name => $value) {
+    /* RFC2616 (HTTP/1.1) defines header fields as case-insensitive entities. */
+    if (strtolower(str_replace('_', '-', substr($name, 5))) == strtolower($header)) {
+      return $value;
+    }
+  }
+  return FALSE;
 }

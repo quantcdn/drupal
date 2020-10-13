@@ -11,13 +11,47 @@
  * @ingroup forms
  */
 function quant_config() {
-  global $base_url;
 
-  $form['quant_draft_revisions'] = array(
+  $form['quant_enabled'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Push draft revisions'),
-    '#description' => t('Support draft node revisions. <i>experimental - this might have compatibility issues with your module setup</i>.'),
-    '#default_value' => variable_get('quant_draft_revisions', FALSE),
+    '#title' => t('Track content changes'),
+    '#description' => t('Automatically push content changes to Quant (recommended).'),
+    '#default_value' => variable_get('quant_enabled', FALSE),
+  );
+
+  $form['tracking_fieldset'] = [
+    '#type' => 'fieldset',
+    '#title' => t('Tracked entities'),
+    '#states' => [
+      'visible' => [
+        ':input[name="quant_enabled"]' => ['checked' => TRUE],
+      ],
+    ],
+  ];
+
+  $form['tracking_fieldset']['quant_enabled_nodes'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Nodes'),
+    '#default_value' => variable_get('quant_enabled_nodes'),
+  ];
+
+  $form['tracking_fieldset']['quant_enabled_taxonomy'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Taxonomy Terms'),
+    '#default_value' => variable_get('quant_enabled_taxonomy'),
+  ];
+
+  $form['tracking_fieldset']['quant_enabled_views'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Views'),
+    '#default_value' => variable_get('quant_enabled_views'),
+  ];
+
+  $form['disable_content_drafts'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Disable content drafts'),
+    '#description' => t('Prevent draft content from being sent to Quant.'),
+    '#default_value' => variable_get('disable_content_drafts', FALSE),
   );
 
   $form['quant_rewrite_relative'] = array(
@@ -45,14 +79,14 @@ function quant_config() {
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
     '#description' => t('Provide the FQDN that internal requests may route to. e.g: http://localhost, http://nginx:8080, http:127.0.0.1. <a href="#">More info</a>'),
-    '#default_value' => variable_get('quant_base_url'),
+    '#default_value' => variable_get('quant_base_url', 'http://localhost'),
   );
 
   $form['quant_hostname'] = array(
     '#type' => 'textfield',
     '#title' => t('Hostname'),
     '#description' => t('Optionally provide the expected hostname for content served via quant, this ensures that absolute links in content point to the correct domain. This ensures absolute links in content point to the correct domain. e.g: www.example.com <a href="#">More info</a>'),
-    '#default_value' => variable_get('quant_hostname', $base_url),
+    '#default_value' => variable_get('quant_hostname', 'www.example.com'),
   );
 
   return system_settings_form($form);

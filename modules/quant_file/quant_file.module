@@ -62,7 +62,7 @@ function quant_file_quant_seed_alter(&$batch) {
     ->condition('status', 1)
     ->execute();
 
-  while($file = $files->fetchAssoc()) {
+  while ($file = $files->fetchAssoc()) {
     list($url, $context) = _quant_prepare_entity('file', $file['fid']);
     $batch['operations'][] = array(
       'quant_seed',
