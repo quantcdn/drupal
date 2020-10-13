@@ -20,7 +20,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class Published extends MetadataBase implements ContainerFactoryPluginInterface {
 
   /**
-   * @var EntityStorage
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected $entityManager;
 
@@ -48,9 +50,9 @@ class Published extends MetadataBase implements ContainerFactoryPluginInterface 
    * {@inheritdoc}
    */
   public function build(EntityInterface $entity) : array {
-    // Note: This approach returns the default published state of the parent node.
-    // This should be used to make content non-viewable if it is unpublished.
-    // $default = $this->entityManager->getStorage($entity->getEntityTypeId())->load($entity->id());
+    // Note: This approach returns the default published state of the parent
+    // node. This should be used to make content non-viewable if it is
+    // unpublished.
     // Return the published status of the revision.
     return ['published' => $entity->isPublished()];
   }

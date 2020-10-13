@@ -34,6 +34,7 @@ class CollectRedirectsEvent extends ConfigFormEventBase {
    *   The entity object.
    *
    * @return self
+   *   The class instance.
    */
   public function addEntity($entity) {
     $this->entities[] = $entity;
@@ -44,6 +45,7 @@ class CollectRedirectsEvent extends ConfigFormEventBase {
    * Get an entity from the evetn.
    *
    * @return mixed
+   *   A single entity.
    */
   public function getEntity() {
     return array_shift($this->entities);

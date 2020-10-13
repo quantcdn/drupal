@@ -10,9 +10,10 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
 use GuzzleHttp\Psr7;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\MultipartStream;
 
 /**
- *
+ * Quant API client.
  */
 class QuantClient implements QuantClientInterface {
 
@@ -82,12 +83,22 @@ class QuantClient implements QuantClientInterface {
       ]);
     }
     catch (RequestException $e) {
-      \Drupal::messenger()->addError(t($e->getMessage()));
+      \Drupal::messenger()->addError($e->getMessage());
       return FALSE;
     }
 
     if ($response->getStatusCode() == 200) {
       return TRUE;
+    }
+
+    if ($response->getStatusCode() == 402) {
+      // Emit a subscription invalid warning.
+      \Drupal::messenger()->addError(t('Your Quant subscription is invalid. Please check the dashboard.'));
+    }
+
+    if ($response->getStatusCode() == 410) {
+      // Emit a deleted project warning.
+      \Drupal::messenger()->addError(t('Project is deleted. Please check the dashboard for restoration options.'));
     }
 
     return FALSE;
@@ -150,7 +161,7 @@ class QuantClient implements QuantClientInterface {
       'POST',
       $this->endpoint,
       $headers,
-      new Psr7\MultipartStream([
+      new MultipartStream([
         [
           'name' => basename($file),
           'filename' => basename($file),
@@ -180,7 +191,7 @@ class QuantClient implements QuantClientInterface {
         'Quant-Customer' => $this->username,
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
-      ]
+      ],
     ]);
 
     return json_decode($response->getBody(), TRUE);

@@ -2,8 +2,6 @@
 
 namespace Drupal\quant_cron\Form;
 
-use Drupal\node\Entity\Node;
-use Drupal\quant\Seed;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\quant\QuantStaticTrait;
@@ -18,14 +16,14 @@ class CronSettingsForm extends FormBase {
   use QuantStaticTrait;
 
   /**
-   * {@inheritdoc}.
+   * {@inheritdoc}
    */
   public function getFormId() {
     return 'quant_cron_settings_form';
   }
 
   /**
-   * {@inheritdoc}.
+   * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
 
@@ -91,7 +89,7 @@ class CronSettingsForm extends FormBase {
       ->loadMultiple();
 
     $content_types = [];
-    foreach($types as $type) {
+    foreach ($types as $type) {
       $content_types[$type->id()] = $type->label();
     }
 

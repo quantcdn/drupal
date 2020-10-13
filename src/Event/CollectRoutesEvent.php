@@ -43,7 +43,8 @@ class CollectRoutesEvent extends ConfigFormEventBase {
    * @var string $route
    *   The entity object.
    *
-   * @return self
+   * @return Drupal\quant\Event\CollectRoutesEvent
+   *   The route collection event.
    */
   public function addRoute($route) {
     $this->routes[] = $route;
@@ -51,9 +52,10 @@ class CollectRoutesEvent extends ConfigFormEventBase {
   }
 
   /**
-   * Get an entity from the evetn.
+   * Get an route from the event.
    *
    * @return string
+   *   A route.
    */
   public function getRoute() {
     return array_shift($this->routes);

@@ -20,7 +20,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class PublishedRevision extends MetadataBase implements ContainerFactoryPluginInterface {
 
   /**
-   * @var EntityStorage
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected $entityManager;
 

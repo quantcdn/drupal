@@ -34,6 +34,7 @@ class CollectFilesEvent extends ConfigFormEventBase {
    *   The entity object.
    *
    * @return self
+   *   The class instance.
    */
   public function addFilePath($path) {
     $this->filePaths[] = $path;
@@ -41,9 +42,10 @@ class CollectFilesEvent extends ConfigFormEventBase {
   }
 
   /**
-   * Get an entity from the evetn.
+   * Get an entity from the event.
    *
    * @return mixed
+   *   The next file path.
    */
   public function getFilePath() {
     return array_shift($this->filePaths);

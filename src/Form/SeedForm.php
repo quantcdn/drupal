@@ -2,7 +2,6 @@
 
 namespace Drupal\quant\Form;
 
-use Drupal\node\Entity\Node;
 use Drupal\quant\Seed;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
@@ -14,6 +13,7 @@ use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\QuantStaticTrait;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Contains a form for initializing a static build.
@@ -32,14 +32,16 @@ class SeedForm extends FormBase {
   protected $client;
 
   /**
+   * The event dispatcher.
    *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
    */
   protected $dispatcher;
 
   /**
    * Build the form.
    */
-  public function __construct(QuantClientInterface $client, $event_dispatcher) {
+  public function __construct(QuantClientInterface $client, EventDispatcherInterface $event_dispatcher) {
     $this->client = $client;
     $this->dispatcher = $event_dispatcher;
   }
@@ -55,14 +57,14 @@ class SeedForm extends FormBase {
   }
 
   /**
-   * {@inheritdoc}.
+   * {@inheritdoc}
    */
   public function getFormId() {
     return 'quant_seed_form';
   }
 
   /**
-   * {@inheritdoc}.
+   * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
 
@@ -126,7 +128,7 @@ class SeedForm extends FormBase {
       ->loadMultiple();
 
     $content_types = [];
-    foreach($types as $type) {
+    foreach ($types as $type) {
       $content_types[$type->id()] = $type->label();
     }
 
@@ -255,8 +257,17 @@ class SeedForm extends FormBase {
       $routes = array_merge($routes, Seed::findLunrRoutes());
     }
 
-    $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
     $config->set('routes', $form_state->getValue('routes'))->save();
+    $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
+
+    if ($form_state->getValue('routes_textarea')) {
+      foreach (explode(PHP_EOL, $form_state->getValue('routes')) as $route) {
+        if (strpos((trim($route)), '/') !== 0) {
+          continue;
+        }
+        $routes[] = trim($route);
+      }
+    }
 
     $batch = [
       'title' => t('Exporting to Quant...'),
@@ -287,6 +298,7 @@ class SeedForm extends FormBase {
 
     $event = new CollectRoutesEvent($routes, $form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
+
     while ($route = $event->getRoute()) {
       $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
     }

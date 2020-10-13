@@ -5,6 +5,9 @@ namespace Drupal\quant\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 
+/**
+ * The metadata configuration form.
+ */
 class MetadataConfigForm extends ConfigFormBase {
 
   const SETTINGS = 'quant.metadata.settings';
@@ -25,6 +28,9 @@ class MetadataConfigForm extends ConfigFormBase {
     ];
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config(static::SETTINGS);
 
@@ -77,4 +83,5 @@ class MetadataConfigForm extends ConfigFormBase {
     $config->save();
     parent::submitForm($form, $form_state);
   }
+
 }

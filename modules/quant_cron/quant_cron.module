@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @file
+ * Add cron support for quant processing.
+ */
+
 use Drupal\quant\Seed;
 use Drupal\Core\Form\FormState;
 use Drupal\quant\Event\CollectEntitiesEvent;
@@ -8,6 +13,9 @@ use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
 
+/**
+ * Implements hook_cron().
+ */
 function quant_cron_cron() {
 
   // Quant cron only supported via CLI.
