@@ -240,9 +240,11 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (InvalidPayload $error) {
       $this->logger->error($error->getMessage());
+      return;
     }
     catch (Exception $error) {
       $this->logger->error($error->getMessage());
+      return;
     }
 
     return $res;
