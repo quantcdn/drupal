@@ -67,7 +67,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_endpoint'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Endpoint'),
-      '#description' => $this->t('e.g: http://api.quantcdn.io'),
+      '#description' => $this->t('e.g: https://api.quantcdn.io'),
       '#default_value' => $config->get('api_endpoint'),
     ];
 
