@@ -73,6 +73,16 @@ function quant_menu() {
     'weight' => 1,
   );
 
+  $items['admin/config/services/quant/queue'] = array(
+    'title' => 'Queue',
+    'description' => 'Prepared items ready to be sent to quant.',
+    'page callback' => 'quant_queue_page',
+    'file' => 'quant.admin.inc',
+    'access arguments' => array('configure quant'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+  );
+
   // Custom quant view controller.
   $items['node/%node/quant'] = array(
     'title callback' => 'quant_page_title',
@@ -583,19 +593,31 @@ function _quant_prepare_entity($type, $entity_id) {
   $base = variable_get('quant_base_url', $base_url);
   $entity = entity_load($type, [$entity_id]);
 
+  if (is_array($entity)) {
+    $entity = reset($entity);
+  }
+
   if (empty($entity)) {
     return FALSE;
   }
 
-  $entity = reset($entity);
-  $uri = entity_uri($type, $entity);
-  $path = $uri['path'];
-  $alias = drupal_get_path_alias($path);
+  switch($type) {
+    case 'file':
+      $url = file_create_url($entity->uri);
+      break;
+    default:
+      $entity = reset($entity);
+      $uri = entity_uri($type, $entity);
+      $path = $uri['path'];
+      $alias = drupal_get_path_alias($path);
+      $url = "$base/$alias";
+      break;
+  }
 
   list($id, $vid) = entity_extract_ids($type, $entity);
 
   return array(
-    "$base/$alias",
+    $url,
     array(
       'entity' => $entity,
       'vid' => $vid,
@@ -668,7 +690,7 @@ function _quant_queue_taxonomy() {
 /**
  * Prepare the images to seed via batch.
  */
-function _quant_batch_images() {
+function _quant_queue_images() {
   $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
   $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
 
@@ -779,9 +801,24 @@ function quant_seed_taxonomy_batch($tid) {
 /**
  * Generate the quant_seed queue.
  *
- * @return SystemQueue
+ * @param bool $items
+ *   Return items or the queue instance.
+ *
+ * @return mixed
  */
-function quant_get_queue() {
+function quant_get_queue($items = FALSE) {
+  if ($items) {
+    $items = array();
+    $query = db_select('queue', 'q')->extend('PagerDefault');
+    $query->condition('name', 'quant_seed')
+      ->fields('q', array('item_id', 'data', 'expire', 'created'));
+    $result = $query->limit(10)->orderBy('q.item_id')->execute();
+    foreach ($result as $item) {
+      $items[] = (array) $item;
+    }
+    return $items;
+  }
+
   $queue = DrupalQueue::get('quant_seed');
   $queue->createQueue();
   return $queue;
@@ -824,7 +861,7 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
   }
 
   if (variable_get('quant_seed_theme_assets')) {
-    _quant_batch_images();
+    _quant_queue_images();
   }
 
   if (variable_get('quant_seed_views')) {

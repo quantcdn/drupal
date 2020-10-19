@@ -99,7 +99,6 @@ function quant_config() {
  */
 function quant_seed_settings() {
   $form = array();
-
   _quant_get_seed_warnings($form);
 
   $form['quant_seed_entity_node'] = array(
@@ -191,4 +190,57 @@ function quant_seed_settings() {
   $form['#submit'][] = '_quant_queue_batch';
 
   return $form;
+}
+
+/**
+ * Present items that are queued for quant sending.
+ */
+function quant_queue_page() {
+  $items = quant_get_queue(TRUE);
+  $rows = [];
+
+  $header = array(
+    t('Item ID'),
+    t('Claimed/Expiration'),
+    t('Created'),
+    t('Content/Data'),
+  );
+
+  foreach ($items as &$item) {
+    if ($item['expire'] > 0) {
+      $item['expire'] = t("Claimed: expires %expire", array('%expire' => date('r', $item['expire'])));
+    } else {
+      $item['expire'] = t('Unclaimed');
+    }
+    $item['created'] = date('r', $item['created']);
+    list($op, $context) = unserialize($item['data']);
+    $item['content'] = t('<b>Callback:</b> %op<br /><b>URL:</b> %arg', array(
+      '%op' => $op,
+      '%arg' => reset($context),
+    ));
+    unset($item['data']);
+    $rows[] = $item;
+  }
+
+  if (!empty($items)) {
+    $queue = quant_get_queue();
+    $build['desc'] = array(
+      '#markup' => t('There are <b>%total</b> items in the queue.<br/><br />', array(
+        '%total' => $queue->numberOfItems(),
+      )),
+    );
+  }
+
+  $build['pager_table'] = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' => t('There are no items in the queue.'),
+  );
+
+  $build['pager'] = array(
+    '#theme' => 'pager',
+  );
+
+  return $build;
 }
