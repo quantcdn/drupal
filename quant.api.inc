@@ -44,7 +44,6 @@ function hook_quant_seed($location, $data, $meta, $context) {
   // Send the data to the configured API.
 }
 
-
 /**
  * Invoked after the entity has been rendered.
  *

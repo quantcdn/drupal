@@ -601,10 +601,11 @@ function _quant_prepare_entity($type, $entity_id) {
     return FALSE;
   }
 
-  switch($type) {
+  switch ($type) {
     case 'file':
       $url = file_create_url($entity->uri);
       break;
+
     default:
       $entity = reset($entity);
       $uri = entity_uri($type, $entity);
@@ -805,6 +806,7 @@ function quant_seed_taxonomy_batch($tid) {
  *   Return items or the queue instance.
  *
  * @return mixed
+ *   A queue instance or queue items.
  */
 function quant_get_queue($items = FALSE) {
   if ($items) {
@@ -831,7 +833,8 @@ function quant_queue_worker($data) {
   list($op, $args) = $data;
   if (is_callable($op)) {
     call_user_func_array($op, $args);
-  } else {
+  }
+  else {
     quant_log('Unsupported callback: [%op]', array('%op' => $op));
   }
 }
@@ -932,8 +935,12 @@ function quant_batch_process_queue($queue_name, &$context) {
   // each batch run we can continuously progress through the queue
   // until completed.
   if ($queue->numberOfItems() > 0) {
-    $context['message'] = t('Processed @i of @t', ['@i' => $context['sandbox']['progress'], '@t' => $context['sandbox']['total']]);
-    // This will cause the progress bar to hang at 90% if additional queue items are added during the run.
+    $context['message'] = t('Processed @i of @t', array(
+      '@i' => $context['sandbox']['progress'],
+      '@t' => $context['sandbox']['total'],
+    ));
+    // This will cause the progress bar to hang at 90% if additional
+    // queue items are added during the run.
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'] >= 1 ? 0.9 : $context['sandbox']['progress'] / $context['sandbox']['total'];
   }
 }

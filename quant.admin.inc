@@ -209,7 +209,8 @@ function quant_queue_page() {
   foreach ($items as &$item) {
     if ($item['expire'] > 0) {
       $item['expire'] = t("Claimed: expires %expire", array('%expire' => date('r', $item['expire'])));
-    } else {
+    }
+    else {
       $item['expire'] = t('Unclaimed');
     }
     $item['created'] = date('r', $item['created']);
