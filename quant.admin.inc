@@ -176,7 +176,7 @@ function quant_seed_settings() {
     '#default_value' => variable_geT('quant_robots', FALSE),
   ];
 
-  $form['quant_seed'] = array(
+  $form['trigger_quant_seed'] = array(
     '#type' => 'checkbox',
     '#title' => t('Trigger the batch'),
     '#description' => t('<strong>Note:</strong> This will attempt to trigger the seed from the UI, depending on the size of your site and PHP configuration this may not work.'),
@@ -188,6 +188,7 @@ function quant_seed_settings() {
   $form['actions']['#weight'] = 999;
 
   $form['#submit'][] = '_quant_seed_prepare';
+  $form['#submit'][] = '_quant_queue_batch';
 
   return $form;
 }
