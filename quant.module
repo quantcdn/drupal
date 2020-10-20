@@ -607,7 +607,6 @@ function _quant_prepare_entity($type, $entity_id) {
       break;
 
     default:
-      $entity = reset($entity);
       $uri = entity_uri($type, $entity);
       $path = $uri['path'];
       $alias = drupal_get_path_alias($path);
