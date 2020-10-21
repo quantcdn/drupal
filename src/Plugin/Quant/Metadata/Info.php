@@ -115,7 +115,36 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
       $meta['info']['log'] = $entity->getRevisionLogMessage();
     }
 
+    $meta['search_record']['categories'] = $this->getNodeTerms($entity);
+    $meta['search_record']['categories']['content_type'] = $entity->type->entity->label();
+
     return $meta;
+  }
+
+  /**
+   * Retrieves any terms attached to a given node.
+   * @param EntityInterface $entity.
+   * @return Array
+   */
+  public function getNodeTerms(EntityInterface $entity) {
+    $query = \Drupal::database()
+      ->select('taxonomy_index', 'ti')
+      ->fields('ti', ['tid'])
+      ->condition('nid', $entity->id());
+
+    $results = $query->execute()->fetchCol();
+
+    $tids = \Drupal::entityTypeManager()
+      ->getStorage('taxonomy_term')
+      ->loadMultiple($results);
+
+    $terms = [];
+
+    foreach ($tids as $term) {
+      $terms[$term->bundle()][] = $term->label();
+    }
+
+    return $terms;
   }
 
 }
