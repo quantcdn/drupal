@@ -253,3 +253,38 @@ function _quant_entity_delete_op(EntityInterface $entity) {
 
   Seed::unpublishRoute($entity);
 }
+
+/**
+ * Process the queue.
+ *
+ * @param array $context
+ *   The batch context.
+ */
+function quant_process_queue(array &$context) {
+  $factory = \Drupal::service('queue');
+  $manager = \Drupal::service('plugin.manager.queue_worker');
+
+  $queue = $factory->get('quant_seed_worker');
+  $worker = $manager->createInstance('quant_seed_worker');
+  $item = $queue->claimItem();
+
+  if (empty($context['sandbox']['progress'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['total'] = $queue->numberOfItems();
+  }
+
+  if (!$item) {
+    $context['finished'] = 1;
+    return FALSE;
+  }
+
+  $worker->processItem($item->data);
+  $queue->deleteItem($item);
+
+  $context['sandbox']['progress']++;
+  $context['message'] = t('Processed @i of @t', array(
+    '@i' => $context['sandbox']['progress'],
+    '@t' => $context['sandbox']['total'],
+  ));
+  $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'] >= 1 ? 0.9 : $context['sandbox']['progress'] / $context['sandbox']['total'];
+}

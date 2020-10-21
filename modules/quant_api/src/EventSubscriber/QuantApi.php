@@ -11,6 +11,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
 
 /**
  * Integrate with the QuantAPI to store static assets.
@@ -192,33 +193,23 @@ class QuantApi implements EventSubscriberInterface {
     @$document->loadHTML($content);
     $xpath = new \DOMXPath($document);
 
-    /** @var \DOMElement $node */
-    $pager_operations = [];
-    // This supports the use case for core views (mini and standard pager).
-    // @TODO: selector should be configurable.
-    foreach ($xpath->query('//a[contains(@href,"page=") and (./span[contains(text(), "Next")])]') as $node) {
-      $original_href = $node->getAttribute('href');
-      if ($original_href[0] === '?') {
-        $new_href = strtok($path, '?') . $original_href;
+    $queue_factory = \Drupal::service('queue');
+    $queue = $queue_factory->get('quant_seed_worker');
+
+    $pager_xpath = [
+      '//a[contains(@href,"page=") and contains(text(), "next")]',
+      '//a[starts-with(@href, "/") and contains(text(), "first")]',
+    ];
+
+    foreach ($pager_xpath as $xpath_query) {
+      /** @var \DOMElement $node */
+      foreach ($xpath->query($xpath_query) as $node) {
+        $original_href = $new_href = $node->getAttribute('href');
+        if ($original_href[0] === '?') {
+          $new_href = strtok($path, '?') . $original_href;
+        }
+        $queue->createItem(new RouteItem($new_href));
       }
-      else {
-        $new_href = $original_href;
-      }
-
-      $pager_operations[] = ['\Drupal\quant\Seed::exportRoute', [$new_href]];
-    }
-
-    if (!empty($pager_operations)) {
-      $batch = [
-        'title' => t('Exporting pagination page...'),
-        'init_message'     => t('Commencing'),
-        'progress_message' => t('Processed @current out of @total.'),
-        'error_message'    => t('An error occurred during processing'),
-        'finished' => '\Drupal\quant\Seed::finishedSeedCallback',
-        'operations' => $pager_operations,
-      ];
-
-      batch_set($batch);
     }
 
     // @todo: Report on forms that need proxying (attachments.forms).

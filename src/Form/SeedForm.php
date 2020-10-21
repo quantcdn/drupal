@@ -5,11 +5,16 @@ namespace Drupal\quant\Form;
 use Drupal\quant\Seed;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\Node;
 use Drupal\quant\Event\CollectEntitiesEvent;
 use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
+use Drupal\quant\Plugin\QueueItem\FileItem;
+use Drupal\quant\Plugin\QueueItem\NodeItem;
+use Drupal\quant\Plugin\QueueItem\RedirectItem;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\QuantStaticTrait;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -23,6 +28,13 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 class SeedForm extends FormBase {
 
   use QuantStaticTrait;
+
+  /**
+   * Config settings.
+   *
+   * @var string
+   */
+  const SETTINGS = 'quant.settings';
 
   /**
    * The client.
@@ -70,6 +82,7 @@ class SeedForm extends FormBase {
 
     $warnings = $this->getWarnings();
     $config = $this->config('quant_api.settings');
+    $seed_config = $this->config(static::SETTINGS);
     $moduleHandler = \Drupal::moduleHandler();
 
     if (!empty($warnings)) {
@@ -94,6 +107,7 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Nodes'),
       '#description' => $this->t('Exports the latest revision of each node.'),
+      '#default_value' => $seed_config->get('entity_node'),
     ];
 
     // Seed by language.
@@ -119,6 +133,7 @@ class SeedForm extends FormBase {
             ':input[name="entity_node"]' => ['checked' => TRUE],
           ],
         ],
+        '#default_value' => $seed_config->get('entity_node_languages'),
       ];
     }
 
@@ -142,6 +157,7 @@ class SeedForm extends FormBase {
           ':input[name="entity_node"]' => ['checked' => TRUE],
         ],
       ],
+      '#default_value' => $seed_config->get('entity_node_bundles'),
     ];
 
     $form['entity_node_revisions'] = [
@@ -153,12 +169,14 @@ class SeedForm extends FormBase {
           ':input[name="entity_node"]' => ['checked' => TRUE],
         ],
       ],
+      '#default_value' => $seed_config->get('entity_node_revisions'),
     ];
 
     $form['entity_taxonomy_term'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Taxonomy terms'),
       '#description' => $this->t('Exports taxonomy term pages.'),
+      '#default_value' => $seed_config->get('entity_taxonomy_term'),
     ];
 
     // @todo: Implement these as plugins.
@@ -166,12 +184,14 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Theme assets'),
       '#description' => $this->t('Images, fonts and favicon in the public theme.'),
+      '#default_value' => $seed_config->get('theme_assets'),
     ];
 
     $form['views_pages'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Views (Pages)'),
       '#description' => $this->t('Exports all views with a Page display accessible to anonymous users.'),
+      '#default_value' => $seed_config->get('views_pages'),
     ];
 
     if ($moduleHandler->moduleExists('redirect')) {
@@ -179,6 +199,7 @@ class SeedForm extends FormBase {
         '#type' => 'checkbox',
         '#title' => $this->t('Redirects'),
         '#description' => $this->t('Exports all existing redirects.'),
+        '#default_value' => $seed_config->get('redirects'),
       ];
     }
 
@@ -205,6 +226,7 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Robots.txt'),
       '#description' => $this->t('Export robots.txt to Quant.'),
+      '#default_value' => $seed_config->get('robots'),
     ];
 
     if ($moduleHandler->moduleExists('lunr')) {
@@ -212,8 +234,16 @@ class SeedForm extends FormBase {
         '#type' => 'checkbox',
         '#title' => 'Lunr search assets',
         '#description' => $this->t('Exports required lunr javascript libraries and all search indexes for decoupled search.'),
+        '#default_value' => $seed_config->get('lunr'),
       ];
     }
+
+    $form['trigger_quant_seed'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Trigger the batch'),
+      '#description' => $this->t('<strong>Note:</strong> This will attempt to trigger the seed from the UI, depending on the size of your site and PHP configuration this may not work.'),
+      '#weight' => 50,
+    ];
 
     $form['actions'] = [
       '#type' => 'actions',
@@ -221,8 +251,11 @@ class SeedForm extends FormBase {
 
     $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Start batch'),
+      '#value' => $this->t('Queue'),
     ];
+
+    // $node = Node::load(1);
+    // Seed::seedNode($node);
 
     return $form;
   }
@@ -239,6 +272,21 @@ class SeedForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->configFactory->getEditable('quant_api.settings');
 
+    $this->configFactory->getEditable(static::SETTINGS)
+      ->set('entity_node', $form_state->getValue('entity_node'))
+      ->set('entity_node_languages', $form_state->getValue('entity_node_languages'))
+      ->set('entity_node_bundles', $form_state->getValue('entity_node_bundles'))
+      ->set('entity_node_revisions', $form_state->getValue('entity_node_revisions'))
+      ->set('entity_taxonomy_term', $form_state->getValue('entity_taxonomy_term'))
+      ->set('theme_assets', $form_state->getValue('theme_assets'))
+      ->set('views_pages', $form_state->getValue('views_pages'))
+      ->set('redirects', $form_state->getValue('redirects'))
+      ->set('routes', $form_state->getValue('routes'))
+      ->set('routes_textarea', $form_state->getValue('routes_textarea'))
+      ->set('robots', $form_state->getValue('robots'))
+      ->set('lunr', $form_state->getValue('lunr'))
+      ->save();
+
     if ($config->get('api_token')) {
       if (!$project = $this->client->ping()) {
         \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
@@ -248,7 +296,6 @@ class SeedForm extends FormBase {
 
     $assets = [];
     $routes = [];
-    $redirects = [];
 
     // Lunr.
     if ($form_state->getValue('lunr')) {
@@ -269,21 +316,16 @@ class SeedForm extends FormBase {
       }
     }
 
-    $batch = [
-      'title' => t('Exporting to Quant...'),
-      'operations' => [],
-      'init_message'     => t('Commencing'),
-      'progress_message' => t('Processed @current out of @total.'),
-      'error_message'    => t('An error occurred during processing'),
-      'finished' => '\Drupal\quant\Seed::finishedSeedCallback',
-    ];
+    $queue_factory = \Drupal::service('queue');
+    $queue = $queue_factory->get('quant_seed_worker');
+    $queue->deleteQueue();
 
     if ($form_state->getValue('redirects')) {
       // Collect the redirects for the seed.
       $event = new CollectRedirectsEvent([], $form_state);
       $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
       while ($redirect = $event->getEntity()) {
-        $batch['operations'][] = ['\Drupal\quant\Seed::exportRedirect', [$redirect]];
+        $queue->createItem(new RedirectItem($redirect));
       }
     }
 
@@ -292,7 +334,7 @@ class SeedForm extends FormBase {
       $event = new CollectEntitiesEvent([], $revisions, $form_state);
       $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
       while ($entity = $event->getEntity()) {
-        $batch['operations'][] = ['\Drupal\quant\Seed::exportNode', [$entity]];
+        $queue->createItem(new NodeItem($entity));
       }
     }
 
@@ -300,16 +342,31 @@ class SeedForm extends FormBase {
     $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
 
     while ($route = $event->getRoute()) {
-      $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
+      $queue->createItem(new RouteItem($route));
     }
 
     $event = new CollectFilesEvent($assets, $form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
     while ($file = $event->getFilePath()) {
-      $batch['operations'][] = ['\Drupal\quant\Seed::exportFile', [$file]];
+      $queue->createItem(new FileItem($file));
     }
 
-    batch_set($batch);
+    if ($form_state->getValue('trigger_quant_seed')) {
+      $batch = [
+        'title' => $this->t('Exporting to Quant...'),
+        'operations' => [],
+        'init_message'     => $this->t('Commencing'),
+        'progress_message' => $this->t('Processed @current out of @total.'),
+        'error_message'    => $this->t('An error occurred during processing'),
+      ];
+      $batch['operations'][] = ['quant_process_queue', []];
+      batch_set($batch);
+    }
+    else {
+      \Drupal::messenger()->addStatus($this->t('Queued %total items to send to Quant.', [
+        '%total' => $queue->numberOfItems(),
+      ]));
+    }
   }
 
 }

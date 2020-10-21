@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\quant\Form\SeedForm;
 
 /**
  * Implements hook_form_FORM_ID_alter().
@@ -15,5 +16,17 @@ function quant_sitemap_form_quant_seed_form_alter(&$form, FormStateInterface $fo
     '#type' => 'checkbox',
     '#title' => t('Sitemaps'),
     '#description' => t('Export all sitemap variants to quant'),
+    '#default_value' => \Drupal::config(SeedForm::SETTINGS)->get('export_sitemap'),
   ];
+
+  $form['#submit'][] = 'quant_sitemap_settings_submit';
+}
+
+/**
+ * Submit handler for sitemap settings.
+ */
+function quant_sitemap_settings_submit(&$form, FormStateInterface $form_state) {
+  \Drupal::configFactory()->getEditable(SeedForm::SETTINGS)
+    ->set('export_sitemap', $form_state->getValue('export_sitemap'))
+    ->save();
 }

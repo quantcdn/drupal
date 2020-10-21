@@ -339,7 +339,7 @@ class Seed {
    * @return string|bool
    *   The markup from the $route.
    */
-  protected static function markupFromRoute($route, array $headers = []) {
+  public static function markupFromRoute($route, array $headers = []) {
 
     // Cleanse route.
     $route = str_replace('//', '/', $route);
