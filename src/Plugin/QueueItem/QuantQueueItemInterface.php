@@ -19,4 +19,11 @@ interface QuantQueueItemInterface {
    */
   public function send();
 
+  /**
+   * Describe the current item.
+   *
+   * @return mixed
+   */
+  public function info();
+
 }

@@ -36,10 +36,6 @@ class RouteItem implements QuantQueueItemInterface {
    */
   public function send() {
     $response = Seed::markupFromRoute($this->route);
-    if (empty($response)) {
-      return;
-    }
-
     list($markup, $content_type) = $response;
     $config = \Drupal::config('quant.settings');
     $proxy_override = boolval($config->get('proxy_override', FALSE));
@@ -57,6 +53,16 @@ class RouteItem implements QuantQueueItemInterface {
     ];
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $this->route, $meta));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function info() {
+    return [
+      '#type' => 'markup',
+      '#markup' => '<b>Route</b>: ' . $this->route,
+    ];
   }
 
 }

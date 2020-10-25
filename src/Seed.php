@@ -290,7 +290,7 @@ class Seed {
       return FALSE;
     }
 
-    if ($response->getStatusCode() == 200) {
+    if ($response->getStatusCode() == 200 || (strpos($route, '/_quant') > -1)) {
       $markup = $response->getBody();
       $content_type = $response->getHeader('content-type');
     }

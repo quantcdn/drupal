@@ -54,4 +54,14 @@ class RedirectItem implements QuantQueueItemInterface {
     \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($this->source, $this->destination, $this->statusCode));
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function info() {
+    return [
+      '#type' => 'markup',
+      '#markup' => '<b>Source: </b>' . $this->source . '<br/><b>Dest:</b> ' . $this->destination,
+    ];
+  }
+
 }

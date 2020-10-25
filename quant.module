@@ -9,6 +9,8 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\node\NodeInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Seed;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
@@ -287,4 +289,31 @@ function quant_process_queue(array &$context) {
     '@t' => $context['sandbox']['total'],
   ));
   $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'] >= 1 ? 0.9 : $context['sandbox']['progress'] / $context['sandbox']['total'];
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function quant_form_system_site_information_settings_alter(&$form, FormStateInterface $form_state) {
+  $form['#submit'][] = 'quant_special_pages';
+}
+
+/**
+ * Update the special pages when the form is saved.
+ */
+function quant_special_pages() {
+  $system = \Drupal::config('system.site');
+  $system_pages = [
+    $system->get('page.front'),
+    $system->get('page.404'),
+    $system->get('page.403'),
+    '/',
+    '/_quant404',
+    '/_quant403',
+  ];
+
+  foreach ($system_pages as $route) {
+    $item = new RouteItem($route);
+    $item->send();
+  }
 }

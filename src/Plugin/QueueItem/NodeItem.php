@@ -46,4 +46,14 @@ class NodeItem implements QuantQueueItemInterface {
     \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($this->node, $this->lang));
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function info() {
+    return [
+      '#type' => '#markup',
+      '#markup' => '<b>Node ID:</b> ' . $this->node->id() . '<br/><b>Revision:</b> ' . $this->node->getLoadedRevisionId(),
+    ];
+  }
+
 }

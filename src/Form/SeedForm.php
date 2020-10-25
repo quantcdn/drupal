@@ -254,9 +254,6 @@ class SeedForm extends FormBase {
       '#value' => $this->t('Queue'),
     ];
 
-    // $node = Node::load(1);
-    // Seed::seedNode($node);
-
     return $form;
   }
 

@@ -47,8 +47,20 @@ class CollectRoutesEvent extends ConfigFormEventBase {
    *   The route collection event.
    */
   public function addRoute($route) {
-    $this->routes[] = $route;
+    if ($route) {
+      $this->routes[] = $route;
+    }
     return $this;
+  }
+
+  /**
+   * List all routes for the event.
+   *
+   * @return array
+   *   The array route.
+   */
+  public function getRoutes() {
+    return $this->routes;
   }
 
   /**

@@ -12,3 +12,8 @@ quant.metadata:
   route_name: quant.metadata
   title: Metadata
   base_route: quant.config
+
+quant.queue:
+  route_name: quant.queue
+  title: Queue Info
+  base_route: quant.config

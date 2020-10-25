@@ -46,4 +46,12 @@ class FileItem implements QuantQueueItemInterface {
       \Drupal::service('event_dispatcher')->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $this->file, $this->file));
     }
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function info() {
+    return ['#type' => 'markup', '#markup' => '<b>File: </b>' . $this->file];
+  }
+
 }

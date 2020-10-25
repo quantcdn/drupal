@@ -21,3 +21,11 @@ quant.metadata:
     _title: 'Metadata configuration'
   requirements:
     _permission: 'configure quant'
+
+quant.queue:
+  path: '/admin/config/quant/queue-info'
+  defaults:
+    _controller: 'Drupal\quant\Page\QueueInfo::build'
+    _title: 'Queue Info'
+  requirements:
+    _permission: 'configure quant'

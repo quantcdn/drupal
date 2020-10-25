@@ -184,6 +184,18 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * Collect the standard routes.
    */
   public function collectRoutes(CollectRoutesEvent $event) {
+    // Collect the site configured routes.
+    $system = $this->configFactory->get('system.site');
+    $system_pages = ['page.front', 'page.404', 'page.403'];
+    foreach ($system_pages as $config) {
+      $event->addRoute($system->get($config));
+    }
+
+    // Quant pages.
+    $quant_pages = ['/', '/_quant404', '/_quant403'];
+    foreach ($quant_pages as $page) {
+      $event->addRoute($page);
+    }
 
     if ($event->getFormState()->getValue('entity_taxonomy_term')) {
       $taxonomy_storage = $this->entityTypeManager->getStorage('taxonomy_term');
