@@ -1,13 +1,15 @@
 <?php
 
-namespace Drupal\quant_purger\Plugin\Purge\Querer;
+namespace Drupal\quant_purger\Plugin\Purge\Queuer;
 
 use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class QuantPurger implements CacheTagsInvalidatorInterface, ContainerInterface {
+/**
+ * Queues URLs with Quant when Drupal invalidates cache tags.
+ */
+class QuantPurger implements CacheTagsInvalidatorInterface, ContainerAwareTrait {
   use ContainerAwareTrait;
 
   /**
@@ -46,9 +48,9 @@ class QuantPurger implements CacheTagsInvalidatorInterface, ContainerInterface {
   protected $queuer;
 
   /**
-   * Quants's queue service.
+   * Quant's queue service.
    *
-   * @var null|\Drupal\purge\Plugin\Purge\Queue\QueueServiceInterface
+   * @var null|\Drupal\Core\Queue\QueueInterface
    */
   protected $quantSeedQueue;
 

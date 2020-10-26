@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\quant_purger\Plugin\Purge\Purger;
+namespace Drupal\quant_purger\Plugin\Purge\Queuer;
 
 use Drupal\purge\Plugin\Purge\Queuer\QueuerBase;
 use Drupal\purge\Plugin\Purge\Queuer\QueuerInterface;
