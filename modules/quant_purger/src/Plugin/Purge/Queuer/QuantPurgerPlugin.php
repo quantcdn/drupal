@@ -8,9 +8,9 @@ use Drupal\purge\Plugin\Purge\Queuer\QueuerInterface;
 /**
  * Quant purger.
  *
- * @PurgePurger(
- *   id = "quant_purger",
- *   label = @Translation("Quant Purger"),
+ * @PurgeQueuer(
+ *   id = "quant",
+ *   label = @Translation("Purge Quant"),
  *   description = @Translation("Queue impacted content updates."),
  *   enable_by_default = true,
  *   types = {"tag"}
