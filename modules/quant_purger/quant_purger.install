@@ -27,7 +27,7 @@ function quant_purger_schema() {
         'description' => 'Space-separated list of cache tag IDs for this entry',
         'type' => 'text',
         'size' => 'big',
-        'not null' => false,
+        'not null' => FALSE,
       ],
     ],
     'primary key' => ['urlid'],

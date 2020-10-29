@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\quant\Plugin\QueueWorkey\QuantSeedWorker.
- */
-
 namespace Drupal\quant\Plugin\QueueWorker;
 
 use Drupal\Core\Queue\QueueWorkerBase;

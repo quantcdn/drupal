@@ -80,7 +80,6 @@ class QuantPurger implements CacheTagsInvalidatorInterface, ContainerAwareInterf
    */
   public function invalidateTags(array $tags) {
     if (!$this->initialize()) {
-      dpm('not invalidting tags');
       return;
     }
 

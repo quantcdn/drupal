@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\quant\Plugin\QueueItem\QuantQueueItemInterface.
- */
-
 namespace Drupal\quant\Plugin\QueueItem;
 
 /**
@@ -22,7 +17,8 @@ interface QuantQueueItemInterface {
   /**
    * Describe the current item.
    *
-   * @return mixed
+   * @return array|string
+   *   A string or render array to be used in output.
    */
   public function info();
 

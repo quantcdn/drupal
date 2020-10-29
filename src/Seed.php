@@ -3,8 +3,6 @@
 namespace Drupal\quant;
 
 use Drupal\quant\Event\QuantEvent;
-use Drupal\quant\Event\NodeInsertEvent;
-use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Url;

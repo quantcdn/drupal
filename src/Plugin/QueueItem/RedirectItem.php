@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\quant\Plugin\QueueItem\NodeItem.
- */
-
 namespace Drupal\quant\Plugin\QueueItem;
 
 use Drupal\quant\Event\QuantRedirectEvent;

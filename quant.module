@@ -284,10 +284,10 @@ function quant_process_queue(array &$context) {
   $queue->deleteItem($item);
 
   $context['sandbox']['progress']++;
-  $context['message'] = t('Processed @i of @t', array(
+  $context['message'] = t('Processed @i of @t', [
     '@i' => $context['sandbox']['progress'],
     '@t' => $context['sandbox']['total'],
-  ));
+  ]);
   $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'] >= 1 ? 0.9 : $context['sandbox']['progress'] / $context['sandbox']['total'];
 }
 
