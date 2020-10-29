@@ -9,6 +9,7 @@ namespace Drupal\quant\Plugin\QueueItem;
 
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Seed;
+use UnexpectedValueException;
 
 /**
  * A quant queue item for a redirect.
@@ -28,6 +29,10 @@ class RouteItem implements QuantQueueItemInterface {
    * {@inheritdoc}
    */
   public function __construct($route) {
+    if (!is_string($route)) {
+      throw new UnexpectedValueException(self::class . ' requires a string value.');
+    }
+
     $this->route = $route;
   }
 

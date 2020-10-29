@@ -5,8 +5,17 @@ namespace Drupal\quant\Page;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Database\Query\PagerSelectExtender;
 
+/**
+ * Page controller for the queue info page.
+ */
 class QueueInfo extends ControllerBase {
 
+  /**
+   * Page callback for the queue info page.
+   *
+   * @return array
+   *   A render array.
+   */
   public function build() {
     $db = \Drupal::database();
     $query = $db->select('queue', 'q')
@@ -20,7 +29,18 @@ class QueueInfo extends ControllerBase {
       $this->t('Created'),
       $this->t('Content/Data'),
     ];
-    $rows = [];
+
+    $queue_factory = \Drupal::service('queue');
+    $queue = $queue_factory->get('quant_seed_worker');
+
+    if ($queue->numberOfItems() > 0) {
+      $build['info'] = [
+        '#type' => 'markup',
+        '#markup' => '<p>' . $this->t('There are [:total] items in the queue.', [
+          ':total' => $queue->numberOfItems(),
+        ]) . '</p>',
+      ];
+    }
 
     $build['table'] = [
       '#type' => 'table',

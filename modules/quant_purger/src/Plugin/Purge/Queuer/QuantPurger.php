@@ -63,7 +63,7 @@ class QuantPurger implements CacheTagsInvalidatorInterface, ContainerAwareInterf
    */
   protected function initialize() {
     if (is_null($this->queuer)) {
-      $this->queuer = $this->container->get('purge.queuers')->get('quant_purger');
+      $this->queuer = $this->container->get('purge.queuers')->get('quant');
       if ($this->queuer !== FALSE) {
         $factory = $this->container->get('queue');
         $this->purgeInvalidationFactory = $this->container->get('purge.invalidation.factory');
@@ -80,6 +80,7 @@ class QuantPurger implements CacheTagsInvalidatorInterface, ContainerAwareInterf
    */
   public function invalidateTags(array $tags) {
     if (!$this->initialize()) {
+      dpm('not invalidting tags');
       return;
     }
 

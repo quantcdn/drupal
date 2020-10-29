@@ -65,8 +65,8 @@ class TrafficRegistry implements TrafficRegistryInterface {
 
     $or = new Condition('OR');
     foreach ($tags as $tag) {
-      $condition = '%;' . $this->connection->escapeLike($tag) . '%';
-      $or->condition('tags', $condition);
+      $condition = '%;' . $this->connection->escapeLike($tag) . ';%';
+      $or->condition('tags', $condition, 'LIKE');
     }
 
     $results = $this->connection->select('purge_queuer_quant', 'q')
@@ -74,8 +74,8 @@ class TrafficRegistry implements TrafficRegistryInterface {
       ->condition($or)
       ->execute();
 
-    foreach ($results as $url) {
-      $urls[] = $url;
+    foreach ($results as $result) {
+      $urls[] = $result->url;
     }
 
     return $urls;
