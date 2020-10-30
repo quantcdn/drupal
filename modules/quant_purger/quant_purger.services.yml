@@ -7,6 +7,7 @@ services:
     class: Drupal\quant_purger\StackMiddleware\UrlRegistrar
     arguments:
       - '@quant_purger.registry'
+      - '@config.factory'
     tags:
       - { name: http_middleware, priority: 250 }
   quant_purger.queuer:

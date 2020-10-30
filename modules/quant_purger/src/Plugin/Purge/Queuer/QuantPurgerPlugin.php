@@ -13,7 +13,8 @@ use Drupal\purge\Plugin\Purge\Queuer\QueuerInterface;
  *   label = @Translation("Purge Quant"),
  *   description = @Translation("Queue impacted content updates."),
  *   enable_by_default = true,
- *   types = {"tag"}
+ *   types = {"tag"},
+ *   configform = "\Drupal\quant_purger\Form\ConfigurationForm",
  * )
  */
 class QuantPurgerPlugin extends QueuerBase implements QueuerInterface {}

@@ -2,6 +2,7 @@
 
 namespace Drupal\quant_purger\StackMiddleware;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\quant_purger\TrafficRegistryInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,11 +14,33 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
 class UrlRegistrar implements HttpKernelInterface {
 
   /**
+   * The HTTP kernel object.
+   *
+   * @var \Symfony\Component\HttpKernel\HttpKernelInterface
+   */
+  protected $httpKernel;
+
+  /**
+   * The traffic registry service.
+   *
+   * @var \Drupal\quant_purger\TrafficRegistryInterface
+   */
+  protected $registry;
+
+  /**
+   * The configuration object for quant purger.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
+  protected $config;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(HttpKernelInterface $http_kernel, TrafficRegistryInterface $registry) {
+  public function __construct(HttpKernelInterface $http_kernel, TrafficRegistryInterface $registry, ConfigFactoryInterface $config_factory) {
     $this->httpKernel = $http_kernel;
     $this->registry = $registry;
+    $this->config = $config_factory->get('quant_purger.settings');
   }
 
   /**
@@ -33,6 +56,17 @@ class UrlRegistrar implements HttpKernelInterface {
     // begin tracking pages to cachetags.
     if (!$request->headers->has('quant-token')) {
       return FALSE;
+    }
+
+    // Allow paths to be excluded from the traffic repository.
+    $blocklist = $this->config->get('path_blocklist');
+    if (is_array($blocklist)) {
+      $path = $this->generateUrl($request);
+      foreach ($blocklist as $needle) {
+        if (strpos($path, $needle) > -1) {
+          return FALSE;
+        }
+      }
     }
 
     // Don't gather responses that aren't going to be useful.

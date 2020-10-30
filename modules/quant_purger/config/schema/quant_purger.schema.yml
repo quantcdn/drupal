@@ -1,0 +1,21 @@
+ # Schema for the configuration files of the purge_queuer_url module.
+quant_purger.settings:
+  type: config_object
+  label: 'quant purger settings.'
+  mapping:
+    tag_blacklist:
+      label: 'A list of string tags that will not trigger a queue.'
+      type: sequence
+      translatable: false
+      sequence:
+        type: string
+        label: 'String that cannot be present in the ccache tag.'
+        translatable: false
+    path_blacklist:
+      label: 'A list of string patterns that will not get queued.'
+      type: sequence
+      translatable: false
+      sequence:
+        type: string
+        label: 'String that cannot be present in a fully qualified URL.'
+        translatable: false
