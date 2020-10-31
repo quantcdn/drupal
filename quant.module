@@ -551,8 +551,20 @@ function quant_quant_meta_node_alter(&$meta, $context) {
   $meta['published'] = boolval($context['entity']->status);
   $meta['content_timestamp'] = $context['entity']->changed;
   $meta['info'] = [
-    'author' => empty($context['entity']->revision_uid) ? $context['entity']->uid : $context['entity']->revision_uid,
+    'author_name' => empty($context['entity']->revision_uid) ? $context['entity']->uid : $context['entity']->revision_uid,
   ];
+
+  // Search record (node only).
+  $tags = [];
+  $results = db_query('SELECT tid FROM {taxonomy_index} WHERE nid = :nid', array(':nid' => $context['entity']->nid));
+  foreach ($results as $result) {
+    $term = taxonomy_term_load($result->tid);
+    $tags[$term->vocabulary_machine_name][] = $term->name;
+  }
+
+  $meta['search_record']['categories'] = $tags;
+  $meta['search_record']['categories']['content_type'] = node_type_get_name($context['entity']);
+
 }
 
 /**
@@ -561,7 +573,7 @@ function quant_quant_meta_node_alter(&$meta, $context) {
 function quant_quant_meta_taxonomy_term(&$meta, $context) {
   global $user;
   $meta['info'] = [
-    'author' => $user->uid,
+    'author_name' => $user->uid,
   ];
   $meta['content_timestamp'] = time();
 }
@@ -947,7 +959,7 @@ function quant_token_validate($nid, $strict = TRUE) {
 
   $record = db_select('quant_token', 'qt')
     ->fields('qt', ['nid', 'created'])
-    ->condition('token', $headers['quant-token'])
+    ->condition('token', _quant_get_request_header('quant-token'))
     ->execute()
     ->fetchAssoc();
 

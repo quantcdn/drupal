@@ -86,20 +86,26 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
   // Ensure we have a leading forward-slash.
   $location = '/' . ltrim($location, '/');
 
+  $data = array(
+    'content' => $data,
+    'url' => $location,
+    'published' => $meta['published'],
+    'transitions' => $meta['transitions'],
+    'info' => $meta['info'],
+    'proxy_override' => $meta['proxy_override'],
+  );
+
+  if (!empty($meta['search_record'])) {
+    $data['search_record'] = $meta['search_record'];
+  }
+
   $request = array(
     'headers' => quant_api_get_request_headers() + array(
       'content-type' => 'application/json',
       'User-Agent' => 'Quant (+http://quant.io)',
     ),
     'method' => 'POST',
-    'data' => array(
-      'content' => $data,
-      'url' => $location,
-      'published' => $meta['published'],
-      'transitions' => $meta['transitions'],
-      'info' => $meta['info'],
-      'proxy_override' => $meta['proxy_override'],
-    ),
+    'data' => $data,
   );
 
   if (isset($meta['content_type'])) {
