@@ -130,7 +130,7 @@ class QuantApi implements EventSubscriberInterface {
     }
 
     if (!empty($rid = $event->getRevisionId())) {
-      $data['revision'] = $rid;
+      $data['revision'] = intval($rid);
     }
 
     try {

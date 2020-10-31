@@ -103,16 +103,18 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
     // Provide an author context.
     $ctx['user'] = $author;
 
-    $log = $entity->getRevisionLogMessage();
-
     if (!empty($this->getConfig('author_name'))) {
       $meta['info']['author_name'] = $this->token->replace($this->getConfig('author_name'), $ctx);
     }
 
-    $meta['content_timestamp'] = $date;
+    $meta['content_timestamp'] = intval($date);
 
     if ($this->getConfig('include_revision_log')) {
-      $meta['info']['log'] = $entity->getRevisionLogMessage();
+      $log = $entity->getRevisionLogMessage();
+
+      if (!empty($log)) {
+        $meta['info']['log'] = $log;
+      }
     }
 
     $meta['search_record']['categories'] = $this->getNodeTerms($entity);
