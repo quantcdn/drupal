@@ -64,7 +64,7 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
    */
   public function defaultConfiguration() {
     return [
-      'author' => '[user:name]',
+      'author_name' => '[user:name]',
       'include_revision_log' => TRUE,
     ];
   }
@@ -73,11 +73,11 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
    * {@inheritdoc}
    */
   public function buildConfigurationForm() {
-    $form['author'] = [
+    $form['author_name'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Author'),
       '#description' => $this->t('A string to use for the author name, can use node tokens.'),
-      '#default_value' => $this->getConfig('author'),
+      '#default_value' => $this->getConfig('author_name'),
     ];
 
     $form['include_revision_log'] = [
@@ -105,8 +105,8 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
 
     $log = $entity->getRevisionLogMessage();
 
-    if (!empty($this->getConfig('author'))) {
-      $meta['info']['author'] = $this->token->replace($this->getConfig('author'), $ctx);
+    if (!empty($this->getConfig('author_name'))) {
+      $meta['info']['author_name'] = $this->token->replace($this->getConfig('author_name'), $ctx);
     }
 
     $meta['content_timestamp'] = $date;
