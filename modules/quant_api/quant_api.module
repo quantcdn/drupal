@@ -76,7 +76,7 @@ function quant_api_get_request_headers() {
 function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
   global $base_url;
 
-  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT);
+  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
 
   if (empty($api)) {
     quant_log('API endpoint is not configured.');
