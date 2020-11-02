@@ -64,7 +64,7 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
    */
   public function defaultConfiguration() {
     return [
-      'author' => '[user:name]',
+      'author_name' => '[user:name]',
       'include_revision_log' => TRUE,
     ];
   }
@@ -73,11 +73,11 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
    * {@inheritdoc}
    */
   public function buildConfigurationForm() {
-    $form['author'] = [
+    $form['author_name'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Author'),
       '#description' => $this->t('A string to use for the author name, can use node tokens.'),
-      '#default_value' => $this->getConfig('author'),
+      '#default_value' => $this->getConfig('author_name'),
     ];
 
     $form['include_revision_log'] = [
@@ -103,19 +103,50 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
     // Provide an author context.
     $ctx['user'] = $author;
 
-    $log = $entity->getRevisionLogMessage();
-
-    if (!empty($this->getConfig('author'))) {
-      $meta['info']['author'] = $this->token->replace($this->getConfig('author'), $ctx);
+    if (!empty($this->getConfig('author_name'))) {
+      $meta['info']['author_name'] = $this->token->replace($this->getConfig('author_name'), $ctx);
     }
 
-    $meta['content_timestamp'] = $date;
+    $meta['content_timestamp'] = intval($date);
 
     if ($this->getConfig('include_revision_log')) {
-      $meta['info']['log'] = $entity->getRevisionLogMessage();
+      $log = $entity->getRevisionLogMessage();
+
+      if (!empty($log)) {
+        $meta['info']['log'] = $log;
+      }
     }
 
+    $meta['search_record']['categories'] = $this->getNodeTerms($entity);
+    $meta['search_record']['categories']['content_type'] = $entity->type->entity->label();
+
     return $meta;
+  }
+
+  /**
+   * Retrieves any terms attached to a given node.
+   * @param EntityInterface $entity.
+   * @return Array
+   */
+  public function getNodeTerms(EntityInterface $entity) {
+    $query = \Drupal::database()
+      ->select('taxonomy_index', 'ti')
+      ->fields('ti', ['tid'])
+      ->condition('nid', $entity->id());
+
+    $results = $query->execute()->fetchCol();
+
+    $tids = \Drupal::entityTypeManager()
+      ->getStorage('taxonomy_term')
+      ->loadMultiple($results);
+
+    $terms = [];
+
+    foreach ($tids as $term) {
+      $terms[$term->bundle()][] = $term->label();
+    }
+
+    return $terms;
   }
 
 }

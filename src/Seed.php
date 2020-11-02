@@ -71,7 +71,7 @@ class Seed {
 
     $meta = [
       'info' => [
-        'author' => '',
+        'author_name' => '',
         'log' => '',
       ],
       'published' => TRUE,
