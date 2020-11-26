@@ -42,7 +42,7 @@ class RouteItem implements QuantQueueItemInterface {
 
     $meta = [
       'info' => [
-        'author' => '',
+        'author_name' => '',
         'log' => '',
       ],
       'published' => TRUE,
