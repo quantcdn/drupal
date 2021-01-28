@@ -1,0 +1,30 @@
+<?php
+
+/**
+ * @file
+ * Provides Quant Form integration for webform.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function quant_webform_theme() {
+  return [
+    'quant_form_result' => [
+      'render element' => 'element',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_page_attachments_alter().
+ */
+function quant_webform_library_info_alter(&$libraries, $extension) {
+  // Webform files support auto-upload and validation via ajax.
+  // The js/css libraries are not relevant for static forms via Quant.
+  if ($extension === 'webform') {
+    if (isset($libraries['webform.element.managed_file'])) {
+      unset($libraries['webform.element.managed_file']);
+    }
+  }
+}
