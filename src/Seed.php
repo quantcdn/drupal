@@ -370,7 +370,8 @@ class Seed {
     $response->getHeader('content-type');
 
     if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
-      $destination = reset($response->getHeader('Location'));
+      $location_header = $response->getHeader('Location');
+      $destination = reset($location_header);
       // Ensure relative for internal redirect.
       $destination = self::rewriteRelative($destination);
       \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
