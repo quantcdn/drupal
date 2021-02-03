@@ -63,7 +63,7 @@ class QuantClient implements QuantClientInterface {
     $this->username = $config->get('api_account');
     $this->token = $config->get('api_token');
     $this->project = $config->get('api_project');
-    $this->endpoint = $config->get('api_endpoint');
+    $this->endpoint = $config->get('api_endpoint') . '/v1';
   }
 
   /**
