@@ -313,7 +313,7 @@ function quant_special_pages() {
   ];
 
   foreach ($system_pages as $route) {
-    $item = new RouteItem($route);
+    $item = new RouteItem(['route' => $route]);
     $item->send();
   }
 }

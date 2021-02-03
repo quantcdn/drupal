@@ -28,8 +28,8 @@ class FileItem implements QuantQueueItemInterface {
   /**
    * {@inheritdoc}
    */
-  public function __construct($file) {
-    $this->file = $file;
+  public function __construct(array $data = []) {
+    $this->file = $data['file'];
   }
 
   /**

@@ -70,52 +70,16 @@ class CollectionSubscriber implements EventSubscriberInterface {
     }
 
     $nids = $query->execute();
+    $revisions = $event->includeRevisions();
 
     // Add nodes to export batch.
-    foreach ($nids as $key => $value) {
-      $node = Node::load($value);
-
-      // Iterate translations if enabled.
-      if (!empty($event->getFormState()->getValue('entity_node_languages'))) {
-        $languageFilter = array_filter($event->getFormState()->getValue('entity_node_languages'));
-      }
-
-      foreach ($node->getTranslationLanguages() as $langcode => $language) {
-
-        // Skip languages excluded from the filter.
-        if (!empty($languageFilter) && !in_array($langcode, $languageFilter)) {
-          continue;
-        }
-
-        // Retrieve the translated version.
-        $node = $node->getTranslation($langcode);
-
-        if ($disable_drafts && !$node->isPublished()) {
-          continue;
-        }
-
-        if ($event->includeRevisions()) {
-
-          $vids = $this->entityTypeManager->getStorage('node')->revisionIds($node);
-
-          foreach ($vids as $vid) {
-            $nr = $this->entityTypeManager->getStorage('node')->loadRevision($vid);
-
-            if ($nr->hasTranslation($langcode) && $nr->getTranslation($langcode)->isRevisionTranslationAffected()) {
-              // Published revision.
-              $nr = $nr->getTranslation($langcode);
-              $event->addEntity($nr, $langcode);
-            }
-          }
-        }
-        else {
-          // Export current node revision.
-          if ($node->hasTranslation($langcode)) {
-            $event->addEntity($node, $langcode);
-          }
-        }
-
-      }
+    foreach ($nids as $nid) {
+      $filter = $event->getFormState()->getValue('entity_node_languages');
+      $event->queueItem([
+        'id' => $nid,
+        'lang_filter' => $filter,
+        'revisions' => $revisions,
+      ]);
     }
   }
 
@@ -123,9 +87,10 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * Identify redirects.
    */
   public function collectRedirects(CollectRedirectsEvent $event) {
-    $redirects_storage = $this->entityTypeManager->getStorage('redirect');
-    foreach ($redirects_storage->loadMultiple() as $redirect) {
-      $event->addEntity($redirect);
+    $query = $this->entityTypeManager->getStorage('redirect')->getQuery();
+    $ids = $query->execute();
+    foreach ($ids as $id) {
+      $event->queueItem(['id' => $id]);
     }
   }
 
@@ -158,7 +123,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
     foreach ($regex as $name => $r) {
       $path = str_replace(DRUPAL_ROOT, '', $name);
-      $event->addFilePath($path);
+      $event->queueItem(['file' => $path]);
     }
 
     // Include all aggregated css/js files.
@@ -176,7 +141,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
     foreach ($iterator as $fileInfo) {
       $path = str_replace(DRUPAL_ROOT, '', $fileInfo->getPathname());
-      $event->addFilePath($path);
+      $event->queueItem(['file' => $path]);
     }
   }
 
@@ -188,13 +153,13 @@ class CollectionSubscriber implements EventSubscriberInterface {
     $system = $this->configFactory->get('system.site');
     $system_pages = ['page.front', 'page.404', 'page.403'];
     foreach ($system_pages as $config) {
-      $event->addRoute($system->get($config));
+      $event->queueItem(['route' => $system->get($config)]);
     }
 
     // Quant pages.
     $quant_pages = ['/', '/_quant404', '/_quant403'];
     foreach ($quant_pages as $page) {
-      $event->addRoute($page);
+      $event->queueItem(['route' => $page]);
     }
 
     if ($event->getFormState()->getValue('entity_taxonomy_term')) {
@@ -214,7 +179,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
           }
 
           $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
-          $event->addRoute($url);
+          $event->queueItem(['route' => $url]);
         }
       }
     }
@@ -224,12 +189,12 @@ class CollectionSubscriber implements EventSubscriberInterface {
         if (strpos((trim($route)), '/') !== 0) {
           continue;
         }
-        $event->addRoute(trim($route));
+        $event->queueItem(['route' => trim($route)]);
       }
     }
 
     if ($event->getFormState()->getValue('robots')) {
-      $event->addRoute('/robots.txt');
+      $event->queueItem(['route' => '/robots.txt']);
     }
 
     $routes = [];
@@ -255,12 +220,12 @@ class CollectionSubscriber implements EventSubscriberInterface {
             }
 
             $paths[] = $path;
-            $event->addRoute("/{$path}");
+            $event->queueItem(['route' => "/{$path}"]);
 
             // Languge negotiation may also provide path prefixes.
             if ($prefixes = \Drupal::config('language.negotiation')->get('url.prefixes')) {
               foreach ($prefixes as $prefix) {
-                $event->addRoute("/{$prefix}/{$path}");
+                $event->queueItem(['route' => "/{$prefix}/{$path}"]);
               }
             }
 
@@ -269,5 +234,4 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
   }
-
 }

@@ -23,7 +23,9 @@ class RouteItem implements QuantQueueItemInterface {
   /**
    * {@inheritdoc}
    */
-  public function __construct($route) {
+  public function __construct(array $data = []) {
+    $route = isset($data['route']) ? $data['route'] : NULL;
+
     if (!is_string($route)) {
       throw new UnexpectedValueException(self::class . ' requires a string value.');
     }

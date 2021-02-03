@@ -318,33 +318,27 @@ class SeedForm extends FormBase {
 
     if ($form_state->getValue('redirects')) {
       // Collect the redirects for the seed.
-      $event = new CollectRedirectsEvent([], $form_state);
+      $event = new CollectRedirectsEvent($form_state);
       $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
-      while ($redirect = $event->getEntity()) {
-        $queue->createItem(new RedirectItem($redirect));
-      }
     }
 
     if ($form_state->getValue('entity_node')) {
-      $revisions = $form_state->getValue('entity_node_revisions');
-      $event = new CollectEntitiesEvent([], $revisions, $form_state);
+      $event = new CollectEntitiesEvent($form_state);
       $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
-      while ($entity = $event->getEntity()) {
-        $queue->createItem(new NodeItem($entity));
-      }
     }
 
-    $event = new CollectRoutesEvent($routes, $form_state);
+    $event = new CollectRoutesEvent($form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
 
-    while ($route = $event->getRoute()) {
-      $queue->createItem(new RouteItem($route));
+    foreach ($routes as $route) {
+      $event->queueItem($route);
     }
 
-    $event = new CollectFilesEvent($assets, $form_state);
+    $event = new CollectFilesEvent($form_state);
     $this->dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
-    while ($file = $event->getFilePath()) {
-      $queue->createItem(new FileItem($file));
+
+    foreach ($assets as $asset) {
+      $event->queueItem($asset);
     }
 
     if ($form_state->getValue('trigger_quant_seed')) {

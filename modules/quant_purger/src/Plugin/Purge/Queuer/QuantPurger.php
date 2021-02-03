@@ -102,7 +102,7 @@ class QuantPurger implements CacheTagsInvalidatorInterface, ContainerAwareInterf
     }
 
     foreach ($paths as $path) {
-      $this->quantSeedQueue->createItem(new RouteItem($path));
+      $this->quantSeedQueue->createItem(new RouteItem(['route' => $path]));
     }
   }
 
