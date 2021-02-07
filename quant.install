@@ -5,6 +5,8 @@
  * Install hook definitions for Quant.
  */
 
+use Drupal\Core\Database\Database;
+
 /**
  * Implements hook_schema().
  *
@@ -30,11 +32,11 @@ function quant_schema() {
         'default' => '',
         'description' => 'The token value.',
       ],
-      'nid' => [
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => 'The node that is to be accessed.',
+      'route' => [
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'description' => 'A path to register for the token',
       ],
       'created' => [
         'mysql_type' => 'timestamp',
@@ -51,4 +53,27 @@ function quant_schema() {
   ];
 
   return $schema;
+}
+
+/**
+ * Changes to the token schema definition to support path protection.
+ */
+function quant_update_9001(&$sandbox) {
+  // Remove any stale tokens.
+  \Drupal::service('quant.token_manager')->release();
+
+  $schema = Database::getConnection()->schema();
+
+  $spec = [
+    'type' => 'text',
+    'size' => 'normal',
+    'not null' => FALSE,
+    'description' => 'A path to register for the token',
+  ];
+
+  $schema->changeField('quant_token', 'nid', 'route', $spec);
+
+  $config = \Drupal::configFactory()->getEditable('quant.token_settings');
+  $config->set('timeout', '+1 minute');
+  $config->save();
 }

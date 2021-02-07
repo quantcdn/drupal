@@ -28,3 +28,4 @@ services:
     arguments:
       - '@database'
       - '@request_stack'
+      - '@config.factory'

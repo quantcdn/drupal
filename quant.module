@@ -10,6 +10,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\node\NodeInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Seed;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
@@ -171,7 +172,10 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
     return AccessResult::neutral();
   }
 
-  if (\Drupal::service('quant.token_manager')->validate($node->id(), FALSE)) {
+  $options = ['absolute' => FALSE];
+  $url = Url::fromRoute('entity.node.canonical', ['node' => $node->id()], $options)->toString();
+
+  if (\Drupal::service('quant.token_manager')->validate($url, FALSE)) {
     // Node access override only applies to the currently viewed node.
     $routeNode = \Drupal::routeMatch()->getParameter('node');
     $nid = $routeNode->id();

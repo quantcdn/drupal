@@ -29,3 +29,11 @@ quant.queue:
     _title: 'Queue Info'
   requirements:
     _permission: 'configure quant'
+
+quant.token:
+  path: '/admin/config/quant/token'
+  defaults:
+    _form: 'Drupal\quant\Form\TokenForm'
+    _title: Token configuration
+  requirements:
+    _permission: 'configure quant'

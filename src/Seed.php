@@ -115,6 +115,7 @@ class Seed {
 
     $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
     $response = self::markupFromRoute($url);
+
     if (empty($response)) {
       return;
     }
@@ -172,13 +173,7 @@ class Seed {
       $url = "/";
     }
 
-    // Generate a request token.
-    $token = \Drupal::service('quant.token_manager')->create($nid);
-
-    $response = self::markupFromRoute($url, [
-      'quant-revision' => $rid,
-      'quant-token' => $token,
-    ]);
+    $response = self::markupFromRoute($url, ['quant-revision' => $rid]);
 
     $meta = [];
     if (empty($response)) {
@@ -262,6 +257,9 @@ class Seed {
     $url = $local_host . $route;
 
     $headers['Host'] = $hostname;
+
+    // Generate a signed token and use it in the request.
+    $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
 
     // Support basic auth if enabled (note: will not work via drush/cli).
     $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
