@@ -30,7 +30,7 @@ class TokenManager {
   /**
    * Token configuration.
    *
-   * @var
+   * @var \Drupal\Core\Config\ImmutableConfig
    */
   protected $settings;
 
@@ -41,6 +41,8 @@ class TokenManager {
    *   The database connection.
    * @param \Symfony\Component\HttpFoundation\RequestStack $request
    *   The current request stack.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
    */
   public function __construct(Connection $connection, RequestStack $request, ConfigFactoryInterface $config_factory) {
     $this->connection = $connection;

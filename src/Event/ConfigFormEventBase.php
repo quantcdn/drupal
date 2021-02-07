@@ -4,7 +4,6 @@ namespace Drupal\quant\Event;
 
 use Symfony\Component\EventDispatcher\Event;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Queue\QueueInterface;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 
 /**

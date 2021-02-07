@@ -2,7 +2,6 @@
 
 namespace Drupal\quant\EventSubscriber;
 
-use Drupal\node\Entity\Node;
 use Drupal\quant\Event\CollectEntitiesEvent;
 use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
@@ -234,4 +233,5 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
   }
+
 }

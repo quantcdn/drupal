@@ -67,7 +67,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
         '#type' => 'submit',
         '#name' => "{$key}_add",
         '#value' => $this->t('Add %key', [
-          '%key' => str_replace('_', ' ', $key)
+          '%key' => str_replace('_', ' ', $key),
         ]),
         '#submit' => [[$this, 'addMoreSubmit']],
         '#ajax' => [
@@ -89,7 +89,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
       '#button_type' => 'danger',
       '#ajax' => [
         'callback' => '::submitFormClear',
-      ]
+      ],
     ];
 
     return parent::buildForm($form, $form_state);

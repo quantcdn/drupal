@@ -125,8 +125,12 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
 
   /**
    * Retrieves any terms attached to a given node.
-   * @param EntityInterface $entity.
-   * @return Array
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to gather info for.
+   *
+   * @return array
+   *   Terms tagged to the node.
    */
   public function getNodeTerms(EntityInterface $entity) {
     $query = \Drupal::database()
