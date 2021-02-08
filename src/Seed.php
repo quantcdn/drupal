@@ -363,6 +363,7 @@ class Seed {
       'headers' => $headers,
       'auth' => $auth,
       'allow_redirects' => FALSE,
+      'verify' => $config->get('ssl_cert_verify'),
     ]);
 
     $markup = $content_type = '';

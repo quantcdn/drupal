@@ -4,3 +4,4 @@ quant_enabled_taxonomy: 1
 quant_enabled_views: 1
 quant_enabled_redirects: 1
 quant_routes_export:
+ssl_cert_verify: 1
