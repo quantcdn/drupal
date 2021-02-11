@@ -185,6 +185,7 @@ class QuantApi implements EventSubscriberInterface {
             'headers' => $headers,
             'auth' => $auth,
             'allow_redirects' => FALSE,
+            'verify' => $config->get('ssl_cert_verify'),
           ]);
 
           // If image style creation succeeds trigger a new file output event.
