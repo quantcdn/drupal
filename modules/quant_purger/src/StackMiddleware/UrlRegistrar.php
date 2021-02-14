@@ -63,7 +63,7 @@ class UrlRegistrar implements HttpKernelInterface {
     if (is_array($blocklist)) {
       $path = $this->generateUrl($request);
       foreach ($blocklist as $needle) {
-        if (strpos($path, $needle) > -1) {
+        if (@strpos($path, $needle) > -1) {
           return FALSE;
         }
       }
