@@ -22,4 +22,12 @@ interface QuantQueueItemInterface {
    */
   public function info();
 
+  /**
+   * Output message about status of the item.
+   *
+   * @return string|null
+   *   The message.
+   */
+  public function log();
+
 }

@@ -160,6 +160,7 @@ class QuantApi implements EventSubscriberInterface {
 
       if (isset($item['existing_md5'])) {
         if (file_exists(DRUPAL_ROOT . $file) && md5_file(DRUPAL_ROOT . $file) == $item['existing_md5']) {
+          $this->logger->notice('MD5 matching for ' . $file);
           continue;
         }
       }

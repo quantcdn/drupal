@@ -54,4 +54,11 @@ class RedirectItem implements QuantQueueItemInterface {
     ];
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function log() {
+    return '[redirect_item]: ' . $this->id;
+  }
+
 }

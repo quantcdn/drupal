@@ -67,4 +67,11 @@ class RouteItem implements QuantQueueItemInterface {
     ];
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function log() {
+    return '[route_item] ' . $this->route;
+  }
+
 }

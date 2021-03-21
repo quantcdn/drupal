@@ -21,6 +21,7 @@ class QuantSeedWorker extends QueueWorkerBase {
    */
   public function processItem($item) {
     if (is_a($item, QuantQueueItemInterface::class)) {
+      \Drupal::logger('quant_seed')->notice($item->log());
       return $item->send();
     }
   }

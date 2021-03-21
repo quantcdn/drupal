@@ -174,11 +174,12 @@ class Seed {
     }
 
     $response = self::markupFromRoute($url, ['quant-revision' => $rid]);
-
     $meta = [];
+
     if (empty($response)) {
       return;
     }
+
     list($markup, $content_type) = $response;
 
     if (!empty($content_type)) {
@@ -293,6 +294,7 @@ class Seed {
     else {
       $messenger = \Drupal::messenger();
       $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
+      return FALSE;
     }
 
     return [$markup, $content_type];

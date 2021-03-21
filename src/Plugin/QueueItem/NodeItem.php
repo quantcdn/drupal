@@ -50,10 +50,6 @@ class NodeItem implements QuantQueueItemInterface {
     // @TOOD: This should be able to be generic entity.
     $entity = Node::load($this->id);
 
-    // @TODO: This ideally should be a single entity (lang/rid) however
-    // we want this to be as removed from the initial request flow as possible
-    // to reduce OOM errors, this may still run into issues with large numbers
-    // of translations and revisions.
     foreach ($entity->getTranslationLanguages() as $langcode => $language) {
       if (!empty($this->filter) && !in_array($langcode, $this->filter)) {
         // Skip languages excluded from the filter.
@@ -80,10 +76,28 @@ class NodeItem implements QuantQueueItemInterface {
    * {@inheritdoc}
    */
   public function info() {
-    return [
+    $info = [
       '#type' => '#markup',
-      '#markup' => '<b>Node ID:</b> ' . $this->id,
+      '#markup' => '<b>Node ID:</b> ' . $this->id
     ];
+
+    if ($this->revisions) {
+      $info['#markup'] .= ' (including revisions)';
+    }
+
+    return $info;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function log($phase = 'start') {
+    $message = '[node_item] - node_id: ' . ($this->id);
+    if (!empty($this->revisions)) {
+      $message .= " including revisions";
+    }
+
+    return $message;
   }
 
 }

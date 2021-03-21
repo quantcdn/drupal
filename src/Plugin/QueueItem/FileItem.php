@@ -19,13 +19,6 @@ class FileItem implements QuantQueueItemInterface {
   private $file;
 
   /**
-   * The language code for the entity.
-   *
-   * @var string
-   */
-  private $lang;
-
-  /**
    * {@inheritdoc}
    */
   public function __construct(array $data = []) {
@@ -46,6 +39,13 @@ class FileItem implements QuantQueueItemInterface {
    */
   public function info() {
     return ['#type' => 'markup', '#markup' => '<b>File: </b>' . $this->file];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function log() {
+    return '[file_item]: ' . $this->file;
   }
 
 }
