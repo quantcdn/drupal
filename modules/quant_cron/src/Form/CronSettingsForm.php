@@ -113,7 +113,7 @@ class CronSettingsForm extends FormBase {
       '#default_value' => $config->get('entity_taxonomy_term'),
     ];
 
-    // @todo: Implement these as plugins.
+    // @todo Implement these as plugins.
     $form['theme_assets'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Theme assets'),

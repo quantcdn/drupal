@@ -60,7 +60,7 @@ final class QuantFileEvent extends Event {
    *   The file on disk.
    */
   public function getFilePath() : string {
-    // @todo: Do this properly.
+    // @todo Do this properly.
     return $this->file;
   }
 

@@ -11,7 +11,6 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\node\Controller\NodeViewController;
 use Drupal\Core\Session\AnonymousUserSession;
-use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -95,7 +94,7 @@ class QuantNodeViewController extends NodeViewController {
       try {
         $node = $rev->getTranslation($lang);
       }
-      catch (InvalidArgumentException $error) {
+      catch (\InvalidArgumentException $error) {
         throw new NotFoundHttpException();
       }
       $this->accountSwitcher->switchTo(new AnonymousUserSession());

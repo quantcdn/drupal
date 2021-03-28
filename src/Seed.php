@@ -12,6 +12,9 @@ use Drupal\Core\Url;
 /**
  * Seed Manager.
  *
+ * The workhorse of Quant, responsible for orchestrating Drupal events and
+ * emitting Quant module events so that content can be pushed to the edge.
+ *
  * @todo define as a service and use dependency injection.
  */
 class Seed {
@@ -317,7 +320,7 @@ class Seed {
    *   The entity.
    */
   public static function unpublishRoute(EntityInterface $entity) {
-    // @TODO: This should be a quant service.
+    // @todo This should be a quant service.
     $url = $entity->toUrl()->toString();
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
@@ -353,9 +356,12 @@ class Seed {
     $headers['Host'] = $hostname;
 
     // Support basic auth if enabled (note: will not work via drush/cli).
-    $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
+    $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
+      $_SERVER['PHP_AUTH_USER'],
+      $_SERVER['PHP_AUTH_PW'],
+    ] : [];
 
-    // @todo; Note: Passing in the Host header fixes issues with absolute links.
+    // @todo ; Note: Passing in the Host header fixes issues with absolute links.
     // It may also cause some redirects to the real host.
     // Best to trap redirects and re-run against the final path.
     $response = \Drupal::httpClient()->post($url, [
