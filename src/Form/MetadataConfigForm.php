@@ -71,7 +71,7 @@ class MetadataConfigForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // @TODO: Submits on the plugins?...
+    // @todo Submits on the plugins?...
     $config = $this->configFactory->getEditable(static::SETTINGS);
     $values = $form_state->getValues();
     $meta = \Drupal::service('plugin.manager.quant.metadata');

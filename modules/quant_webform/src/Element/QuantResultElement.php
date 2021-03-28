@@ -2,9 +2,7 @@
 
 namespace Drupal\quant_webform\Element;
 
-use Drupal\Core\Render\Element;
 use Drupal\Core\Render\Element\FormElement;
-use Drupal\Core\Form\FormStateInterface;
 
 /**
  * Provides a 'quant_result_element' element.

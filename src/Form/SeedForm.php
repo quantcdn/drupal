@@ -161,7 +161,7 @@ class SeedForm extends FormBase {
       '#description' => $this->t('Exports taxonomy term pages.'),
     ];
 
-    // @todo: Implement these as plugins.
+    // @todo Implement these as plugins.
     $form['theme_assets'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Theme assets'),
@@ -252,7 +252,7 @@ class SeedForm extends FormBase {
 
     // Lunr.
     if ($form_state->getValue('lunr')) {
-      // @TODO Sub-module for lunr support using the events.
+      // @todo Sub-module for lunr support using the events.
       $assets = array_merge($assets, Seed::findLunrAssets());
       $routes = array_merge($routes, Seed::findLunrRoutes());
     }
@@ -283,7 +283,10 @@ class SeedForm extends FormBase {
       $event = new CollectRedirectsEvent([], $form_state);
       $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
       while ($redirect = $event->getEntity()) {
-        $batch['operations'][] = ['\Drupal\quant\Seed::exportRedirect', [$redirect]];
+        $batch['operations'][] = [
+          '\Drupal\quant\Seed::exportRedirect',
+          [$redirect],
+        ];
       }
     }
 

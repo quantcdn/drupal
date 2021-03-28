@@ -57,7 +57,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
   /**
    * Collect standard entities.
    *
-   * @TODO: This should support other entity types.
+   * @todo This should support other entity types.
    */
   public function collectEntities(CollectEntitiesEvent $event) {
     $query = $this->entityTypeManager->getStorage('node')->getQuery();
@@ -137,8 +137,8 @@ class CollectionSubscriber implements EventSubscriberInterface {
       return;
     }
 
-    // @todo: Find path programmatically.
-    // @todo: Support multiple themes (e.g site may have multiple themes changing by route).
+    // @todo Find path programmatically.
+    // @todo Support multiple themes (e.g site may have multiple themes changing by route).
     $config = $this->configFactory->get('system.theme');
     $themeName = $config->get('default');
     $path = \Drupal::service('theme_handler')->getTheme($themeName)->getPath();

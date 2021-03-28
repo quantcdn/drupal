@@ -24,7 +24,8 @@ interface QuantClientInterface {
    * @return array
    *   Return array of response data.
    *
-   * @TODO: Error handlers :D
+   * @todo Error handlers :D
+   *
    * @throws \Drupal\quant_api\Exception\InvalidPayload
    * @throws \Drupal\quant_api\Exception\InvalidResposne
    */
@@ -43,7 +44,8 @@ interface QuantClientInterface {
    * @return array
    *   Return array of response data.
    *
-   * @TODO: Error handlers :D
+   * @todo Error handlers :D
+   *
    * @throws \Drupal\quant_api\Exception\InvalidPayload
    * @throws \Drupal\quant_api\Exception\InvalidResposne
    */

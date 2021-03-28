@@ -63,7 +63,10 @@ function quant_cron_cron() {
     $event = new CollectRedirectsEvent([], $form_state);
     $event_dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
     while ($redirect = $event->getEntity()) {
-      $batch['operations'][] = ['\Drupal\quant\Seed::exportRedirect', [$redirect]];
+      $batch['operations'][] = [
+        '\Drupal\quant\Seed::exportRedirect',
+        [$redirect],
+      ];
     }
   }
 

@@ -6,7 +6,6 @@ use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\quant_api\Client\QuantClientInterface;
-use Exception;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -89,7 +88,7 @@ class QuantApi implements EventSubscriberInterface {
     try {
       $res = $this->client->sendRedirect($data);
     }
-    catch (Exception $error) {
+    catch (\Exception $error) {
       $this->logger->error($error->getMessage());
     }
 
@@ -136,7 +135,7 @@ class QuantApi implements EventSubscriberInterface {
     try {
       $res = $this->client->send($data);
     }
-    catch (Exception $error) {
+    catch (\Exception $error) {
       $this->logger->error($error->getMessage());
       return FALSE;
     }
@@ -144,9 +143,9 @@ class QuantApi implements EventSubscriberInterface {
     $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents'], $res['attachments']['media']['video']);
 
     foreach ($media as $item) {
-      // @todo: Determine local vs. remote.
-      // @todo: Configurable to disallow remote files.
-      // @todo: Strip base domain.
+      // @todo Determine local vs. remote.
+      // @todo Configurable to disallow remote files.
+      // @todo Strip base domain.
       $url = urldecode($item['path']);
 
       // Ignore anything that isn't relative for now.
@@ -179,7 +178,10 @@ class QuantApi implements EventSubscriberInterface {
           $headers['Host'] = $hostname;
 
           // Support basic auth if enabled (note: will not work via drush/cli).
-          $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
+          $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
+            $_SERVER['PHP_AUTH_USER'],
+            $_SERVER['PHP_AUTH_PW'],
+          ] : [];
           $response = \Drupal::httpClient()->get($image_style_url, [
             'http_errors' => FALSE,
             'headers' => $headers,
@@ -204,7 +206,7 @@ class QuantApi implements EventSubscriberInterface {
     /** @var \DOMElement $node */
     $pager_operations = [];
     // This supports the use case for core views (mini and standard pager).
-    // @TODO: selector should be configurable.
+    // @todo selector should be configurable.
     foreach ($xpath->query('//a[contains(@href,"page=") and (./span[contains(text(), "Next")])]') as $node) {
       $original_href = $node->getAttribute('href');
       if ($original_href[0] === '?') {
@@ -230,7 +232,7 @@ class QuantApi implements EventSubscriberInterface {
       batch_set($batch);
     }
 
-    // @todo: Report on forms that need proxying (attachments.forms).
+    // @todo Report on forms that need proxying (attachments.forms).
   }
 
   /**
@@ -251,7 +253,7 @@ class QuantApi implements EventSubscriberInterface {
       $this->logger->error($error->getMessage());
       return;
     }
-    catch (Exception $error) {
+    catch (\Exception $error) {
       $this->logger->error($error->getMessage());
       return;
     }
@@ -268,7 +270,7 @@ class QuantApi implements EventSubscriberInterface {
     try {
       $res = $this->client->unpublish($url);
     }
-    catch (Exception $error) {
+    catch (\Exception $error) {
       $this->logger->error($error->getMessage());
     }
 

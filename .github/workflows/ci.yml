@@ -1,0 +1,44 @@
+name: Test and code coverage
+on:
+  - push
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    container: quantcdn/drupal-ci:9.2.x-dev
+    steps:
+      - uses: actions/checkout@v2
+      - name: Lint
+        run: phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,yml .
+
+  phpunit:
+    runs-on: ubuntu-latest
+    container: quantcdn/drupal-ci:9.2.x-dev
+
+    services:
+      mariadb:
+        image: mariadb
+        ports:
+          - 3306
+        env:
+          MYSQL_DATABASE: drupal8
+          MYSQL_ROOT_PASSWORD: drupal
+        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+
+    steps:
+      - name: Install Drupal
+        run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal8 -y
+        working-directory: /var/www/drupal
+
+      - name: Set up custom module
+        run: mkdir -p /var/www/drupal/web/modules/custom/quant
+
+      - uses: actions/checkout@v2
+        with:
+          path: quant
+
+      - name: Move the module
+        run: mv ./quant /var/www/drupal/web/modules/custom
+
+      - name: Enable quant
+        run: drush en quant -y
+        working-directory: /var/www/drupal
