@@ -4,7 +4,6 @@ namespace Drupal\quant_webform\Plugin\WebformElement;
 
 use Drupal\webform\Plugin\WebformElementBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\webform\WebformSubmissionInterface;
 
 /**
  * Provides a Quant Result element.
@@ -18,18 +17,18 @@ use Drupal\webform\WebformSubmissionInterface;
  */
 class QuantResult extends WebformElementBase {
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getDefaultProperties() {
-        return ['title' => ''];
-    }
+  /**
+   * {@inheritdoc}
+   */
+  public function getDefaultProperties() {
+    return ['title' => ''];
+  }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function form(array $form, FormStateInterface $form_state) {
-        return $form;
-    }
+  /**
+   * {@inheritdoc}
+   */
+  public function form(array $form, FormStateInterface $form_state) {
+    return $form;
+  }
 
 }
