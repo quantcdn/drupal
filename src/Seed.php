@@ -10,6 +10,9 @@ use Drupal\Core\Url;
 /**
  * Seed Manager.
  *
+ * The workhorse of Quant, responsible for orchestrating Drupal events and
+ * emitting Quant module events so that content can be pushed to the edge.
+ *
  * @todo define as a service and use dependency injection.
  */
 class Seed {
@@ -224,7 +227,7 @@ class Seed {
    *   The entity.
    */
   public static function unpublishRoute(EntityInterface $entity) {
-    // @TODO: This should be a quant service.
+    // @todo This should be a quant service.
     $url = $entity->toUrl()->toString();
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
@@ -263,9 +266,12 @@ class Seed {
     $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
 
     // Support basic auth if enabled (note: will not work via drush/cli).
-    $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] : [];
+    $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
+      $_SERVER['PHP_AUTH_USER'],
+      $_SERVER['PHP_AUTH_PW'],
+    ] : [];
 
-    // @todo; Note: Passing in the Host header fixes issues with absolute links.
+    // @todo ; Note: Passing in the Host header fixes issues with absolute links.
     // It may also cause some redirects to the real host.
     // Best to trap redirects and re-run against the final path.
     $response = \Drupal::httpClient()->post($url, [
@@ -273,6 +279,7 @@ class Seed {
       'headers' => $headers,
       'auth' => $auth,
       'allow_redirects' => FALSE,
+      'verify' => $config->get('ssl_cert_verify'),
     ]);
 
     $markup = $content_type = '';
@@ -280,7 +287,8 @@ class Seed {
     $response->getHeader('content-type');
 
     if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
-      $destination = reset($response->getHeader('Location'));
+      $location_header = $response->getHeader('Location');
+      $destination = reset($location_header);
       // Ensure relative for internal redirect.
       $destination = self::rewriteRelative($destination);
       \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));

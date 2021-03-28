@@ -226,7 +226,7 @@ function quant_redirect_delete($redirect) {
  *   This should be registered as a shutdown function so that it
  *   can operate after the db_transaction has finished.
  *
- * @TODO: Entity support.
+ * @todo Entity support.
  */
 function _quant_entity_update_op(EntityInterface $entity) {
 
@@ -250,7 +250,7 @@ function _quant_entity_update_op(EntityInterface $entity) {
  *
  *   Used to trigger an unpublish from the Quant API.
  *
- * @TODO: Entity support.
+ * @todo Entity support.
  */
 function _quant_entity_delete_op(EntityInterface $entity) {
   if ($entity->getEntityTypeId() != 'node') {

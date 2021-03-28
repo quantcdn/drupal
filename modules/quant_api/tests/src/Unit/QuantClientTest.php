@@ -48,7 +48,7 @@ class QuantClientTest extends UnitTestCase {
    *   A response object.
    */
   protected function getProjectResponse() {
-    // @TODO - should these be fixtures.
+    // @todo should these be fixtures.
     $body = [
       'project' => 'test',
       'error' => FALSE,
@@ -169,7 +169,8 @@ class QuantClientTest extends UnitTestCase {
 
     $client = new QuantClient($http, $config, $logger);
 
-    $this->assertFalse($client->ping(););
+    $this->assertFalse($client->ping();
+    );
   }
 
   /**

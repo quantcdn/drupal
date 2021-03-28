@@ -99,14 +99,14 @@ class ConfigForm extends ConfigFormBase {
     $form['local_server'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Webserver URL'),
-      '#description' => $this->t('Provide the FQDN that internal requests may route to. e.g: <em>http://localhost</em>, <em>http://nginx:8080</em> or <em>http://127.0.0.1</em>. <a href="https://support.quantcdn.io/setup/drupal">More info.</a>'),
+      '#description' => $this->t('Provide the FQDN that internal requests may route to. e.g: <em>http://localhost</em>, <em>http://nginx:8080</em> or <em>http://127.0.0.1</em>. <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
       '#default_value' => $config->get('local_server', 'http://localhost'),
     ];
 
     $form['host_domain'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Hostname'),
-      '#description' => $this->t('Optionally provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain. e.g: <em>www.example.com</em> <a href="https://support.quantcdn.io/setup/drupal">More info.</a>'),
+      '#description' => $this->t('Optionally provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain. e.g: <em>www.example.com</em> <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
       '#default_value' => $config->get('host_domain'),
     ];
 

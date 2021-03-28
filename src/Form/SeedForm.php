@@ -174,7 +174,7 @@ class SeedForm extends FormBase {
       '#default_value' => $seed_config->get('entity_taxonomy_term'),
     ];
 
-    // @todo: Implement these as plugins.
+    // @todo Implement these as plugins.
     $form['theme_assets'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Theme assets'),
@@ -291,7 +291,7 @@ class SeedForm extends FormBase {
 
     // Lunr.
     if ($form_state->getValue('lunr')) {
-      // @TODO Sub-module for lunr support using the events.
+      // @todo Sub-module for lunr support using the events.
       $assets = array_merge($assets, Seed::findLunrAssets());
       $routes = array_merge($routes, Seed::findLunrRoutes());
     }
