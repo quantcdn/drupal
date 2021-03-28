@@ -78,7 +78,7 @@ class NodeItem implements QuantQueueItemInterface {
   public function info() {
     $info = [
       '#type' => '#markup',
-      '#markup' => '<b>Node ID:</b> ' . $this->id
+      '#markup' => '<b>Node ID:</b> ' . $this->id,
     ];
 
     if ($this->revisions) {
