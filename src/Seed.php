@@ -6,6 +6,7 @@ use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Url;
+use GuzzleHttp\Exception\ConnectException;
 
 /**
  * Seed Manager.
@@ -274,17 +275,22 @@ class Seed {
     // @todo ; Note: Passing in the Host header fixes issues with absolute links.
     // It may also cause some redirects to the real host.
     // Best to trap redirects and re-run against the final path.
-    $response = \Drupal::httpClient()->post($url, [
-      'http_errors' => FALSE,
-      'headers' => $headers,
-      'auth' => $auth,
-      'allow_redirects' => FALSE,
-      'verify' => $config->get('ssl_cert_verify'),
-    ]);
+    try {
+      $response = \Drupal::httpClient()->post($url, [
+        'http_errors' => FALSE,
+        'headers' => $headers,
+        'auth' => $auth,
+        'allow_redirects' => FALSE,
+        'verify' => $config->get('ssl_cert_verify'),
+      ]);
+    }
+    catch (ConnectException $exception) {
+      $messenger = \Drupal::messenger();
+      $messenger->addMessage("Unable to connect to {$url}", $messenger::TYPE_ERROR);
+      return FALSE;
+    }
 
     $markup = $content_type = '';
-
-    $response->getHeader('content-type');
 
     if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
       $location_header = $response->getHeader('Location');

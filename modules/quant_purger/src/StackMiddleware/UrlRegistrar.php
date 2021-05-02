@@ -2,6 +2,7 @@
 
 namespace Drupal\quant_purger\StackMiddleware;
 
+use Drupal\Core\Cache\CacheableResponseInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\quant_purger\TrafficRegistryInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -67,6 +68,10 @@ class UrlRegistrar implements HttpKernelInterface {
           return FALSE;
         }
       }
+    }
+
+    if (!is_a($response, CacheableResponseInterface::class)) {
+      return FALSE;
     }
 
     // Don't gather responses that aren't going to be useful.
