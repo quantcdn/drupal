@@ -219,8 +219,6 @@ class CollectionSubscriber implements EventSubscriberInterface {
       $event->queueItem(['route' => '/robots.txt']);
     }
 
-    $routes = [];
-
     if ($event->getFormState()->getValue('views_pages')) {
       $views_storage = $this->entityTypeManager->getStorage('view');
       $anon = User::getAnonymousUser();
@@ -229,6 +227,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
         $view = Views::getView($view->get('id'));
 
         $paths = [];
+
         $displays = array_keys($view->storage->get('display'));
         foreach ($displays as $display) {
           $view->setDisplay($display);
@@ -239,6 +238,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
             }
 
             if (in_array($path, $paths)) {
+              continue;
+            }
+
+            if (strpos($path, 'admin') > -1) {
+              // @todo: permission checks in the views.
               continue;
             }
 

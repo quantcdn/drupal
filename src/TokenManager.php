@@ -98,7 +98,7 @@ class TokenManager {
       ->fields([
         'route' => $route,
         'token' => $token,
-        'created' => date('Y-m-d H:i:s', $time),
+        'created' => $time,
       ]);
 
     try {
@@ -144,10 +144,11 @@ class TokenManager {
       $record = $query->execute()->fetchObject();
     }
     catch (\Exception $error) {
+      \Drupal::logger('quant_token')->error('Error: ' . $error->getMessage());
       return FALSE;
     }
 
-    $valid_until = strtotime($this->settings->get('timeout'), strtotime($record->created));
+    $valid_until = strtotime($this->settings->get('timeout'), $record->created);
 
     if (!$strict) {
       // Ensure the token is valid.

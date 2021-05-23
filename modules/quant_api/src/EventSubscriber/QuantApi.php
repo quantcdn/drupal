@@ -153,6 +153,10 @@ class QuantApi implements EventSubscriberInterface {
       // @todo Strip base domain.
       $url = urldecode($item['path']);
 
+      if ($url == '/css') {
+        continue;
+      }
+
       // Ignore anything that isn't relative for now.
       if (substr($url, 0, 1) != "/") {
         continue;
@@ -163,7 +167,6 @@ class QuantApi implements EventSubscriberInterface {
 
       if (isset($item['existing_md5'])) {
         if (file_exists(DRUPAL_ROOT . $file) && md5_file(DRUPAL_ROOT . $file) == $item['existing_md5']) {
-          $this->logger->notice('MD5 matching for ' . $file);
           continue;
         }
       }
