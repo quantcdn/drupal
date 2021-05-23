@@ -128,7 +128,7 @@ class SeedForm extends FormBase {
             ':input[name="entity_node"]' => ['checked' => TRUE],
           ],
         ],
-        '#default_value' => $seed_config->get('entity_node_languages'),
+        '#default_value' => $seed_config->get('entity_node_languages') ?: [],
       ];
     }
 
@@ -152,7 +152,7 @@ class SeedForm extends FormBase {
           ':input[name="entity_node"]' => ['checked' => TRUE],
         ],
       ],
-      '#default_value' => $seed_config->get('entity_node_bundles'),
+      '#default_value' => $seed_config->get('entity_node_bundles') ?: [],
     ];
 
     $form['entity_node_revisions'] = [

@@ -13,6 +13,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Url;
+use Drupal\node\Entity\Node;
 
 /**
  * Event subscribers for the quant collection events.
@@ -62,23 +63,40 @@ class CollectionSubscriber implements EventSubscriberInterface {
     $query = $this->entityTypeManager->getStorage('node')->getQuery();
     $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
 
-    $bundles = array_filter($event->getFormState()->getValue('entity_node_bundles'));
+    $bundles = $event->getFormState()->getValue('entity_node_bundles');
 
     if (!empty($bundles)) {
-      $query->condition('type', array_keys($bundles), 'IN');
+      $bundles = array_filter($bundles);
+      if (!empty($bundles)) {
+        $query->condition('type', array_keys($bundles), 'IN');
+      }
     }
 
-    $nids = $query->execute();
+    $entities = $query->execute();
     $revisions = $event->includeRevisions();
 
-    // Add nodes to export batch.
-    foreach ($nids as $nid) {
+    // Add the latest node to the batch.
+    foreach ($entities as $vid => $nid) {
       $filter = $event->getFormState()->getValue('entity_node_languages');
       $event->queueItem([
         'id' => $nid,
+        'vid' => $vid,
         'lang_filter' => $filter,
-        'revisions' => $revisions,
       ]);
+
+      if ($revisions) {
+        $entity = Node::load($nid);
+        $vids = \Drupal::entityTypeManager()->getStorage('node')->revisionIds($entity);
+        $vids = array_diff($vids, [$vid]);
+        foreach ($vids as $revision_id) {
+          $event->queueItem([
+            'id' => $nid,
+            'vid' => $revision_id,
+            'lang_filter' => $filter,
+          ]);
+        }
+        $entity = NULL;
+      }
     }
   }
 
@@ -151,12 +169,17 @@ class CollectionSubscriber implements EventSubscriberInterface {
     // Collect the site configured routes.
     $system = $this->configFactory->get('system.site');
     $system_pages = ['page.front', 'page.404', 'page.403'];
+
     foreach ($system_pages as $config) {
-      $event->queueItem(['route' => $system->get($config)]);
+      $system_path = $system->get($config);
+      if (!empty($system_path)) {
+        $event->queueItem(['route' => $system_path]);
+      }
     }
 
     // Quant pages.
     $quant_pages = ['/', '/_quant404', '/_quant403'];
+
     foreach ($quant_pages as $page) {
       $event->queueItem(['route' => $page]);
     }
@@ -197,6 +220,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
     }
 
     $routes = [];
+
     if ($event->getFormState()->getValue('views_pages')) {
       $views_storage = $this->entityTypeManager->getStorage('view');
       $anon = User::getAnonymousUser();
@@ -227,7 +251,6 @@ class CollectionSubscriber implements EventSubscriberInterface {
                 $event->queueItem(['route' => "/{$prefix}/{$path}"]);
               }
             }
-
           }
         }
       }

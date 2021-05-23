@@ -287,32 +287,41 @@ class Seed {
     catch (ConnectException $exception) {
       $messenger = \Drupal::messenger();
       $messenger->addMessage("Unable to connect to {$url}", $messenger::TYPE_ERROR);
+      \Drupal::logger('quant_seed')->notice($exception->getMessage());
       return FALSE;
     }
 
     $markup = $content_type = '';
 
-    if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
-      $location_header = $response->getHeader('Location');
-      $destination = reset($location_header);
-      // Ensure relative for internal redirect.
-      $destination = self::rewriteRelative($destination);
-      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
-      return FALSE;
-    }
+    switch ($response->getStatusCode()) {
+      case 301:
+      case 302:
+        $location_header = $response->getHeader('Location');
+        $destination = reset($location_header);
+        // Ensure relative for internal redirect.
+        $destination = self::rewriteRelative($destination);
+        \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
+        return FALSE;
 
-    if ($response->getStatusCode() == 200 || (strpos($route, '/_quant') > -1)) {
-      $markup = $response->getBody();
-      $content_type = $response->getHeader('content-type');
-    }
-    else {
-      $messenger = \Drupal::messenger();
-      $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
-      return FALSE;
+      case 200:
+        $markup = $response->getBody();
+        $content_type = $response->getHeader('content-type');
+        break;
+
+      case 404:
+        if (strpos($url, '_quant') > -1) {
+          $markup = $response->getBody();
+          $content_type = $response->getHeader('content-type');
+          break;
+        }
+
+      default:
+        $messenger = \Drupal::messenger();
+        $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
+        return FALSE;
     }
 
     return [$markup, $content_type];
-
   }
 
   /**

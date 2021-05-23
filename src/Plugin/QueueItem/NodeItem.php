@@ -2,8 +2,7 @@
 
 namespace Drupal\quant\Plugin\QueueItem;
 
-use Drupal\node\Entity\Node;
-use Drupal\quant\Event\NodeInsertEvent;
+use Drupal\quant\Seed;
 
 /**
  * A standard definition for a queue item.
@@ -39,36 +38,26 @@ class NodeItem implements QuantQueueItemInterface {
    */
   public function __construct(array $data = []) {
     $this->id = $data['id'];
+    $this->vid = isset($data['vid']) ? $data['vid'] : FALSE;
     $this->filter = array_filter($data['lang_filter']);
-    $this->revisions = $data['revisions'];
   }
 
   /**
    * {@inheritdoc}
    */
   public function send() {
-    // @TOOD: This should be able to be generic entity.
-    $entity = Node::load($this->id);
+    if (empty($this->vid)) {
+      $entity = \Drupal::entityTypeManager()->getStorage('node')->load($this->id);
+    }
+    else {
+      $entity = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($this->vid);
+    }
 
     foreach ($entity->getTranslationLanguages() as $langcode => $language) {
       if (!empty($this->filter) && !in_array($langcode, $this->filter)) {
-        // Skip languages excluded from the filter.
         continue;
       }
-
-      if (!$this->revisions) {
-        \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($entity, $langcode));
-        continue;
-      }
-
-      $vids = \Drupal::entityTypeManager()->getStorage('node')->revisionIds($entity);
-      foreach ($vids as $vid) {
-        $nr = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($vid);
-        if ($nr->hasTranslation($langcode) && $nr->getTranslation($langcode)->isRevisionTranslationAffected()) {
-          $nr = $nr->getTranslation($langcode);
-          \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($nr, $langcode));
-        }
-      }
+      Seed::seedNode($entity, $langcode);
     }
   }
 
@@ -76,28 +65,17 @@ class NodeItem implements QuantQueueItemInterface {
    * {@inheritdoc}
    */
   public function info() {
-    $info = [
+    return [
       '#type' => '#markup',
-      '#markup' => '<b>Node ID:</b> ' . $this->id,
+      '#markup' => "<b>Node ID:</b> {$this->id}<br/><b>Revision</b> {$this->vid}",
     ];
-
-    if ($this->revisions) {
-      $info['#markup'] .= ' (including revisions)';
-    }
-
-    return $info;
   }
 
   /**
    * {@inheritdoc}
    */
   public function log($phase = 'start') {
-    $message = '[node_item] - node_id: ' . ($this->id);
-    if (!empty($this->revisions)) {
-      $message .= " including revisions";
-    }
-
-    return $message;
+    return "[node_item] - node_id: {$this->id} vid: {$this->vid}";
   }
 
 }

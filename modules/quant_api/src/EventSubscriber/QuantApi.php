@@ -10,6 +10,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 
 /**
@@ -143,6 +144,9 @@ class QuantApi implements EventSubscriberInterface {
 
     $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents'], $res['attachments']['media']['video']);
 
+    $queue_factory = \Drupal::service('queue');
+    $queue = $queue_factory->get('quant_seed_worker');
+
     foreach ($media as $item) {
       // @todo Determine local vs. remote.
       // @todo Configurable to disallow remote files.
@@ -164,49 +168,19 @@ class QuantApi implements EventSubscriberInterface {
         }
       }
 
-      if (file_exists(DRUPAL_ROOT . $file)) {
-        $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
-      }
-      elseif (strpos($url, '/styles/')) {
-        // Image style derivative does not exist. Quant API returns an expected
-        // full_path item which allows for image generation.
-        if (isset($item['full_path'])) {
-          // Build internal request.
-          $config = \Drupal::config('quant.settings');
-          $local_host = $config->get('local_server') ?: 'http://localhost';
-          $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-          $image_style_url = $local_host . $item['full_path'];
+      $file_item = new FileItem([
+        'file' => $file,
+        'url' => $url,
+        'full_path' => $item['full_path'],
+      ]);
 
-          $headers['Host'] = $hostname;
-
-          // Support basic auth if enabled (note: will not work via drush/cli).
-          $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
-            $_SERVER['PHP_AUTH_USER'],
-            $_SERVER['PHP_AUTH_PW'],
-          ] : [];
-          $response = \Drupal::httpClient()->get($image_style_url, [
-            'http_errors' => FALSE,
-            'headers' => $headers,
-            'auth' => $auth,
-            'allow_redirects' => FALSE,
-            'verify' => $config->get('ssl_cert_verify'),
-          ]);
-
-          // If image style creation succeeds trigger a new file output event.
-          if (file_exists(DRUPAL_ROOT . $file)) {
-            $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
-          }
-        }
-      }
+      $queue->createItem($file_item);
     }
 
     // Pagination support.
     $document = new \DOMDocument();
     @$document->loadHTML($content);
     $xpath = new \DOMXPath($document);
-
-    $queue_factory = \Drupal::service('queue');
-    $queue = $queue_factory->get('quant_seed_worker');
 
     $pager_xpath = [
       '//a[contains(@href,"page=") and contains(text(), "next")]',
@@ -246,7 +220,9 @@ class QuantApi implements EventSubscriberInterface {
       return;
     }
     catch (\Exception $error) {
-      $this->logger->error($error->getMessage());
+      if (strpos('MD5 already matches', $error->getMessage() === -1)) {
+        $this->logger->error($error->getMessage());
+      }
       return;
     }
 

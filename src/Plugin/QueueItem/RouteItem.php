@@ -37,7 +37,14 @@ class RouteItem implements QuantQueueItemInterface {
    */
   public function send() {
     $response = Seed::markupFromRoute($this->route);
+
+    if (!$response) {
+      \Drupal::logger('quant_seed')->error("Unable to send {$this->route}");
+      return;
+    }
+
     list($markup, $content_type) = $response;
+
     $config = \Drupal::config('quant.settings');
     $proxy_override = boolval($config->get('proxy_override', FALSE));
 
