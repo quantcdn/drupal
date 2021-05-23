@@ -242,7 +242,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
             }
 
             if (strpos($path, 'admin') > -1) {
-              // @todo: permission checks in the views.
+              // @todo permission checks in the views.
               continue;
             }
 
