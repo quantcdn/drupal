@@ -171,13 +171,18 @@ class QuantApi implements EventSubscriberInterface {
         }
       }
 
-      $file_item = new FileItem([
-        'file' => $file,
-        'url' => $url,
-        'full_path' => $item['full_path'],
-      ]);
-
-      $queue->createItem($file_item);
+      // If the file exists we send it directly to quant otherwise we add it
+      // to the queue to generate assets on the next run.
+      if (file_exists(DRUPAL_ROOT . $file)) {
+        $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
+      } else {
+        $file_item = new FileItem([
+          'file' => $file,
+          'url' => $url,
+          'full_path' => $item['full_path'],
+        ]);
+        $queue->createItem($file_item);
+      }
     }
 
     // Pagination support.
