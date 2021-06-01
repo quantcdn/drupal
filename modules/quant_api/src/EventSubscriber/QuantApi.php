@@ -175,7 +175,8 @@ class QuantApi implements EventSubscriberInterface {
       // to the queue to generate assets on the next run.
       if (file_exists(DRUPAL_ROOT . $file)) {
         $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
-      } else {
+      }
+      else {
         $file_item = new FileItem([
           'file' => $file,
           'url' => $url,
