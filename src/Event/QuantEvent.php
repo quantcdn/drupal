@@ -82,7 +82,7 @@ final class QuantEvent extends Event {
    * @return string
    *   The contents.
    */
-  public function getContents() : string {
+  public function getContents() :? string {
     return $this->contents;
   }
 

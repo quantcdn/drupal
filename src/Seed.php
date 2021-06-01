@@ -3,11 +3,10 @@
 namespace Drupal\quant;
 
 use Drupal\quant\Event\QuantEvent;
-use Drupal\quant\Event\NodeInsertEvent;
-use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Url;
+use GuzzleHttp\Exception\ConnectException;
 
 /**
  * Seed Manager.
@@ -18,93 +17,6 @@ use Drupal\Core\Url;
  * @todo define as a service and use dependency injection.
  */
 class Seed {
-
-  /**
-   * Trigger export node via event dispatcher.
-   */
-  public static function exportNode($node, &$context) {
-
-    $langcode = $node['langcode'];
-    $node = $node['entity'];
-
-    $vid = $node->get('vid')->value;
-    $message = "Processing {$node->title->value} (Revision: {$vid})";
-
-    // Export via event dispatcher.
-    \Drupal::service('event_dispatcher')->dispatch(NodeInsertEvent::NODE_INSERT_EVENT, new NodeInsertEvent($node, $langcode));
-
-    $results = [$node->nid->value];
-    $context['message'] = $message;
-    $context['results'][] = $results;
-  }
-
-  /**
-   * Trigger export redirect via event dispatcher.
-   */
-  public static function exportRedirect($redirect, &$context) {
-    $source = $redirect->getSourcePathWithQuery();
-    $message = "Processing redirect: {$source}";
-
-    // Export via event dispatcher.
-    $source = $redirect->getSourcePathWithQuery();
-    $destination = $redirect->getRedirectUrl()->toString();
-    $statusCode = $redirect->getStatusCode();
-    \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($source, $destination, $statusCode));
-
-    $results = [$source];
-    $context['message'] = $message;
-    $context['results'][] = $results;
-  }
-
-  /**
-   * Export arbitrary route (markup).
-   */
-  public static function exportRoute($route, &$context) {
-    $message = "Processing route: {$route}";
-    $response = self::markupFromRoute($route);
-
-    if (empty($response)) {
-      return;
-    }
-
-    list($markup, $content_type) = $response;
-
-    $config = \Drupal::config('quant.settings');
-    $proxy_override = boolval($config->get('proxy_override', FALSE));
-
-    $meta = [
-      'info' => [
-        'author_name' => '',
-        'log' => '',
-      ],
-      'published' => TRUE,
-      'transitions' => [],
-      'proxy_override' => $proxy_override,
-      'content_timestamp' => time(),
-      'content_type' => $content_type,
-    ];
-
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $route, $meta));
-
-    $context['message'] = $message;
-    $context['results'][] = $route;
-  }
-
-  /**
-   * Trigger export file via event dispatcher.
-   */
-  public static function exportFile($file, &$context) {
-    $message = "Processing theme asset: " . basename($file);
-
-    // Export via event dispatcher.
-    if (file_exists(DRUPAL_ROOT . $file)) {
-      \Drupal::service('event_dispatcher')->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
-    }
-
-    $results = [$file];
-    $context['message'] = $message;
-    $context['results'][] = $results;
-  }
 
   /**
    * Batch finish callback for the seed.
@@ -207,6 +119,7 @@ class Seed {
 
     $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
     $response = self::markupFromRoute($url);
+
     if (empty($response)) {
       return;
     }
@@ -264,18 +177,13 @@ class Seed {
       $url = "/";
     }
 
-    // Generate a request token.
-    $token = \Drupal::service('quant.token_manager')->create($nid);
-
-    $response = self::markupFromRoute($url, [
-      'quant-revision' => $rid,
-      'quant-token' => $token,
-    ]);
-
+    $response = self::markupFromRoute($url, ['quant-revision' => $rid]);
     $meta = [];
+
     if (empty($response)) {
       return;
     }
+
     list($markup, $content_type) = $response;
 
     if (!empty($content_type)) {
@@ -342,7 +250,7 @@ class Seed {
    * @return string|bool
    *   The markup from the $route.
    */
-  protected static function markupFromRoute($route, array $headers = []) {
+  public static function markupFromRoute($route, array $headers = []) {
 
     // Cleanse route.
     $route = str_replace('//', '/', $route);
@@ -355,6 +263,9 @@ class Seed {
 
     $headers['Host'] = $hostname;
 
+    // Generate a signed token and use it in the request.
+    $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
+
     // Support basic auth if enabled (note: will not work via drush/cli).
     $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
       $_SERVER['PHP_AUTH_USER'],
@@ -364,38 +275,53 @@ class Seed {
     // @todo ; Note: Passing in the Host header fixes issues with absolute links.
     // It may also cause some redirects to the real host.
     // Best to trap redirects and re-run against the final path.
-    $response = \Drupal::httpClient()->post($url, [
-      'http_errors' => FALSE,
-      'headers' => $headers,
-      'auth' => $auth,
-      'allow_redirects' => FALSE,
-      'verify' => $config->get('ssl_cert_verify'),
-    ]);
-
-    $markup = $content_type = '';
-
-    $response->getHeader('content-type');
-
-    if ($response->getStatusCode() == 301 || $response->getStatusCode() == 302) {
-      $location_header = $response->getHeader('Location');
-      $destination = reset($location_header);
-      // Ensure relative for internal redirect.
-      $destination = self::rewriteRelative($destination);
-      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
+    try {
+      $response = \Drupal::httpClient()->post($url, [
+        'http_errors' => FALSE,
+        'headers' => $headers,
+        'auth' => $auth,
+        'allow_redirects' => FALSE,
+        'verify' => $config->get('ssl_cert_verify'),
+      ]);
+    }
+    catch (ConnectException $exception) {
+      $messenger = \Drupal::messenger();
+      $messenger->addMessage("Unable to connect to {$url}", $messenger::TYPE_ERROR);
+      \Drupal::logger('quant_seed')->notice($exception->getMessage());
       return FALSE;
     }
 
-    if ($response->getStatusCode() == 200) {
-      $markup = $response->getBody();
-      $content_type = $response->getHeader('content-type');
-    }
-    else {
-      $messenger = \Drupal::messenger();
-      $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
+    $markup = $content_type = '';
+
+    switch ($response->getStatusCode()) {
+      case 301:
+      case 302:
+        $location_header = $response->getHeader('Location');
+        $destination = reset($location_header);
+        // Ensure relative for internal redirect.
+        $destination = self::rewriteRelative($destination);
+        \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
+        return FALSE;
+
+      case 200:
+        $markup = $response->getBody();
+        $content_type = $response->getHeader('content-type');
+        break;
+
+      case 404:
+        if (strpos($url, '_quant') > -1) {
+          $markup = $response->getBody();
+          $content_type = $response->getHeader('content-type');
+          break;
+        }
+
+      default:
+        $messenger = \Drupal::messenger();
+        $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
+        return FALSE;
     }
 
     return [$markup, $content_type];
-
   }
 
   /**

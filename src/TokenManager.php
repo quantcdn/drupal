@@ -2,6 +2,7 @@
 
 namespace Drupal\quant;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -11,11 +12,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * @ingroup quant
  */
 class TokenManager {
-
-  /**
-   * Token timeout.
-   */
-  const ELAPSED = '+1 minute';
 
   /**
    * The database connection.
@@ -32,16 +28,26 @@ class TokenManager {
   protected $request;
 
   /**
+   * Token configuration.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
+  protected $settings;
+
+  /**
    * Construct a TokenManager instance.
    *
    * @param \Drupal\Core\Database\Connection $connection
    *   The database connection.
    * @param \Symfony\Component\HttpFoundation\RequestStack $request
    *   The current request stack.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
    */
-  public function __construct(Connection $connection, RequestStack $request) {
+  public function __construct(Connection $connection, RequestStack $request, ConfigFactoryInterface $config_factory) {
     $this->connection = $connection;
     $this->request = $request;
+    $this->settings = $config_factory->get('quant.token_settings');
   }
 
   /**
@@ -76,10 +82,13 @@ class TokenManager {
   /**
    * Create a token for the node.
    *
+   * @param string $route
+   *   A route to reference for the token.
+   *
    * @return string
    *   The token.
    */
-  public function create($entity_id) {
+  public function create($route = NULL) {
     // @todo table has DEFAULT now() but this was causing
     // issues with request time mismatches so for now we just
     // insert the request time for create.
@@ -87,9 +96,9 @@ class TokenManager {
     $token = $this->generate();
     $query = $this->connection->insert('quant_token')
       ->fields([
-        'nid' => $entity_id,
+        'route' => $route,
         'token' => $token,
-        'created' => date('Y-m-d H:i:s', $time),
+        'created' => $time,
       ]);
 
     try {
@@ -109,15 +118,15 @@ class TokenManager {
    * and will attempt to validate that the token is able to provide
    * valid access.
    *
-   * @param int $entity_id
-   *   The entity to validate.
+   * @param string $route
+   *   The route to validate.
    * @param bool $strict
    *   If we should validate the entity_id in the check.
    *
    * @return bool
    *   If the token is valid.
    */
-  public function validate($entity_id = NULL, $strict = TRUE) {
+  public function validate($route = NULL, $strict = TRUE) {
 
     $token = $this->request->getCurrentRequest()->headers->get('quant-token');
     $time = $this->request->getCurrentRequest()->server->get('REQUEST_TIME');
@@ -128,17 +137,18 @@ class TokenManager {
 
     $query = $this->connection->select('quant_token', 'qt')
       ->condition('qt.token', $token)
-      ->fields('qt', ['nid', 'created'])
+      ->fields('qt', ['route', 'created'])
       ->range(0, 1);
 
     try {
       $record = $query->execute()->fetchObject();
     }
     catch (\Exception $error) {
+      \Drupal::logger('quant_token')->error('Error: ' . $error->getMessage());
       return FALSE;
     }
 
-    $valid_until = strtotime(self::ELAPSED, strtotime($record->created));
+    $valid_until = strtotime($this->settings->get('timeout'), $record->created);
 
     if (!$strict) {
       // Ensure the token is valid.
@@ -146,7 +156,7 @@ class TokenManager {
     }
 
     // Ensure the token is valid and the entity matches.
-    return $time < $valid_until && $entity_id == $record->nid;
+    return $time < $valid_until && $route == $record->route;
   }
 
   /**

@@ -1,0 +1,18 @@
+services:
+  quant_purger.registry:
+    class: Drupal\quant_purger\TrafficRegistry
+    arguments:
+      - '@database'
+  http_middleware.quant_purger_url_registrar:
+    class: Drupal\quant_purger\StackMiddleware\UrlRegistrar
+    arguments:
+      - '@quant_purger.registry'
+      - '@config.factory'
+    tags:
+      - { name: http_middleware, priority: 250 }
+  quant_purger.queuer:
+    class: Drupal\quant_purger\Plugin\Purge\Queuer\QuantPurger
+    tags:
+      - { name: cache_tags_invalidator }
+    calls:
+      - [setContainer, ['@service_container']]

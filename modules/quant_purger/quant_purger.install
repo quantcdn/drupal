@@ -1,0 +1,36 @@
+<?php
+
+/**
+ * @file
+ * Install the quant cache tags purger.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function quant_purger_schema() {
+  $schema['purge_queuer_quant'] = [
+    'description' => 'URLs that belong to specific cache tags',
+    'fields' => [
+      'urlid' => [
+        'description' => 'URL ID',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ],
+      'url' => [
+        'description' => 'The fully qualified URL that was requested by Quant',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ],
+      'tags' => [
+        'description' => 'Space-separated list of cache tag IDs for this entry',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+      ],
+    ],
+    'primary key' => ['urlid'],
+  ];
+  return $schema;
+}

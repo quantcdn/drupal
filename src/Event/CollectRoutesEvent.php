@@ -2,7 +2,7 @@
 
 namespace Drupal\quant\Event;
 
-use Drupal\Core\Form\FormStateInterface;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
 
 /**
  * Collect entities event.
@@ -13,52 +13,8 @@ use Drupal\Core\Form\FormStateInterface;
 class CollectRoutesEvent extends ConfigFormEventBase {
 
   /**
-   * A list of routes that are to be exported.
-   *
-   * @var array
-   */
-  protected $routes;
-
-  /**
    * {@inheritdoc}
    */
-  public function __construct(array $routes = [], FormStateInterface $state = NULL) {
-    parent::__construct($state);
-    $this->routes = $routes;
-  }
-
-  /**
-   * Get configuration values.
-   *
-   * @param string $key
-   *   The setting value to get.
-   */
-  public function getSetting($key) {
-    return isset($this->settings[$key]) ? $this->settings[$key] : FALSE;
-  }
-
-  /**
-   * Add an entity to the export list.
-   *
-   * @var string $route
-   *   The entity object.
-   *
-   * @return Drupal\quant\Event\CollectRoutesEvent
-   *   The route collection event.
-   */
-  public function addRoute($route) {
-    $this->routes[] = $route;
-    return $this;
-  }
-
-  /**
-   * Get an route from the event.
-   *
-   * @return string
-   *   A route.
-   */
-  public function getRoute() {
-    return array_shift($this->routes);
-  }
+  protected $queueItemClass = RouteItem::class;
 
 }

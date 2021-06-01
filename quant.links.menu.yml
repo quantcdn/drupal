@@ -12,6 +12,14 @@ quant.config:
   parent: quant
   weight: 1
 
+quant.token:
+  title: 'Token'
+  route_name: quant.token
+  description: 'Configuration for token settings'
+  parent: quant
+  weight: 2
+
+
 quant.metadata:
   title: 'Metadata'
   route_name: quant.metadata

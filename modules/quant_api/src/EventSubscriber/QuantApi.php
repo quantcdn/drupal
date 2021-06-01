@@ -10,6 +10,8 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+use Drupal\quant\Plugin\QueueItem\FileItem;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
 
 /**
  * Integrate with the QuantAPI to store static assets.
@@ -142,11 +144,18 @@ class QuantApi implements EventSubscriberInterface {
 
     $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents'], $res['attachments']['media']['video']);
 
+    $queue_factory = \Drupal::service('queue');
+    $queue = $queue_factory->get('quant_seed_worker');
+
     foreach ($media as $item) {
       // @todo Determine local vs. remote.
       // @todo Configurable to disallow remote files.
       // @todo Strip base domain.
       $url = urldecode($item['path']);
+
+      if ($url == '/css') {
+        continue;
+      }
 
       // Ignore anything that isn't relative for now.
       if (substr($url, 0, 1) != "/") {
@@ -162,39 +171,18 @@ class QuantApi implements EventSubscriberInterface {
         }
       }
 
+      // If the file exists we send it directly to quant otherwise we add it
+      // to the queue to generate assets on the next run.
       if (file_exists(DRUPAL_ROOT . $file)) {
         $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
       }
-      elseif (strpos($url, '/styles/')) {
-        // Image style derivative does not exist. Quant API returns an expected
-        // full_path item which allows for image generation.
-        if (isset($item['full_path'])) {
-          // Build internal request.
-          $config = \Drupal::config('quant.settings');
-          $local_host = $config->get('local_server') ?: 'http://localhost';
-          $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-          $image_style_url = $local_host . $item['full_path'];
-
-          $headers['Host'] = $hostname;
-
-          // Support basic auth if enabled (note: will not work via drush/cli).
-          $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
-            $_SERVER['PHP_AUTH_USER'],
-            $_SERVER['PHP_AUTH_PW'],
-          ] : [];
-          $response = \Drupal::httpClient()->get($image_style_url, [
-            'http_errors' => FALSE,
-            'headers' => $headers,
-            'auth' => $auth,
-            'allow_redirects' => FALSE,
-            'verify' => $config->get('ssl_cert_verify'),
-          ]);
-
-          // If image style creation succeeds trigger a new file output event.
-          if (file_exists(DRUPAL_ROOT . $file)) {
-            $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
-          }
-        }
+      else {
+        $file_item = new FileItem([
+          'file' => $file,
+          'url' => $url,
+          'full_path' => $item['full_path'],
+        ]);
+        $queue->createItem($file_item);
       }
     }
 
@@ -203,33 +191,20 @@ class QuantApi implements EventSubscriberInterface {
     @$document->loadHTML($content);
     $xpath = new \DOMXPath($document);
 
-    /** @var \DOMElement $node */
-    $pager_operations = [];
-    // This supports the use case for core views (mini and standard pager).
-    // @todo selector should be configurable.
-    foreach ($xpath->query('//a[contains(@href,"page=") and (./span[contains(text(), "Next")])]') as $node) {
-      $original_href = $node->getAttribute('href');
-      if ($original_href[0] === '?') {
-        $new_href = strtok($path, '?') . $original_href;
+    $pager_xpath = [
+      '//a[contains(@href,"page=") and contains(text(), "next")]',
+      '//a[starts-with(@href, "/") and contains(text(), "first")]',
+    ];
+
+    foreach ($pager_xpath as $xpath_query) {
+      /** @var \DOMElement $node */
+      foreach ($xpath->query($xpath_query) as $node) {
+        $original_href = $new_href = $node->getAttribute('href');
+        if ($original_href[0] === '?') {
+          $new_href = strtok($path, '?') . $original_href;
+        }
+        $queue->createItem(new RouteItem($new_href));
       }
-      else {
-        $new_href = $original_href;
-      }
-
-      $pager_operations[] = ['\Drupal\quant\Seed::exportRoute', [$new_href]];
-    }
-
-    if (!empty($pager_operations)) {
-      $batch = [
-        'title' => t('Exporting pagination page...'),
-        'init_message'     => t('Commencing'),
-        'progress_message' => t('Processed @current out of @total.'),
-        'error_message'    => t('An error occurred during processing'),
-        'finished' => '\Drupal\quant\Seed::finishedSeedCallback',
-        'operations' => $pager_operations,
-      ];
-
-      batch_set($batch);
     }
 
     // @todo Report on forms that need proxying (attachments.forms).
@@ -254,7 +229,9 @@ class QuantApi implements EventSubscriberInterface {
       return;
     }
     catch (\Exception $error) {
-      $this->logger->error($error->getMessage());
+      if (strpos('MD5 already matches', $error->getMessage() === -1)) {
+        $this->logger->error($error->getMessage());
+      }
       return;
     }
 

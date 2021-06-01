@@ -1,0 +1,3 @@
+tag_blocklist:
+  - 'render'
+path_blocklist: []

@@ -49,7 +49,7 @@ class ConfigForm extends ConfigFormBase {
     ];
 
     $form['tracking_fieldset'] = [
-      '#type' => 'fieldset',
+      '#type' => 'details',
       '#title' => $this->t('Tracked entities'),
       '#states' => [
         'visible' => [
