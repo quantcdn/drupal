@@ -1,0 +1,25 @@
+{
+  "name": "drupal/quantcdn",
+  "description": "Example Project is a lightweight PHP class for detecting examples",
+  "type": "drupal-module",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "Stuart Rowlands (stooit)",
+      "homepage": "https://www.drupal.org/u/stooit",
+      "email": "stuart.rowlands@quantcdn.io",
+      "role": "Maintainer"
+    },
+    {
+      "name": "Steve Worley (steveworley)",
+      "email": "steven.worley@quantcdn.io",
+      "homepage": "https://www.drupal.org/u/steveworley",
+      "role": "Co-maintainer"
+    }
+  ],
+  "homepage": "https://github.com/quantcdn/drupal",
+  "support": {
+    "issues": "https://github.com/quantcdn/drupal/issues",
+    "source": "https://github.com/quantcdn/drupal"
+  }
+}
