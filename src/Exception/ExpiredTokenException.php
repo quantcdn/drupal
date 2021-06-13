@@ -34,7 +34,7 @@ class ExpiredTokenException extends Exception {
   /**
    * {@inheritdoc}
    */
-  public function __construct(string $token, int $time = 0, $record = [], string $message = "The token has expired", int $code = 0, Throwable $previous = null) {
+  public function __construct(string $token, int $time = 0, $record = [], string $message = "The token has expired", int $code = 0, Throwable $previous = NULL) {
     $this->token = $token;
     $this->time = $time;
     $this->record = $record;
@@ -56,6 +56,9 @@ class ExpiredTokenException extends Exception {
     return $this->time;
   }
 
+  /**
+   * Getter for the database record.
+   */
   public function getRecord() {
     return $this->record;
   }
