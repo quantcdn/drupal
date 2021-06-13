@@ -328,7 +328,7 @@ class Seed {
    * Replaces absolute URLs with relative in markup.
    *
    * @param string $markup
-   *   The markup to search and rewrie relative paths for.
+   *   The markup to search and rewire relative paths for.
    *
    * @return string
    *   Sanitised markup string.

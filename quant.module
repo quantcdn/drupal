@@ -11,6 +11,8 @@ use Drupal\node\NodeInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Drupal\quant\Exception\ExpiredTokenException;
+use Drupal\quant\Exception\InvalidTokenException;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Seed;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
@@ -175,18 +177,28 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
   $options = ['absolute' => FALSE];
   $url = Url::fromRoute('entity.node.canonical', ['node' => $node->id()], $options)->toString();
 
-  if (\Drupal::service('quant.token_manager')->validate($url, FALSE)) {
-    // Node access override only applies to the currently viewed node.
-    $routeNode = \Drupal::routeMatch()->getParameter('node');
-    $nid = $routeNode->id();
-    if ($nid == $node->id()) {
-      return AccessResult::allowed();
-    }
+  try {
+    \Drupal::service('quant.token_manager')->validate($url, FALSE);
+  }
+  catch (ExpiredTokenException $e) {
+    throw new ServiceUnavailableHttpException(3600, t('Service route is not available.'));
 
-    return AccessResult::neutral();
+  }
+  catch (InvalidTokenException $e) {
+    throw new ServiceUnavailableHttpException(3600, t('Service route is not available.'));
   }
 
-  throw new ServiceUnavailableHttpException(3600, t('Service route is not available.'));
+  // If the token validation didn't trigger an exception - then the
+  // token is valid and can be continued to be evaluated to allow
+  // access to the node.
+  $routeNode = \Drupal::routeMatch()->getParameter('node');
+  $nid = $routeNode->id();
+
+  if ($nid == $node->id()) {
+    return AccessResult::allowed();
+  }
+
+  return AccessResult::neutral();
 }
 
 /**

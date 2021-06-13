@@ -2,8 +2,11 @@
 
 namespace Drupal\quant;
 
+use DateTime;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
+use Drupal\quant\Exception\ExpiredTokenException;
+use Drupal\quant\Exception\InvalidTokenException;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -92,13 +95,14 @@ class TokenManager {
     // @todo table has DEFAULT now() but this was causing
     // issues with request time mismatches so for now we just
     // insert the request time for create.
-    $time = $this->request->getCurrentRequest()->server->get('REQUEST_TIME');
+    // $time = $this->request->getCurrentRequest()->server->get('REQUEST_TIME');
+    $time = new DateTime();
     $token = $this->generate();
     $query = $this->connection->insert('quant_token')
       ->fields([
         'route' => $route,
         'token' => $token,
-        'created' => $time,
+        'created' => $time->getTimestamp(),
       ]);
 
     try {
@@ -107,6 +111,8 @@ class TokenManager {
     catch (\Exception $error) {
       return FALSE;
     }
+
+    \Drupal::logger('quant_token')->notice('created token: ' . $token . ' route: ' . $route . ' time:' . $time->getTimestamp());
 
     return $token;
   }
@@ -125,11 +131,15 @@ class TokenManager {
    *
    * @return bool
    *   If the token is valid.
+   *
+   * @throws Drupal\quant\Exception\InvalidTokenException
+   * @throws Drupal\quant\Exception\ExpiredTokenException
    */
   public function validate($route = NULL, $strict = TRUE) {
 
     $token = $this->request->getCurrentRequest()->headers->get('quant-token');
-    $time = $this->request->getCurrentRequest()->server->get('REQUEST_TIME');
+    $time = new DateTime();
+    $time = $time->getTimestamp();
 
     if (empty($token)) {
       return FALSE;
@@ -144,19 +154,21 @@ class TokenManager {
       $record = $query->execute()->fetchObject();
     }
     catch (\Exception $error) {
-      \Drupal::logger('quant_token')->error('Error: ' . $error->getMessage());
-      return FALSE;
+      throw new InvalidTokenException($token, $time);
     }
 
     $valid_until = strtotime($this->settings->get('timeout'), $record->created);
+    $expired = $time > $valid_until;
 
-    if (!$strict) {
-      // Ensure the token is valid.
-      return $time < $valid_until;
+    if (!$strict && $expired) {
+      throw new ExpiredTokenException($token, $time, $record);
     }
 
-    // Ensure the token is valid and the entity matches.
-    return $time < $valid_until && $route == $record->route;
+    if ($strict) {
+      if ($expired || $route != $record->route) {
+        throw new ExpiredTokenException($token, $time, $record);
+      }
+    }
   }
 
   /**
