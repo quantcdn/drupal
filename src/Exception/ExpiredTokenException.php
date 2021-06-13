@@ -2,13 +2,10 @@
 
 namespace Drupal\quant\Exception;
 
-use Exception;
-use Throwable;
-
 /**
  * The token has expired.
  */
-class ExpiredTokenException extends Exception {
+class ExpiredTokenException extends \Exception {
 
   /**
    * Request token.
@@ -34,7 +31,7 @@ class ExpiredTokenException extends Exception {
   /**
    * {@inheritdoc}
    */
-  public function __construct(string $token, int $time = 0, $record = [], string $message = "The token has expired", int $code = 0, Throwable $previous = NULL) {
+  public function __construct(string $token, int $time = 0, $record = [], string $message = "The token has expired", int $code = 0, \Throwable $previous = NULL) {
     $this->token = $token;
     $this->time = $time;
     $this->record = $record;

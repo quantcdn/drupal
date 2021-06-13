@@ -2,7 +2,6 @@
 
 namespace Drupal\quant;
 
-use DateTime;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\quant\Exception\ExpiredTokenException;
@@ -96,7 +95,7 @@ class TokenManager {
     // issues with request time mismatches so for now we just
     // insert the request time for create.
     // $time = $this->request->getCurrentRequest()->server->get('REQUEST_TIME');
-    $time = new DateTime();
+    $time = new \DateTime();
     $token = $this->generate();
     $query = $this->connection->insert('quant_token')
       ->fields([
@@ -111,8 +110,6 @@ class TokenManager {
     catch (\Exception $error) {
       return FALSE;
     }
-
-    \Drupal::logger('quant_token')->notice('created token: ' . $token . ' route: ' . $route . ' time:' . $time->getTimestamp());
 
     return $token;
   }
@@ -138,7 +135,7 @@ class TokenManager {
   public function validate($route = NULL, $strict = TRUE) {
 
     $token = $this->request->getCurrentRequest()->headers->get('quant-token');
-    $time = new DateTime();
+    $time = new \DateTime();
     $time = $time->getTimestamp();
 
     if (empty($token)) {
