@@ -94,7 +94,6 @@ class TokenManager {
     // @todo table has DEFAULT now() but this was causing
     // issues with request time mismatches so for now we just
     // insert the request time for create.
-    // $time = $this->request->getCurrentRequest()->server->get('REQUEST_TIME');
     $time = new \DateTime();
     $token = $this->generate();
     $query = $this->connection->insert('quant_token')
