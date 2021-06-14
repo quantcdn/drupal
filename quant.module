@@ -178,7 +178,7 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
   $url = Url::fromRoute('entity.node.canonical', ['node' => $node->id()], $options)->toString();
 
   try {
-    \Drupal::service('quant.token_manager')->validate($url, FALSE);
+    \Drupal::service('quant.token_manager')->validate($url, TRUE);
   }
   catch (ExpiredTokenException $e) {
     throw new ServiceUnavailableHttpException(3600, t('Service route is not available.'));
