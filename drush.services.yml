@@ -1,0 +1,5 @@
+services:
+  quantcdn.commands:
+    class: \Drupal\quant\Commands\QuantDrushCommands
+    tags:
+      - { name: drush.command }
