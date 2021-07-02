@@ -169,7 +169,7 @@ class QuantApi implements EventSubscriberInterface {
       $fileOnDisk = DRUPAL_ROOT . $file;
 
       // Override if this looks like a private file.
-      if (strpos($file, '/system/files/') !== false) {
+      if (strpos($file, '/system/files/') !== FALSE) {
         $privatePath = \Drupal::service('file_system')->realpath("private://");
         $fileOnDisk = str_replace('/system/files', $privatePath, $file);
       }
