@@ -22,11 +22,10 @@ class QuantDrushCommands extends DrushCommands {
    */
   public function message($options = ['threads' => 5]) {
     $this->output()->writeln("Forking seed worker.");
-    for ($i=0; $i<$options['threads']; $i++) {
+    for ($i = 0; $i < $options['threads']; $i++) {
       $cmd = 'drush queue:run quant_seed_worker';
-      $process = proc_open($cmd, array(), $pipes, NULL, NULL, array('bypass_shell' => TRUE));
+      $process = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
     }
   }
 
 }
-
