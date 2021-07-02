@@ -165,16 +165,25 @@ class QuantApi implements EventSubscriberInterface {
       // Strip query params.
       $file = strtok($url, '?');
 
+      // Resolve to a path on disk.
+      $fileOnDisk = DRUPAL_ROOT . $file;
+
+      // Override if this looks like a private file.
+      if (strpos($file, '/system/files/') !== false) {
+        $privatePath = \Drupal::service('file_system')->realpath("private://");
+        $fileOnDisk = str_replace('/system/files', $privatePath, $file);
+      }
+
       if (isset($item['existing_md5'])) {
-        if (file_exists(DRUPAL_ROOT . $file) && md5_file(DRUPAL_ROOT . $file) == $item['existing_md5']) {
+        if (file_exists($fileOnDisk) && md5_file($fileOnDisk) == $item['existing_md5']) {
           continue;
         }
       }
 
       // If the file exists we send it directly to quant otherwise we add it
       // to the queue to generate assets on the next run.
-      if (file_exists(DRUPAL_ROOT . $file)) {
-        $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $file, $file));
+      if (file_exists($fileOnDisk)) {
+        $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent($fileOnDisk, $file));
       }
       else {
         $file_item = new FileItem([
