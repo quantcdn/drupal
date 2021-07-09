@@ -13,6 +13,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\quant\Exception\ExpiredTokenException;
 use Drupal\quant\Exception\InvalidTokenException;
+use Drupal\quant\Exception\TokenValidationDisabledException;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Seed;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
@@ -180,12 +181,14 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
   try {
     \Drupal::service('quant.token_manager')->validate($url, TRUE);
   }
+  catch (TokenValidationDisabledException $e) {
+    \Drupal::logger('quant')->info('Token validation is disabled, consider enabling');
+  }
   catch (ExpiredTokenException $e) {
-    throw new ServiceUnavailableHttpException(3600, t('Service route is not available.'));
-
+    throw new ServiceUnavailableHttpException(NULL, t('Service route is not available.'));
   }
   catch (InvalidTokenException $e) {
-    throw new ServiceUnavailableHttpException(3600, t('Service route is not available.'));
+    throw new ServiceUnavailableHttpException(NULL, t('Service route is not available.'));
   }
 
   // If the token validation didn't trigger an exception - then the

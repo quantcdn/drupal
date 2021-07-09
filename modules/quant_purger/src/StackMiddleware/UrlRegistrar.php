@@ -102,10 +102,17 @@ class UrlRegistrar implements HttpKernelInterface {
   public function handle(Request $request, $type = self::MASTER_REQUEST, $catch = TRUE) {
     $response = $this->httpKernel->handle($request, $type, $catch);
     if ($this->determine($request, $response)) {
-      $this->registry->add(
-        $this->generateUrl($request),
-        $response->getCacheableMetadata()->getCacheTags()
-      );
+
+      $url = $this->generateUrl($request);
+
+      if ($url) {
+        // var_dump($url);
+        // exit;
+        // $this->registry->add(
+        //   $url,
+        //   $response->getCacheableMetadata()->getCacheTags()
+        // );
+      }
     }
     return $response;
   }
