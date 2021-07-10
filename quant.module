@@ -192,10 +192,13 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
   // token is valid and can be continued to be evaluated to allow
   // access to the node.
   $routeNode = \Drupal::routeMatch()->getParameter('node');
-  $nid = $routeNode->id();
 
-  if ($nid == $node->id()) {
-    return AccessResult::allowed();
+  if (!empty($routeNode)) {
+    $nid = $routeNode->id();
+
+    if ($nid == $node->id()) {
+      return AccessResult::allowed();
+    }
   }
 
   return AccessResult::neutral();
