@@ -158,7 +158,7 @@ class QuantApi implements EventSubscriberInterface {
       }
 
       // Ignore anything that isn't relative for now.
-      if (substr($url, 0, 1) != "/") {
+      if (substr($url, 0, 1) != '/' || substr($url, 0, 2) == '//') {
         continue;
       }
 
@@ -201,8 +201,8 @@ class QuantApi implements EventSubscriberInterface {
     $xpath = new \DOMXPath($document);
 
     $pager_xpath = [
-      '//a[contains(@href,"page=") and contains(text(), "next")]',
-      '//a[starts-with(@href, "/") and contains(text(), "first")]',
+      '//li[contains(@class,"pager__item")]/a[contains(@href,"page=") and contains(text(), "next")]',
+      '//li[contains(@class,"pager__item")]/a[starts-with(@href, "/") and contains(text(), "first")]',
     ];
 
     foreach ($pager_xpath as $xpath_query) {
@@ -212,6 +212,7 @@ class QuantApi implements EventSubscriberInterface {
         if ($original_href[0] === '?') {
           $new_href = strtok($path, '?') . $original_href;
         }
+
         $queue->createItem(new RouteItem(['route' => $new_href]));
       }
     }
