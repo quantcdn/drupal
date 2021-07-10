@@ -139,6 +139,13 @@ class Seed {
       }
     }
 
+    // Create canonical redirects from taxonomy/term/172 to the aliased route.
+    if ("/taxonomy/term/{$tid}" != $url) {
+      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+      $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
+      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301));
+    }
+
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta));
   }
 
