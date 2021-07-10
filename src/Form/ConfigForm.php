@@ -4,6 +4,7 @@ namespace Drupal\quant\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\quant\Seed;
 
 /**
  * Contains a form for configuring Quant.
@@ -40,6 +41,14 @@ class ConfigForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config(static::SETTINGS);
+
+    $tokenConfig = $this->config('quant.token_settings');
+
+    if ($tokenConfig->get('disable')) {
+      \Drupal::messenger()->addWarning(t('Internal Quant tokens are disabled. It is recommended these are enabled where possible.'));
+    }
+
+    $this->checkValidationRoute();
 
     $form['quant_enabled'] = [
       '#type' => 'checkbox',
@@ -99,14 +108,15 @@ class ConfigForm extends ConfigFormBase {
     $form['local_server'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Webserver URL'),
-      '#description' => $this->t('Provide the FQDN that internal requests may route to. e.g: <em>http://localhost</em>, <em>http://nginx:8080</em> or <em>http://127.0.0.1</em>. <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
+      '#description' => $this->t('Provide the FQDN for the local webserver. e.g: <em>http://localhost</em>, <em>http://nginx:8080</em> or <em>http://127.0.0.1</em>. <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
       '#default_value' => $config->get('local_server', 'http://localhost'),
+      '#required' => TRUE,
     ];
 
     $form['host_domain'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Hostname'),
-      '#description' => $this->t('Optionally provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain. e.g: <em>www.example.com</em> <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
+      '#description' => $this->t('Optionally provide the expected hostname for HTTP requests to the local webserver. This ensures absolute links in content point to the correct domain. e.g: <em>www.example.com</em> <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
       '#default_value' => $config->get('host_domain'),
     ];
 
@@ -131,6 +141,37 @@ class ConfigForm extends ConfigFormBase {
       ->save();
 
     parent::submitForm($form, $form_state);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    if (filter_var($form_state->getValue('local_server'), FILTER_VALIDATE_URL) === FALSE) {
+      $form_state->setErrorByName('local_sever', $this->t('Invalid local server URL.'));
+    }
+  }
+
+  /**
+   * Checks the Quant validation route for an expected response.
+   *
+   * @return bool
+   *   If quant can connect to local webserver or not.
+   */
+  private function checkValidationRoute() {
+
+    $markup = Seed::markupFromRoute('/quant/validate');
+
+    if (!empty($markup[0])) {
+      if (strpos($markup[0], 'quant success') !== FALSE) {
+        \Drupal::messenger()->addMessage(t('Connected successfully.'));
+        return TRUE;
+      }
+    }
+
+    \Drupal::messenger()->addError(t('Unable to connect to local webserver. Check webserver and host header settings.'));
+    return FALSE;
+
   }
 
 }

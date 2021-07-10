@@ -37,3 +37,10 @@ quant.token:
     _title: Token configuration
   requirements:
     _permission: 'configure quant'
+
+quant.validate:
+  path: '/quant/validate'
+  defaults:
+    _controller: 'Drupal\quant\Controller\QuantValidateController::index'
+  requirements:
+    _access: 'TRUE'

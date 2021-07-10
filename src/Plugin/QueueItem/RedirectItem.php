@@ -26,7 +26,7 @@ class RedirectItem implements QuantQueueItemInterface {
   protected $destination;
 
   /**
-   * The redirection dtatus code.
+   * The redirection status code.
    *
    * @var int
    */
