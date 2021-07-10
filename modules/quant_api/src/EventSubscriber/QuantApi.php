@@ -212,7 +212,7 @@ class QuantApi implements EventSubscriberInterface {
         if ($original_href[0] === '?') {
           $new_href = strtok($path, '?') . $original_href;
         }
-        $queue->createItem(new RouteItem($new_href));
+        $queue->createItem(new RouteItem(['route' => $new_href]));
       }
     }
 
