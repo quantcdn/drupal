@@ -117,8 +117,11 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
       }
     }
 
-    $meta['search_record']['categories'] = $this->getNodeTerms($entity);
-    $meta['search_record']['categories']['content_type'] = $entity->type->entity->label();
+    // Add search meta for node entities.
+    if ($entity->getEntityTypeId() == 'node') {
+      $meta['search_record']['categories'] = $this->getNodeTerms($entity);
+      $meta['search_record']['categories']['content_type'] = $entity->type->entity->label();
+    }
 
     return $meta;
   }
