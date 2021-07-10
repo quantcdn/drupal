@@ -91,6 +91,6 @@ function quant_update_9001(&$sandbox) {
  */
 function quant_update_9002(&$sandbox) {
   $config = \Drupal::configFactory()->getEditable('quant.token_settings');
-  $config->set('disabled', FALSE);
+  $config->set('disable', FALSE);
   $config->save();
 }
