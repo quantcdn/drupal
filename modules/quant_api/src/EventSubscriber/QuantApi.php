@@ -201,8 +201,8 @@ class QuantApi implements EventSubscriberInterface {
     $xpath = new \DOMXPath($document);
 
     $pager_xpath = [
-      '//li[contains(@class,"pager__item")]/a[contains(@href,"page=") and contains(text(), "next")]',
-      '//li[contains(@class,"pager__item")]/a[starts-with(@href, "/") and contains(text(), "first")]',
+      '//li[contains(@class,"pager__item--next")]/a[contains(@href,"page=")]',
+      '//li[contains(@class,"pager__item--first")]/a[starts-with(@href, "/")]',
     ];
 
     foreach ($pager_xpath as $xpath_query) {
