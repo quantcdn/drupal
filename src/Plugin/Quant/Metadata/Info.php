@@ -113,7 +113,7 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
       $log = $entity->getRevisionLogMessage();
 
       if (!empty($log)) {
-        $meta['info']['log'] = $log;
+        $meta['info']['log'] = substr($log, 0, 255);
       }
     }
 
