@@ -141,6 +141,7 @@ class Seed {
 
     // Create canonical redirects from taxonomy/term/172 to the aliased route.
     if ("/taxonomy/term/{$tid}" != $url) {
+      // Use the default language alias in the event of multi-lang setup.
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
       \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301));

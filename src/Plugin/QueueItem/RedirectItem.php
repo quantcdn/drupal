@@ -3,7 +3,6 @@
 namespace Drupal\quant\Plugin\QueueItem;
 
 use Drupal\quant\Event\QuantRedirectEvent;
-use Drupal\redirect\Entity\Redirect;
 
 /**
  * A standard definition for a queue item.
@@ -13,44 +12,49 @@ use Drupal\redirect\Entity\Redirect;
 class RedirectItem implements QuantQueueItemInterface {
 
   /**
-   * The entity id.
+   * The source path.
+   *
+   * @var string
+   */
+  protected $source;
+
+  /**
+   * The destination path or URL.
+   *
+   * @var string
+   */
+  protected $destination;
+
+  /**
+   * The redirection dtatus code.
    *
    * @var int
    */
-  protected $id;
+  protected $statusCode;
 
   /**
    * {@inheritdoc}
    */
   public function __construct(array $data = []) {
-    $this->id = $data['id'];
+    $this->source = $data['source'];
+    $this->destination = $data['destination'];
+    $this->statusCode = $data['status_code'];
   }
 
   /**
    * {@inheritdoc}
    */
   public function send() {
-    $redirect = Redirect::load($this->id);
-
-    $source = $redirect->getSourcePathWithQuery();
-    $destination = $redirect->getRedirectUrl()->toString();
-    $statusCode = $redirect->getStatusCode();
-
-    \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($source, $destination, $statusCode));
+    \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($this->source, $this->destination, $this->statusCode));
   }
 
   /**
    * {@inheritdoc}
    */
   public function info() {
-    $redirect = Redirect::load($this->id);
-
-    $source = $redirect->getSourcePathWithQuery();
-    $destination = $redirect->getRedirectUrl()->toString();
-
     return [
       '#type' => 'markup',
-      '#markup' => '<b>Source: </b>' . $source . '<br/><b>Dest:</b> ' . $destination,
+      '#markup' => '<b>Source: </b>' . $this->source . '<br/><b>Dest:</b> ' . $this->destination,
     ];
   }
 
@@ -58,7 +62,7 @@ class RedirectItem implements QuantQueueItemInterface {
    * {@inheritdoc}
    */
   public function log() {
-    return '[redirect_item]: ' . $this->id;
+    return "[redirect_item]: Source: {$this->source}, Dest: {$this->destination}";
   }
 
 }
