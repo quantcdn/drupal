@@ -115,8 +115,8 @@ class ConfigForm extends ConfigFormBase {
 
     $form['host_domain'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Hostname'),
-      '#description' => $this->t('Optionally provide the expected hostname for HTTP requests to the local webserver. This ensures absolute links in content point to the correct domain. e.g: <em>www.example.com</em> <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
+      '#title' => $this->t('HTTP Host header'),
+      '#description' => $this->t('Optionally provide the expected host header for HTTP requests to the local webserver. This ensures absolute links in content point to the correct domain. e.g: <em>www.example.com</em> <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
       '#default_value' => $config->get('host_domain'),
     ];
 
