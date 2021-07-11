@@ -38,27 +38,25 @@ class QuantDrushCommands extends DrushCommands {
   /**
    * Clear the quant queue.
    *
-   * @command quant:clear
-   * @aliases quant-clear
-   * @usage quant:clear
+   * @command quant:clear-queue
+   * @aliases quant-queue-clear
+   * @usage quant:clear-queue
    */
   public function clear($options = []) {
     $queue_factory = \Drupal::service('queue');
     $queue = $queue_factory->get('quant_seed_worker');
-
-    if ($options['reset'] == 'true') {
-      $queue->deleteQueue();
-    }
+    $queue->deleteQueue();
+    $this->output()->writeln("Removed all items from Quant queue.");
   }
 
   /**
    * Drush command to prepare the seed.
    *
-   * @command quant:seed
-   * @aliases quant-seed
+   * @command quant:seed-queue
+   * @aliases quant-queue-seed
    * @options reset
    *   Reset the current queue.
-   * @usage quant:seed
+   * @usage quant:seed-queue
    */
   public function prepare($options = ['reset' => 'true']) {
     $this->output()->writeln("Preparing seed...");
