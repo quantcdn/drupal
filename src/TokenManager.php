@@ -6,6 +6,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\quant\Exception\ExpiredTokenException;
 use Drupal\quant\Exception\InvalidTokenException;
+use Drupal\quant\Exception\TokenValidationDisabledException;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -136,6 +137,10 @@ class TokenManager {
     $token = $this->request->getCurrentRequest()->headers->get('quant-token');
     $time = new \DateTime();
     $time = $time->getTimestamp();
+
+    if ($this->settings->get('disable')) {
+      throw new TokenValidationDisabledException();
+    }
 
     if (empty($token)) {
       return FALSE;

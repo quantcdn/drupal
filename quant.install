@@ -85,3 +85,12 @@ function quant_update_9001(&$sandbox) {
   $config->set('timeout', '+1 minute');
   $config->save();
 }
+
+/**
+ * Add configuration option to disable token validation.
+ */
+function quant_update_9002(&$sandbox) {
+  $config = \Drupal::configFactory()->getEditable('quant.token_settings');
+  $config->set('disable', FALSE);
+  $config->save();
+}

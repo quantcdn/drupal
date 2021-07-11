@@ -7,6 +7,7 @@ use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
+use Drupal\quant\Plugin\QueueItem\RedirectItem;
 use Drupal\user\Entity\User;
 use Drupal\views\Views;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -14,6 +15,7 @@ use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
+use Drupal\redirect\Entity\Redirect;
 
 /**
  * Event subscribers for the quant collection events.
@@ -106,8 +108,19 @@ class CollectionSubscriber implements EventSubscriberInterface {
   public function collectRedirects(CollectRedirectsEvent $event) {
     $query = $this->entityTypeManager->getStorage('redirect')->getQuery();
     $ids = $query->execute();
+
     foreach ($ids as $id) {
-      $event->queueItem(['id' => $id]);
+      $redirect = Redirect::load($id);
+
+      $source = $redirect->getSourcePathWithQuery();
+      $destination = $redirect->getRedirectUrl()->toString();
+      $status_code = $redirect->getStatusCode();
+
+      $event->queueItem([
+        'source' => $source,
+        'destination' => $destination,
+        'status_code' => $status_code,
+      ]);
     }
   }
 
@@ -202,6 +215,24 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
           $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
           $event->queueItem(['route' => $url]);
+
+          // Generate a redirection QueueItem from canonical path to URL.
+          // Use the default language alias in the event of multi-lang setup.
+          $queue_factory = \Drupal::service('queue');
+          $queue = $queue_factory->get('quant_seed_worker');
+
+          if ("/taxonomy/term/{$tid}" != $url) {
+            $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+            $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
+
+            $redirectItem = new RedirectItem([
+              'source' => "/taxonomy/term/{$tid}",
+              'destination' => $defaultUrl,
+              'status_code' => 301,
+            ]);
+
+            $queue->createItem($redirectItem);
+          }
         }
       }
     }
