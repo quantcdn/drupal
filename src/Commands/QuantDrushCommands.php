@@ -137,4 +137,5 @@ class QuantDrushCommands extends DrushCommands {
 
     $this->output()->writeln('Successfully added [' . $queue->numberOfItems() . '] to the queue');
   }
+
 }
