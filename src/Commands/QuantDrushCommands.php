@@ -79,9 +79,10 @@ class QuantDrushCommands extends DrushCommands {
     $form_state = new FormState();
     $config_keys = [
       'entity_node',
-      'entity_node_langauge',
+      'entity_node_languages',
       'entity_node_bundles',
       'entity_node_revisions',
+      'entity_taxonomy_term',
       'theme_assets',
       'views_pages',
       'redirects',
