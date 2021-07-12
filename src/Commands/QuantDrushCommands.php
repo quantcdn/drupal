@@ -74,15 +74,34 @@ class QuantDrushCommands extends DrushCommands {
 
     $assets = [];
     $routes = [];
+
+    // Prepare the form state based on the config.
     $form_state = new FormState();
+    $config_keys = [
+      'entity_node',
+      'entity_node_langauge',
+      'entity_node_bundles',
+      'entity_node_revisions',
+      'theme_assets',
+      'views_pages',
+      'redirects',
+      'routes',
+      'routes_textarea',
+      'robots',
+      'lunr',
+    ];
+
+    foreach ($config_keys as $key) {
+      $form_state->setValue($key, $config->get($key));
+    }
 
     if ($config->get('lunr')) {
       $assets = array_merge($assets, Seed::findLunrAssets());
       $routes = array_merge($routes, Seed::findLunrRoutes());
     }
 
-    if ($config->get('routes_textarea')) {
-      foreach (explode(PHP_EOL, $config->get('routes')) as $route) {
+    if ($form_state->getValue('routes_textarea')) {
+      foreach (explode(PHP_EOL, $form_state->getValue('routes')) as $route) {
         if (strpos((trim($route)), '/') !== 0) {
           continue;
         }
@@ -90,31 +109,37 @@ class QuantDrushCommands extends DrushCommands {
       }
     }
 
-    if ($config->get('redirects')) {
+    if ($form_state->getValue('redirects')) {
+      // Collect the redirects for the seed.
+      $this->output()->writeln('Adding redirects.');
       $event = new CollectRedirectsEvent($form_state);
-      $dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
+      $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
     }
 
-    if ($config->get('entity_node')) {
+    if ($form_state->getValue('entity_node')) {
+      $this->output()->writeln('Adding entities.');
       $event = new CollectEntitiesEvent($form_state);
-      $dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
+      $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
     }
 
     $event = new CollectRoutesEvent($form_state);
-    $dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
+    $this->output()->writeln('Adding routes.');
+    $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
 
     foreach ($routes as $route) {
       $event->queueItem($route);
     }
 
     $event = new CollectFilesEvent($form_state);
-    $dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
+    $this->output()->writeln('Adding files.');
+    $this->dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
 
     foreach ($assets as $asset) {
       $event->queueItem($asset);
     }
 
-    $this->output()->writeln("Done!");
+    $this->output()->writeln('Successfully added [' . $queue->numberOfItems() . '] to the queue');
+
   }
 
 }
