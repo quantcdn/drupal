@@ -112,35 +112,29 @@ class QuantDrushCommands extends DrushCommands {
 
     if ($form_state->getValue('redirects')) {
       // Collect the redirects for the seed.
-      $this->output()->writeln('Adding redirects.');
       $event = new CollectRedirectsEvent($form_state);
-      $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
+      $dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
     }
 
     if ($form_state->getValue('entity_node')) {
-      $this->output()->writeln('Adding entities.');
       $event = new CollectEntitiesEvent($form_state);
-      $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
+      $dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
     }
 
     $event = new CollectRoutesEvent($form_state);
-    $this->output()->writeln('Adding routes.');
-    $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
+    $dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
 
     foreach ($routes as $route) {
       $event->queueItem($route);
     }
 
     $event = new CollectFilesEvent($form_state);
-    $this->output()->writeln('Adding files.');
-    $this->dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
+    $dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
 
     foreach ($assets as $asset) {
       $event->queueItem($asset);
     }
 
     $this->output()->writeln('Successfully added [' . $queue->numberOfItems() . '] to the queue');
-
   }
-
 }
