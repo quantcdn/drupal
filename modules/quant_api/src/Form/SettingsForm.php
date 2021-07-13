@@ -69,24 +69,28 @@ class SettingsForm extends ConfigFormBase {
       '#title' => $this->t('API Endpoint'),
       '#description' => $this->t('e.g: https://api.quantcdn.io'),
       '#default_value' => $config->get('api_endpoint'),
+      '#required' => TRUE,
     ];
 
     $form['api_account'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Account'),
       '#default_value' => $config->get('api_account'),
+      '#required' => TRUE,
     ];
 
     $form['api_project'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Project'),
       '#default_value' => $config->get('api_project'),
+      '#required' => TRUE,
     ];
 
     $form['api_token'] = [
       '#type' => 'password',
       '#title' => $this->t('API Token'),
       '#default_value' => $config->get('api_token'),
+      '#required' => TRUE,
     ];
 
     return parent::buildForm($form, $form_state);
