@@ -108,7 +108,7 @@ class SeedForm extends FormBase {
         ],
         'unchecked' => [
           ':input[name="entity_node_revisions"]' => ['checked' => TRUE],
-        ]
+        ],
       ],
       '#default_value' => $seed_config->get('entity_node'),
     ];
@@ -179,7 +179,7 @@ class SeedForm extends FormBase {
           ],
           [
             ':input[name="entity_node_revisions"]' => ['checked' => TRUE],
-          ]
+          ],
         ],
       ],
       '#default_value' => $seed_config->get('entity_node_bundles') ?: [],
