@@ -102,7 +102,32 @@ class SeedForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Nodes'),
       '#description' => $this->t('Exports the latest revision of each node.'),
+      '#states' => [
+        'disabled' => [
+          ':input[name="entity_node_revisions"]' => ['checked' => TRUE],
+        ],
+        'unchecked' => [
+          ':input[name="entity_node_revisions"]' => ['checked' => TRUE],
+        ]
+      ],
       '#default_value' => $seed_config->get('entity_node'),
+    ];
+
+    $form['entity_node_disabled_explainer'] = [
+      '#type' => 'container',
+      '#markup' => $this->t('Push revision history independently of published revisions for best results.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="entity_node_revisions"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $form['entity_node_revisions'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Nodes (revision history)'),
+      '#description' => $this->t('Exports the historic revision history for nodes. <em>Note: You should only perform this operation this once.</em>'),
+      '#default_value' => $seed_config->get('entity_node_revisions'),
     ];
 
     // Seed by language.
@@ -149,22 +174,15 @@ class SeedForm extends FormBase {
       '#options' => $content_types,
       '#states' => [
         'visible' => [
-          ':input[name="entity_node"]' => ['checked' => TRUE],
+          [
+            ':input[name="entity_node"]' => ['checked' => TRUE],
+          ],
+          [
+            ':input[name="entity_node_revisions"]' => ['checked' => TRUE],
+          ]
         ],
       ],
       '#default_value' => $seed_config->get('entity_node_bundles') ?: [],
-    ];
-
-    $form['entity_node_revisions'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('All revisions'),
-      '#description' => $this->t('Exports all historic revisions.'),
-      '#states' => [
-        'visible' => [
-          ':input[name="entity_node"]' => ['checked' => TRUE],
-        ],
-      ],
-      '#default_value' => $seed_config->get('entity_node_revisions'),
     ];
 
     $form['entity_taxonomy_term'] = [
@@ -318,7 +336,7 @@ class SeedForm extends FormBase {
       $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
     }
 
-    if ($form_state->getValue('entity_node')) {
+    if ($form_state->getValue('entity_node') || $form_state->getValue('entity_node_revisions')) {
       $event = new CollectEntitiesEvent($form_state);
       $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
     }

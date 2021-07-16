@@ -54,7 +54,7 @@ class Published extends MetadataBase implements ContainerFactoryPluginInterface 
     // node. This should be used to make content non-viewable if it is
     // unpublished.
     // Return the published status of the revision.
-    return ['published' => $entity->isPublished()];
+    return ['published' => $entity->isPublished() && $entity->isDefaultRevision()];
   }
 
 }
