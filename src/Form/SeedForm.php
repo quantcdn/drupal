@@ -262,9 +262,22 @@ class SeedForm extends FormBase {
       '#type' => 'actions',
     ];
 
+    $form['actions']['save'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Save'),
+      '#op' => 'save',
+      '#attributes' => [
+        'class' => ['button--primary'],
+      ],
+    ];
+
     $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Queue'),
+      '#value' => $this->t('Save and Queue'),
+      '#op' => 'queue',
+      '#attributes' => [
+        'class' => ['button--secondary'],
+      ],
     ];
 
     return $form;
@@ -281,6 +294,7 @@ class SeedForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->configFactory->getEditable('quant_api.settings');
+    $trigger = $form_state->getTriggeringElement();
 
     $this->configFactory->getEditable(static::SETTINGS)
       ->set('entity_node', $form_state->getValue('entity_node'))
@@ -296,6 +310,11 @@ class SeedForm extends FormBase {
       ->set('robots', $form_state->getValue('robots'))
       ->set('lunr', $form_state->getValue('lunr'))
       ->save();
+
+    if (isset($trigger['#op']) && $trigger['#op'] == 'save') {
+      \Drupal::messenger()->addStatus(t('Successfully updated configuration.'));
+      return;
+    }
 
     if ($config->get('api_token')) {
       if (!$project = $this->client->ping()) {
