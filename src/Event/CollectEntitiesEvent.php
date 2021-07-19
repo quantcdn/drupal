@@ -27,4 +27,14 @@ class CollectEntitiesEvent extends ConfigFormEventBase {
     return (bool) $this->getFormState()->getValue('entity_node_revisions');
   }
 
+  /**
+   * Determine if should seed the latest revision.
+   *
+   * @return bool
+   *   Include latest revision or not.
+   */
+  public function includeLatest() {
+    return (bool) $this->getFormState()->getValue('entity_node');
+  }
+
 }

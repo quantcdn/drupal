@@ -75,18 +75,14 @@ class CollectionSubscriber implements EventSubscriberInterface {
     }
 
     $entities = $query->execute();
-    $revisions = $event->includeRevisions();
+    $includeLatest = $event->includeLatest();
+    $includeRevisions = $event->includeRevisions();
 
     // Add the latest node to the batch.
     foreach ($entities as $vid => $nid) {
       $filter = $event->getFormState()->getValue('entity_node_languages');
-      $event->queueItem([
-        'id' => $nid,
-        'vid' => $vid,
-        'lang_filter' => $filter,
-      ]);
 
-      if ($revisions) {
+      if ($includeRevisions) {
         $entity = Node::load($nid);
         $vids = \Drupal::entityTypeManager()->getStorage('node')->revisionIds($entity);
         $vids = array_diff($vids, [$vid]);
@@ -98,6 +94,15 @@ class CollectionSubscriber implements EventSubscriberInterface {
           ]);
         }
         $entity = NULL;
+      }
+
+      // Include latest revisions.
+      if ($includeLatest) {
+        $event->queueItem([
+          'id' => $nid,
+          'vid' => $vid,
+          'lang_filter' => $filter,
+        ]);
       }
     }
   }

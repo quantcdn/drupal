@@ -116,7 +116,7 @@ class QuantDrushCommands extends DrushCommands {
       $dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
     }
 
-    if ($form_state->getValue('entity_node')) {
+    if ($form_state->getValue('entity_node') || $form_state->getValue('entity_node_revisions')) {
       $event = new CollectEntitiesEvent($form_state);
       $dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
     }
