@@ -150,7 +150,12 @@ class SeedForm extends FormBase {
         '#options' => $language_codes,
         '#states' => [
           'visible' => [
-            ':input[name="entity_node"]' => ['checked' => TRUE],
+            [
+              ':input[name="entity_node"]' => ['checked' => TRUE],
+            ],
+            [
+              ':input[name="entity_node_revisions"]' => ['checked' => TRUE],
+            ],
           ],
         ],
         '#default_value' => $seed_config->get('entity_node_languages') ?: [],
