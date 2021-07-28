@@ -22,6 +22,10 @@ use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
  * Implements hook_menu_local_tasks_alter().
  */
 function quant_menu_local_tasks_alter(&$data, $route_name) {
+  if (!\Drupal::requestStack()->getCurrentRequest()->headers->get('quant-token')) {
+    return;
+  }
+
   if (\Drupal::currentUser()->isAnonymous()) {
     unset($data['tabs']);
   }
