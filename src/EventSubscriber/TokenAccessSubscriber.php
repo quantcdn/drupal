@@ -13,6 +13,9 @@ use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
+/**
+ * Validates token for internal requests.
+ */
 class TokenAccessSubscriber implements EventSubscriberInterface {
 
   /**
@@ -22,6 +25,11 @@ class TokenAccessSubscriber implements EventSubscriberInterface {
    */
   protected $tokenManager;
 
+  /**
+   * The config factory.
+   *
+   * @var Drupal\Core\Config\ConfigFactory
+   */
   protected $config;
 
   /**
@@ -44,7 +52,7 @@ class TokenAccessSubscriber implements EventSubscriberInterface {
    * Validate the token on the incoming request.
    */
   public function validateToken(GetResponseEvent $event) {
-    /* @var $request Symfony\Component\HttpFoundation\Request */
+    /** @var Symfony\Component\HttpFoundation\Request $request */
     $request = $event->getRequest();
 
     if (!$request->headers->has('quant-token')) {

@@ -118,7 +118,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
     }
 
     foreach ($items as $route) {
-      $event->addRoute($route);
+      $event->queueItem(['route' => $route]);
     }
   }
 

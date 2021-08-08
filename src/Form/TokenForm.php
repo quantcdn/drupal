@@ -44,7 +44,7 @@ class TokenForm extends ConfigFormBase {
     $form['strict'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Enable strict tokens'),
-      '#description' => $this->t('Allow token verificaiton process to perform route validations, this may not work for all Drupal configurations.'),
+      '#description' => $this->t('Allow token verification process to perform route validations. This may not work for all Drupal configurations'),
       '#default_value' => $config->get('strict'),
     ];
 
@@ -89,6 +89,10 @@ class TokenForm extends ConfigFormBase {
 
     if ($form_state->getValue('generate_secret') || empty($config->get('secret'))) {
       $editable->set('secret', bin2hex(random_bytes(32)));
+    }
+
+    if ($form_state->getValue('disable')) {
+      $form_state->setValue('strict', 0);
     }
 
     $editable

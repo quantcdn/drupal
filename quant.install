@@ -67,6 +67,6 @@ function quant_update_9003(&$sandbox) {
   $config->save();
 
   // Remove the token table.
-  $schema = \Database::getConnection()->schema();
+  $schema = Database::getConnection()->schema();
   $schema->dropTable('quant_token');
 }
