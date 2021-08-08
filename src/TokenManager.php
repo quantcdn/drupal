@@ -143,6 +143,7 @@ class TokenManager {
     $token_parts = explode('.', $token);
     $header = json_decode(base64_decode($token_parts[0]), TRUE);
     $payload = json_decode(base64_decode($token_parts[1]), TRUE);
+
     $provided_signature = $token_parts[2];
 
     $signature = hash_hmac('sha256', "{$token_parts[0]}.{$token_parts[1]}", $secret, TRUE);

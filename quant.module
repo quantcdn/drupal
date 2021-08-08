@@ -167,7 +167,6 @@ function quant_shutdown(array $context = []) {
  * Implements hook_node_access().
  */
 function quant_node_access(NodeInterface $node, $op, AccountInterface $account) {
-  $strict = \Drupal::config('quant.token_settings')->get('strict');
   $request = \Drupal::request();
 
   if (!$request->headers->has('quant-revision') && !$request->headers->has('quant-token')) {
@@ -178,41 +177,24 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
   $url = Url::fromRoute('entity.node.canonical', ['node' => $node->id()], $options)->toString();
 
   try {
-    \Drupal::service('quant.token_manager')->validate($url, $strict);
+    // Token validation for node access cannot be strict as this will be called
+    // for embedded entities on a page the token process is bound to requests
+    // if the incoming request has a valid token we assume that all
+    // embedded entities are valid.
+    //
+    // @see Drupal\quant\EventSubscriber\TokenAccessSubscriber
+    \Drupal::service('quant.token_manager')->validate($url, FALSE);
   }
   catch (TokenValidationDisabledException $e) {
     // Allow access when token validation is disabled.
   }
-  catch (ExpiredTokenException $e) {
-    throw new ServiceUnavailableHttpException(NULL, t('Token request: time mismatch. Received [:token_time] expected [:server_time]', [
-      ':token_time' => $e->getTime(),
-      ':server_time' => $e->getServerTime(),
-    ]));
-  }
-  catch (StrictTokenException $e) {
-    throw new ServiceUnavailableHttpException(NULL, t('Token request: route mismatch. Received [:route] expected [:expected]', [
-      ':route' => $e->getTokenRoute(),
-      ':expected' => $e->getExpectedRoute(),
-    ]));
-  }
-  catch (InvalidTokenException $e) {
-    throw new ServiceUnavailableHttpException(NULL, t('Token request: Invalid token'));
+  catch (\Exception $e) {
+    return AccessResult::neutral();
   }
 
   // If the token validation didn't trigger an exception - then the
-  // token is valid and can be continued to be evaluated to allow
-  // access to the node.
-  $routeNode = \Drupal::routeMatch()->getParameter('node');
-
-  if (!empty($routeNode)) {
-    $nid = $routeNode->id();
-
-    if ($nid == $node->id()) {
-      return AccessResult::allowed();
-    }
-  }
-
-  return AccessResult::neutral();
+  // token is valid and can be continued.
+  return AccessResult::allowed();
 }
 
 /**
