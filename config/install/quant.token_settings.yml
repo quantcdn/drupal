@@ -1,2 +1,4 @@
 timeout: '+1 minute'
 disable: false
+secret: null
+strict: false

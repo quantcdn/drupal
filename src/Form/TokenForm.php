@@ -34,12 +34,32 @@ class TokenForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config(static::SETTINGS);
 
+    $form['disable'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Disable token verification'),
+      '#description' => $this->t('Not recommended for production environments, this disables token verification'),
+      '#default_value' => $config->get('disable'),
+    ];
+
+    $form['strict'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable strict tokens'),
+      '#description' => $this->t('Allow token verificaiton process to perform route validations, this may not work for all Drupal configurations.'),
+      '#default_value' => $config->get('strict'),
+    ];
+
     $form['timeout'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Token timeout'),
       '#description' => $this->t('Duration of a valid token relative to now. Must be compatible with <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">strtotime</a>'),
       '#default_value' => !empty($config->get('timeout')) ? $config->get('timeout') : '+1 minute',
       '#required' => TRUE,
+    ];
+
+    $form['generate_secret'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Generate a new secret token'),
+      '#description' => $this->t('Regenerate the secret token used to sign internal requests'),
     ];
 
     return parent::buildForm($form, $form_state);
@@ -64,8 +84,17 @@ class TokenForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    $config = $this->config(static::SETTINGS);
+    $editable = $this->configFactory->getEditable(static::SETTINGS);
+
+    if ($form_state->getValue('generate_secret') || empty($config->get('secret'))) {
+      $editable->set('secret', bin2hex(random_bytes(32)));
+    }
+
     $this->configFactory->getEditable(static::SETTINGS)
       ->set('timeout', $form_state->getValue('timeout'))
+      ->set('disable', $form_state->getValue('disable'))
+      ->set('strict', $form_state->get('strict'))
       ->save();
 
     parent::submitForm($form, $form_state);

@@ -5,7 +5,7 @@ namespace Drupal\quant\Exception;
 /**
  * The token has expired.
  */
-class ExpiredTokenException extends \Exception {
+class StrictTokenException extends \Exception {
 
   /**
    * Request token.
@@ -17,24 +17,24 @@ class ExpiredTokenException extends \Exception {
   /**
    * Request time.
    *
-   * @var int
+   * @var string
    */
-  protected $time;
+  protected $tokenRoute;
 
   /**
    * The matched record.
    *
-   * @var int
+   * @var string
    */
-  protected $sTime;
+  protected $expectedRoute;
 
   /**
    * {@inheritdoc}
    */
-  public function __construct(string $token, int $time = 0, $sTime = 0, string $message = "The token has expired", int $code = 0, \Throwable $previous = NULL) {
+  public function __construct(string $token, $token_route = NULL, $expected_route = NULL, string $message = "The token routes do not match", int $code = 0, \Throwable $previous = NULL) {
     $this->token = $token;
-    $this->time = $time;
-    $this->sTime = $sTime;
+    $this->tokenRoute = $token_route;
+    $this->expectedRoute = $expected_route;
 
     parent::__construct($message, $code, $previous);
   }
@@ -49,15 +49,15 @@ class ExpiredTokenException extends \Exception {
   /**
    * Getter for the time.
    */
-  public function getTime() {
-    return $this->time;
+  public function getTokenRoute() {
+    return $this->tokenRoute;
   }
 
   /**
    * Getter for the database record.
    */
-  public function getServerTime() {
-    return $this->sTime;
+  public function getExpectedRoute() {
+    return $this->expectedRoute;
   }
 
 }

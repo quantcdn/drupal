@@ -13,6 +13,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\quant\Exception\ExpiredTokenException;
 use Drupal\quant\Exception\InvalidTokenException;
+use Drupal\quant\Exception\StrictTokenException;
 use Drupal\quant\Exception\TokenValidationDisabledException;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Seed;
@@ -163,16 +164,10 @@ function quant_shutdown(array $context = []) {
 }
 
 /**
- * Implements hook_cron().
- */
-function quant_cron() {
-  \Drupal::service('quant.token_manager')->release();
-}
-
-/**
  * Implements hook_node_access().
  */
 function quant_node_access(NodeInterface $node, $op, AccountInterface $account) {
+  $strict = \Drupal::config('quant.token_settings')->get('strict');
   $request = \Drupal::request();
 
   if (!$request->headers->has('quant-revision') && !$request->headers->has('quant-token')) {
@@ -183,16 +178,25 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
   $url = Url::fromRoute('entity.node.canonical', ['node' => $node->id()], $options)->toString();
 
   try {
-    \Drupal::service('quant.token_manager')->validate($url, TRUE);
+    \Drupal::service('quant.token_manager')->validate($url, $strict);
   }
   catch (TokenValidationDisabledException $e) {
-
+    // Allow access when token validation is disabled.
   }
   catch (ExpiredTokenException $e) {
-    throw new ServiceUnavailableHttpException(NULL, t('Service route is not available.'));
+    throw new ServiceUnavailableHttpException(NULL, t('Token request: time mismatch. Received [:token_time] expected [:server_time]', [
+      ':token_time' => $e->getTime(),
+      ':server_time' => $e->getServerTime(),
+    ]));
+  }
+  catch (StrictTokenException $e) {
+    throw new ServiceUnavailableHttpException(NULL, t('Token request: route mismatch. Received [:route] expected [:expected]', [
+      ':route' => $e->getTokenRoute(),
+      ':expected' => $e->getExpectedRoute(),
+    ]));
   }
   catch (InvalidTokenException $e) {
-    throw new ServiceUnavailableHttpException(NULL, t('Service route is not available.'));
+    throw new ServiceUnavailableHttpException(NULL, t('Token request: Invalid token'));
   }
 
   // If the token validation didn't trigger an exception - then the

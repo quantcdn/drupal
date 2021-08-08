@@ -6,8 +6,10 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\quant\Exception\ExpiredTokenException;
 use Drupal\quant\Exception\InvalidTokenException;
+use Drupal\quant\Exception\StrictTokenException;
 use Drupal\quant\Exception\TokenValidationDisabledException;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Drupal\Component\Datetime\TimeInterface;
 
 /**
  * Simple interface to manage short-lived access tokens.
@@ -46,40 +48,35 @@ class TokenManager {
    *   The current request stack.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory.
+   * @param \Drupal\Component\Datetime\TimeInterface $time
+   *   The time interface.
    */
-  public function __construct(Connection $connection, RequestStack $request, ConfigFactoryInterface $config_factory) {
+  public function __construct(Connection $connection, RequestStack $request, ConfigFactoryInterface $config_factory, TimeInterface $time) {
     $this->connection = $connection;
     $this->request = $request;
     $this->settings = $config_factory->get('quant.token_settings');
+    $this->time = $time;
   }
 
   /**
-   * Generate a token to use.
+   * Prepare a JWT header part.
+   *
+   * @param array|string $part
+   *   The part to encode.
    *
    * @return string
-   *   The token.
+   *   base64encoded string.
    */
-  protected function generate() {
-    if (function_exists('random_bytes')) {
-      $bytes = random_bytes(ceil(16 / 2));
-      $hash = substr(bin2hex($bytes), 0, 16);
+  public static function encode($part = []) {
+    if (is_array($part)) {
+      $part = json_encode($part);
     }
-    else {
-      $hash = bin2hex(random_bytes(16));
-    }
-    return base64_encode($hash);
-  }
 
-  /**
-   * Delete a token.
-   *
-   * @param string $token
-   *   The token to remove.
-   */
-  protected function delete($token) {
-    $this->connection->delete('quant_token')
-      ->condition('token', $token)
-      ->execute();
+    return str_replace(
+      ['+', '/', '='],
+      ['-', '_', ''],
+      base64_encode($part)
+    );
   }
 
   /**
@@ -92,26 +89,21 @@ class TokenManager {
    *   The token.
    */
   public function create($route = NULL) {
-    // @todo table has DEFAULT now() but this was causing
-    // issues with request time mismatches so for now we just
-    // insert the request time for create.
-    $time = new \DateTime();
-    $token = $this->generate();
-    $query = $this->connection->insert('quant_token')
-      ->fields([
-        'route' => $route,
-        'token' => $token,
-        'created' => $time->getTimestamp(),
-      ]);
+    $secret = $this->settings->get('secret');
+    $time = $this->time->getRequestTime();
 
-    try {
-      $query->execute();
-    }
-    catch (\Exception $error) {
-      return FALSE;
-    }
+    $header = ['typ' => 'JWT', 'alg' => 'HS256'];
+    $payload = [
+      'user' => 'quant',
+      'route' => $route,
+      'expires' => strtotime($this->settings->get('timeout'), $time),
+    ];
 
-    return $token;
+    $header = self::encode($header);
+    $payload = self::encode($payload);
+    $signature = hash_hmac('sha256', "$header.$payload", $secret, TRUE);
+
+    return "$header.$payload." . self::encode($signature);
   }
 
   /**
@@ -133,50 +125,46 @@ class TokenManager {
    * @throws Drupal\quant\Exception\ExpiredTokenException
    */
   public function validate($route = NULL, $strict = TRUE) {
-
-    $token = $this->request->getCurrentRequest()->headers->get('quant-token');
-    $time = new \DateTime();
-    $time = $time->getTimestamp();
-
     if ($this->settings->get('disable')) {
+      // Allow administrators to completely bypass the token verification
+      // process. This can be done to test server configuration and is
+      // not recommended in production.
       throw new TokenValidationDisabledException();
     }
 
+    $secret = $this->settings->get('secret');
+    $time = $this->time->getRequestTime();
+    $token = $this->request->getCurrentRequest()->headers->get('quant-token');
+
     if (empty($token)) {
-      return FALSE;
-    }
-
-    $query = $this->connection->select('quant_token', 'qt')
-      ->condition('qt.token', $token)
-      ->fields('qt', ['route', 'created'])
-      ->range(0, 1);
-
-    try {
-      $record = $query->execute()->fetchObject();
-    }
-    catch (\Exception $error) {
       throw new InvalidTokenException($token, $time);
     }
 
-    $valid_until = strtotime($this->settings->get('timeout'), $record->created);
-    $expired = $time > $valid_until;
+    $token_parts = explode('.', $token);
+    $header = json_decode(base64_decode($token_parts[0]), TRUE);
+    $payload = json_decode(base64_decode($token_parts[1]), TRUE);
+    $provided_signature = $token_parts[2];
 
-    if (!$strict && $expired) {
-      throw new ExpiredTokenException($token, $time, $record);
+    $signature = hash_hmac('sha256', "{$token_parts[0]}.{$token_parts[1]}", $secret, TRUE);
+    $signature = self::encode($signature);
+
+    if ($signature !== $provided_signature) {
+      throw new InvalidTokenException($token, $time);
     }
 
-    if ($strict) {
-      if ($expired || $route != $record->route) {
-        throw new ExpiredTokenException($token, $time, $record);
-      }
+    if (empty($payload['expires'])) {
+      throw new InvalidTokenException($token, $time);
     }
-  }
 
-  /**
-   * Release tokens that have been created.
-   */
-  public function release() {
-    return $this->connection->query('TRUNCATE quant_token');
+    if ($payload['expires'] - $time < 0) {
+      throw new ExpiredTokenException($token, $payload['expires'], $time);
+    }
+
+    if ($strict && ($route != $payload['route'])) {
+      throw new StrictTokenException($token, $payload['route'], $route);
+    }
+
+    return TRUE;
   }
 
 }
