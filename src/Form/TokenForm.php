@@ -91,10 +91,10 @@ class TokenForm extends ConfigFormBase {
       $editable->set('secret', bin2hex(random_bytes(32)));
     }
 
-    $this->configFactory->getEditable(static::SETTINGS)
+    $editable
       ->set('timeout', $form_state->getValue('timeout'))
       ->set('disable', $form_state->getValue('disable'))
-      ->set('strict', $form_state->get('strict'))
+      ->set('strict', $form_state->getValue('strict'))
       ->save();
 
     parent::submitForm($form, $form_state);
