@@ -8,50 +8,12 @@
 use Drupal\Core\Database\Database;
 
 /**
- * Implements hook_schema().
- *
- * Defines a simple table to store salted tokens.
- *
- * @see hook_schema()
- *
- * @ingroup quant
+ * Perform setup tasks for Quant.
  */
-function quant_schema() {
-  $schema['quant_token'] = [
-    'description' => 'Stores short-lived access tokens.',
-    'fields' => [
-      'pid' => [
-        'type' => 'serial',
-        'not null' => TRUE,
-        'description' => 'Primary key: Unique token ID.',
-      ],
-      'token' => [
-        'type' => 'varchar',
-        'not null' => TRUE,
-        'length' => 255,
-        'default' => '',
-        'description' => 'The token value.',
-      ],
-      'route' => [
-        'type' => 'text',
-        'size' => 'normal',
-        'not null' => FALSE,
-        'description' => 'A path to register for the token',
-      ],
-      'created' => [
-        'type' => 'int',
-        'size' => 'normal',
-        'not null' => TRUE,
-        'description' => 'When the token was created.',
-      ],
-    ],
-    'primary key' => ['pid'],
-    'indexes' => [
-      'token' => ['token'],
-    ],
-  ];
-
-  return $schema;
+function quant_install() {
+  $config = \Drupal::configFactory()->getEditable('quant.token_settings');
+  $config->set('secret', bin2hex(random_bytes(32)));
+  $config->save();
 }
 
 /**
@@ -93,4 +55,18 @@ function quant_update_9002(&$sandbox) {
   $config = \Drupal::configFactory()->getEditable('quant.token_settings');
   $config->set('disable', FALSE);
   $config->save();
+}
+
+/**
+ * Support JWT for internal request tokens.
+ */
+function quant_update_9003(&$sandbox) {
+  $config = \Drupal::configFactory()->getEditable('quant.token_settings');
+  $config->set('secret', bin2hex(random_bytes(32)));
+  $config->set('strict', FALSE);
+  $config->save();
+
+  // Remove the token table.
+  $schema = Database::getConnection()->schema();
+  $schema->dropTable('quant_token');
 }

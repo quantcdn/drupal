@@ -29,3 +29,12 @@ services:
       - '@database'
       - '@request_stack'
       - '@config.factory'
+      - '@datetime.time'
+
+  quant.token_subscriber:
+    class: Drupal\quant\EventSubscriber\TokenAccessSubscriber
+    arguments:
+      - '@quant.token_manager'
+      - '@config.factory'
+    tags:
+      - { name: 'event_subscriber' }

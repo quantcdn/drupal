@@ -8,6 +8,11 @@ quant.seed:
   title: 'Seed'
   base_route: quant.config
 
+quant.token:
+  route_name: quant.token
+  title: 'Token'
+  base_route: quant.config
+
 quant.metadata:
   route_name: quant.metadata
   title: Metadata

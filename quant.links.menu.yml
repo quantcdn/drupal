@@ -19,7 +19,6 @@ quant.token:
   parent: quant
   weight: 2
 
-
 quant.metadata:
   title: 'Metadata'
   route_name: quant.metadata
