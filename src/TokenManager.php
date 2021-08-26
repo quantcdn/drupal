@@ -9,7 +9,6 @@ use Drupal\quant\Exception\InvalidTokenException;
 use Drupal\quant\Exception\StrictTokenException;
 use Drupal\quant\Exception\TokenValidationDisabledException;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Drupal\Component\Datetime\TimeInterface;
 
 /**
  * Simple interface to manage short-lived access tokens.
@@ -51,11 +50,10 @@ class TokenManager {
    * @param \Drupal\Component\Datetime\TimeInterface $time
    *   The time interface.
    */
-  public function __construct(Connection $connection, RequestStack $request, ConfigFactoryInterface $config_factory, TimeInterface $time) {
+  public function __construct(Connection $connection, RequestStack $request, ConfigFactoryInterface $config_factory) {
     $this->connection = $connection;
     $this->request = $request;
     $this->settings = $config_factory->get('quant.token_settings');
-    $this->time = $time;
   }
 
   /**
@@ -71,12 +69,32 @@ class TokenManager {
     if (is_array($part)) {
       $part = json_encode($part);
     }
+    $encoded = base64_encode($part);
 
-    return str_replace(
-      ['+', '/', '='],
-      ['-', '_', ''],
-      base64_encode($part)
-    );
+    if ($encoded === FALSE) {
+      throw new \Exception('Unable to encode part.');
+    }
+
+    $encoded = strtr($encoded, '+/', '-_');
+    return rtrim($encoded, '=');
+  }
+
+  /**
+   * Reverse the JWT decode.
+   *
+   * @param string $string
+   *   The encoded string.
+   * @param bool $strict
+   *   base64 in strict mode.
+   *
+   * @return string|array
+   *   The decoded URL part.
+   */
+  public static function decode($string, $strict = FALSE) {
+    $string = strtr($string, '-_', '+/');
+    $part = base64_decode($string, $strict);
+    $array_part = json_decode($part, TRUE);
+    return empty($array_part) ? $part : $array_part;
   }
 
   /**
@@ -90,13 +108,13 @@ class TokenManager {
    */
   public function create($route = NULL) {
     $secret = $this->settings->get('secret');
-    $time = $this->time->getRequestTime();
+    $time = new \DateTime($this->settings->get('timeout'));
 
     $header = ['typ' => 'JWT', 'alg' => 'HS256'];
     $payload = [
       'user' => 'quant',
       'route' => $route,
-      'expires' => strtotime($this->settings->get('timeout'), $time),
+      'expires' => $time->format('U'),
     ];
 
     $header = self::encode($header);
@@ -133,16 +151,16 @@ class TokenManager {
     }
 
     $secret = $this->settings->get('secret');
-    $time = $this->time->getRequestTime();
+    $current_time = new \DateTime();
     $token = $this->request->getCurrentRequest()->headers->get('quant-token');
 
     if (empty($token)) {
-      throw new InvalidTokenException($token, $time);
+      throw new InvalidTokenException($token, $current_time->format('U'));
     }
 
     $token_parts = explode('.', $token);
-    $header = json_decode(base64_decode($token_parts[0]), TRUE);
-    $payload = json_decode(base64_decode($token_parts[1]), TRUE);
+    $header = self::decode($token_parts[0]);
+    $payload = self::decode($token_parts[1]);
 
     $provided_signature = $token_parts[2];
 
@@ -150,15 +168,19 @@ class TokenManager {
     $signature = self::encode($signature);
 
     if ($signature !== $provided_signature) {
-      throw new InvalidTokenException($token, $time);
+      throw new InvalidTokenException($token, $current_time->format('U'));
     }
 
     if (empty($payload['expires'])) {
-      throw new InvalidTokenException($token, $time);
+      throw new InvalidTokenException($token, $current_time->format('U'));
     }
 
-    if ($payload['expires'] - $time < 0) {
-      throw new ExpiredTokenException($token, $payload['expires'], $time);
+    $request_time = new \DateTime();
+    $request_time->setTimestamp($payload['expires']);
+    $date_diff = $current_time->diff($request_time);
+
+    if (!empty($date_diff->format('%r'))) {
+      throw new ExpiredTokenException($token, $payload['expires'], $current_time->format('U'));
     }
 
     if ($strict && ($route != $payload['route'])) {
