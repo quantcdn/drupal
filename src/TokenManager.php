@@ -177,11 +177,15 @@ class TokenManager {
     $request_time->setTimestamp($payload['expires']);
     $date_diff = $current_time->diff($request_time);
 
+    // The %r format will return empty string or '-' if the diff is
+    // in the past, we can use this to determine if the date diff
+    // is negative and restrict access accordingly.
+    // @see https://www.php.net/manual/en/dateinterval.format.php
     if (!empty($date_diff->format('%r'))) {
       throw new ExpiredTokenException($token, $payload['expires'], $current_time->format('U'));
     }
 
-    if ($strict && ($route != $payload['route'])) {
+    if ($strict && (parse_url($route, PHP_URL_PATH) != parse_url($payload['route'], PHP_URL_PATH))) {
       throw new StrictTokenException($token, $payload['route'], $route);
     }
 
