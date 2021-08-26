@@ -47,8 +47,6 @@ class TokenManager {
    *   The current request stack.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory.
-   * @param \Drupal\Component\Datetime\TimeInterface $time
-   *   The time interface.
    */
   public function __construct(Connection $connection, RequestStack $request, ConfigFactoryInterface $config_factory) {
     $this->connection = $connection;
@@ -85,7 +83,7 @@ class TokenManager {
    * @param string $string
    *   The encoded string.
    * @param bool $strict
-   *   base64 in strict mode.
+   *   Base64 in strict mode.
    *
    * @return string|array
    *   The decoded URL part.
