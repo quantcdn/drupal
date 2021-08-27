@@ -299,7 +299,6 @@ class SeedForm extends FormBase {
     $config = $this->configFactory->getEditable('quant_api.settings');
     $trigger = $form_state->getTriggeringElement();
 
-
     $this->configFactory->getEditable(static::SETTINGS)
       ->set('entity_node', $form_state->getValue('entity_seed_method') == 'published')
       ->set('entity_node_languages', $form_state->getValue('entity_node_languages'))
@@ -326,6 +325,9 @@ class SeedForm extends FormBase {
         return;
       }
     }
+
+    $form_state->setValue('entity_node', $form_state->getValue('entity_seed_method') == 'published');
+    $form_state->setValue('entity_node_revisions', $form_state->getValue('entity_seed_method') == 'revisions');
 
     $assets = [];
     $routes = [];
