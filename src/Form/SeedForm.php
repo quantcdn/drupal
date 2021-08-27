@@ -76,7 +76,6 @@ class SeedForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
 
     $warnings = $this->getWarnings();
-    $config = $this->config('quant_api.settings');
     $seed_config = $this->config(static::SETTINGS);
     $moduleHandler = \Drupal::moduleHandler();
 
@@ -337,9 +336,6 @@ class SeedForm extends FormBase {
       $assets = array_merge($assets, Seed::findLunrAssets());
       $routes = array_merge($routes, Seed::findLunrRoutes());
     }
-
-    $config->set('routes', $form_state->getValue('routes'))->save();
-    $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
 
     if ($form_state->getValue('routes_textarea')) {
       foreach (explode(PHP_EOL, $form_state->getValue('routes')) as $route) {
