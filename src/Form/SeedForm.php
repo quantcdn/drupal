@@ -97,7 +97,25 @@ class SeedForm extends FormBase {
       }
     }
 
-    $form['entity_seed_method'] = [
+    $form['entity_node'] = [
+      '#type' => 'checkbox',
+      '#default_value' => $seed_config->get('entity_node'),
+      '#title' => $this->t('Nodes'),
+      '#description' => $this->t('Exports node content entities.'),
+    ];
+
+    $form['node_details'] = [
+      '#type' => 'details',
+      '#tree' => FALSE,
+      '#title' => $this->t('Node configuration'),
+      '#states' => [
+        'visible' => [
+          ':input[name="entity_node"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $form['node_details']['entity_seed_method'] = [
       '#type' => 'radios',
       '#description' => $this->t('Controls the seed method for how nodes are sent to Quant.'),
       '#title' => $this->t('Node seed method'),
@@ -105,10 +123,10 @@ class SeedForm extends FormBase {
         'published' => $this->t('Published'),
         'revisions' => $this->t('Revision history'),
       ],
-      '#default_value' => $seed_config->get('entity_node') ? 'published' : 'revisions',
+      '#default_value' => $seed_config->get('entity_node_revisions') ? 'revisions' : 'published',
     ];
 
-    $form['entity_node_published_info'] = [
+    $form['node_details']['entity_node_published_info'] = [
       '#type' => 'container',
       '#markup' => $this->t('Push revision history independently of published revisions for best results.'),
       '#states' => [
@@ -118,7 +136,7 @@ class SeedForm extends FormBase {
       ],
     ];
 
-    $form['entity_node_revisions_info'] = [
+    $form['node_details']['entity_node_revisions_info'] = [
       '#type' => 'container',
       '#markup' => $this->t('Exports the historic revision history for nodes. <em>Note: You should only perform this operation this once.</em>'),
       '#states' => [
@@ -141,21 +159,11 @@ class SeedForm extends FormBase {
         $language_codes[$langcode] = $language->getName() . $default;
       }
 
-      $form['entity_node_languages'] = [
+      $form['node_details']['entity_node_languages'] = [
         '#type' => 'checkboxes',
         '#title' => $this->t('Languages'),
         '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be exported.'),
         '#options' => $language_codes,
-        '#states' => [
-          'visible' => [
-            [
-              ':input[name="entity_node"]' => ['checked' => TRUE],
-            ],
-            [
-              ':input[name="entity_node_revisions"]' => ['checked' => TRUE],
-            ],
-          ],
-        ],
         '#default_value' => $seed_config->get('entity_node_languages') ?: [],
       ];
     }
@@ -170,21 +178,11 @@ class SeedForm extends FormBase {
       $content_types[$type->id()] = $type->label();
     }
 
-    $form['entity_node_bundles'] = [
+    $form['node_details']['entity_node_bundles'] = [
       '#type' => 'checkboxes',
       '#title' => $this->t('Enabled bundles'),
       '#description' => $this->t('Optionally restrict to these content types.'),
       '#options' => $content_types,
-      '#states' => [
-        'visible' => [
-          [
-            ':input[name="entity_node"]' => ['checked' => TRUE],
-          ],
-          [
-            ':input[name="entity_node_revisions"]' => ['checked' => TRUE],
-          ],
-        ],
-      ],
       '#default_value' => $seed_config->get('entity_node_bundles') ?: [],
     ];
 
@@ -300,7 +298,7 @@ class SeedForm extends FormBase {
     $trigger = $form_state->getTriggeringElement();
 
     $this->configFactory->getEditable(static::SETTINGS)
-      ->set('entity_node', $form_state->getValue('entity_seed_method') == 'published')
+      ->set('entity_node', $form_state->getValue('entity_node'))
       ->set('entity_node_languages', $form_state->getValue('entity_node_languages'))
       ->set('entity_node_bundles', $form_state->getValue('entity_node_bundles'))
       ->set('entity_node_revisions', $form_state->getValue('entity_seed_method') == 'revisions')
@@ -326,7 +324,6 @@ class SeedForm extends FormBase {
       }
     }
 
-    $form_state->setValue('entity_node', $form_state->getValue('entity_seed_method') == 'published');
     $form_state->setValue('entity_node_revisions', $form_state->getValue('entity_seed_method') == 'revisions');
 
     $assets = [];
