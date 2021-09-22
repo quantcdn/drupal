@@ -44,7 +44,7 @@ function drush_quant_seed() {
     drush_log('Quant API project is not configured', 'error');
   }
 
-  drush_log("Seeding for $customer with $token", 'ok');
+  drush_log("Seeding for $customer: $project", 'ok');
 
   _quant_seed_prepare();
 
