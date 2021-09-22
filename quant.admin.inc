@@ -99,7 +99,6 @@ function quant_config() {
  */
 function quant_seed_settings() {
   $form = array();
-
   _quant_get_seed_warnings($form);
 
   $form['quant_seed_entity_node'] = array(
@@ -120,6 +119,7 @@ function quant_seed_settings() {
     '#type' => 'checkboxes',
     '#title' => t('Enabled bundles'),
     '#description' => t('Optionally restrict to these content types.'),
+    '#default_value' => variable_get('quant_seed_entity_node_bundles', FALSE),
     '#options' => $options,
     '#states' => array(
       'visible' => array(
@@ -152,10 +152,11 @@ function quant_seed_settings() {
   // @TODO - add media entity support.
   $form['entity_media'] = array();
 
-  $form['routes'] = [
+  $form['quant_custom_routes_enabled'] = [
     '#type' => 'checkbox',
     '#title' => t('Custom routes'),
     '#description' => t('Exports custom list of routes.'),
+    '#default_value' => variable_get('quant_custom_routes_enabled', FALSE),
   ];
 
   $form['quant_custom_routes'] = [
@@ -164,7 +165,7 @@ function quant_seed_settings() {
     '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g: /about-us'),
     '#states' => [
       'visible' => [
-        ':input[name="routes"]' => ['checked' => TRUE],
+        ':input[name="quant_custom_routes_enabled"]' => ['checked' => TRUE],
       ],
     ],
     '#default_value' => variable_get('quant_custom_routes', FALSE),
@@ -176,7 +177,7 @@ function quant_seed_settings() {
     '#default_value' => variable_geT('quant_robots', FALSE),
   ];
 
-  $form['quant_seed'] = array(
+  $form['trigger_quant_seed'] = array(
     '#type' => 'checkbox',
     '#title' => t('Trigger the batch'),
     '#description' => t('<strong>Note:</strong> This will attempt to trigger the seed from the UI, depending on the size of your site and PHP configuration this may not work.'),
@@ -185,9 +186,69 @@ function quant_seed_settings() {
 
   $form = system_settings_form($form);
 
-  $form['actions']['#weight'] = 999;
+  $form['actions']['#weight'] = 998;
+  $form['#submit'][] = '_quant_queue_batch';
 
-  $form['#submit'][] = '_quant_seed_prepare';
+  $form['save_and_queue'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save and Queue',
+    '#submit' => array('_quant_seed_prepare'),
+    '#weight' => 999,
+  );
 
   return $form;
+}
+
+/**
+ * Present items that are queued for quant sending.
+ */
+function quant_queue_page() {
+  $items = quant_get_queue(TRUE);
+  $rows = [];
+
+  $header = array(
+    t('Item ID'),
+    t('Claimed/Expiration'),
+    t('Created'),
+    t('Content/Data'),
+  );
+
+  foreach ($items as &$item) {
+    if ($item['expire'] > 0) {
+      $item['expire'] = t("Claimed: expires %expire", array('%expire' => date('r', $item['expire'])));
+    }
+    else {
+      $item['expire'] = t('Unclaimed');
+    }
+    $item['created'] = date('r', $item['created']);
+    list($op, $context) = unserialize($item['data']);
+    $item['content'] = t('<b>Callback:</b> %op<br /><b>URL:</b> %arg', array(
+      '%op' => $op,
+      '%arg' => reset($context),
+    ));
+    unset($item['data']);
+    $rows[] = $item;
+  }
+
+  if (!empty($items)) {
+    $queue = quant_get_queue();
+    $build['desc'] = array(
+      '#markup' => t('There are <b>%total</b> items in the queue.<br/><br />', array(
+        '%total' => $queue->numberOfItems(),
+      )),
+    );
+  }
+
+  $build['pager_table'] = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' => t('There are no items in the queue.'),
+  );
+
+  $build['pager'] = array(
+    '#theme' => 'pager',
+  );
+
+  return $build;
 }

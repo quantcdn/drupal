@@ -50,12 +50,14 @@ function quant_file_form_quant_seed_settings_alter(&$form, $form_state) {
 }
 
 /**
- * Implements hook_quant_seed_alter().
+ * Implements hook_quant_seed_queue().
  */
-function quant_file_quant_seed_alter(&$batch) {
+function quant_file_quant_seed_queue() {
   if (!variable_get('quant_seed_files', FALSE)) {
     return;
   }
+
+  $queue = quant_get_queue();
 
   $files = db_select('file_managed', 'f')
     ->fields('f', array('fid', 'status'))
@@ -64,10 +66,11 @@ function quant_file_quant_seed_alter(&$batch) {
 
   while ($file = $files->fetchAssoc()) {
     list($url, $context) = _quant_prepare_entity('file', $file['fid']);
-    $batch['operations'][] = array(
+    $item = array(
       'quant_seed',
       array($url, $context),
     );
+    $queue->createItem($item);
   }
 }
 

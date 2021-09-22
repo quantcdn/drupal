@@ -10,7 +10,7 @@
  *
  * @var string
  */
-define('QUANT_API_ENDPOINT_DEFAULT', 'https://api.quantcdn.io/');
+define('QUANT_API_ENDPOINT_DEFAULT', 'https://api.quantcdn.io');
 
 /**
  * Implements hook_help().
@@ -179,7 +179,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
  * Implements hook_quant_seed_file().
  */
 function quant_api_quant_seed_file($url, $context) {
-  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT);
+  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
 
   if (empty($api)) {
     quant_log('API endpoint is not configured.', [], 'info');
@@ -248,7 +248,7 @@ function quant_api_quant_seed_file($url, $context) {
  *   If the request was successful.
  */
 function quant_api_unpublish_route($url) {
-  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT);
+  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
 
   $options = array(
     'headers' => quant_api_get_request_headers() + array(
