@@ -865,6 +865,8 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
   $queue->deleteQueue();
   $queue->createQueue();
 
+  $routes = array();
+
   if (variable_get('quant_seed_entity_node')) {
     $node_bundles = array_filter(variable_get('quant_seed_entity_node_bundles'));
     _quant_queue_nodes($node_bundles);
@@ -884,8 +886,13 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
 
   $routes = array('/_quant404');
 
-  if (variable_get('quant_custom_routes')) {
-    $routes = array_merge($routes, variable_get('quant_custom_routes'));
+  if (variable_get('quant_custom_routes_enabled')) {
+    foreach (explode(PHP_EOL, variable_get('quant_custom_routes')) as $route) {
+      if (strpos((trim($route)), '/') !== 0) {
+        continue;
+      }
+      $routes[] = trim($route);
+    }
   }
 
   if (variable_get('quant_robots')) {
@@ -904,6 +911,8 @@ function _quant_queue_batch() {
   if (!variable_get('trigger_quant_seed')) {
     return;
   }
+
+  _quant_seed_prepare();
 
   $batch = array(
     'title' => t('Quant seeding'),

@@ -119,6 +119,7 @@ function quant_seed_settings() {
     '#type' => 'checkboxes',
     '#title' => t('Enabled bundles'),
     '#description' => t('Optionally restrict to these content types.'),
+    '#default_value' => variable_get('quant_seed_entity_node_bundles', FALSE),
     '#options' => $options,
     '#states' => array(
       'visible' => array(
@@ -151,10 +152,11 @@ function quant_seed_settings() {
   // @TODO - add media entity support.
   $form['entity_media'] = array();
 
-  $form['routes'] = [
+  $form['quant_custom_routes_enabled'] = [
     '#type' => 'checkbox',
     '#title' => t('Custom routes'),
     '#description' => t('Exports custom list of routes.'),
+    '#default_value' => variable_get('quant_custom_routes_enabled', FALSE),
   ];
 
   $form['quant_custom_routes'] = [
@@ -163,7 +165,7 @@ function quant_seed_settings() {
     '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g: /about-us'),
     '#states' => [
       'visible' => [
-        ':input[name="routes"]' => ['checked' => TRUE],
+        ':input[name="quant_custom_routes_enabled"]' => ['checked' => TRUE],
       ],
     ],
     '#default_value' => variable_get('quant_custom_routes', FALSE),
@@ -184,10 +186,15 @@ function quant_seed_settings() {
 
   $form = system_settings_form($form);
 
-  $form['actions']['#weight'] = 999;
-
-  $form['#submit'][] = '_quant_seed_prepare';
+  $form['actions']['#weight'] = 998;
   $form['#submit'][] = '_quant_queue_batch';
+
+  $form['save_and_queue'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save and Queue',
+    '#submit' => array('_quant_seed_prepare'),
+    '#weight' => 999,
+  );
 
   return $form;
 }

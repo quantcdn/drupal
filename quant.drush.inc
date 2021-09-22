@@ -10,6 +10,14 @@
  */
 function quant_drush_command() {
 
+  $items['quant-queue-info'] = array(
+    'callback' => 'drush_quant_info',
+    'description' => 'Return current queue count.',
+    'arguments' => array(),
+    'options' => array(),
+    'aliases' => array('qi'),
+  );
+
   $items['quant-seed-queue'] = array(
     'callback' => 'drush_quant_seed',
     'description' => 'Populate the queue',
@@ -33,10 +41,18 @@ function quant_drush_command() {
     'description' => 'Reset the queue',
     'arguments' => array(),
     'options' => array(),
-    'aliases' => array('qr'),
+    'aliases' => array('qc'),
   );
 
   return $items;
+}
+
+/**
+ * Callback to return current queue count.
+ */
+function drush_quant_info() {
+  $queue = quant_get_queue();
+  drush_log($queue->numberOfItems() . ' items in the queue.', 'ok');
 }
 
 /**
