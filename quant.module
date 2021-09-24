@@ -413,9 +413,6 @@ function quant_seed($url, array $context = array()) {
     $options['headers']['quant-revision'] = $context['vid'];
   }
 
-  dpm($options);
-  return;
-
   $response = drupal_http_request($url, $options);
 
   // Add a redirect if 301|302.
