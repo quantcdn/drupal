@@ -29,13 +29,14 @@ class RouteItem implements QuantQueueItemInterface {
       throw new \UnexpectedValueException(self::class . ' requires a string value.');
     }
 
-    $this->route = $route;
+    $this->route = trim($route);
   }
 
   /**
    * {@inheritdoc}
    */
   public function send() {
+
     $response = Seed::markupFromRoute($this->route);
 
     if (!$response) {

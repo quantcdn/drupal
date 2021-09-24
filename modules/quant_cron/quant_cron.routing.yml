@@ -1,0 +1,9 @@
+quant_cron.settings_form:
+  path: '/admin/config/development/quant/cron'
+  defaults:
+    _form: '\Drupal\quant_cron\Form\CronSettingsForm'
+    _title: 'Quant Cron Configuration'
+  requirements:
+    _permission: 'configure quant'
+  options:
+    _admin_route: TRUE

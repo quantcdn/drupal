@@ -12,6 +12,8 @@ use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\node\Entity\Node;
 
 /**
  * Implements hook_cron().
@@ -38,60 +40,36 @@ function quant_cron_cron() {
     'finished' => '\Drupal\quant\Seed::finishedSeedCallback',
   ];
 
-  $assets = [];
-  $routes = [];
-  $redirects = [];
 
-  // Lunr.
-  if ($form_state->getValue('lunr')) {
-    $assets = array_merge($assets, Seed::findLunrAssets());
-    $routes = array_merge($routes, Seed::findLunrRoutes());
+  if ($form_state->getValue('entity_node')) {
+    $query = \Drupal::entityTypeManager()->getStorage('node')->getQuery();
+
+    $bundles = $form_state->getValue('entity_node_bundles');
+
+    if (!empty($bundles)) {
+      $bundles = array_filter($bundles);
+      if (!empty($bundles)) {
+        $query->condition('type', array_keys($bundles), 'IN');
+      }
+    }
+
+    $entities = $query->execute();
+    foreach ($entities as $vid => $nid) {
+      $entity = Node::load($nid);
+      Seed::seedNode($entity);
+      \Drupal::messenger()->addMessage("quant_cron sending nid: $nid");
+    }
   }
 
-  // Custom routes.
-  if ($form_state->getValue('routes_export')) {
-    foreach (explode(PHP_EOL, $cron_config->get('routes_export')) as $route) {
+  if ($form_state->getValue('routes')) {
+    foreach (explode(PHP_EOL, $form_state->getValue('routes_textarea')) as $route) {
       if (strpos((trim($route)), '/') !== 0) {
         continue;
       }
-      $routes[] = trim($route);
+      \Drupal::messenger()->addMessage("quant_cron sending route: $route");
+      $item = new RouteItem(['route' => $route]);
+      $item->send();
     }
   }
-
-  if ($form_state->getValue('redirects')) {
-    // Collect the redirects for the seed.
-    $event = new CollectRedirectsEvent([], $form_state);
-    $event_dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
-    while ($redirect = $event->getEntity()) {
-      $batch['operations'][] = [
-        '\Drupal\quant\Seed::exportRedirect',
-        [$redirect],
-      ];
-    }
-  }
-
-  if ($form_state->getValue('entity_node')) {
-    $revisions = $form_state->getValue('entity_node_revisions');
-    $event = new CollectEntitiesEvent([], $revisions, $form_state);
-    $event_dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
-    while ($entity = $event->getEntity()) {
-      $batch['operations'][] = ['\Drupal\quant\Seed::exportNode', [$entity]];
-    }
-  }
-
-  $event = new CollectRoutesEvent($routes, $form_state);
-  $event_dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
-  while ($route = $event->getRoute()) {
-    $batch['operations'][] = ['\Drupal\quant\Seed::exportRoute', [$route]];
-  }
-
-  $event = new CollectFilesEvent($assets, $form_state);
-  $event_dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
-  while ($file = $event->getFilePath()) {
-    $batch['operations'][] = ['\Drupal\quant\Seed::exportFile', [$file]];
-  }
-
-  batch_set($batch);
-  drush_backend_batch_process();
 
 }
