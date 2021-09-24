@@ -1140,10 +1140,13 @@ function quant_token_validate($route, $strict = TRUE) {
     return FALSE;
   }
 
-  if ($strict && (parse_url($route, PHP_URL_PATH) != parse_url($payload['route'], PHP_URL_PATH))) {
-    watchdog('quant_token', 'Strict token mismatch: Expected [@path] Received [@route]', array(
-      '@path' => parse_url($payload['route'], PHP_URL_PATH),
-      '@route' => parse_url($route, PHP_URL_PATH),
+  $expected_route = parse_url(ltrim($route, '/'));
+  $received_route = parse_url(ltrim($payload['route'], '/'));
+
+  if ($strict && $expected_route != $received_route) {
+    watchdog('quant_token', 'Strict token mismatch: Expected [@expected] Received [@received]', array(
+      '@expected' => $expected_route,
+      '@received' => $received_route,
     ), WATCHDOG_INFO);
     return FALSE;
   }
