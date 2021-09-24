@@ -154,7 +154,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
     $directoryIterator = new \RecursiveDirectoryIterator($themePath, \RecursiveDirectoryIterator::SKIP_DOTS);
     $iterator = new \RecursiveIteratorIterator($directoryIterator);
-    $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.ico)$/i', \RecursiveRegexIterator::GET_MATCH);
+    $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.ico|.js|.css)$/i', \RecursiveRegexIterator::GET_MATCH);
 
     foreach ($regex as $name => $r) {
       $path = str_replace(DRUPAL_ROOT, '', $name);
