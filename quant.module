@@ -18,13 +18,6 @@ define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf)$/
 define('QUANT_VERBOSE', 'verbose');
 
 /**
- * The elapsed time a short-live token can be alive for.
- *
- * @var string
- */
-define('QUANT_ELAPSED_TIME', '+1 minute');
-
-/**
  * Implements hook_help().
  */
 function quant_help($section) {
@@ -83,6 +76,17 @@ function quant_menu() {
     'weight' => 10,
   );
 
+  $items['admin/config/services/quant/token'] = array(
+    'title' => 'Token',
+    'description' => 'Configure the Quant internal token system',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_token_settings'),
+    'file' => 'quant.admin.inc',
+    'access arguments' => array('configure quant'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 3
+  );
+
   // Custom quant view controller.
   $items['node/%node/quant'] = array(
     'title callback' => 'quant_page_title',
@@ -115,7 +119,6 @@ function quant_cron_queue_info() {
  * standard router context continue to operate as expected.
  */
 function quant_menu_alter(&$items) {
-
   // Altering the node route breaks displaysuite.
   if (variable_get('disable_content_drafts', FALSE)) {
     return;
@@ -191,32 +194,40 @@ function quant_cron() {
   db_query('TRUNCATE {quant_token}');
 }
 
+function quant_forbidden() {
+  http_response_code(403);
+  die('Forbidden');
+}
+
+
 /**
- * Implements hook_node_access().
+ * Implements hook_init().
  *
- * This is not called for all users - if a user has the 'bypass node access'
- * permission this will not be called (eg. uid 1).
- *
- * Additionally 'access content' needs to be given to anonymous for this to
- * take effect.
- *
- * @see node_access
+ * Perform token validation at the beginning of the request. This allows us to
+ * generate a token for the request and then embed resources into the page without
+ * clashing with node_access restrictions.
  */
-function quant_node_access($node, $op, $account) {
-
-  if (is_string($node)) {
-    return NODE_ACCESS_IGNORE;
+function quant_init() {
+  if (empty(_quant_get_request_header('quant-token'))) {
+    // Skip token checking if we don't have a token - this will
+    // allow the site to operate correctly in normal browsing
+    // patterns.
+    return;
   }
 
-  if (variable_get('disable_content_drafts', FALSE)) {
-    return NODE_ACCESS_IGNORE;
+  $path = current_path();
+  $path_alias = drupal_lookup_path('alias', $path);
+  $strict = variable_get('quant_token_strict', true);
+
+  if (quant_token_validate($path_alias, $strict)) {
+    return;
   }
 
-  if (!empty(_quant_get_request_header('quant-token'))) {
-    return quant_token_validate($node->nid) ? NODE_ACCESS_ALLOW : NODE_ACCESS_DENY;
+  if (quant_token_validate($path, $strict)) {
+    return;
   }
 
-  return NODE_ACCESS_IGNORE;
+  quant_forbidden();
 }
 
 /**
@@ -226,8 +237,10 @@ function quant_node_load($nodes) {
   if (empty(_quant_get_request_header('quant-token'))) {
     return;
   }
+
   foreach ($nodes as $node) {
-    if (quant_token_validate($node->nid)) {
+    $path = drupal_lookup_path('alias', "node/{$node->nid}");
+    if (quant_token_validate($path, FALSE)) {
       $node->status = 1;
     }
   }
@@ -393,17 +406,15 @@ function quant_seed($url, array $context = array()) {
     ),
   );
 
-  if (isset($context['token'])) {
-    $options['headers']['quant-token'] = $context['token'];
-  }
-  elseif (isset($context['id'])) {
-    // Create a short-lived token to grant node access.
-    $options['headers']['quant-token'] = quant_token_create($context['id']);
-  }
+  // Ensure Quant internal requests are signed.
+  $options['headers']['quant-token'] = quant_token_create($url);
 
   if (isset($context['vid']) && $context['type'] == 'node') {
     $options['headers']['quant-revision'] = $context['vid'];
   }
+
+  dpm($options);
+  return;
 
   $response = drupal_http_request($url, $options);
 
@@ -1016,39 +1027,68 @@ function quant_export_drupal_pages() {
 }
 
 /**
+ * Prepare a JWT header part.
+ *
+ * @param array|string $part
+ *   The part to encode.
+ *
+ * @return string
+ *   base64encoded string.
+ */
+function quant_jwt_encode($part = []) {
+  if (is_array($part)) {
+    $part = json_encode($part);
+  }
+  $encoded = base64_encode($part);
+
+  if ($encoded === FALSE) {
+    throw new \Exception('Unable to encode part.');
+  }
+
+  $encoded = strtr($encoded, '+/', '-_');
+  return rtrim($encoded, '=');
+}
+
+/**
+ * Reverse the JWT encode.
+ *
+ * @param string $string
+ *   The encoded string.
+ * @param bool $strict
+ *   Base64 in strict mode.
+ *
+ * @return string|array
+ *   The decoded URL part.
+ */
+function quant_jwt_decode($string, $strict = FALSE) {
+    $string = strtr($string, '-_', '+/');
+    $part = base64_decode($string, $strict);
+    $array_part = json_decode($part, TRUE);
+    return empty($array_part) ? $part : $array_part;
+  }
+
+/**
  * Add a short-lived token to the table.
  *
  * @return string
  *   The generated token.
  */
-function quant_token_create($nid) {
-  // This is slightly different to the D8 implementation
-  // openssl produces different characters that get_query_parameters
-  // cannot handle correctly so we just use random bytes.
-  if (function_exists('random_bytes')) {
-    $bytes = random_bytes(ceil(16 / 2));
-    $token = substr(bin2hex($bytes), 0, 16);
-  }
-  else {
-    $token = bin2hex(random_bytes(16));
-  }
+function quant_token_create($route) {
+  $secret = variable_get('quant_token_secret', 'supersecret');
+  $time = new DateTime(variable_get('quant_token_timeout', '+1 minute'));
 
-  $token = base64_encode($token);
+  $header = ['typ' => 'JWT', 'alg' => 'HS256'];
+  $payload = [
+    'user' => 'quant',
+    'route' => PARSE_URL($route, PHP_URL_PATH),
+    'expires' => $time->format('U'),
+  ];
 
-  try {
-    db_insert('quant_token')
-      ->fields(array(
-        'token' => $token,
-        'nid' => $nid,
-        'created' => REQUEST_TIME,
-      ))
-      ->execute();
-  }
-  catch (\Exception $error) {
-    var_dump($error->getMessage());
-  }
+  $header = quant_jwt_encode($header);
+  $payload = quant_jwt_encode($payload);
+  $signature = hash_hmac('sha256', "$header.$payload", $secret, TRUE);
 
-  return $token;
+  return "$header.$payload." . quant_jwt_encode($signature);
 }
 
 /**
@@ -1057,31 +1097,61 @@ function quant_token_create($nid) {
  * @return bool
  *   If the token is valid.
  */
-function quant_token_validate($nid, $strict = TRUE) {
-
-  if (empty(_quant_get_request_header('quant-token'))) {
-    return FALSE;
-  }
-
+function quant_token_validate($route, $strict = TRUE) {
   $token = _quant_get_request_header('quant-token');
+  $secret = variable_get('quant_token_secret', 'supersecret');
+  $current_time = new DateTime;
 
-  $record = db_select('quant_token', 'qt')
-    ->fields('qt', ['nid', 'created'])
-    ->condition('token', $token)
-    ->execute()
-    ->fetchAssoc();
-
-  if (empty($record) || empty($record['created']) || empty($record['nid'])) {
-    // Something went wrong, we don't have the fields we need.
-    return FALSE;
-  }
-
-  if (!$strict) {
+  if (variable_get('quant_token_disable', FALSE)) {
+    // If token validation is disabled we assume the user has access
+    // to the request.
     return TRUE;
   }
 
-  $valid_until = strtotime(QUANT_ELAPSED_TIME, $record['created']);
-  return REQUEST_TIME < $valid_until && $nid == $record['nid'];
+  if (empty($token)) {
+    return FALSE;
+  }
+
+  $token_parts = explode('.', $token);
+  $header = quant_jwt_decode($token_parts[0]);
+  $payload = quant_jwt_decode($token_parts[1]);
+
+  $provided_signature = $token_parts[2];
+
+  $signature = hash_hmac('sha256', "{$token_parts[0]}.{$token_parts[1]}", $secret, TRUE);
+  $signature = quant_jwt_encode($signature);
+
+  if ($signature !== $provided_signature || empty($payload['expires'])) {
+    watchdog('quant_token', 'Invalid token [@token]', array('@token' => $token), WATCHDOG_INFO);
+    return FALSE;
+  }
+
+  $request_time = new DateTime();
+  $request_time->setTimestamp($payload['expires']);
+  $date_diff = $current_time->diff($request_time);
+
+  // The %r format will return empty string or '-' if the diff is
+  // in the past, we can use this to determine if the date diff
+  // is negative and restrict access accordingly.
+  // @see https://www.php.net/manual/en/dateinterval.format.php
+  if (!empty($date_diff->format('%r'))) {
+    watchdog('quant_token', 'Expired token: Expected [@time] Received [@cur_time] (@diff)', array(
+      '@time' => $request_time->format('d/m/y H:m:s'),
+      '@cur_time' => $current_time->format('d/m/y H:m:s'),
+      '@diff' => $date_diff->format('%r'),
+    ), WATCHDOG_INFO);
+    return FALSE;
+  }
+
+  if ($strict && (parse_url($route, PHP_URL_PATH) != parse_url($payload['route'], PHP_URL_PATH))) {
+    watchdog('quant_token', 'Strict token mismatch: Expected [@path] Received [@route]', array(
+      '@path' => parse_url($payload['route'], PHP_URL_PATH),
+      '@route' => parse_url($route, PHP_URL_PATH),
+    ), WATCHDOG_INFO);
+    return FALSE;
+  }
+
+  return TRUE;
 }
 
 /**

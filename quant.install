@@ -6,44 +6,21 @@
  */
 
 /**
- * Implements hook_quant_schema().
+ * Perform setup tasks.
  */
-function quant_schema() {
-  $schema['quant_token'] = array(
-    'description' => 'Short-lived access tokens for revisions.',
-    'fields' => array(
-      'pid' => array(
-        'type' => 'serial',
-        'not null' => TRUE,
-        'description' => 'Primary key: Unique token ID.',
-        'unsigned' => TRUE,
-      ),
-      'nid' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => 'The node that is to be accessed.',
-      ),
-      'token' => array(
-        'type' => 'varchar',
-        'not null' => TRUE,
-        'length' => 255,
-        'default' => '',
-        'description' => 'The token value.',
-      ),
-      'created' => array(
-        'description' => 'The Unix timestamp when the token was created.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-    ),
-    'indexes' => array(
-      'token' => array('token'),
-    ),
-    'primary key' => array('pid'),
-  );
+function quant_install() {
+  // Prepare configuration for quant tokens.
+  variable_set('quant_token_secret', bin2hex(random_bytes(32)));
+  variable_set('quant_token_timeout', '+1 minute');
+}
 
-  return $schema;
+/**
+ * Remove the quant_token table.
+ */
+function quant_update_7000() {
+  if (db_table_exists('quant_token')) {
+    db_drop_table('quant_token');
+  }
+  variable_set('quant_token_secret', bin2hex(random_bytes(32)));
+  variable_set('quant_token_timeout', '+1 minute');
 }

@@ -174,7 +174,7 @@ function quant_seed_settings() {
   $form['quant_robots'] = [
     '#type' => 'checkbox',
     '#title' => t('Export robots.txt'),
-    '#default_value' => variable_geT('quant_robots', FALSE),
+    '#default_value' => variable_get('quant_robots', FALSE),
   ];
 
   $form['trigger_quant_seed'] = array(
@@ -251,4 +251,41 @@ function quant_queue_page() {
   );
 
   return $build;
+}
+
+/**
+ * Quant token settings form.
+ */
+function quant_token_settings() {
+  $form = array();
+  $form['quant_token_timeout'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Token timeout'),
+    '#description' => t('A string compatible with <a href="https://www.php.net/manual/en/function.strtotime.php">PHPs baseTimestamp</a> parameter'),
+    '#default_value' => variable_get('quant_token_timeout', '+1 minute'),
+  );
+  $form['quant_token_strict'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable strict token checks'),
+    '#description' => t('This enforces strict token checking during seeds'),
+    '#default_value' => variable_get('quant_token_strict', true),
+  );
+  $form['quant_token_secret_regenerate'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Regerenate signing secret'),
+    '#description' => t('This will regenerate the internal secret value Quant uses to sign internal requests'),
+  );
+
+  $form = system_settings_form($form);
+  $form['#submit'][] = 'quant_token_regenerate';
+  return $form;
+}
+
+/**
+ * Regenerate quant signing secret.
+ */
+function quant_token_regenerate($form, &$form_state) {
+  if ($form_state['values']['quant_token_secret_regenerate']) {
+    variable_set('quant_token_secret', bin2hex(random_bytes(32)));
+  }
 }
