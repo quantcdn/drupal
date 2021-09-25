@@ -80,7 +80,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
     // Add the latest node to the batch.
     foreach ($entities as $vid => $nid) {
-      $filter = $event->getFormState()->getValue('entity_node_languages');
+      $filter = array_filter($event->getFormState()->getValue('entity_node_languages'));
 
       if ($includeRevisions) {
         $entity = Node::load($nid);
@@ -137,7 +137,6 @@ class CollectionSubscriber implements EventSubscriberInterface {
       return;
     }
 
-    // @todo Find path programmatically.
     // @todo Support multiple themes (e.g site may have multiple themes changing by route).
     $config = $this->configFactory->get('system.theme');
     $themeName = $config->get('default');

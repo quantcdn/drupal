@@ -220,7 +220,7 @@ class SeedForm extends FormBase {
     $form['routes'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Custom routes'),
-      '#description' => $this->t('Exports custom list of routes.'),
+      '#description' => $this->t('Exports custom list of routes.  May be content or files.'),
       '#default_value' => $seed_config->get('routes'),
     ];
 

@@ -113,7 +113,6 @@ class CronSettingsForm extends FormBase {
       '#default_value' => $config->get('entity_taxonomy_term'),
     ];
 
-    // @todo Implement these as plugins.
     $form['theme_assets'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Theme assets'),
@@ -131,8 +130,8 @@ class CronSettingsForm extends FormBase {
     $form['routes'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Custom routes'),
-      '#description' => $this->t('Exports custom list of routes.'),
-      '#default_value' => !empty($config->get('routes_export')),
+      '#description' => $this->t('Exports custom list of routes. May be content or files.'),
+      '#default_value' => $config->get('routes'),
     ];
 
     $form['routes_textarea'] = [
@@ -186,6 +185,7 @@ class CronSettingsForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->configFactory->getEditable('quant_cron.settings');
+    $config->set('routes', $form_state->getValue('routes'))->save();
     $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
     $config->set('entity_node', $form_state->getValue('entity_node'))->save();
     $config->set('entity_node_languages', $form_state->getValue('entity_node_languages'))->save();

@@ -248,6 +248,56 @@ class Seed {
   }
 
   /**
+   * Attempts a HTTP HEAD request to a given route.
+   *
+   * @param string $route
+   *   The route to poll.
+   * @param array $headers
+   *   Headers to add to the request.
+   *
+   * @return bool
+   *   Whether a 200 response was received or not.
+   */
+  public static function headRoute($route, array $headers = []) {
+
+    // Build internal request.
+    $config = \Drupal::config('quant.settings');
+    $local_host = $config->get('local_server') ?: 'http://localhost';
+    $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
+    $url = $local_host . $route;
+
+    $headers['Host'] = $hostname;
+
+    // Generate a signed token and use it in the request.
+    $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
+
+    // Support basic auth if enabled (note: will not work via drush/cli).
+    $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
+      $_SERVER['PHP_AUTH_USER'],
+      $_SERVER['PHP_AUTH_PW'],
+    ] : [];
+
+    try {
+      $response = \Drupal::httpClient()->head($url, [
+        'http_errors' => FALSE,
+        'headers' => $headers,
+        'auth' => $auth,
+        'allow_redirects' => FALSE,
+        'verify' => $config->get('ssl_cert_verify'),
+      ]);
+    }
+    catch (ConnectException $exception) {
+      return FALSE;
+    }
+
+    if ($response->getStatusCode() == 200) {
+      return TRUE;
+    }
+
+    return FALSE;
+  }
+
+  /**
    * Returns markup for a given route.
    *
    * @param string $route
