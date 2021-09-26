@@ -7,13 +7,7 @@
 
 use Drupal\quant\Seed;
 use Drupal\Core\Form\FormState;
-use Drupal\quant\Event\CollectEntitiesEvent;
-use Drupal\quant\Event\CollectFilesEvent;
-use Drupal\quant\Event\CollectRedirectsEvent;
-use Drupal\quant\Event\CollectRoutesEvent;
-use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
-use Drupal\quant\Plugin\QueueItem\RedirectItem;
 use Drupal\node\Entity\Node;
 use Drupal\user\Entity\User;
 use Drupal\views\Views;
@@ -75,7 +69,7 @@ function quant_cron_cron() {
         \Drupal::logger('quant_cron')->notice("quant_cron sending node: nid: @nid, langcode: @lang",
           [
             '@nid' => $nid,
-            '@lang' => $langcode
+            '@lang' => $langcode,
           ]
         );
       }
@@ -100,17 +94,17 @@ function quant_cron_cron() {
 
   // Add theme file routes.
   if ($form_state->getValue('theme_assets')) {
-    $routes = array_merge($routes, getThemeRoutes());
+    $routes = array_merge($routes, get_theme_routes());
   }
 
   // Add views routes.
   if ($form_state->getValue('views_pages')) {
-    $routes = array_merge($routes, getViewsRoutes());
+    $routes = array_merge($routes, get_views_routes());
   }
 
   // Add taxonomy term routes.
   if ($form_state->getValue('entity_taxonomy_term')) {
-    $routes = array_merge($routes, getTaxonomyRoutes());
+    $routes = array_merge($routes, get_taxonomy_routes());
   }
 
   // Send any added routes.
@@ -122,11 +116,10 @@ function quant_cron_cron() {
 
 }
 
-
 /**
  * Helper: Get taxonomy routes.
  */
-function getTaxonomyRoutes() {
+function get_taxonomy_routes() {
 
   $paths = [];
   $taxonomy_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
@@ -146,35 +139,16 @@ function getTaxonomyRoutes() {
 
       $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
       $paths[] = $url;
-
-      // Generate a redirection QueueItem from canonical path to URL.
-      // Use the default language alias in the event of multi-lang setup.
-      $queue_factory = \Drupal::service('queue');
-      $queue = $queue_factory->get('quant_seed_worker');
-
-      if ("/taxonomy/term/{$tid}" != $url) {
-        $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
-        $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
-
-        $redirectItem = new RedirectItem([
-          'source' => "/taxonomy/term/{$tid}",
-          'destination' => $defaultUrl,
-          'status_code' => 301,
-        ]);
-
-        $queue->createItem($redirectItem);
-      }
     }
   }
 
   return $paths;
 }
 
-
 /**
  * Helper: Get theme assets.
  */
-function getThemeRoutes() {
+function get_theme_routes() {
 
   $paths = [];
 
@@ -225,7 +199,7 @@ function getThemeRoutes() {
 /**
  * Helper: Get views routes.
  */
-function getViewsRoutes() {
+function get_views_routes() {
 
   $views_storage = \Drupal::entityTypeManager()->getStorage('view');
   $anon = User::getAnonymousUser();
@@ -252,7 +226,7 @@ function getViewsRoutes() {
         }
 
         if (strpos($path, 'admin') > -1) {
-          // @todo: Check why view access check does exclude these.
+          // @todo Check why view access check does exclude these.
           continue;
         }
 
