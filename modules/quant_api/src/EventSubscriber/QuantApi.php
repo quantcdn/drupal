@@ -246,7 +246,7 @@ class QuantApi implements EventSubscriberInterface {
       return;
     }
     catch (\Exception $error) {
-      if (strpos('MD5 already matches', $error->getMessage() === -1)) {
+      if (strpos("MD5 already matches", $error->getMessage()) !== FALSE) {
         $this->logger->error($error->getMessage());
       }
       return;
