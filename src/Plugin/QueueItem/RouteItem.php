@@ -29,13 +29,32 @@ class RouteItem implements QuantQueueItemInterface {
       throw new \UnexpectedValueException(self::class . ' requires a string value.');
     }
 
-    $this->route = $route;
+    // Ensure route starts with a slash.
+    if (substr($route, 0, 1) != '/') {
+      $route = "/{$route}";
+    }
+
+    $this->route = trim($route);
   }
 
   /**
    * {@inheritdoc}
    */
   public function send() {
+
+    // Wrapper for routes that resolve as files.
+    $ext = pathinfo(strtok($this->route, '?'), PATHINFO_EXTENSION);
+
+    if ($ext && file_exists(DRUPAL_ROOT . strtok($this->route, '?'))) {
+      $file_item = new FileItem([
+        'file' => strtok($this->route, '?'),
+        'url' => $this->route,
+        'full_path' => DRUPAL_ROOT . $this->route,
+      ]);
+      $file_item->send();
+      return;
+    }
+
     $response = Seed::markupFromRoute($this->route);
 
     if (!$response) {

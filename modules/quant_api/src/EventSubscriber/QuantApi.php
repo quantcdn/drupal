@@ -12,6 +12,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\quant\Seed;
 
 /**
  * Integrate with the QuantAPI to store static assets.
@@ -189,7 +190,7 @@ class QuantApi implements EventSubscriberInterface {
         $file_item = new FileItem([
           'file' => $file,
           'url' => $url,
-          'full_path' => $item['full_path'],
+          'full_path' => $item['full_path'] ?? NULL,
         ]);
         $queue->createItem($file_item);
       }
@@ -231,6 +232,12 @@ class QuantApi implements EventSubscriberInterface {
     $url = $event->getUrl();
     $rid = $event->getRevisionId();
 
+    // Disallow file sending that does not return 200.
+    if (!Seed::headRoute($url)) {
+      $this->logger->error("Error retrieving file for route: $url");
+      return;
+    }
+
     try {
       $res = $this->client->sendFile($file, $url);
     }
@@ -239,7 +246,7 @@ class QuantApi implements EventSubscriberInterface {
       return;
     }
     catch (\Exception $error) {
-      if (strpos('MD5 already matches', $error->getMessage() === -1)) {
+      if (strpos("MD5 already matches", $error->getMessage()) !== FALSE) {
         $this->logger->error($error->getMessage());
       }
       return;

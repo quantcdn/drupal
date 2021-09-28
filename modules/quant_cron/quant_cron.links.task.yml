@@ -1,0 +1,4 @@
+quant_cron.settings_form:
+  route_name: quant_cron.settings_form
+  title: 'Cron'
+  base_route: quant.config

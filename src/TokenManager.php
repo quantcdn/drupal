@@ -185,7 +185,11 @@ class TokenManager {
       throw new ExpiredTokenException($token, $payload['expires'], $current_time->format('U'));
     }
 
-    if ($strict && (parse_url($route, PHP_URL_PATH) != parse_url($payload['route'], PHP_URL_PATH))) {
+    // Ensure both routes are decoded for consistent comparison.
+    $route = urldecode($route);
+    $payload_route = urldecode($payload['route']);
+
+    if ($strict && (parse_url($route, PHP_URL_PATH) != parse_url($payload_route, PHP_URL_PATH))) {
       throw new StrictTokenException($token, $payload['route'], $route);
     }
 
