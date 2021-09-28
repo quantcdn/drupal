@@ -58,7 +58,11 @@ function quant_cron_cron() {
     foreach ($entities as $vid => $nid) {
       $entity = Node::load($nid);
 
-      $filter = array_filter($form_state->getValue('entity_node_languages'));
+      $filter = [];
+
+      if (!empty($form_state->getValue('entity_node_languages'))) {
+        $filter = array_filter($form_state->getValue('entity_node_languages'));
+      }
 
       foreach ($entity->getTranslationLanguages() as $langcode => $language) {
         if (!empty($filter) && !in_array($langcode, $filter)) {

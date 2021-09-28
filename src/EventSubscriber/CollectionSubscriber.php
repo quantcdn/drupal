@@ -80,7 +80,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
     // Add the latest node to the batch.
     foreach ($entities as $vid => $nid) {
-      $filter = array_filter($event->getFormState()->getValue('entity_node_languages'));
+      $filter = [];
+
+      if (!empty($event->getFormState()->getValue('entity_node_languages'))) {
+        $filter = array_filter($event->getFormState()->getValue('entity_node_languages'));
+      }
 
       if ($includeRevisions) {
         $entity = Node::load($nid);
