@@ -186,11 +186,11 @@ class QuantApi implements EventSubscriberInterface {
       if (file_exists($fileOnDisk)) {
         $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent($fileOnDisk, $file));
       }
-      elseif (!empty($item['full_path'])) {
+      else {
         $file_item = new FileItem([
           'file' => $file,
           'url' => $url,
-          'full_path' => $item['full_path'],
+          'full_path' => $item['full_path'] ?? NULL,
         ]);
         $queue->createItem($file_item);
       }
