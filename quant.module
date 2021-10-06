@@ -10,7 +10,7 @@
  *
  * @var string
  */
-define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf)$/i');
+define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.css|.js)$/i');
 
 /**
  * Quant verbose logging.
@@ -397,7 +397,7 @@ function quant_seed($url, array $context = array()) {
     return;
   }
 
-  quant_log('Preparing to send !url', array('!url' => $url));
+  quant_log('Sending content: !url', array('!url' => $url));
 
   $options = array(
     'headers' => array(
@@ -415,6 +415,43 @@ function quant_seed($url, array $context = array()) {
 
   $response = drupal_http_request($url, $options);
 
+  // Ensure file entities have their underlying asset seeded.
+  if (isset($context['type']) && $context['type'] == 'file') {
+
+    // Public file handler
+    if(strpos($context['entity']->uri, "public://" ) === 0) {
+
+      // Seed the underlying file to the web-accessible public files path.
+      $file_on_disk = drupal_realpath($context['entity']->uri);
+
+      // File exists in filesystem.
+      if (!empty($file_on_disk)) {
+
+        $public_path = $file_on_disk;
+        if (substr($file_on_disk, 0, strlen(DRUPAL_ROOT)) == DRUPAL_ROOT) {
+          $public_path = substr($file_on_disk, strlen(DRUPAL_ROOT));
+        }
+
+        // Create a redirect from file download uri location to public file path.
+        if (module_exists('quant_redirect')) {
+          $download_uri = file_entity_download_uri($context['entity']);
+          $download_path = url($download_uri['path'], $download_uri['options']);
+
+          // We purposefully exclude the token from file paths.
+          $download_path = parse_url($download_path, PHP_URL_PATH);
+          quant_redirect_request($download_path, $public_path, 301);
+        }
+
+        $fileCtx = array(
+          'location' => $context['entity']->uri,
+          'request' => $public_path,
+        );
+
+        quant_seed_file("{$base}{$public_path}", $fileCtx);
+      }
+    }
+  }
+
   // Add a redirect if 301|302.
   if (isset($response->redirect_code) && ($response->redirect_code == 301 || $response->redirect_code == 302)) {
     // Strip quant params from destination.
@@ -429,13 +466,22 @@ function quant_seed($url, array $context = array()) {
 
     // Ensure internal redirects have their destination seeded.
     if (_is_url_internal($dest)) {
+
       $dest_path = parse_url($dest, PHP_URL_PATH);
-      quant_seed("{$base}{$dest_path}", array());
+
+      if (isset($context['type']) && $context['type'] == 'file') {
+        // File asset already handled.
+        return;
+      }
+      else {
+        quant_seed("{$base}{$dest_path}", array());
+      }
     }
-    else {
-      return;
-    }
+
+    // Redirect created, internal redirect followed + seeded.
+    return;
   }
+
 
   if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
@@ -623,7 +669,10 @@ function _quant_prepare_entity($type, $entity_id) {
 
   switch ($type) {
     case 'file':
-      $url = file_create_url($entity->uri);
+      $uri = entity_uri($type, $entity);
+      $path = $uri['path'];
+      $alias = drupal_get_path_alias($path);
+      $url = "$base/$alias";
       break;
 
     default:
@@ -710,7 +759,7 @@ function _quant_queue_taxonomy() {
 /**
  * Prepare the images to seed via batch.
  */
-function _quant_queue_images() {
+function _quant_queue_theme_assets() {
   $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
   $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
 
@@ -720,18 +769,22 @@ function _quant_queue_images() {
   drupal_alter('quant_seed_files', $file);
 
   foreach ($files as $file) {
-    $path = urldecode($file->uri);
+
+    $file_on_disk = $file->uri;
+    if (substr($file_on_disk, 0, strlen(DRUPAL_ROOT)) == DRUPAL_ROOT) {
+      $file_on_disk = substr($file_on_disk, strlen(DRUPAL_ROOT));
+    }
 
     $context = array(
       'location' => $file->uri,
-      'request' => str_replace(DRUPAL_ROOT, '', $file->uri),
+      'request' => $file_on_disk,
     );
 
-    quant_log('Preparing !path', array('!path' => $path));
+    quant_log('Preparing !path', array('!path' => $file_on_disk));
 
     $item = array(
       'quant_seed_file',
-      array($path, $context),
+      array($file_on_disk, $context),
     );
     $queue->createItem($item);
   }
@@ -885,7 +938,7 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
   }
 
   if (variable_get('quant_seed_theme_assets')) {
-    _quant_queue_images();
+    _quant_queue_theme_assets();
   }
 
   if (variable_get('quant_seed_views')) {

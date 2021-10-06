@@ -25,6 +25,7 @@ function quant_file_file_insert($file) {
  * Implements hook_file_update().
  */
 function quant_file_file_update($file) {
+
   $original = isset($file->original) ? $file->original : NULL;
   $entity_info = array(
     'entity' => $file,

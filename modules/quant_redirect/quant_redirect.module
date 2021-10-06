@@ -53,18 +53,20 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
 
   $api .= '/redirect';
 
+  $data = json_encode(array(
+    'url' => '/' . ltrim($from, '/'),
+    'redirect_url' => $to,
+    'redirect_http_code' => $status,
+    'published' => (bool) $published,
+  ));
+
   $request = array(
     'headers' => quant_api_get_request_headers() + array(
       'content-type' => 'application/json',
       'User-Agent' => 'Quant (+http://quant.io)',
     ),
     'method' => 'POST',
-    'data' => json_encode(array(
-      'url' => '/' . ltrim($from, '/'),
-      'redirect_url' => $to,
-      'redirect_http_code' => $status,
-      'published' => (bool) $published,
-    )),
+    'data' => $data,
   );
 
   // If the redirect is not new then we need to unpublish the URL
@@ -84,10 +86,9 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
-    quant_log('Unable to seed redirect: %error %payload %res', array(
+    quant_log('Unable to seed redirect: %data (%error)', array(
       '%error' => $response->error,
-      '%payload' => json_encode($request),
-      '%res' => json_encode($response),
+      '%data' => json_encode($data),
     ), WATCHDOG_ERROR);
   }
 
@@ -139,4 +140,20 @@ function quant_redirect_quant_seed_queue() {
 
     $queue->createItem($item);
   }
+}
+
+
+/**
+ * Implements hook_quant_seed().
+ *
+ * Generates canonical redirects for entities (file, taxonomy, node).
+ */
+function quant_redirect_quant_seed($location, $data, $meta = [], $context = []) {
+
+  if (empty($context) || !isset($context['type'])) {
+    return;
+  }
+
+  // @todo: generate canonical redirects (e.g node/123 or taxonomy/term/123)
+
 }
