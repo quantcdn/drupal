@@ -49,7 +49,7 @@ class FileItem implements QuantQueueItemInterface {
         'headers' => $headers,
         'auth' => $auth,
         'allow_redirects' => FALSE,
-        'verify' => $config->get('ssl_cert_verify'),
+        'verify' => boolval($config->get('ssl_cert_verify')),
       ]);
     }
 

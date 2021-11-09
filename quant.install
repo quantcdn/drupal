@@ -21,7 +21,9 @@ function quant_install() {
  */
 function quant_update_9001(&$sandbox) {
   // Remove any stale tokens.
-  \Drupal::service('quant.token_manager')->release();
+  if (method_exists(\Drupal::service('quant.token_manager'), 'release')) {
+    \Drupal::service('quant.token_manager')->release();
+  }
 
   $schema = Database::getConnection()->schema();
 
