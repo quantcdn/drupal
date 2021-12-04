@@ -123,7 +123,7 @@ class ConfigForm extends ConfigFormBase {
     $form['ssl_cert_verify'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Verify SSL certificates'),
-      '#description' => $this->t('Optionally disable SSL certificate verification, useful when your server uses self-signed certificates.'),
+      '#description' => $this->t('Verify TLS on local webserver. Disable if using self-signed certificates.'),
       '#default_value' => $config->get('ssl_cert_verify'),
     ];
 
