@@ -120,6 +120,13 @@ class ConfigForm extends ConfigFormBase {
       '#default_value' => $config->get('host_domain'),
     ];
 
+    $form['ssl_cert_verify'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Verify SSL certificates'),
+      '#description' => $this->t('Verify TLS on local webserver. Disable if using self-signed certificates.'),
+      '#default_value' => $config->get('ssl_cert_verify'),
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -138,6 +145,7 @@ class ConfigForm extends ConfigFormBase {
       ->set('local_server', $form_state->getValue('local_server'))
       ->set('host_domain', $form_state->getValue('host_domain'))
       ->set('disable_content_drafts', $form_state->getValue('disable_content_drafts'))
+      ->set('ssl_cert_verify', $form_state->getValue('ssl_cert_verify'))
       ->save();
 
     parent::submitForm($form, $form_state);

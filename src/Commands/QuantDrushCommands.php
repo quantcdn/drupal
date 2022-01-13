@@ -19,6 +19,13 @@ use Drupal\quant\Event\QuantCollectionEvents;
 class QuantDrushCommands extends DrushCommands {
 
   /**
+   * Tracks currently running processes via proc_open.
+   *
+   * @var runningProcs
+   */
+  private $runningProcs = [];
+
+  /**
    * Drush command that executes the Quant queue.
    *
    * @command quant:run-queue
@@ -31,8 +38,20 @@ class QuantDrushCommands extends DrushCommands {
     $this->output()->writeln("Forking seed worker.");
     for ($i = 0; $i < $options['threads']; $i++) {
       $cmd = 'drush queue:run quant_seed_worker';
-      $process = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
+      $this->runningProcs[] = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
     }
+
+    // Wait until commands complete.
+    foreach ($this->runningProcs as $proc) {
+      $procStatus = proc_get_status($proc);
+
+      while ($procStatus['running']) {
+        $procStatus = proc_get_status($proc);
+      }
+    }
+
+    $this->output()->writeln("<info>Seeding complete.</info>");
+
   }
 
   /**
