@@ -379,7 +379,7 @@ class Seed {
         return FALSE;
     }
 
-    return [$markup, $content_type];
+    return [self::rewriteRelative($markup), $content_type];
   }
 
   /**
