@@ -184,7 +184,7 @@ class QuantApi implements EventSubscriberInterface {
       // If the file exists we send it directly to quant otherwise we add it
       // to the queue to generate assets on the next run.
       if (file_exists($fileOnDisk)) {
-        $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent($fileOnDisk, $file));
+        $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent($fileOnDisk, $item['full_path'] ?? $file));
       }
       else {
         $file_item = new FileItem([
@@ -237,6 +237,10 @@ class QuantApi implements EventSubscriberInterface {
       $this->logger->error("Error retrieving file for route: $url");
       return;
     }
+
+    // Ensure query params are stripped here.
+    // The HEAD operation uses full_path which includes itok token.
+    $url = strtok($url, '?');
 
     try {
       $res = $this->client->sendFile($file, $url);
