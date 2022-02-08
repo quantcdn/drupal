@@ -37,7 +37,8 @@ class QuantDrushCommands extends DrushCommands {
   public function message($options = ['threads' => 5]) {
     $this->output()->writeln("Forking seed worker.");
     for ($i = 0; $i < $options['threads']; $i++) {
-      $cmd = 'drush queue:run quant_seed_worker';
+      $drush_path = DRUPAL_ROOT . '/vendor/bin/drush';
+      $cmd = $drush_path . ' queue:run quant_seed_worker';
       $this->runningProcs[] = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
     }
 
