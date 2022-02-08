@@ -26,6 +26,43 @@ class QuantDrushCommands extends DrushCommands {
   private $runningProcs = [];
 
   /**
+   * Returns path to drush binary for process forking.
+   *
+   * Priority order: $CWD, $DRUSH_PATH, $PATH, vendor/bin/drush.
+   */
+  private function getDrushPath() {
+
+    $testPaths = [
+      __DIR__ . '/drush',
+      getenv('DRUSH_PATH'),
+    ];
+
+    foreach (explode(':', getenv('PATH')) as $p) {
+      $testPaths[] = $p . '/drush';
+    }
+
+    // Support composer location in any number of places.
+    $testPaths += [
+      DRUPAL_ROOT . '/../vendor/bin/drush',
+      DRUPAL_ROOT . '/vendor/bin/drush',
+      getenv('HOME') . '/.composer/vendor/bin/drush',
+    ];
+
+    foreach ($testPaths as $path) {
+      if (empty($path)) {
+        continue;
+      }
+
+      if (file_exists($path) && is_executable($path)) {
+        return $path;
+      }
+    }
+
+    throw new \Exception('Unable to find a valid drush binary, please specify $DRUSH_PATH.');
+
+  }
+
+  /**
    * Drush command that executes the Quant queue.
    *
    * @command quant:run-queue
@@ -35,10 +72,13 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:run-queue --threads=5
    */
   public function message($options = ['threads' => 5]) {
-    $this->output()->writeln("Forking seed worker.");
+
+    $this->output()->writeln("<info>Forking seed worker.</info>");
+    $drushPath = $this->getDrushPath();
+    $cmd = $drushPath . ' queue:run quant_seed_worker';
+    $this->output()->writeln("<comment>Using drush binary at $drushPath. Override with \$DRUSH_PATH if required.</comment>");
+
     for ($i = 0; $i < $options['threads']; $i++) {
-      $drush_path = DRUPAL_ROOT . '/vendor/bin/drush';
-      $cmd = $drush_path . ' queue:run quant_seed_worker';
       $this->runningProcs[] = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
     }
 
