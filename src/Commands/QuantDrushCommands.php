@@ -10,6 +10,7 @@ use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
+use Drupal\quant\Plugin\QueueItem\NodeItem;
 
 /**
  * A drush command file.
@@ -155,6 +156,35 @@ class QuantDrushCommands extends DrushCommands {
     }
 
     $this->output()->writeln('Successfully added [' . $queue->numberOfItems() . '] to the queue');
+  }
+
+  /**
+   * Drush command to seed a single node.
+   *
+   * @command quant:seed-single
+   * @aliases quant-seed-single
+   * @aliases qss
+   *
+   * @option nid
+   *  The node to seed
+   * @option vid
+   *  The revision id to seed
+   * @option lang
+   *   The language to seed
+   *
+   * @usage quant:seed-single --nid=1
+   */
+  public function seedSingle($options = ['nid' => 1, 'vid' => FALSE, 'lang' => []])
+  {
+    $item = new NodeItem([
+      'id' => 8,
+      'vid' => FALSE,
+      'lang_filter' => [],
+    ]);
+
+    $manager = \Drupal::service('plugin.manager.queue_worker');
+    $worker = $manager->createInstance('quant_seed_worker');
+    $worker->processItem($item);
   }
 
 }

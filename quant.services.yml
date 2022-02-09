@@ -37,3 +37,8 @@ services:
       - '@config.factory'
     tags:
       - { name: 'event_subscriber' }
+
+  queue_service_quant_seed_worker:
+    class: Drupal\quant\Queue\SeedQueueFactory
+    arguments:
+      - '@database'
