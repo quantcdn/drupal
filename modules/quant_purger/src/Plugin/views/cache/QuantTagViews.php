@@ -55,7 +55,7 @@ class QuantTagViews extends Tag {
     foreach ($entity_types as $entity_type) {
       $bundles = \Drupal::service('entity_type.bundle.info')->getBundleInfo($entity_type->id());
       if (!in_array($entity_type->id(), ['node'])) {
-        // @TODO: Expand cache tag selection options.
+        // @todo Fix limited cache tag selection options.
         continue;
       }
       foreach ($bundles as $id => $bundle) {
