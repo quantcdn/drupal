@@ -69,14 +69,21 @@ class QuantDrushCommands extends DrushCommands {
    * @command quant:run-queue
    * @aliases quant-queue-run
    * @option threads
-   *   Number of threads to use (default 5)
+   *   Number of threads to use
+   * @option items-limit
+   *   Number of items for each thread to process
    * @usage quant:run-queue --threads=5
    */
-  public function message($options = ['threads' => 5]) {
+  public function message($options = ['threads' => 5, 'items-limit' => 0]) {
 
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
     $cmd = $drushPath . ' queue:run quant_seed_worker';
+
+    if ($options['items-limit'] > 0) {
+      $cmd .= " --items-limit={$options['items-limit']}";
+    }
+
     $this->output()->writeln("<comment>Using drush binary at $drushPath. Override with \$DRUSH_PATH if required.</comment>");
 
     for ($i = 0; $i < $options['threads']; $i++) {
@@ -218,11 +225,10 @@ class QuantDrushCommands extends DrushCommands {
   public function seedSingle($options = ['nid' => 1, 'vid' => FALSE, 'lang' => []])
   {
     $item = new NodeItem([
-      'id' => 8,
-      'vid' => FALSE,
-      'lang_filter' => [],
+      'id' => $options['nid'],
+      'vid' => $options['vid'],
+      'lang_filter' => $options['lang'],
     ]);
-
     $manager = \Drupal::service('plugin.manager.queue_worker');
     $worker = $manager->createInstance('quant_seed_worker');
     $worker->processItem($item);

@@ -1,0 +1,18 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for the purger module.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Cache\Cache;
+
+/**
+ * Implement hook_entity_presave().
+ */
+function quant_purger_entity_presave(EntityInterface $entity) {
+  $entity_type = $entity->getEntityType()->id();
+  $tag = "quant:{$entity_type}:{$entity->bundle()}";
+  Cache::invalidateTags([$tag]);
+}
