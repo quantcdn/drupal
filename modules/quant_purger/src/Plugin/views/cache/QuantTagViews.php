@@ -8,8 +8,7 @@ use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\views\Plugin\views\cache\Tag;
 
 /**
- * Add node type tags to views where available to support CRUD
- * entity operations.
+ * Add node type tags to views where available to support CRUD.
  *
  * @ViewsCache(
  *  id = "quant_views_tag_caching",
@@ -23,6 +22,8 @@ class QuantTagViews extends Tag {
 
   /**
    * Overrides Drupal\views\Plugin\Plugin::$usesOptions.
+   *
+   * @var bool
    */
   protected $usesOptions = TRUE;
 
@@ -38,10 +39,9 @@ class QuantTagViews extends Tag {
    */
   public function defineOptions() {
     $options = parent::defineOptions();
-    $options['entity_types'] = array('default' => []);
+    $options['entity_types'] = ['default' => []];
     return $options;
   }
-
 
   /**
    * {@inheritdoc}

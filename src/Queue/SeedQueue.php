@@ -28,7 +28,8 @@ class SeedQueue extends DatabaseQueue {
   public function createItem($data) {
     if (!$this->hasItem($data)) {
       return parent::createItem($data);
-    } else {
+    }
+    else {
       return FALSE;
     }
   }
