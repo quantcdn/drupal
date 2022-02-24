@@ -20,7 +20,7 @@ function quant_api_settings() {
   );
 
   $form['quant_api_token'] = array(
-    '#type' => 'textfield',
+    '#type' => 'password',
     '#title' => t('API Token'),
     '#decription' => t('The API token'),
   );

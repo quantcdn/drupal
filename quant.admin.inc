@@ -16,7 +16,7 @@ function quant_config() {
     '#type' => 'checkbox',
     '#title' => t('Track content changes'),
     '#description' => t('Automatically push content changes to Quant (recommended).'),
-    '#default_value' => variable_get('quant_enabled', FALSE),
+    '#default_value' => variable_get('quant_enabled', TRUE),
   );
 
   $form['tracking_fieldset'] = [
@@ -32,33 +32,33 @@ function quant_config() {
   $form['tracking_fieldset']['quant_enabled_nodes'] = [
     '#type' => 'checkbox',
     '#title' => t('Nodes'),
-    '#default_value' => variable_get('quant_enabled_nodes'),
+    '#default_value' => variable_get('quant_enabled_nodes', TRUE),
   ];
 
   $form['tracking_fieldset']['quant_enabled_taxonomy'] = [
     '#type' => 'checkbox',
     '#title' => t('Taxonomy Terms'),
-    '#default_value' => variable_get('quant_enabled_taxonomy'),
+    '#default_value' => variable_get('quant_enabled_taxonomy', TRUE),
   ];
 
   $form['tracking_fieldset']['quant_enabled_views'] = [
     '#type' => 'checkbox',
     '#title' => t('Views'),
-    '#default_value' => variable_get('quant_enabled_views'),
+    '#default_value' => variable_get('quant_enabled_views', TRUE),
   ];
 
   $form['disable_content_drafts'] = array(
     '#type' => 'checkbox',
     '#title' => t('Disable content drafts'),
     '#description' => t('Prevent draft content from being sent to Quant.'),
-    '#default_value' => variable_get('disable_content_drafts', FALSE),
+    '#default_value' => variable_get('disable_content_drafts', TRUE),
   );
 
   $form['quant_rewrite_relative'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable relative paths'),
     '#description' => t('Ensure all assets are rewritten as relative paths.'),
-    '#default_value' => variable_get('quant_rewrite_relative', FALSE),
+    '#default_value' => variable_get('quant_rewrite_relative', TRUE),
   );
 
   $form['quant_proxy_override'] = array(
@@ -99,7 +99,6 @@ function quant_config() {
  */
 function quant_seed_settings() {
   $form = array();
-
   _quant_get_seed_warnings($form);
 
   $form['quant_seed_entity_node'] = array(
@@ -120,6 +119,7 @@ function quant_seed_settings() {
     '#type' => 'checkboxes',
     '#title' => t('Enabled bundles'),
     '#description' => t('Optionally restrict to these content types.'),
+    '#default_value' => variable_get('quant_seed_entity_node_bundles', FALSE),
     '#options' => $options,
     '#states' => array(
       'visible' => array(
@@ -152,10 +152,11 @@ function quant_seed_settings() {
   // @TODO - add media entity support.
   $form['entity_media'] = array();
 
-  $form['routes'] = [
+  $form['quant_custom_routes_enabled'] = [
     '#type' => 'checkbox',
     '#title' => t('Custom routes'),
     '#description' => t('Exports custom list of routes.'),
+    '#default_value' => variable_get('quant_custom_routes_enabled', FALSE),
   ];
 
   $form['quant_custom_routes'] = [
@@ -164,7 +165,7 @@ function quant_seed_settings() {
     '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g: /about-us'),
     '#states' => [
       'visible' => [
-        ':input[name="routes"]' => ['checked' => TRUE],
+        ':input[name="quant_custom_routes_enabled"]' => ['checked' => TRUE],
       ],
     ],
     '#default_value' => variable_get('quant_custom_routes', FALSE),
@@ -173,10 +174,10 @@ function quant_seed_settings() {
   $form['quant_robots'] = [
     '#type' => 'checkbox',
     '#title' => t('Export robots.txt'),
-    '#default_value' => variable_geT('quant_robots', FALSE),
+    '#default_value' => variable_get('quant_robots', FALSE),
   ];
 
-  $form['quant_seed'] = array(
+  $form['trigger_quant_seed'] = array(
     '#type' => 'checkbox',
     '#title' => t('Trigger the batch'),
     '#description' => t('<strong>Note:</strong> This will attempt to trigger the seed from the UI, depending on the size of your site and PHP configuration this may not work.'),
@@ -185,9 +186,118 @@ function quant_seed_settings() {
 
   $form = system_settings_form($form);
 
-  $form['actions']['#weight'] = 999;
+  $form['actions']['#weight'] = 998;
+  $form['#submit'][] = '_quant_queue_batch';
 
-  $form['#submit'][] = '_quant_seed_prepare';
+  $form['save_and_queue'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save and Queue',
+    '#submit' => array('system_settings_form_submit', '_quant_seed_prepare'),
+    '#weight' => 999,
+  );
 
   return $form;
+}
+
+/**
+ * Present items that are queued for quant sending.
+ */
+function quant_queue_page() {
+  $items = quant_get_queue(TRUE);
+  $rows = [];
+
+  $header = array(
+    t('Item ID'),
+    t('Claimed/Expiration'),
+    t('Created'),
+    t('Content/Data'),
+  );
+
+  foreach ($items as &$item) {
+    if ($item['expire'] > 0) {
+      $item['expire'] = t("Claimed: expires %expire", array('%expire' => date('r', $item['expire'])));
+    }
+    else {
+      $item['expire'] = t('Unclaimed');
+    }
+    $item['created'] = date('r', $item['created']);
+    list($op, $context) = unserialize($item['data']);
+    $item['content'] = t('<b>Callback:</b> %op<br /><b>URL:</b> %arg', array(
+      '%op' => $op,
+      '%arg' => reset($context),
+    ));
+    unset($item['data']);
+    $rows[] = $item;
+  }
+
+  if (!empty($items)) {
+    $queue = quant_get_queue();
+    $build['desc'] = array(
+      '#markup' => t('There are <b>%total</b> items in the queue.<br/><br />', array(
+        '%total' => $queue->numberOfItems(),
+      )),
+    );
+  }
+
+  $build['pager_table'] = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' => t('There are no items in the queue.'),
+  );
+
+  $build['pager'] = array(
+    '#theme' => 'pager',
+  );
+
+  return $build;
+}
+
+/**
+ * Quant token settings form.
+ */
+function quant_token_settings() {
+
+  $form = array();
+
+  $form['quant_token_disable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Disable token verification'),
+    '#description' => t('Not recommended for production environments, this disables token verification.'),
+    '#default_value' => variable_get('quant_token_disable', FALSE),
+  );
+
+
+  $form['quant_token_timeout'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Token timeout'),
+    '#description' => t('A string compatible with <a href="https://www.php.net/manual/en/function.strtotime.php">PHPs baseTimestamp</a> parameter'),
+    '#default_value' => variable_get('quant_token_timeout', '+1 minute'),
+  );
+
+  $form['quant_token_strict'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable strict token checks'),
+    '#description' => t('This enforces strict token checking during seeds'),
+    '#default_value' => variable_get('quant_token_strict', true),
+  );
+
+  $form['quant_token_secret_regenerate'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Regerenate signing secret'),
+    '#description' => t('This will regenerate the internal secret value Quant uses to sign internal requests'),
+  );
+
+  $form = system_settings_form($form);
+  $form['#submit'][] = 'quant_token_regenerate';
+  return $form;
+}
+
+/**
+ * Regenerate quant signing secret.
+ */
+function quant_token_regenerate($form, &$form_state) {
+  if ($form_state['values']['quant_token_secret_regenerate']) {
+    variable_set('quant_token_secret', bin2hex(random_bytes(32)));
+  }
 }
