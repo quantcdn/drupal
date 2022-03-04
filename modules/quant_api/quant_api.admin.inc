@@ -57,6 +57,7 @@ function quant_api_settings_validate($form, &$form_state) {
 
   // Sanitise our API endpoint.
   $form_state['values']['quant_api_endpoint'] = $url;
+  $api = $url . '/v1';
 
   // Try a ping :).
   $options = array(
@@ -67,12 +68,18 @@ function quant_api_settings_validate($form, &$form_state) {
     ),
   );
 
-  $response = drupal_http_request("$url/ping", $options);
+  $response = drupal_http_request("$api/ping", $options);
+
+  if (!property_exists($response, 'data')) {
+    form_set_error('quant_api_endpoint', 'Unable to connect to the Quant API please check the endpoint.');
+    return;
+  }
+
   $body = json_decode($response->data);
 
   if (!empty($response->error)) {
     $message = !empty($body->errorMsg) ? $body->errorMsg : 'Unauthorised';
-    form_set_error('quant_api_token', 'Unable to connect to the QuantAPI please check the API token and customer match.');
+    form_set_error('quant_api_token', 'Unable to connect to the Quant API please check the API token and customer match.');
     drupal_set_message('QuantAPI error: ' . $message, 'error');
   }
   else {
