@@ -75,6 +75,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_verbose_logging', FALSE),
   );
 
+  $form['quant_verify_ssl'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Verify SSL'),
+    '#description' => t('Optionally disable SSL verification when making internal requests for content to seed. This can be useful if your server is using a self-signed certificate.'),
+    '#default_value' => variable_get('quant_verify_ssl', TRUE),
+  );
+
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
@@ -105,6 +112,15 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
       'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
   );
+
+  if (empty($form_state['quant_verify_ssl'])) {
+    $options['context'] = stream_context_create(array(
+      'ssl' => array(
+        'verify_peer' => FALSE,
+        'verify_peer_name' => FALSE,
+      )
+    ));
+  }
 
   $url = "$base/_quant/validate";
   $options['headers']['quant-token'] = quant_token_create($url);

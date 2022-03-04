@@ -83,6 +83,15 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
     );
   }
 
+  if (!variable_get('quant_api_ssl_verify', TRUE)) {
+    $request['context'] = stream_context_create(array(
+      'ssl' => array(
+        'verify_peer' => FALSE,
+        'verify_peer_name' => FALSE,
+      )
+    ));
+  }
+
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
