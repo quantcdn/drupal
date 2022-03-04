@@ -75,6 +75,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_verbose_logging', FALSE),
   );
 
+  $form['quant_verify_ssl'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Verify SSL'),
+    '#description' => t('Optionally disable SSL verification when making internal requests for content to seed. This can be useful if your server is using a self-signed certificate.'),
+    '#default_value' => variable_get('quant_verify_ssl', TRUE),
+  );
+
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
@@ -89,7 +96,48 @@ function quant_config() {
     '#default_value' => variable_get('quant_hostname', 'www.example.com'),
   );
 
+  $form['#validate'][] = 'quant_form_quant_config_validate';
+
   return system_settings_form($form);
+}
+
+/**
+ * Validate the configuration form to ensure that the settings are valid.
+ */
+function quant_form_quant_config_validate($form = array(), &$form_state = array()) {
+  $base = quant_get_base_url();
+  $options = array(
+    'headers' => array(
+      'Host' => variable_get('quant_hostname', parse_url($base, PHP_URL_HOST)),
+      'User-Agent' => 'Quant (+http://quantcdn.io)',
+    ),
+  );
+
+  if (empty($form_state['quant_verify_ssl'])) {
+    $options['context'] = stream_context_create(array(
+      'ssl' => array(
+        'verify_peer' => FALSE,
+        'verify_peer_name' => FALSE,
+      )
+    ));
+  }
+
+  $url = "$base/_quant/validate";
+  $options['headers']['quant-token'] = quant_token_create($url);
+  $response = drupal_http_request($url, $options);
+
+  $data = @json_decode($response->data, TRUE);
+  if (json_last_error() != JSON_ERROR_NONE) {
+    drupal_set_message(t("Invalid Quant configuration."), "error");
+    return;
+  }
+
+  if (empty($data['message']) || $data['message'] != 'quant success') {
+    drupal_set_message(t("Invalid Quant configuration."), "error");
+    return;
+  }
+
+  drupal_set_message(t("Quant configured correctly."));
 }
 
 /**
@@ -300,4 +348,12 @@ function quant_token_regenerate($form, &$form_state) {
   if ($form_state['values']['quant_token_secret_regenerate']) {
     variable_set('quant_token_secret', bin2hex(random_bytes(32)));
   }
+}
+
+/**
+ * Show a success message to validate configuration.
+ */
+function quant_validate() {
+  $response = array("message" => "quant success");
+  return drupal_json_output($response);
 }

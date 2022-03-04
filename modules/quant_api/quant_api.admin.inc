@@ -11,6 +11,15 @@
  * @ingroup forms
  */
 function quant_api_settings() {
+  if (!variable_get('quant_api_ssl_verify', TRUE)) {
+    $form['markup'] = array(
+      '#type' => 'markup',
+      '#prefix' => '<div class="messages error">',
+      '#suffix' => '</div>',
+      '#markup' => '<b>DANGER ZONE</b> SSL verification is disabled for Quant API connections, it is recommended that you address server configuration rather than disabling SSL verification.'
+    );
+  }
+
   $form['quant_api_endpoint'] = array(
     '#type' => 'textfield',
     '#required' => TRUE,
@@ -39,6 +48,13 @@ function quant_api_settings() {
     '#default_value' => variable_get('quant_api_project'),
   );
 
+  $form['quant_api_ssl_verify'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Verify SSL'),
+    '#description' => t('You can optionally disable SSL verification for all Quant API requests, this is <b>not recommended</b> but may be necessary in some configurations.'),
+    '#default_value' => variable_get('quant_api_ssl_verify', TRUE),
+  );
+
   $form['#validate'][] = 'quant_api_settings_validate';
 
   return system_settings_form($form);
@@ -57,6 +73,7 @@ function quant_api_settings_validate($form, &$form_state) {
 
   // Sanitise our API endpoint.
   $form_state['values']['quant_api_endpoint'] = $url;
+  $api = $url . '/v1';
 
   // Try a ping :).
   $options = array(
@@ -67,12 +84,27 @@ function quant_api_settings_validate($form, &$form_state) {
     ),
   );
 
-  $response = drupal_http_request("$url/ping", $options);
+  if (!$form_state['values']['quant_api_ssl_verify']) {
+    $options['context'] = stream_context_create(array(
+      'ssl' => array(
+        'verify_peer' => FALSE,
+        'verify_peer_name' => FALSE,
+      )
+    ));
+  }
+
+  $response = drupal_http_request("$api/ping", $options);
+
+  if (!property_exists($response, 'data')) {
+    form_set_error('quant_api_endpoint', 'Unable to connect to the Quant API please check the endpoint.');
+    return;
+  }
+
   $body = json_decode($response->data);
 
   if (!empty($response->error)) {
     $message = !empty($body->errorMsg) ? $body->errorMsg : 'Unauthorised';
-    form_set_error('quant_api_token', 'Unable to connect to the QuantAPI please check the API token and customer match.');
+    form_set_error('quant_api_token', 'Unable to connect to the Quant API please check the API token and customer match.');
     drupal_set_message('QuantAPI error: ' . $message, 'error');
   }
   else {

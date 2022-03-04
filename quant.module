@@ -87,6 +87,15 @@ function quant_menu() {
     'weight' => 3
   );
 
+  $items['_quant/validate'] = array(
+    'title' => 'Validate',
+    'description' => 'Validate the Quant configuration',
+    'page callback' => 'quant_validate',
+    'file' => 'quant.admin.inc',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
   // Custom quant view controller.
   $items['node/%node/quant'] = array(
     'title callback' => 'quant_page_title',
@@ -411,6 +420,15 @@ function quant_seed($url, array $context = array()) {
 
   if (isset($context['vid']) && $context['type'] == 'node') {
     $options['headers']['quant-revision'] = $context['vid'];
+  }
+
+  if (!variable_get('quant_verify_ssl', TRUE)) {
+    $options['context'] = stream_context_create(array(
+      'ssl' => array(
+        'verify_peer' => FALSE,
+        'verify_peer_name' => FALSE,
+      )
+    ));
   }
 
   $response = drupal_http_request($url, $options);
