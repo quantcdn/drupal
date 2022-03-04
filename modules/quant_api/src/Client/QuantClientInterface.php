@@ -16,6 +16,23 @@ interface QuantClientInterface {
   public function ping();
 
   /**
+   * Retrieves project data.
+   *
+   * @return mixed
+   *   Contains object containing project information.
+   */
+  public function project();
+
+
+  /**
+   * Retrieves project search configuration.
+   *
+   * @return mixed
+   *   Contains object containing search information.
+   */
+  public function search();
+
+  /**
    * Send a payload to the API.
    *
    * @param array $data

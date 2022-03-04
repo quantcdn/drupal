@@ -107,6 +107,84 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
+  public function project() {
+
+    try {
+      $response = $this->client->get($this->endpoint . "/ping", [
+        'http_errors' => FALSE,
+        'headers' => [
+          'Quant-Customer' => $this->username,
+          'Quant-Project'  => $this->project,
+          'Quant-Token'    => $this->token,
+        ],
+        'exceptions' => FALSE,
+      ]);
+    }
+    catch (RequestException $e) {
+      \Drupal::messenger()->addError($e->getMessage());
+      return FALSE;
+    }
+
+    if ($response->getStatusCode() == 200) {
+      return json_decode($response->getBody());
+    }
+
+    if ($response->getStatusCode() == 402) {
+      // Emit a subscription invalid warning.
+      \Drupal::messenger()->addError(t('Your Quant subscription is invalid. Please check the dashboard.'));
+    }
+
+    if ($response->getStatusCode() == 410) {
+      // Emit a deleted project warning.
+      \Drupal::messenger()->addError(t('Project is deleted. Please check the dashboard for restoration options.'));
+    }
+
+    return FALSE;
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function search() {
+
+    try {
+      $response = $this->client->get($this->endpoint . "/search", [
+        'http_errors' => FALSE,
+        'headers' => [
+          'Quant-Customer' => $this->username,
+          'Quant-Project'  => $this->project,
+          'Quant-Token'    => $this->token,
+        ],
+        'exceptions' => FALSE,
+      ]);
+    }
+    catch (RequestException $e) {
+      \Drupal::messenger()->addError($e->getMessage());
+      return FALSE;
+    }
+
+    if ($response->getStatusCode() == 200) {
+      return json_decode($response->getBody());
+    }
+
+    if ($response->getStatusCode() == 402) {
+      // Emit a subscription invalid warning.
+      \Drupal::messenger()->addError(t('Your Quant subscription is invalid. Please check the dashboard.'));
+    }
+
+    if ($response->getStatusCode() == 410) {
+      // Emit a deleted project warning.
+      \Drupal::messenger()->addError(t('Project is deleted. Please check the dashboard for restoration options.'));
+    }
+
+    return FALSE;
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
   public function send(array $data) : array {
     $response = $this->client->post($this->endpoint, [
       RequestOptions::JSON => $data,

@@ -1,0 +1,23 @@
+<div class="search">
+
+    {%if page.description %}
+    <h4>{{ page.description }}</h4>
+    {% endif %}
+
+    <div class="flex-grid">
+        <div class="col facets">
+            <div id="clear-refinements"></div>
+            <div class="facet-container">
+            <div class="facet-heading">Facet heading</div>
+            <div id="facet_id"></div>
+            </div>
+        </div>
+
+        <div class="col content">
+            <div id="searchbox" class="ais-SearchBox"></div>
+            <div id="stats"></div>
+            <div id="hits"></div>
+            <div id="pagination"></div>
+        </div>
+    </div>
+</div>

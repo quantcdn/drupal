@@ -1,0 +1,4 @@
+services:
+  search.search_page_repository:
+    class: Drupal\quant_search\SearchPageRepository
+    arguments: ['@config.factory', '@entity_type.manager']

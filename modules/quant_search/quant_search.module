@@ -1,0 +1,22 @@
+<?php
+
+/**
+ * Implements hook_theme().
+ */
+function quant_search_theme($existing, $type, $theme, $path) {
+  return [
+    'search_page_status' => [
+      'variables' => [
+        'index' => NULL,
+        'settings' => NULL,
+        'pages' => NULL,
+      ],
+    ],
+    'search_page' => [
+      'variables' => [
+        'index' => NULL,
+        'page' => NULL,
+      ],
+    ],
+  ];
+}

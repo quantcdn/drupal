@@ -1,0 +1,152 @@
+.search {
+  max-width: 100%;
+  margin: auto auto;
+}
+
+.flex-grid {
+  display: flex;
+}
+
+.col.content {
+  flex-grow: 1;
+}
+.col.facets {
+  min-width: 20%;
+  margin-right: 2em;
+}
+
+@media (max-width: 600px) {
+  .flex-grid {
+    display: block;
+  }
+  .search {
+    margin: 1em;
+  }
+}
+
+.facet-container {
+  margin-bottom: 40px;
+}
+
+.facet-heading {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #E9EDF2;
+  text-transform: uppercase;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.ais-ClearRefinements {
+  margin: 1em 0;
+}
+
+.ais-SearchBox {
+  margin: 1em 0;
+}
+
+.ais-Pagination {
+  margin: 2em 0;
+}
+
+.ais-Pagination-link {
+  border-radius: 0;
+}
+
+.ais-InstantSearch {
+  max-width: 960px;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.ais-Hits-item {
+  margin-bottom: 1em;
+  width: calc(50% - 1rem);
+  border: none;
+  box-shadow: 0 2px 5px 0 #e3e5ec;
+  background: #fff;
+}
+
+.ais-Highlight-highlighted, .ais-Snippet-highlighted {
+  background-color: #e7eefa;
+}
+
+.ais-SearchBox-input {
+  height: 50px;
+  font-size: 1.2em;
+  border-radius: 0;
+  padding: 0.3rem 4rem;
+}
+
+.ais-SearchBox-submitIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.ais-SearchBox-submit {
+  left: 1rem;
+}
+
+.ais-Hits-item img {
+  margin-right: 1em;
+}
+
+.ais-Hits-item a {
+  font-size: 1.1em;
+  font-weight: 500;
+  text-decoration: none;
+  color: #5878f9;
+  margin-top: 1em;
+}
+
+.hit-name {
+  margin: 1em 0;
+}
+
+.hit-description {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 0.5em;
+}
+
+.hit-tag {
+  background-color: #dcdcdc;
+  color: #5a5a5a;
+  text-transform: uppercase;
+  font-size: 0.75em;
+  font-weight: 600;
+  padding: 5px 10px;
+  margin-right: 10px;
+  border-radius: 3px;
+}
+
+.hit-tags {
+  clear:both;
+  margin-top: 20px;
+}
+
+.ais-Hits-item {
+  margin-bottom: 1em;
+  width: 100%;
+  border: none;
+  box-shadow: none;
+  background: none;
+}
+
+.ais-Hits-item:hover {
+  box-shadow: 0 2px 5px 0 #e3e5ec;
+  background: #fff;
+}
+
+.ais-Hits-item img {
+  max-width: 100px;
+  float: left;
+}
+
+.hit-name {
+  margin-top: 0;
+}
