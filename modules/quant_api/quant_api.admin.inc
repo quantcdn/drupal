@@ -51,7 +51,7 @@ function quant_api_settings() {
   $form['quant_api_ssl_verify'] = array(
     '#type' => 'checkbox',
     '#title' => t('Verify SSL'),
-    '#description' => t('You can optionally disable SSL verification for all Quant API requests, this is <b>unrecommended</b> but may be necessary in some configurations.'),
+    '#description' => t('You can optionally disable SSL verification for all Quant API requests, this is <b>not recommended</b> but may be necessary in some configurations.'),
     '#default_value' => variable_get('quant_api_ssl_verify', TRUE),
   );
 
