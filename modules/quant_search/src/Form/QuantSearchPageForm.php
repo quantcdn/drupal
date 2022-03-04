@@ -110,6 +110,7 @@ class QuantSearchPageForm extends EntityForm {
       ]));
     }
 
+    \Drupal::service('router.builder')->rebuild();
     $form_state->setRedirect('entity.quant_search_page.collection');
   }
 
