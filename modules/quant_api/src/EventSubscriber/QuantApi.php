@@ -201,12 +201,14 @@ class QuantApi implements EventSubscriberInterface {
     @$document->loadHTML($content);
     $xpath = new \DOMXPath($document);
 
-    $pager_xpath = [
-      '//li[contains(@class,"pager__item--next")]/a[contains(@href,"page=")]',
-      '//li[contains(@class,"pager__item--first")]/a[starts-with(@href, "/")]',
-    ];
+    $xpath_selectors = [];
+    $links_config = \Drupal::config('quant.settings')->get('xpath_selectors');
 
-    foreach ($pager_xpath as $xpath_query) {
+    foreach (explode(PHP_EOL, $links_config) as $links_line) {
+      $xpath_selectors[] = trim($links_line);
+    }
+
+    foreach ($xpath_selectors as $xpath_query) {
       /** @var \DOMElement $node */
       foreach ($xpath->query($xpath_query) as $node) {
         $original_href = $new_href = $node->getAttribute('href');

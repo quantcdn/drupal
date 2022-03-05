@@ -93,6 +93,13 @@ class SettingsForm extends ConfigFormBase {
       '#required' => TRUE,
     ];
 
+    $form['api_tls_disabled'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Disable TLS verification'),
+      '#description' => $this->t('Old webservers may have issues validating modern certificates. Only disable if absolutely necessary.'),
+      '#default_value' => $config->get('api_tls_disabled', FALSE),
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -107,6 +114,7 @@ class SettingsForm extends ConfigFormBase {
       ->set('api_token', $form_state->getValue('api_token'))
       ->set('api_project', $form_state->getValue('api_project'))
       ->set('api_account', $form_state->getValue('api_account'))
+      ->set('api_tls_disabled', $form_state->getValue('api_tls_disabled'))
       ->save();
 
     parent::submitForm($form, $form_state);
