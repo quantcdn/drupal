@@ -53,6 +53,13 @@ class QuantClient implements QuantClientInterface {
   protected $endpoint;
 
   /**
+   * TLS disable boolean.
+   *
+   * @var bool
+   */
+  protected $tlsDisabled = FALSE;
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(Client $client, ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory) {
@@ -64,6 +71,7 @@ class QuantClient implements QuantClientInterface {
     $this->token = $config->get('api_token');
     $this->project = $config->get('api_project');
     $this->endpoint = $config->get('api_endpoint') . '/v1';
+    $this->tlsDisabled = $config->get('api_tls_disabled');
   }
 
   /**
@@ -80,6 +88,7 @@ class QuantClient implements QuantClientInterface {
           'Quant-Token'    => $this->token,
         ],
         'exceptions' => FALSE,
+        'verify' => $this->tlsDisabled ? FALSE : TRUE,
       ]);
     }
     catch (RequestException $e) {
@@ -115,6 +124,7 @@ class QuantClient implements QuantClientInterface {
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
       ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
     ]);
 
     return json_decode($response->getBody(), TRUE);
@@ -131,6 +141,7 @@ class QuantClient implements QuantClientInterface {
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
       ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
     ]);
 
     return json_decode($response->getBody(), TRUE);
@@ -170,7 +181,9 @@ class QuantClient implements QuantClientInterface {
       ])
     );
 
-    $response = $this->client->send($request);
+    $response = $this->client->send($request, [
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
 
     return json_decode($response->getBody(), TRUE);
   }
@@ -192,6 +205,7 @@ class QuantClient implements QuantClientInterface {
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
       ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
     ]);
 
     return json_decode($response->getBody(), TRUE);

@@ -72,3 +72,17 @@ function quant_update_9003(&$sandbox) {
   $schema = Database::getConnection()->schema();
   $schema->dropTable('quant_token');
 }
+
+/**
+ * Add default configuration for automated link following.
+ */
+function quant_update_9004(&$sandbox) {
+  $xpaths = [
+    '//li[contains(@class,"pager__item--next")]/a[contains(@href,"page=")]',
+    '//li[contains(@class,"pager__item--first")]/a[starts-with(@href, "/")]',
+  ];
+
+  $config = \Drupal::configFactory()->getEditable('quant.settings');
+  $config->set('xpath_selectors', implode(PHP_EOL, $xpaths));
+  $config->save();
+}

@@ -286,7 +286,8 @@ class CollectionSubscriber implements EventSubscriberInterface {
             }
 
             $paths[] = $path;
-            $event->queueItem(['route' => "/{$path}"]);
+            $base = \Drupal::request()->getBaseUrl();
+            $event->queueItem(['route' => $base . "/{$path}"]);
 
             // Languge negotiation may also provide path prefixes.
             if ($prefixes = \Drupal::config('language.negotiation')->get('url.prefixes')) {
