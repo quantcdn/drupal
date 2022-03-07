@@ -91,6 +91,19 @@ class ConfigForm extends ConfigFormBase {
       '#default_value' => $config->get('quant_enabled_views'),
     ];
 
+    $form['follow_links_fieldset'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Follow links'),
+      '#description' => $this->t('Automatically add certain links to the queue (e.g Views pagination)'),
+    ];
+
+    $form['follow_links_fieldset']['xpath_selectors'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Links to follow'),
+      '#default_value' => $config->get('xpath_selectors'),
+      '#description' => $this->t('Provide one xpath per line for anchor links to queue when detected.'),
+    ];
+
     $form['disable_content_drafts'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Disable content drafts'),
@@ -146,6 +159,7 @@ class ConfigForm extends ConfigFormBase {
       ->set('host_domain', $form_state->getValue('host_domain'))
       ->set('disable_content_drafts', $form_state->getValue('disable_content_drafts'))
       ->set('ssl_cert_verify', $form_state->getValue('ssl_cert_verify'))
+      ->set('xpath_selectors', $form_state->getValue('xpath_selectors'))
       ->save();
 
     parent::submitForm($form, $form_state);
@@ -168,7 +182,8 @@ class ConfigForm extends ConfigFormBase {
    */
   private function checkValidationRoute() {
 
-    $markup = Seed::markupFromRoute('/quant/validate');
+    $base = \Drupal::request()->getBaseUrl();
+    $markup = Seed::markupFromRoute($base . '/quant/validate');
 
     if (!empty($markup[0])) {
       if (strpos($markup[0], 'quant success') !== FALSE) {
