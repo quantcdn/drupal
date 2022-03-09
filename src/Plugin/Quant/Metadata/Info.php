@@ -123,6 +123,8 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
       $meta['search_record']['categories']['content_type'] = $entity->type->entity->label();
     }
 
+    $meta['search_record']['lang_code'] = $entity->language()->getId();
+
     return $meta;
   }
 

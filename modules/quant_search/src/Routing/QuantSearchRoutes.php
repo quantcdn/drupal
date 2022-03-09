@@ -28,6 +28,11 @@ class QuantSearchRoutes
         $pages = $storage->loadMultiple($ids);
 
         foreach ($pages as $page) {
+
+            if (!$page->get('status')) {
+                continue;
+            }
+
             $route = new Route(
                 $page->get('route'),
                 [
@@ -40,8 +45,6 @@ class QuantSearchRoutes
                 ]
             );
             $collection->add("entity.quant_search_page.{$page->id()}", $route);
-
-            error_log("** ADDING ROUTE " . $page->get('route'));
         }
         return $collection;
     }

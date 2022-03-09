@@ -76,6 +76,49 @@ class SearchEntitiesForm extends ConfigFormBase {
       '#default_value' => $config->get('quant_search_records_enabled', TRUE),
     ];
 
+    // @todo: Proper per-entity configs, tokens, stuff
+    $form['quant_search_records_title_token'] = [
+      '#type' => 'text',
+      '#title' => $this->t('Title token'),
+      '#description' => $this->t('Provide search record data when content is pushed.'),
+      '#default_value' => $config->get('quant_search_records_enabled', TRUE),
+    ];
+
+    $form['search_tokens'] = [
+      '#type' => 'vertical_tabs',
+    ];
+
+    $form['search_tokens_node'] = [
+      '#type' => 'details',
+      '#title' => 'Node',
+      '#description' => 'Tokens related to nodes',
+      '#group' => 'search_tokens',
+      '#tree' => TRUE,
+    ];
+
+    $form['search_tokens_node']['quant_search_title_token'] = [
+      '#type' => 'textfield',
+      '#title' => 'Title',
+      '#description' => 'Title',
+      '#default_value' => $config->get('quant_search_title_token'),
+    ];
+
+    $form['search_tokens_node']['quant_search_summary_token'] = [
+      '#type' => 'textfield',
+      '#title' => 'Summary',
+      '#description' => 'Summary',
+      '#default_value' => $config->get('quant_search_summary_token'),
+    ];
+
+    $form['search_tokens_node']['quant_search_content_viewmode'] = [
+      '#type' => 'textfield',
+      '#title' => 'Content view mode',
+      '#description' => 'View mode to render the content as for search body',
+      '#default_value' => $config->get('quant_search_content_viewmode'),
+    ];
+
+
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -84,9 +127,14 @@ class SearchEntitiesForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
+    $nodeTokens = $form_state->getValue('search_tokens_node');
+
     // Retrieve the configuration.
     $this->configFactory->getEditable(self::SETTINGS)
       ->set('quant_search_records_enabled', $form_state->getValue('quant_search_records_enabled'))
+      ->set('quant_search_title_token', $nodeTokens['quant_search_title_token'])
+      ->set('quant_search_summary_token', $nodeTokens['quant_search_summary_token'])
+      ->set('quant_search_content_viewmode', $nodeTokens['quant_search_content_viewmode'])
       ->save();
 
     parent::submitForm($form, $form_state);
