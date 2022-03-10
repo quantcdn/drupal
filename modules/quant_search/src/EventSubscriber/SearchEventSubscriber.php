@@ -6,6 +6,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Drupal\quant\Event\QuantEvent;
+use Drupal\quant_search\Controller\Search;
 
 /**
  * Inject search_record object during push.
@@ -56,27 +57,10 @@ class SearchEventSubscriber implements EventSubscriberInterface {
    *   The event.
    */
   public function onOutput(QuantEvent $event) {
-
-    $config = \Drupal::config('quant_search.entities.settings');
     $entity = $event->getEntity();
-    $entityType = $entity->getEntityTypeId();
-
-    // Get token values from context.
-    $ctx = [];
-    $ctx[$entityType] = $entity;
-
-    $title = \Drupal::token()->replace($config->get('quant_search_title_token'), $ctx);
-    $summary = \Drupal::token()->replace($config->get('quant_search_summary_token'), $ctx);
-
-    $view_builder = \Drupal::entityTypeManager()->getViewBuilder($entityType);
-    $view_mode = $config->get('quant_search_content_viewmode');
-    $build = $view_builder->view($entity, $view_mode);
-    $output = render($build);
-
     $meta = $event->getMetadata();
-    $meta['search_record']['title'] = $title;
-    $meta['search_record']['summary'] = strip_tags($summary);
-    $meta['search_record']['content'] = strip_tags($output);
+    $langcode = $event->getLangcode();
+    $meta['search_record'] = Search::generateSearchRecord($entity, $langcode);
     $event->setMetadata($meta);
   }
 

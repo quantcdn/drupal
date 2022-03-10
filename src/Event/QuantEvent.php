@@ -74,14 +74,22 @@ final class QuantEvent extends Event {
   protected $entity;
 
   /**
+   * The langcode associated with the event.
+   *
+   * @var string
+   */
+  protected $langcode;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct($contents, $location, $meta, $rid = NULL, $entity = NULL) {
+  public function __construct($contents, $location, $meta, $rid = NULL, $entity = NULL, $langcode = NULL) {
     $this->contents = $contents;
     $this->location = $location;
     $this->meta = $meta;
     $this->rid = $rid;
     $this->entity = $entity;
+    $this->langcode = $langcode;
   }
 
   /**
@@ -112,6 +120,16 @@ final class QuantEvent extends Event {
    */
   public function getRevisionId() {
     return $this->rid;
+  }
+
+  /**
+   * Get the langcode associated with the event.
+   * 
+   * @return string
+   *   The langcode.
+   */
+  public function getLangcode() {
+    return $this->langcode;
   }
 
   /**

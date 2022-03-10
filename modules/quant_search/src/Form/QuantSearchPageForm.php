@@ -40,6 +40,8 @@ class QuantSearchPageForm extends EntityForm {
 
     $page = $this->entity;
 
+    $form['#tree'] = TRUE;
+
     $form['label'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Label'),
@@ -79,6 +81,54 @@ class QuantSearchPageForm extends EntityForm {
       '#description' => $this->t('Search page description.'),
     ];
 
+    $languages = \Drupal::languageManager()->getLanguages();
+
+    if (count($languages) > 1) {
+      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+      $language_codes = [];
+
+      foreach ($languages as $langcode => $language) {
+        $default = ($defaultLanguage->getId() == $langcode) ? ' (Default)' : '';
+        $language_codes[$langcode] = $language->getName() . $default;
+      }
+
+      $form['languages'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Languages'),
+        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be included.'),
+        '#options' => $language_codes,
+        '#default_value' => $this->entity->get('languages'),
+        '#multiple' => TRUE,
+      ];
+    }
+
+    // Seed by bundle.
+    $types = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+
+    $content_types = [];
+    foreach ($types as $type) {
+      $content_types[$type->id()] = $type->label();
+    }
+
+    $form['bundles'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Enabled bundles'),
+      '#description' => $this->t('Optionally restrict to these content types.'),
+      '#options' => $content_types,
+      '#default_value' => $this->entity->get('bundles'),
+      '#multiple' => TRUE,
+    ];
+
+    $form['manual_filters'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Manual Filters'),
+      '#maxlength' => 2048,
+      '#default_value' => $this->entity->get('manual_filters'),
+      '#description' => $this->t('Optionally provide complex filters. For example: <code>cost>10 AND cost<99.5</code>. You may join with ANDs, ORs.'),
+    ];
+
     $form['route'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Route'),
@@ -88,7 +138,65 @@ class QuantSearchPageForm extends EntityForm {
       '#required' => TRUE,
     ];
 
-    // You will need additional form elements for your custom properties.
+    $form['facets'] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t('Facets'),
+        '#prefix' => '<div id="facets-fieldset-wrapper">',
+        '#suffix' => '</div>',
+    ];
+
+    $existingFacets = $this->entity->get('facets');
+
+    $facets_count_field = $form_state->get('num_facets');
+    if (empty($facets_count_field)) {
+      $facets_count_field = $form_state->set('num_facets', 1);
+      if (!empty($existingFacets)) {
+        $facets_count_field = $form_state->set('num_facets', count($existingFacets));
+      }
+    }
+
+    $facets_count_field = $form_state->get('num_facets');
+
+    for ($i = 0; $i < $facets_count_field -1; $i++) {
+      $form['facets'][$i] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t('Facet configuration')
+      ];
+
+      $form['facets'][$i]['facet_filter'] = [
+          '#type' => 'textfield',
+          '#title' => t('Facet name'),
+          '#default_value' => $existingFacets[$i]['facet_filter'],
+      ];
+      $form['facets'][$i]['facet_heading'] = [
+        '#type' => 'textfield',
+        '#title' => t('Facet heading'),
+        '#default_value' => $existingFacets[$i]['facet_heading']
+      ];
+    }
+
+    $form['facets']['actions']['add_facet'] = [
+        '#type' => 'submit',
+        '#value' => t('Add facet'),
+        '#submit' => array('::addOne'),
+        '#ajax' => [
+            'callback' => '::addmoreCallback',
+            'wrapper' => 'facets-fieldset-wrapper',
+        ],
+    ];
+    if ($form_state->get('num_facets') > 1) {
+        $form['facets']['actions']['remove_facet'] = [
+            '#type' => 'submit',
+            '#value' => t('Remove facet'),
+            '#submit' => array('::removeCallback'),
+            '#ajax' => [
+                'callback' => '::addmoreCallback',
+                'wrapper' => 'facets-fieldset-wrapper',
+            ]
+        ];
+    }
+    $form_state->setCached(FALSE);
+
     return $form;
   }
 
@@ -96,7 +204,12 @@ class QuantSearchPageForm extends EntityForm {
    * {@inheritdoc}
    */
   public function save(array $form, FormStateInterface $form_state) {
+
+    unset($form['facets']['actions']);
     $page = $this->entity;
+
+    // Manually massage the facet configuration.
+    $values = $form_state->getValue(array('facets'));
     $status = $page->save();
 
     if ($status === SAVED_NEW) {
@@ -123,5 +236,28 @@ class QuantSearchPageForm extends EntityForm {
       ->execute();
     return (bool) $entity;
   }
+
+  public function addOne(array &$form, FormStateInterface $form_state) {
+    $facets_count_field = $form_state->get('num_facets');
+    $add_button = $facets_count_field + 1;
+    $form_state->set('num_facets', $add_button);
+    $form_state->setRebuild();
+  }
+
+  public function addmoreCallback(array &$form, FormStateInterface $form_state) {
+    $facets_count_field = $form_state->get('num_facets');
+    return $form['facets'];
+  }
+
+  public function removeCallback(array &$form, FormStateInterface $form_state) {
+
+    $facets_count_field = $form_state->get('num_facets');
+    if ($facets_count_field > 1) {
+      $remove_button = $facets_count_field - 1;
+      $form_state->set('num_facets', $remove_button);
+    }
+    $form_state->setRebuild();
+  }
+
 
 }

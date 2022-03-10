@@ -289,4 +289,40 @@ class QuantClient implements QuantClientInterface {
     return json_decode($response->getBody(), TRUE);
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function sendSearchRecords(array $records) : array {
+    $response = $this->client->post($this->endpoint . '/search', [
+      RequestOptions::JSON => $records,
+      'headers' => [
+        'Quant-Url' => $url,
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+      ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function clearSearchIndex() : array {
+    $response = $this->client->delete($this->endpoint . '/search/all', [
+      'headers' => [
+        'Quant-Url' => $url,
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+      ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
 }

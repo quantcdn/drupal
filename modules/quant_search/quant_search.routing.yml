@@ -52,5 +52,14 @@ quant_search.main.entities:
   options:
     _admin_route: TRUE
 
+quant_search.clear_index:
+  path: '/admin/config/development/quant/search/clear'
+  defaults:
+    _form: '\Drupal\quant_search\Form\ConfirmIndexClearForm'
+    _title: 'Confirm Index clear'
+  requirements:
+    _permission: 'clear quant search index'
+
+
 route_callbacks:
     - '\Drupal\quant_search\Routing\QuantSearchRoutes::searchPageRoutes'

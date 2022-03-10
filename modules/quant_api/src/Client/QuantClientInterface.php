@@ -23,7 +23,6 @@ interface QuantClientInterface {
    */
   public function project();
 
-
   /**
    * Retrieves project search configuration.
    *
@@ -89,5 +88,24 @@ interface QuantClientInterface {
    *   The API response.
    */
   public function unpublish(string $url) : array;
+
+  /**
+   * Send a search record payload to Quant.
+   *
+   * @param array $records
+   *   The array of search records to submit.
+   *
+   * @return array
+   *   The API response.
+   */
+  public function sendSearchRecords(array $records) : array;
+
+  /**
+   * Clear a search index.
+   * 
+   * @return array
+   *   The API response.
+   */
+  public function clearSearchIndex() : array;
 
 }

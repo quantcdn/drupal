@@ -147,7 +147,7 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301));
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, NULL, $entity));
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode));
   }
 
   /**
@@ -202,7 +202,7 @@ class Seed {
     foreach ($metaManager->getDefinitions() as $pid => $def) {
       $plugin = $metaManager->createInstance($pid);
       if ($plugin->applies($entity)) {
-        $meta = array_merge($meta, $plugin->build($entity));
+        $meta = array_merge($meta, $plugin->build($entity, $langcode));
       }
     }
 
@@ -219,7 +219,7 @@ class Seed {
       }
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid, $entity));
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode));
 
     // Create canonical redirects from node/123 to the published revision route.
     if ("/node/{$nid}" != $url && $entity->isPublished() && $entity->isDefaultRevision()) {

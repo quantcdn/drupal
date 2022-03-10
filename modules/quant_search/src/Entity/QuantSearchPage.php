@@ -40,7 +40,11 @@ use Drupal\quant_search\QuantSearchPageInterface;
  *     "uuid" = "uuid",
  *     "route" = "route",
  *     "title" = "title",
- *     "description" = "description"
+ *     "description" = "description",
+ *     "languages" = "languages",
+ *     "bundles" = "bundles",
+ *     "manual_filters" = "manual_filters",
+ *     "facets" = "facets"
  *   },
  *   config_export = {
  *     "id",
@@ -48,7 +52,11 @@ use Drupal\quant_search\QuantSearchPageInterface;
  *     "description",
  *     "route",
  *     "title",
- *     "description"
+ *     "description",
+ *     "languages",
+ *     "bundles",
+ *     "manual_filters",
+ *     "facets"
  *   }
  * )
  */
@@ -95,6 +103,34 @@ class QuantSearchPage extends ConfigEntityBase implements QuantSearchPageInterfa
    * @var string
    */
   protected $route;
+
+  /**
+   * The languages to filter.
+   *
+   * @var array
+   */
+  protected $languages = [];
+
+  /**
+   * The bundles to filter.
+   *
+   * @var array
+   */
+  protected $bundles = [];
+
+  /**
+   * Manual filter string.
+   * 
+   * @var string
+   */
+  protected $manual_filters;
+
+  /**
+   * Facets.
+   * 
+   * @var array
+   */
+  protected $facets = [];
 
 
 }

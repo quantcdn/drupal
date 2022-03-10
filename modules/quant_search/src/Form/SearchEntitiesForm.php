@@ -76,12 +76,70 @@ class SearchEntitiesForm extends ConfigFormBase {
       '#default_value' => $config->get('quant_search_records_enabled', TRUE),
     ];
 
-    // @todo: Proper per-entity configs, tokens, stuff
-    $form['quant_search_records_title_token'] = [
-      '#type' => 'text',
-      '#title' => $this->t('Title token'),
-      '#description' => $this->t('Provide search record data when content is pushed.'),
-      '#default_value' => $config->get('quant_search_records_enabled', TRUE),
+
+    $form['quant_search_entity_node'] = [
+      '#type' => 'checkbox',
+      '#default_value' => $config->get('quant_search_entity_node'),
+      '#title' => $this->t('Nodes'),
+      '#description' => $this->t('Push node search records.'),
+    ];
+
+    $form['node_details'] = [
+      '#type' => 'details',
+      '#tree' => FALSE,
+      '#title' => $this->t('Node configuration'),
+      '#states' => [
+        'visible' => [
+          ':input[name="entity_node"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    // Seed by language.
+    // Only active if there are more than one active languages.
+    $languages = \Drupal::languageManager()->getLanguages();
+
+    if (count($languages) > 1) {
+      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+      $language_codes = [];
+
+      foreach ($languages as $langcode => $language) {
+        $default = ($defaultLanguage->getId() == $langcode) ? ' (Default)' : '';
+        $language_codes[$langcode] = $language->getName() . $default;
+      }
+
+      $form['node_details']['quant_search_entity_node_languages'] = [
+        '#type' => 'checkboxes',
+        '#title' => $this->t('Languages'),
+        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be exported.'),
+        '#options' => $language_codes,
+        '#default_value' => $config->get('quant_search_entity_node_languages') ?: [],
+      ];
+    }
+
+    // Seed by bundle.
+    $types = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+
+    $content_types = [];
+    foreach ($types as $type) {
+      $content_types[$type->id()] = $type->label();
+    }
+
+    $form['node_details']['quant_search_entity_node_bundles'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Enabled bundles'),
+      '#description' => $this->t('Optionally restrict to these content types.'),
+      '#options' => $content_types,
+      '#default_value' => $config->get('quant_search_entity_node_bundles') ?: [],
+    ];
+
+    $form['quant_search_entity_taxonomy_term'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Taxonomy terms'),
+      '#description' => $this->t('Exports taxonomy term pages.'),
+      '#default_value' => $config->get('quant_search_entity_taxonomy_term'),
     ];
 
     $form['search_tokens'] = [
@@ -110,14 +168,19 @@ class SearchEntitiesForm extends ConfigFormBase {
       '#default_value' => $config->get('quant_search_summary_token'),
     ];
 
+    $form['search_tokens_node']['quant_search_image_token'] = [
+      '#type' => 'textfield',
+      '#title' => 'Image',
+      '#description' => 'Image',
+      '#default_value' => $config->get('quant_search_image_token'),
+    ];
+
     $form['search_tokens_node']['quant_search_content_viewmode'] = [
       '#type' => 'textfield',
       '#title' => 'Content view mode',
       '#description' => 'View mode to render the content as for search body',
       '#default_value' => $config->get('quant_search_content_viewmode'),
     ];
-
-
 
     return parent::buildForm($form, $form_state);
   }
@@ -131,11 +194,48 @@ class SearchEntitiesForm extends ConfigFormBase {
 
     // Retrieve the configuration.
     $this->configFactory->getEditable(self::SETTINGS)
-      ->set('quant_search_records_enabled', $form_state->getValue('quant_search_records_enabled'))
       ->set('quant_search_title_token', $nodeTokens['quant_search_title_token'])
+      ->set('quant_search_entity_node', $form_state->getValue('quant_search_entity_node'))
+      ->set('quant_search_entity_node_languages', $form_state->getValue('quant_search_entity_node_languages'))
+      ->set('quant_search_entity_node_bundles', $form_state->getValue('quant_search_entity_node_bundles'))
+      ->set('quant_search_entity_taxonomy_term', $form_state->getValue('quant_search_entity_taxonomy_term'))
       ->set('quant_search_summary_token', $nodeTokens['quant_search_summary_token'])
+      ->set('quant_search_image_token', $nodeTokens['quant_search_image_token'])
       ->set('quant_search_content_viewmode', $nodeTokens['quant_search_content_viewmode'])
       ->save();
+
+
+    // @todo: If "index" button is pressed..
+    $query = \Drupal::entityQuery('node')
+      ->condition('status', 1);
+
+    $bundles = $form_state->getValue('quant_search_entity_node_bundles');
+
+    if (!empty($bundles)) {
+      $bundles = array_filter($bundles);
+      if (!empty($bundles)) {
+        $query->condition('type', array_keys($bundles), 'IN');
+      }
+    }
+
+    $nids = $query->execute();
+
+    // Chunk into a few batches.
+    $batches = array_chunk($nids, 10);
+
+    $batch = [
+      'title' => $this->t('Exporting to Quant...'),
+      'operations' => [],
+      'init_message'     => $this->t('Commencing'),
+      'progress_message' => $this->t('Processed @current out of @total.'),
+      'error_message'    => $this->t('An error occurred during processing'),
+    ];
+
+    foreach ($batches as $b) {
+      $batch['operations'][] = ['quant_search_run_index', [$b]];
+    }
+
+    batch_set($batch);
 
     parent::submitForm($form, $form_state);
   }

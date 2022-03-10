@@ -1,17 +1,22 @@
-<div class="search">
+<div class="quant-search">
 
     {%if page.description %}
     <h4>{{ page.description }}</h4>
     {% endif %}
 
     <div class="flex-grid">
+
+        {% if page.facets.0 is not empty %}
         <div class="col facets">
             <div id="clear-refinements"></div>
+            {% for facet in page.facets %}
             <div class="facet-container">
-            <div class="facet-heading">Facet heading</div>
-            <div id="facet_id"></div>
+            <div class="facet-heading">{{ facet.facet_heading }}</div>
+            <div id="facet_{{ facet.facet_filter }}"></div>
             </div>
+            {% endfor %}
         </div>
+        {% endif %}
 
         <div class="col content">
             <div id="searchbox" class="ais-SearchBox"></div>
