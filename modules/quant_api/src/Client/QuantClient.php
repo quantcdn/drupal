@@ -296,7 +296,6 @@ class QuantClient implements QuantClientInterface {
     $response = $this->client->post($this->endpoint . '/search', [
       RequestOptions::JSON => $records,
       'headers' => [
-        'Quant-Url' => $url,
         'Quant-Customer' => $this->username,
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
@@ -314,7 +313,6 @@ class QuantClient implements QuantClientInterface {
   public function clearSearchIndex() : array {
     $response = $this->client->delete($this->endpoint . '/search/all', [
       'headers' => [
-        'Quant-Url' => $url,
         'Quant-Customer' => $this->username,
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
