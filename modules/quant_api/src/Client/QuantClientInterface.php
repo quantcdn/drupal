@@ -102,10 +102,21 @@ interface QuantClientInterface {
 
   /**
    * Clear a search index.
-   * 
+   *
    * @return array
    *   The API response.
    */
   public function clearSearchIndex() : array;
+
+  /**
+   * Ensure facets are appropriated enabled in Quant Search.
+   *
+   * @param array $facets
+   *   The array of facet keys to ensure are enabled.
+   *
+   * @return array
+   *   The API response.
+   */
+  public function addFacets(array $facets) : array;
 
 }

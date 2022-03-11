@@ -325,4 +325,23 @@ class QuantClient implements QuantClientInterface {
     return json_decode($response->getBody(), TRUE);
   }
 
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addFacets(array $facets) : array {
+    $response = $this->client->post($this->endpoint . '/search/facet', [
+      RequestOptions::JSON => $facets,
+      'headers' => [
+        'Quant-Url' => $url,
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+      ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
 }

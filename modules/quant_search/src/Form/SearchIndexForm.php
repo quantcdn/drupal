@@ -12,9 +12,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @see Drupal\Core\Form\ConfigFormBase
  */
-class SearchEntitiesForm extends ConfigFormBase {
+class SearchIndexForm extends ConfigFormBase {
 
-  const SETTINGS = 'quant_search.entities.settings';
+  const SETTINGS = 'quant_search.index.settings';
 
   /**
    * Build the form.
@@ -69,19 +69,10 @@ class SearchEntitiesForm extends ConfigFormBase {
       }
     }
 
-    $form['quant_search_records_enabled'] = [
+    $form['quant_search_index_entity_node'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Push search records'),
-      '#description' => $this->t('Provide search record data when content is pushed.'),
-      '#default_value' => $config->get('quant_search_records_enabled', TRUE),
-    ];
-
-
-    $form['quant_search_entity_node'] = [
-      '#type' => 'checkbox',
-      '#default_value' => $config->get('quant_search_entity_node'),
       '#title' => $this->t('Nodes'),
-      '#description' => $this->t('Push node search records.'),
+      '#description' => $this->t('Reindex nodes.'),
     ];
 
     $form['node_details'] = [
@@ -90,7 +81,7 @@ class SearchEntitiesForm extends ConfigFormBase {
       '#title' => $this->t('Node configuration'),
       '#states' => [
         'visible' => [
-          ':input[name="entity_node"]' => ['checked' => TRUE],
+          ':input[name="quant_search_index_entity_node"]' => ['checked' => TRUE],
         ],
       ],
     ];
@@ -108,12 +99,11 @@ class SearchEntitiesForm extends ConfigFormBase {
         $language_codes[$langcode] = $language->getName() . $default;
       }
 
-      $form['node_details']['quant_search_entity_node_languages'] = [
+      $form['node_details']['quant_search_index_entity_node_languages'] = [
         '#type' => 'checkboxes',
         '#title' => $this->t('Languages'),
         '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be exported.'),
         '#options' => $language_codes,
-        '#default_value' => $config->get('quant_search_entity_node_languages') ?: [],
       ];
     }
 
@@ -127,59 +117,17 @@ class SearchEntitiesForm extends ConfigFormBase {
       $content_types[$type->id()] = $type->label();
     }
 
-    $form['node_details']['quant_search_entity_node_bundles'] = [
+    $form['node_details']['quant_search_index_entity_node_bundles'] = [
       '#type' => 'checkboxes',
       '#title' => $this->t('Enabled bundles'),
       '#description' => $this->t('Optionally restrict to these content types.'),
       '#options' => $content_types,
-      '#default_value' => $config->get('quant_search_entity_node_bundles') ?: [],
     ];
 
-    $form['quant_search_entity_taxonomy_term'] = [
+    $form['quant_search_index_entity_taxonomy_term'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Taxonomy terms'),
       '#description' => $this->t('Exports taxonomy term pages.'),
-      '#default_value' => $config->get('quant_search_entity_taxonomy_term'),
-    ];
-
-    $form['search_tokens'] = [
-      '#type' => 'vertical_tabs',
-    ];
-
-    $form['search_tokens_node'] = [
-      '#type' => 'details',
-      '#title' => 'Node',
-      '#description' => 'Tokens related to nodes',
-      '#group' => 'search_tokens',
-      '#tree' => TRUE,
-    ];
-
-    $form['search_tokens_node']['quant_search_title_token'] = [
-      '#type' => 'textfield',
-      '#title' => 'Title',
-      '#description' => 'Title',
-      '#default_value' => $config->get('quant_search_title_token'),
-    ];
-
-    $form['search_tokens_node']['quant_search_summary_token'] = [
-      '#type' => 'textfield',
-      '#title' => 'Summary',
-      '#description' => 'Summary',
-      '#default_value' => $config->get('quant_search_summary_token'),
-    ];
-
-    $form['search_tokens_node']['quant_search_image_token'] = [
-      '#type' => 'textfield',
-      '#title' => 'Image',
-      '#description' => 'Image',
-      '#default_value' => $config->get('quant_search_image_token'),
-    ];
-
-    $form['search_tokens_node']['quant_search_content_viewmode'] = [
-      '#type' => 'textfield',
-      '#title' => 'Content view mode',
-      '#description' => 'View mode to render the content as for search body',
-      '#default_value' => $config->get('quant_search_content_viewmode'),
     ];
 
     return parent::buildForm($form, $form_state);
@@ -190,19 +138,36 @@ class SearchEntitiesForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
-    $nodeTokens = $form_state->getValue('search_tokens_node');
+    $query = \Drupal::entityQuery('node')
+      ->condition('status', 1);
 
-    // Retrieve the configuration.
-    $this->configFactory->getEditable(self::SETTINGS)
-      ->set('quant_search_title_token', $nodeTokens['quant_search_title_token'])
-      ->set('quant_search_entity_node', $form_state->getValue('quant_search_entity_node'))
-      ->set('quant_search_entity_node_languages', $form_state->getValue('quant_search_entity_node_languages'))
-      ->set('quant_search_entity_node_bundles', $form_state->getValue('quant_search_entity_node_bundles'))
-      ->set('quant_search_entity_taxonomy_term', $form_state->getValue('quant_search_entity_taxonomy_term'))
-      ->set('quant_search_summary_token', $nodeTokens['quant_search_summary_token'])
-      ->set('quant_search_image_token', $nodeTokens['quant_search_image_token'])
-      ->set('quant_search_content_viewmode', $nodeTokens['quant_search_content_viewmode'])
-      ->save();
+    $bundles = $form_state->getValue('quant_search_index_entity_node_bundles');
+
+    if (!empty($bundles)) {
+      $bundles = array_filter($bundles);
+      if (!empty($bundles)) {
+        $query->condition('type', array_keys($bundles), 'IN');
+      }
+    }
+
+    $nids = $query->execute();
+
+    // Chunk into a few batches.
+    $batches = array_chunk($nids, 10);
+
+    $batch = [
+      'title' => $this->t('Exporting to Quant...'),
+      'operations' => [],
+      'init_message'     => $this->t('Commencing'),
+      'progress_message' => $this->t('Processed @current out of @total.'),
+      'error_message'    => $this->t('An error occurred during processing'),
+    ];
+
+    foreach ($batches as $b) {
+      $batch['operations'][] = ['quant_search_run_index', [$b]];
+    }
+
+    batch_set($batch);
 
     parent::submitForm($form, $form_state);
   }

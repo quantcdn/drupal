@@ -207,9 +207,6 @@ class QuantSearchPageForm extends EntityForm {
 
     unset($form['facets']['actions']);
     $page = $this->entity;
-
-    // Manually massage the facet configuration.
-    $values = $form_state->getValue(array('facets'));
     $status = $page->save();
 
     if ($status === SAVED_NEW) {
@@ -221,6 +218,20 @@ class QuantSearchPageForm extends EntityForm {
       $this->messenger()->addMessage($this->t('The %label search page updated.', [
         '%label' => $page->label(),
       ]));
+    }
+
+    // Ensure API is aware of facets and enable as required.
+    $facets = $form_state->getValue(array('facets'));
+    unset($facets['actions']);
+
+    $keys = [];
+    foreach ($facets as $f) {
+      $keys[] = $f['facet_filter'];
+    }
+
+    if (!empty($keys)) {
+      $client = \Drupal::service('quant_api.client');
+      $client->addFacets($keys);
     }
 
     \Drupal::service('router.builder')->rebuild();

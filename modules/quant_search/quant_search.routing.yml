@@ -8,6 +8,16 @@ quant_search.main:
   options:
     _admin_route: TRUE
 
+quant_search.main.index:
+  path: '/admin/config/development/quant/search/index'
+  defaults:
+    _form: '\Drupal\quant_search\Form\SearchIndexForm'
+    _title: 'Quant Search Index'
+  requirements:
+    _permission: 'administer quant search'
+  options:
+    _admin_route: TRUE
+
 entity.quant_search_page.collection:
   path: '/admin/config/development/quant/search/pages'
   defaults:
