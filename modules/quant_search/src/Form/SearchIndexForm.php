@@ -153,7 +153,7 @@ class SearchIndexForm extends ConfigFormBase {
     $nids = $query->execute();
 
     // Chunk into a few batches.
-    $batches = array_chunk($nids, 10);
+    $batches = array_chunk($nids, 50);
 
     $batch = [
       'title' => $this->t('Exporting to Quant...'),

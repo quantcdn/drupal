@@ -153,10 +153,22 @@ class Search extends ControllerBase {
     $output = render($build);
 
     $record = [];
-    $record['title'] = $title;
-    $record['summary'] = strip_tags(html_entity_decode($summary));
-    $record['content'] = strip_tags(html_entity_decode($output));
-    $record['image'] = strip_tags(html_entity_decode($image));
+
+    if (!empty($title)) {
+      $record['title'] = $title;
+    }
+
+    if (!empty($summary)) {
+      $record['summary'] = strip_tags(html_entity_decode($summary));
+    }
+
+    if (!empty($output)) {
+      $record['content'] = strip_tags(html_entity_decode($output));
+    }
+
+    if (!empty($image)) {
+      $record['image'] = strip_tags(html_entity_decode($image));
+    }
 
     $options = ['absolute' => FALSE];
     if (!empty($langcode)) {
@@ -169,7 +181,6 @@ class Search extends ControllerBase {
 
     // Add search meta for node entities.
     if ($entity->getEntityTypeId() == 'node') {
-
       $record += self::getNodeTerms($entity);
       $record['content_type'] = $entity->type->entity->label();
     }

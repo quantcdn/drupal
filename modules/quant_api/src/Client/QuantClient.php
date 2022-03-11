@@ -333,7 +333,6 @@ class QuantClient implements QuantClientInterface {
     $response = $this->client->post($this->endpoint . '/search/facet', [
       RequestOptions::JSON => $facets,
       'headers' => [
-        'Quant-Url' => $url,
         'Quant-Customer' => $this->username,
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,

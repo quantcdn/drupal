@@ -69,14 +69,6 @@ class SearchEntitiesForm extends ConfigFormBase {
       }
     }
 
-    $form['quant_search_records_enabled'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Push search records'),
-      '#description' => $this->t('Provide search record data when content is pushed.'),
-      '#default_value' => $config->get('quant_search_records_enabled', TRUE),
-    ];
-
-
     $form['quant_search_entity_node'] = [
       '#type' => 'checkbox',
       '#default_value' => $config->get('quant_search_entity_node'),
