@@ -1,5 +1,6 @@
 name = Quant API
 description = Quant API exporter
 package = Quant
-core = 7.x
+backdrop = 1.x
+type = module
 configure = admin/config/services/quant/api

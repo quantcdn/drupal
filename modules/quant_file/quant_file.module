@@ -17,7 +17,7 @@ function quant_file_file_insert($file) {
   );
 
   if (!empty($file->op)) {
-    drupal_register_shutdown_function('_quant_shutdown', $entity_info);
+    backdrop_register_shutdown_function('_quant_shutdown', $entity_info);
   }
 }
 
@@ -35,7 +35,7 @@ function quant_file_file_update($file) {
   );
 
   if (!empty($file->op)) {
-    drupal_register_shutdown_function('_quant_shutdown', $entity_info);
+    backdrop_register_shutdown_function('_quant_shutdown', $entity_info);
   }
 }
 
@@ -43,6 +43,7 @@ function quant_file_file_update($file) {
  * Implements hook_form_FORM_ID_alter().
  */
 function quant_file_form_quant_seed_settings_alter(&$form, $form_state) {
+  // TODO This variable was probably removed in Backdrop without replacement.
   $form['quant_seed_files'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export file pages'),
@@ -54,6 +55,7 @@ function quant_file_form_quant_seed_settings_alter(&$form, $form_state) {
  * Implements hook_quant_seed_queue().
  */
 function quant_file_quant_seed_queue() {
+  // TODO This variable was probably removed in Backdrop without replacement.
   if (!variable_get('quant_seed_files', FALSE)) {
     return;
   }

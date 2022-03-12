@@ -10,17 +10,85 @@
  */
 function quant_install() {
   // Prepare configuration for quant tokens.
-  variable_set('quant_token_secret', bin2hex(random_bytes(32)));
-  variable_set('quant_token_timeout', '+1 minute');
+  config_set('quant.settings', 'quant_token_secret', bin2hex(random_bytes(32)));
+  config_set('quant.settings', 'quant_token_timeout', '+1 minute');
+  // Dynamically generated variable data was detected on the following lines.
+  // /quantcdn/quant.module line 1349
+  // /quantcdn/quant.module line 1242
+  // /quantcdn/quant.module line 1319
+}
+
+// TODO The old hook_update_N functions cannot be applied to Backdrop.
+function quant_update_7000() { }
+
+/**
+ * Implements hook_update_last_removed().
+ */
+function quant_update_last_removed() {
+  return 7000;
 }
 
 /**
- * Remove the quant_token table.
+ * Migrate quant variables to config.
  */
-function quant_update_7000() {
-  if (db_table_exists('quant_token')) {
-    db_drop_table('quant_token');
-  }
-  variable_set('quant_token_secret', bin2hex(random_bytes(32)));
-  variable_set('quant_token_timeout', '+1 minute');
+function quant_update_1000() {
+  $config = config('quant.settings');
+  $config->set('quant_enabled', update_variable_get('quant_enabled', TRUE));
+  $config->set('quant_enabled_nodes', update_variable_get('quant_enabled_nodes', TRUE));
+  $config->set('quant_enabled_taxonomy', update_variable_get('quant_enabled_taxonomy', TRUE));
+  $config->set('quant_enabled_views', update_variable_get('quant_enabled_views', TRUE));
+  $config->set('quant_rewrite_relative', update_variable_get('quant_rewrite_relative', TRUE));
+  $config->set('quant_proxy_override', update_variable_get('quant_proxy_override', array()));
+  $config->set('quant_verbose_logging', update_variable_get('quant_verbose_logging', array()));
+  $config->set('quant_verify_ssl', update_variable_get('quant_verify_ssl', TRUE));
+  $config->set('quant_base_url', update_variable_get('quant_base_url', 'dynamic value in file /quantcdn/quant.module line 1349'));
+  $config->set('quant_hostname', update_variable_get('quant_hostname', 'dynamic value in file /quantcdn/quant.module line 1242'));
+  $config->set('quant_seed_entity_node', update_variable_get('quant_seed_entity_node', ''));
+  $config->set('quant_seed_entity_node_bundles', update_variable_get('quant_seed_entity_node_bundles', ''));
+  $config->set('quant_seed_entity_taxonomy', update_variable_get('quant_seed_entity_taxonomy', ''));
+  $config->set('quant_seed_theme_assets', update_variable_get('quant_seed_theme_assets', ''));
+  $config->set('quant_seed_views', update_variable_get('quant_seed_views', ''));
+  $config->set('quant_custom_routes_enabled', update_variable_get('quant_custom_routes_enabled', ''));
+  $config->set('quant_custom_routes', update_variable_get('quant_custom_routes', ''));
+  $config->set('quant_robots', update_variable_get('quant_robots', ''));
+  $config->set('quant_token_disable', update_variable_get('quant_token_disable', array()));
+  $config->set('quant_token_timeout', update_variable_get('quant_token_timeout', '+1 minute'));
+  $config->set('quant_token_strict', update_variable_get('quant_token_strict', TRUE));
+  $config->set('quant_api_token', update_variable_get('quant_api_token', ''));
+  $config->set('quant_api_customer', update_variable_get('quant_api_customer', ''));
+  $config->set('quant_api_project', update_variable_get('quant_api_project', ''));
+  $config->set('quant_pager_xpath', update_variable_get('quant_pager_xpath', ''));
+  $config->set('trigger_quant_seed', update_variable_get('trigger_quant_seed', ''));
+  $config->set('quant_token_secret', update_variable_get('quant_token_secret', 'supersecret'));
+  $config->set('quant_enabled_type', update_variable_get('quant_enabled_type', 'dynamic variable in file /quantcdn/quant.module line 1319'));
+  $config->save();
+
+  update_variable_del('quant_enabled');
+  update_variable_del('quant_enabled_nodes');
+  update_variable_del('quant_enabled_taxonomy');
+  update_variable_del('quant_enabled_views');
+  update_variable_del('quant_rewrite_relative');
+  update_variable_del('quant_proxy_override');
+  update_variable_del('quant_verbose_logging');
+  update_variable_del('quant_verify_ssl');
+  update_variable_del('quant_base_url');
+  update_variable_del('quant_hostname');
+  update_variable_del('quant_seed_entity_node');
+  update_variable_del('quant_seed_entity_node_bundles');
+  update_variable_del('quant_seed_entity_taxonomy');
+  update_variable_del('quant_seed_theme_assets');
+  update_variable_del('quant_seed_views');
+  update_variable_del('quant_custom_routes_enabled');
+  update_variable_del('quant_custom_routes');
+  update_variable_del('quant_robots');
+  update_variable_del('quant_token_disable');
+  update_variable_del('quant_token_timeout');
+  update_variable_del('quant_token_strict');
+  update_variable_del('quant_api_token');
+  update_variable_del('quant_api_customer');
+  update_variable_del('quant_api_project');
+  update_variable_del('quant_pager_xpath');
+  update_variable_del('trigger_quant_seed');
+  update_variable_del('quant_token_secret');
+  update_variable_del('quant_enabled_type');
 }

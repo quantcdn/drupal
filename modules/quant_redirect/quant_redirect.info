@@ -1,7 +1,8 @@
 name = Quant Redirects
 description = Publish redirects to Quant.
 package = Quant
-core = 7.x
+backdrop = 1.x
+type = module
 configure = admin/config/services/quant/seed
 
 dependencies[] = quant

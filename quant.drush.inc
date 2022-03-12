@@ -58,7 +58,7 @@ function drush_quant_info() {
 /**
  * Callback function to run a threaded seed process.
  */
-function drush_quant_process_queue($threads=5) {
+function drush_quant_process_queue($threads = 5) {
   _validate_quant_config();
 
   if (drush_get_option('threads')) {
@@ -100,9 +100,10 @@ function drush_quant_seed() {
  * Validate Quant configuration prior to drush operation.
  */
 function _validate_quant_config() {
-  $token = variable_get('quant_api_token');
-  $customer = variable_get('quant_api_customer');
-  $project = variable_get('quant_api_project');
+  $config = config('quant.settings');
+  $token = $config->get('quant_api_token');
+  $customer = $config->get('quant_api_customer');
+  $project = $config->get('quant_api_project');
 
   if (empty($token)) {
     drush_log('Quant API token is not configured', 'error');

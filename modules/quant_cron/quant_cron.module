@@ -13,7 +13,7 @@ function quant_cron_menu() {
   $items['admin/config/services/quant/cron'] = array(
     'title' => 'Cron',
     'description' => 'Configure seed options during cron run.',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('quant_cron_settings'),
     'file' => 'quant_cron.admin.inc',
     'access arguments' => array('bulk quant export'),
@@ -33,34 +33,46 @@ function quant_cron_cron() {
 }
 
 /**
+ * Implements hook_config_info().
+ */
+function quant_cron_config_info() {
+  $prefixes['quant_cron.settings'] = array(
+    'label' => t('Quant settings'),
+    'group' => t('Configuration'),
+  );
+  return $prefixes;
+}
+
+/**
  * Prepare the quant seeding batch process.
  */
 function _quant_cron_seed_prepare() {
+  $config = config('quant_cron.settings');
 
-  $node_bundles = array_filter(variable_get('quant_cron_entity_node_bundles'));
-  if (variable_get('quant_cron_entity_node')) {
+  $node_bundles = array_filter($config->get('quant_cron_entity_node_bundles'));
+  if ($config->get('quant_cron_entity_node')) {
     _quant_batch_nodes($batch, $node_bundles);
   }
 
-  if (variable_get('quant_cron_entity_taxonomy')) {
+  if ($config->get('quant_cron_entity_taxonomy')) {
     _quant_batch_taxonomy($batch);
   }
 
-  if (variable_get('quant_cron_theme_assets')) {
+  if ($config->get('quant_cron_theme_assets')) {
     _quant_batch_images($batch);
   }
 
-  if (variable_get('quant_cron_views')) {
+  if ($config->get('quant_cron_views')) {
     _quant_batch_views($batch);
   }
 
-  if (variable_get('quant_cron_custom_routes_enabled')) {
-    _quant_batch_routes($batch, variable_get('quant_cron_custom_routes'));
+  if ($config->get('quant_cron_custom_routes_enabled')) {
+    _quant_batch_routes($batch, $config->get('quant_cron_custom_routes'));
   }
 
   batch_set($batch);
 
-  $batch =& batch_get();
+  $batch = &batch_get();
   $batch['progressive'] = FALSE;
 
   drush_backend_batch_process();

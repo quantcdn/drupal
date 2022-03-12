@@ -1,7 +1,8 @@
 name = Quant sitemap
 description = Quant sitemap
 package = Quant
-core = 7.x
+backdrop = 1.x
+type = module
 configure = admin/config/services/quant/seed
 
 dependencies[] = quant

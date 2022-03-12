@@ -47,7 +47,7 @@ function quant_page_access($node) {
 function quant_page_view($node) {
   $uri = entity_uri('node', $node);
 
-  drupal_add_html_head_link(array(
+  backdrop_add_html_head_link(array(
     'rel' => 'cannonical',
     'href' => url($uri['path'], $uri['options']),
   ), TRUE);

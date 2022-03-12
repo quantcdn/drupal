@@ -1,0 +1,22 @@
+<?php
+
+/**
+ * @file
+ * Install operations for Quant API.
+ */
+
+/**
+ * The default URL endpoint for Quant.
+ *
+ * @var string
+ */
+define('QUANT_API_ENDPOINT_DEFAULT', 'https://api.quantcdn.io');
+
+/**
+ * Perform setup tasks.
+ */
+function quant_api_install() {
+  // Prepare configuration for quant tokens.
+  config_set('quant_api.settings', 'quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT);
+  config_set('quant_api.settings', 'quant_api_ssl_verify', TRUE); 
+}

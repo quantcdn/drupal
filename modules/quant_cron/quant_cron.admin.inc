@@ -11,8 +11,10 @@
  * @ingroup forms
  */
 function quant_cron_settings() {
+  $config = config('quant_cron.settings');
 
   $form = array();
+  $form['#config'] = 'quant_cron.settings';
 
   _quant_get_seed_warnings($form);
 
@@ -20,7 +22,7 @@ function quant_cron_settings() {
     '#type' => 'checkbox',
     '#title' => t('Export nodes'),
     '#description' => t('Note: It is advised you limit cron export to a subset of nodes (e.g a content type with limited content).'),
-    '#default_value' => variable_get('quant_cron_entity_node', FALSE),
+    '#default_value' => $config->get('quant_cron_entity_node'),
   );
 
   // Filter by node bundles.
@@ -41,32 +43,32 @@ function quant_cron_settings() {
         ':input[name="quant_cron_entity_node"]' => array('checked' => TRUE),
       ),
     ),
-    '#default_value' => variable_get('quant_cron_entity_node_bundles', []),
+    '#default_value' => $config->get('quant_cron_entity_node_bundles'),
   );
 
   $form['quant_cron_entity_taxonomy'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export taxonomy terms'),
-    '#default_value' => variable_get('quant_cron_entity_taxonomy', FALSE),
+    '#default_value' => $config->get('quant_cron_entity_taxonomy'),
   );
 
   $form['quant_cron_theme_assets'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export theme assets'),
-    '#default_value' => variable_get('quant_cron_theme_assets', FALSE),
+    '#default_value' => $config->get('quant_cron_theme_assets'),
   );
 
   $form['quant_cron_views'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export Views'),
-    '#default_value' => variable_get('quant_cron_views', FALSE),
+    '#default_value' => $config->get('quant_cron_views'),
   );
 
   $form['quant_cron_custom_routes_enabled'] = [
     '#type' => 'checkbox',
     '#title' => t('Custom routes'),
     '#description' => t('Exports custom list of routes.'),
-    '#default_value' => variable_get('quant_cron_custom_routes_enabled', FALSE),
+    '#default_value' => $config->get('quant_cron_custom_routes_enabled'),
   ];
 
   $form['quant_cron_custom_routes'] = [
@@ -78,7 +80,7 @@ function quant_cron_settings() {
         ':input[name="routes"]' => ['checked' => TRUE],
       ],
     ],
-    '#default_value' => variable_get('quant_cron_custom_routes', FALSE),
+    '#default_value' => $config->get('quant_cron_custom_routes'),
   ];
 
   return system_settings_form($form);

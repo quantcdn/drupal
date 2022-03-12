@@ -1,6 +1,7 @@
 name = Quant scheduler
 description = Support scheduler transitions.
 package = Quant
-core = 7.x
+backdrop = 1.x
+type = module
 dependencies[] = quant
 dependencies[] = scheduler

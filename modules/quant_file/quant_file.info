@@ -1,7 +1,8 @@
 name = Quant File
 description = Publish file displays to quant
 package = Quant
-core = 7.x
+backdrop = 1.x
+type = module
 configure = admin/config/service/quant/seed
 
 dependencies[] = quant

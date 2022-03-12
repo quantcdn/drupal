@@ -26,7 +26,7 @@ function quant_api_menu() {
   $items['admin/config/services/quant/api'] = array(
     'title' => 'API',
     'description' => 'Configure the API connection',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('quant_api_settings'),
     'file' => 'quant_api.admin.inc',
     'access arguments' => array('configure quant'),
@@ -38,15 +38,27 @@ function quant_api_menu() {
 }
 
 /**
+ * Implements hook_config_info().
+ */
+function quant_api_config_info() {
+  $prefixes['quant_api.settings'] = array(
+    'label' => t('Quant settings'),
+    'group' => t('Configuration'),
+  );
+  return $prefixes;
+}
+
+/**
  * Get request headers.
  *
  * @return array
  *   The standard quant api headers.
  */
 function quant_api_get_request_headers() {
-  $token = variable_get('quant_api_token');
-  $customer = variable_get('quant_api_customer');
-  $project = variable_get('quant_api_project');
+  $config = config('quant_api.settings');
+  $token = $config->get('quant_api_token');
+  $customer = $config->get('quant_api_customer');
+  $project = $config->get('quant_api_project');
 
   if (empty($token)) {
     quant_log('API Token is not configured.');
@@ -74,9 +86,10 @@ function quant_api_get_request_headers() {
  * Implements hook_quant_seed().
  */
 function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
+  $config = config('quant_api.settings');
   global $base_url;
 
-  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
+  $api = $config->get('quant_api_endpoint') . '/v1';
 
   if (empty($api)) {
     quant_log('API endpoint is not configured.');
@@ -112,24 +125,24 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     $request['data']['headers']['content_type'] = $meta['content_type'];
   }
 
-  if (!variable_get('quant_api_ssl_verify', TRUE)) {
+  if (!$config->get('quant_api_ssl_verify')) {
     $request['context'] = stream_context_create(array(
       'ssl' => array(
         'verify_peer' => FALSE,
         'verify_peer_name' => FALSE,
-      )
+      ),
     ));
   }
 
-  drupal_alter('quant_api_data', $request['data']);
+  backdrop_alter('quant_api_data', $request['data']);
   $request['data'] = json_encode($request['data']);
 
   quant_log('%request_options', array('%request_options' => json_encode($request)), QUANT_VERBOSE);
-  $response = drupal_http_request($api, $request);
+  $response = backdrop_http_request($api, $request);
 
   if (!empty($response->error)) {
     if (empty($response->data)) {
-      // This is a connection error between the drupal server and quant.
+      // This is a connection error between the backdrop server and quant.
       quant_log('Connection error', [], WATCHDOG_ERROR);
       return;
     }
@@ -159,11 +172,11 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       continue;
     }
 
-    $loc = DRUPAL_ROOT . $on_disk;
+    $loc = BACKDROP_ROOT . $on_disk;
 
     // Override if this looks like a private file.
     if (strpos($file, '/system/files/') !== FALSE) {
-      $private_path = drupal_realpath('private://');
+      $private_path = backdrop_realpath('private://');
       $loc = str_replace('/system/files', $private_path, $file);
     }
 
@@ -185,6 +198,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     if (!empty($item['full_path'])) {
       $file = $item['full_path'];
     }
+
     quant_seed_file($file, [
       'location' => $loc,
       'request' => $on_disk,
@@ -197,9 +211,10 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
  * Implements hook_quant_seed_file().
  */
 function quant_api_quant_seed_file($url, $context) {
+  $config = config('quant_api.settings');
   global $base_url;
 
-  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
+  $api = $config->get('quant_api_endpoint') . '/v1';
 
   if (empty($api)) {
     quant_log('API endpoint is not configured.', [], 'info');
@@ -219,28 +234,28 @@ function quant_api_quant_seed_file($url, $context) {
   // Issue a HEAD request to the file path.
   $options = array(
     'headers' => array(
-      'Host' => variable_get('quant_hostname', parse_url($base_url, PHP_URL_HOST)),
+      'Host' => config_get('quant.settings', 'quant_hostname', parse_url($base_url, PHP_URL_HOST)),
       'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
     'method' => 'HEAD',
   );
 
   // Ensure url is absolute for internal HEAD request.
-  if(strpos($url, "http") !== 0) {
-    $base = variable_get('quant_base_url', $base_url);
+  if (strpos($url, "http") !== 0) {
+    $base = config_get('quant.settings', 'quant_base_url', $base_url);
     $url = "{$base}{$url}";
   }
 
-  if (!variable_get('quant_verify_ssl', TRUE)) {
+  if (!config_get('quant.settings', 'quant_verify_ssl', TRUE)) {
     $options['context'] = stream_context_create(array(
       'ssl' => array(
         'verify_peer' => FALSE,
         'verify_peer_name' => FALSE,
-      )
+      ),
     ));
   }
 
-  $file_head = drupal_http_request($url, $options);
+  $file_head = backdrop_http_request($url, $options);
 
   // Disallow files that do not return 200 OK.
   if ($file_head->code != 200) {
@@ -255,7 +270,7 @@ function quant_api_quant_seed_file($url, $context) {
   $custom_headers = array_intersect_key($file_head->headers, array_flip(array(
     'content-disposition',
     'content-transfer-encoding',
-    'content-type'
+    'content-type',
   )));
 
   $headers = quant_api_get_request_headers() + array(
@@ -273,7 +288,7 @@ function quant_api_quant_seed_file($url, $context) {
     $curl_headers[] = "Quant-File-Headers: " . json_encode($custom_headers);
   }
 
-  // Drupal HTTP request doesn't support streaming files - so we need
+  // Backdrop HTTP request doesn't support streaming files - so we need
   // to use curl directly to support large files.
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $api);
@@ -289,7 +304,7 @@ function quant_api_quant_seed_file($url, $context) {
 
   curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 
-  if (!variable_get('quant_api_verify_ssl', TRUE)) {
+  if (!$config->get('quant_api_verify_ssl')) {
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
   }
@@ -325,7 +340,8 @@ function quant_api_quant_seed_file($url, $context) {
  *   If the request was successful.
  */
 function quant_api_unpublish_route($url) {
-  $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
+  $config = config('quant_api.settings');
+  $api = $config->get('quant_api_endpoint') . '/v1';
 
   $options = array(
     'headers' => quant_api_get_request_headers() + array(
@@ -335,19 +351,19 @@ function quant_api_unpublish_route($url) {
     'method' => 'PATCH',
   );
 
-  if (!variable_get('quant_api_ssl_verify', TRUE)) {
+  if (!$config->get('quant_api_ssl_verify')) {
     $options['context'] = stream_context_create(array(
       'ssl' => array(
         'verify_peer' => FALSE,
         'verify_peer_name' => FALSE,
-      )
+      ),
     ));
   }
 
-  $response = drupal_http_request("$api/unpublish", $options);
+  $response = backdrop_http_request("$api/unpublish", $options);
   if (!empty($response->error)) {
     if (empty($response->data)) {
-      // This is a connection error between the drupal server and quant.
+      // This is a connection error between the backdrop server and quant.
       quant_log('Connection error');
       return FALSE;
     }

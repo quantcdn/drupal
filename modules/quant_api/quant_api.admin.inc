@@ -11,12 +11,15 @@
  * @ingroup forms
  */
 function quant_api_settings() {
-  if (!variable_get('quant_api_ssl_verify', TRUE)) {
+  $config = config('quant_api.settings');
+
+  if (!$config->get('quant_api_ssl_verify')) {
+    $form['#config'] = 'quant_api.settings';
     $form['markup'] = array(
       '#type' => 'markup',
       '#prefix' => '<div class="messages error">',
       '#suffix' => '</div>',
-      '#markup' => '<b>DANGER ZONE</b> SSL verification is disabled for Quant API connections, it is recommended that you address server configuration rather than disabling SSL verification.'
+      '#markup' => '<b>DANGER ZONE</b> SSL verification is disabled for Quant API connections, it is recommended that you address server configuration rather than disabling SSL verification.',
     );
   }
 
@@ -25,7 +28,7 @@ function quant_api_settings() {
     '#required' => TRUE,
     '#title' => t('API Endpoint'),
     '#description' => t('The FQDN for the API endpoint'),
-    '#default_value' => variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT),
+    '#default_value' => $config->get('quant_api_endpoint'),
   );
 
   $form['quant_api_token'] = array(
@@ -38,23 +41,24 @@ function quant_api_settings() {
     '#type' => 'textfield',
     '#title' => t('API Customer'),
     '#description' => t('The API customer'),
-    '#default_value' => variable_get('quant_api_customer'),
+    '#default_value' => $config->get('quant_api_customer'),
   );
 
   $form['quant_api_project'] = array(
     '#type' => 'textfield',
     '#title' => t('API Project'),
     '#description' => t('The API project'),
-    '#default_value' => variable_get('quant_api_project'),
+    '#default_value' => $config->get('quant_api_project'),
   );
 
   $form['quant_api_ssl_verify'] = array(
     '#type' => 'checkbox',
     '#title' => t('Verify SSL'),
     '#description' => t('You can optionally disable SSL verification for all Quant API requests, this is <b>not recommended</b> but may be necessary in some configurations.'),
-    '#default_value' => variable_get('quant_api_ssl_verify', TRUE),
+    '#default_value' => $config->get('quant_api_ssl_verify'),
   );
 
+  $form['#config'] = 'quant_api.settings';
   $form['#validate'][] = 'quant_api_settings_validate';
 
   return system_settings_form($form);
@@ -65,7 +69,7 @@ function quant_api_settings() {
  */
 function quant_api_settings_validate($form, &$form_state) {
   if (empty($form_state['values']['quant_api_token'])) {
-    $form_state['values']['quant_api_token'] = variable_get('quant_api_token');
+    $form_state['values']['quant_api_token'] = config_get('quant_api.settings', 'quant_api_token');
   }
 
   $url = $form_state['values']['quant_api_endpoint'];
@@ -89,11 +93,11 @@ function quant_api_settings_validate($form, &$form_state) {
       'ssl' => array(
         'verify_peer' => FALSE,
         'verify_peer_name' => FALSE,
-      )
+      ),
     ));
   }
 
-  $response = drupal_http_request("$api/ping", $options);
+  $response = backdrop_http_request("$api/ping", $options);
 
   if (!property_exists($response, 'data')) {
     form_set_error('quant_api_endpoint', 'Unable to connect to the Quant API please check the endpoint.');
@@ -105,9 +109,9 @@ function quant_api_settings_validate($form, &$form_state) {
   if (!empty($response->error)) {
     $message = !empty($body->errorMsg) ? $body->errorMsg : 'Unauthorised';
     form_set_error('quant_api_token', 'Unable to connect to the Quant API please check the API token and customer match.');
-    drupal_set_message('QuantAPI error: ' . $message, 'error');
+    backdrop_set_message('QuantAPI error: ' . $message, 'error');
   }
   else {
-    drupal_set_message('QuantAPI: Successfully connected to ' . $body->project);
+    backdrop_set_message('QuantAPI: Successfully connected to ' . $body->project);
   }
 }

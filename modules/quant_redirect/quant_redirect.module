@@ -9,6 +9,7 @@
  * Implements hook_form_FORM_ID_alter().
  */
 function quant_redirect_form_quant_config_alter(&$form, $form_state) {
+  // TODO This variable was probably removed in Backdrop without replacement.
   $form['tracking_fieldset']['quant_enabled_redirects'] = [
     '#type' => 'checkbox',
     '#title' => t('Redirects'),
@@ -24,7 +25,8 @@ function quant_redirect_redirect_presave($redirect) {
     return;
   }
 
-  $status_code = empty($redirect->status_code) ? variable_get('redirect_default_status_code', 301) : $redirect->status_code;
+  // TODO This variable was probably removed in Backdrop without replacement.
+  $status_code = empty($redirect->status_code)?variable_get('redirect_default_status_code', 301) : $redirect->status_code;
   quant_redirect_request($redirect->source, $redirect->redirect, $status_code, $redirect->status, $redirect->is_new);
 }
 
@@ -36,7 +38,8 @@ function quant_redirect_redirect_delete($redirect) {
     return;
   }
 
-  $status_code = empty($redirect->status_code) ? variable_get('redirect_default_status_code', 301) : $redirect->status_code;
+  // TODO This variable was probably removed in Backdrop without replacement.
+  $status_code = empty($redirect->status_code)?variable_get('redirect_default_status_code', 301) : $redirect->status_code;
   quant_redirect_request($redirect->source, $redirect->redirect, $status_code, FALSE);
 }
 
@@ -44,6 +47,7 @@ function quant_redirect_redirect_delete($redirect) {
  * Trigger an API request to Quant for a redirect.
  */
 function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $is_new = FALSE) {
+  // TODO This variable was probably removed in Backdrop without replacement.
   $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT);
 
   if (empty($api)) {
@@ -83,16 +87,17 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
     );
   }
 
+  // TODO This variable was probably removed in Backdrop without replacement.
   if (!variable_get('quant_api_ssl_verify', TRUE)) {
     $request['context'] = stream_context_create(array(
       'ssl' => array(
         'verify_peer' => FALSE,
         'verify_peer_name' => FALSE,
-      )
+      ),
     ));
   }
 
-  $response = drupal_http_request($api, $request);
+  $response = backdrop_http_request($api, $request);
 
   if (!empty($response->error)) {
     quant_log('Unable to seed redirect: %data (%error)', array(
@@ -108,6 +113,7 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
  * Implements hook_form_FORM_ID_alter().
  */
 function quant_redirect_form_quant_seed_settings_alter(&$form, $form_state) {
+  // TODO This variable was probably removed in Backdrop without replacement.
   $form['quant_seed_redirects'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export redirects'),
@@ -119,6 +125,7 @@ function quant_redirect_form_quant_seed_settings_alter(&$form, $form_state) {
  * Implements hook_quant_seed_queue().
  */
 function quant_redirect_quant_seed_queue() {
+  // TODO This variable was probably removed in Backdrop without replacement.
   if (!variable_get('quant_seed_redirects', FALSE)) {
     return;
   }
@@ -131,7 +138,8 @@ function quant_redirect_quant_seed_queue() {
     ->execute();
 
   while ($redirect = $redirects->fetchAssoc()) {
-    $status_code = empty($redirect['status_code']) ? variable_get('redirect_default_status_code', 301) : $redirect['status_code'];
+    // TODO This variable was probably removed in Backdrop without replacement.
+    $status_code = empty($redirect['status_code'])?variable_get('redirect_default_status_code', 301) : $redirect['status_code'];
 
     // Strange behaviour; to/from are swapped.
     if (strpos($redirect['redirect'], 'node') === 0 && $redirect['status_code'] == 0) {

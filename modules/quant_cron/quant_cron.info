@@ -1,6 +1,7 @@
 name = Quant Cron
 description = Quant Cron scheduler
 package = Quant
-core = 7.x
+backdrop = 1.x
+type = module
 configure = admin/config/services/quant/cron
 dependencies[] = quant
