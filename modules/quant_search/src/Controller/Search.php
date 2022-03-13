@@ -139,17 +139,47 @@ class Search extends ControllerBase {
       $entity = $entity->getTranslation($langcode);
     }
 
+    // Determine whether the search record should be created or skipped.
+    $allowedBundles = $config->get('quant_search_entity_node_bundles');
+
+    if (!empty($allowedBundles)) {
+      $allowedBundles = array_filter($allowedBundles);
+      if (!empty($allowedBundles)) {
+        if (!in_array($entity->bundle(), $allowedBundles)) {
+          $record = [
+            'skip' => TRUE,
+          ];
+          return $record;
+        }
+      }
+    }
+
+    // Get default values.
+    $titleToken = $config->get('quant_search_title_token');
+    $summaryToken = $config->get('quant_search_summary_token');
+    $imageToken = $config->get('quant_search_image_token');
+    $viewMode = $config->get('quant_search_content_viewmode');
+
+    // Get override values.
+    $typeConfig = \Drupal::config('quant_search.entities.settings.' . $entity->bundle());
+
+    if (!empty($typeConfig) && $typeConfig->get('enabled')) {
+      $titleToken = $typeConfig->get('quant_search_title_token');
+      $summaryToken = $typeConfig->get('quant_search_summary_token');
+      $imageToken = $typeConfig->get('quant_search_image_token');
+      $viewMode = $typeConfig->get('quant_search_content_viewmode');
+    }
+
     // Get token values from context.
     $ctx = [];
     $ctx[$entityType] = $entity;
 
-    $title = \Drupal::token()->replace($config->get('quant_search_title_token'), $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
-    $summary = \Drupal::token()->replace($config->get('quant_search_summary_token'), $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
-    $image = \Drupal::token()->replace($config->get('quant_search_image_token'), $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
+    $title = \Drupal::token()->replace($titleToken, $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
+    $summary = \Drupal::token()->replace($summaryToken, $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
+    $image = \Drupal::token()->replace($imageToken, $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
 
     $view_builder = \Drupal::entityTypeManager()->getViewBuilder($entityType);
-    $view_mode = $config->get('quant_search_content_viewmode');
-    $build = $view_builder->view($entity, $view_mode, $langcode);
+    $build = $view_builder->view($entity, $viewMode, $langcode);
     $output = render($build);
 
     $record = [];

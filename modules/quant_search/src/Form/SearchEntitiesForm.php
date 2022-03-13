@@ -73,7 +73,7 @@ class SearchEntitiesForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#default_value' => $config->get('quant_search_entity_node'),
       '#title' => $this->t('Nodes'),
-      '#description' => $this->t('Push node search records.'),
+      '#description' => $this->t('Keep search records for nodes updated.'),
     ];
 
     $form['node_details'] = [
@@ -82,7 +82,7 @@ class SearchEntitiesForm extends ConfigFormBase {
       '#title' => $this->t('Node configuration'),
       '#states' => [
         'visible' => [
-          ':input[name="entity_node"]' => ['checked' => TRUE],
+          ':input[name="quant_search_entity_node"]' => ['checked' => TRUE],
         ],
       ],
     ];
@@ -103,13 +103,13 @@ class SearchEntitiesForm extends ConfigFormBase {
       $form['node_details']['quant_search_entity_node_languages'] = [
         '#type' => 'checkboxes',
         '#title' => $this->t('Languages'),
-        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be exported.'),
+        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will have a search record created.'),
         '#options' => $language_codes,
         '#default_value' => $config->get('quant_search_entity_node_languages') ?: [],
       ];
     }
 
-    // Seed by bundle.
+    // Get node bundles.
     $types = \Drupal::entityTypeManager()
       ->getStorage('node_type')
       ->loadMultiple();
@@ -117,6 +117,11 @@ class SearchEntitiesForm extends ConfigFormBase {
     $content_types = [];
     foreach ($types as $type) {
       $content_types[$type->id()] = $type->label();
+    }
+
+    $node_view_modes = [];
+    foreach (\Drupal::service('entity_display.repository')->getViewModes('node') as $k => $vm) {
+      $node_view_modes[$k] = $vm['label'];
     }
 
     $form['node_details']['quant_search_entity_node_bundles'] = [
@@ -130,49 +135,126 @@ class SearchEntitiesForm extends ConfigFormBase {
     $form['quant_search_entity_taxonomy_term'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Taxonomy terms'),
-      '#description' => $this->t('Exports taxonomy term pages.'),
+      '#description' => $this->t('Keep search records for taxonomy terms updated.'),
       '#default_value' => $config->get('quant_search_entity_taxonomy_term'),
     ];
 
-    $form['search_tokens'] = [
+    $form['search_tokens_node'] = [
       '#type' => 'vertical_tabs',
+      '#states' => [
+        'visible' => [
+          ':input[name="quant_search_entity_node"]' => ['checked' => TRUE],
+        ],
+      ],
     ];
 
-    $form['search_tokens_node'] = [
+    $form['search_tokens_node_default'] = [
       '#type' => 'details',
-      '#title' => 'Node',
-      '#description' => 'Tokens related to nodes',
-      '#group' => 'search_tokens',
+      '#title' => 'Default',
+      '#group' => 'search_tokens_node',
       '#tree' => TRUE,
     ];
 
-    $form['search_tokens_node']['quant_search_title_token'] = [
+    $form['search_tokens_node_default']['quant_search_title_token'] = [
       '#type' => 'textfield',
       '#title' => 'Title',
-      '#description' => 'Title',
+      '#description' => 'Token to use for record title',
       '#default_value' => $config->get('quant_search_title_token'),
     ];
 
-    $form['search_tokens_node']['quant_search_summary_token'] = [
+    $form['search_tokens_node_default']['quant_search_summary_token'] = [
       '#type' => 'textfield',
       '#title' => 'Summary',
-      '#description' => 'Summary',
+      '#description' => 'Token to use for record summary',
       '#default_value' => $config->get('quant_search_summary_token'),
     ];
 
-    $form['search_tokens_node']['quant_search_image_token'] = [
+    $form['search_tokens_node_default']['quant_search_image_token'] = [
       '#type' => 'textfield',
       '#title' => 'Image',
-      '#description' => 'Image',
+      '#description' => 'Token to use for record image',
       '#default_value' => $config->get('quant_search_image_token'),
     ];
 
-    $form['search_tokens_node']['quant_search_content_viewmode'] = [
-      '#type' => 'textfield',
+    $form['search_tokens_node_default']['quant_search_content_viewmode'] = [
+      '#type' => 'select',
       '#title' => 'Content view mode',
-      '#description' => 'View mode to render the content as for search body',
+      '#description' => 'View mode to render the content as for search body. Not used in display by default (search only value).',
       '#default_value' => $config->get('quant_search_content_viewmode'),
+      '#options' => $node_view_modes,
     ];
+
+    foreach ($types as $type) {
+
+      $tokenConfig = $this->config(self::SETTINGS . '.' . $type->id());
+
+      $form['search_tokens_node_' . $type->id()] = [
+        '#type' => 'details',
+        '#title' => $type->label(),
+        '#group' => 'search_tokens_node',
+        '#tree' => TRUE,
+      ];
+
+      $form['search_tokens_node_' . $type->id()]['exclude'] = [
+        '#type' => 'checkbox',
+        '#default_value' => $tokenConfig->get('exclude'),
+        '#title' => $this->t('Exclude'),
+        '#description' => $this->t('Excludes this type from the search index.'),
+      ];
+
+      $form['search_tokens_node_' . $type->id()]['enabled'] = [
+        '#type' => 'checkbox',
+        '#default_value' => $tokenConfig->get('enabled'),
+        '#title' => $this->t('Override'),
+        '#description' => $this->t('Override default node values.'),
+      ];
+
+      $form['search_tokens_node_' . $type->id()]['quant_search_title_token'] = [
+        '#type' => 'textfield',
+        '#title' => 'Title',
+        '#default_value' => $tokenConfig->get('quant_search_title_token'),
+        '#states' => [
+          'enabled' => [
+            ':input[name="search_tokens_node_' . $type->id() . '[enabled]"]' => ['checked' => TRUE],
+          ],
+        ],
+      ];
+
+      $form['search_tokens_node_' . $type->id()]['quant_search_summary_token'] = [
+        '#type' => 'textfield',
+        '#title' => 'Summary',
+        '#default_value' => $tokenConfig->get('quant_search_summary_token'),
+        '#states' => [
+          'enabled' => [
+            ':input[name="search_tokens_node_' . $type->id() . '[enabled]"]' => ['checked' => TRUE],
+          ],
+        ],
+      ];
+
+      $form['search_tokens_node_' . $type->id()]['quant_search_image_token'] = [
+        '#type' => 'textfield',
+        '#title' => 'Image',
+        '#default_value' => $tokenConfig->get('quant_search_image_token'),
+        '#states' => [
+          'enabled' => [
+            ':input[name="search_tokens_node_' . $type->id() . '[enabled]"]' => ['checked' => TRUE],
+          ],
+        ],
+      ];
+
+      $form['search_tokens_node_' . $type->id()]['quant_search_content_viewmode'] = [
+        '#type' => 'select',
+        '#title' => 'Content view mode',
+        '#description' => 'View mode to render the content as for search body',
+        '#default_value' => $tokenConfig->get('quant_search_content_viewmode'),
+        '#options' => $node_view_modes,
+        '#states' => [
+          'enabled' => [
+            ':input[name="search_tokens_node_' . $type->id() . '[enabled]"]' => ['checked' => TRUE],
+          ],
+        ],
+      ];
+    }
 
     return parent::buildForm($form, $form_state);
   }
@@ -182,7 +264,7 @@ class SearchEntitiesForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
-    $nodeTokens = $form_state->getValue('search_tokens_node');
+    $nodeTokens = $form_state->getValue('search_tokens_node_default');
 
     // Retrieve the configuration.
     $this->configFactory->getEditable(self::SETTINGS)
@@ -195,6 +277,26 @@ class SearchEntitiesForm extends ConfigFormBase {
       ->set('quant_search_image_token', $nodeTokens['quant_search_image_token'])
       ->set('quant_search_content_viewmode', $nodeTokens['quant_search_content_viewmode'])
       ->save();
+
+
+    // Iterate node type overrides.
+    $types = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+
+    $content_types = [];
+    foreach ($types as $type) {
+      $typeTokens = $form_state->getValue('search_tokens_node_' . $type->id());
+
+      $typeConfig = $this->configFactory->getEditable(self::SETTINGS . '.' . $type->id())
+        ->set('exclude', $typeTokens['exclude'])
+        ->set('enabled', $typeTokens['enabled'])
+        ->set('quant_search_title_token', $typeTokens['quant_search_title_token'])
+        ->set('quant_search_summary_token', $typeTokens['quant_search_summary_token'])
+        ->set('quant_search_image_token', $typeTokens['quant_search_image_token'])
+        ->set('quant_search_content_viewmode', $typeTokens['quant_search_content_viewmode'])
+        ->save();
+    }
 
     parent::submitForm($form, $form_state);
   }
