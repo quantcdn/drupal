@@ -59,10 +59,16 @@ function drush_quant_info() {
  * Callback function to run a threaded seed process.
  */
 function drush_quant_process_queue($threads=5) {
+  static $procs;
+  $cmd = 'drush queue-run quant_seed';
   _validate_quant_config();
 
   if (drush_get_option('threads')) {
     $threads = drush_get_option('threads');
+  }
+
+  if (empty($procs)) {
+    $procs = array();
   }
 
   if (!intval($threads)) {
@@ -70,10 +76,19 @@ function drush_quant_process_queue($threads=5) {
   }
 
   drush_log("Quant: Forking seed worker with $threads threads.", 'ok');
+
   for ($i = 0; $i < $threads; $i++) {
-    $cmd = 'drush queue-run quant_seed';
-    $process = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
+    $procs[] = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
   }
+
+  foreach ($procs as $proc) {
+    $status = proc_get_status($proc);
+    while ($status['running']) {
+      $status = proc_get_status($proc);
+    }
+  }
+
+  drush_log('Seeding complete.');
 
 }
 
