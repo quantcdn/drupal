@@ -121,8 +121,8 @@ function quant_cron_queue_info() {
     // Module name clashes with hook system resulting in
     // drush overriding with null pointer.
     // @see https://www.drupal.org/project/queue_ui/issues/1233682.
-    $queues['quant_seed'] = array(
-      'cron' => ['callback' => 'quant_queue_worker'],
+    $queues['quant_seed']['cron'] = array(
+      'callback' => 'quant_queue_worker',
     );
   }
 
