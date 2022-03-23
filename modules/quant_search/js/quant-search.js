@@ -55,12 +55,13 @@
                 //     }),
                 // ]);
 
-                for (let f = 0; f < drupalSettings.quantSearch.facets.length; f++) {
-                    const facet = drupalSettings.quantSearch.facets[f];
+                for (var facet_key in drupalSettings.quantSearch.facets) {
+                    const facet = drupalSettings.quantSearch.facets[facet_key];
+
                     search.addWidgets([
                         instantsearch.widgets.refinementList({
-                            container: '#facet_' + facet.facet_filter,
-                            attribute: facet.facet_filter,
+                            container: '#facet_' + facet_key,
+                            attribute: facet.facet_key,
                         }),
                     ]);
                 }

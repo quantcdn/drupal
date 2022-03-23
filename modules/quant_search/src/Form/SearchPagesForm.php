@@ -73,7 +73,6 @@ class SearchPagesForm extends ConfigFormBase {
       }
     }
 
-
     return parent::buildForm($form, $form_state);
   }
 

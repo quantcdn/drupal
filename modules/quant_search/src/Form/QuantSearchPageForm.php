@@ -5,8 +5,9 @@ namespace Drupal\quant_search\Form;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Messenger\MessengerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\taxonomy\Entity\Vocabulary;
+use Drupal\quant_search\Controller\Search;
 
 /**
  * Form handler for the Quant Search page add and edit forms.
@@ -139,10 +140,10 @@ class QuantSearchPageForm extends EntityForm {
     ];
 
     $form['facets'] = [
-        '#type' => 'fieldset',
-        '#title' => $this->t('Facets'),
-        '#prefix' => '<div id="facets-fieldset-wrapper">',
-        '#suffix' => '</div>',
+      '#type' => 'fieldset',
+      '#title' => $this->t('Facets'),
+      '#prefix' => '<div id="facets-fieldset-wrapper">',
+      '#suffix' => '</div>',
     ];
 
     $existingFacets = $this->entity->get('facets');
@@ -157,43 +158,93 @@ class QuantSearchPageForm extends EntityForm {
 
     $facets_count_field = $form_state->get('num_facets');
 
-    for ($i = 0; $i < $facets_count_field -1; $i++) {
+    for ($i = 0; $i < $facets_count_field - 1; $i++) {
       $form['facets'][$i] = [
-        '#type' => 'fieldset',
-        '#title' => $this->t('Facet configuration')
+        '#type' => 'details',
+        '#open' => TRUE,
+        '#title' => $this->t('Facet configuration'),
       ];
 
-      $form['facets'][$i]['facet_filter'] = [
-          '#type' => 'textfield',
-          '#title' => t('Facet name'),
-          '#default_value' => $existingFacets[$i]['facet_filter'],
+      $types = [
+        'taxonomy' => 'Taxonomy',
+        'content_type' => 'Content type',
+        'language' => 'Language',
+        'custom' => 'Custom',
       ];
+
+      $form['facets'][$i]['facet_type'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Facet type'),
+        '#options' => $types,
+        '#default_value' => $existingFacets[$i]['facet_type'],
+        '#attributes' => [
+          'id' => "facet_{$i}_type",
+        ],
+      ];
+
+      $vocabularies = Vocabulary::loadMultiple();
+
+      $vocab_options = [];
+      foreach ($vocabularies as $vocab) {
+        $vocab_options[$vocab->id()] = $vocab->label();
+      }
+
+      $form['facets'][$i]['taxonomy_vocabulary'] = [
+        '#type' => 'select',
+        '#title' => t('Taxonomy vocabulary'),
+        '#options' => $vocab_options,
+        '#default_value' => $existingFacets[$i]['taxonomy_vocabulary'],
+        '#states' => [
+          'visible' => [
+            ':input[id="facet_' . $i . '_type"]' => ['value' => 'taxonomy'],
+          ],
+        ],
+      ];
+
       $form['facets'][$i]['facet_heading'] = [
         '#type' => 'textfield',
         '#title' => t('Facet heading'),
-        '#default_value' => $existingFacets[$i]['facet_heading']
+        '#default_value' => $existingFacets[$i]['facet_heading'],
+      ];
+
+      $languages = \Drupal::languageManager()->getLanguages();
+      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+      $language_codes = [];
+
+      foreach ($languages as $langcode => $language) {
+        $default = ($defaultLanguage->getId() == $langcode) ? ' (Default)' : '';
+        $language_codes[$langcode] = $language->getName() . $default;
+      }
+
+      $form['facets'][$i]['facet_language'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Facet language'),
+        '#description' => $this->t('Language to use for the facet .'),
+        '#options' => $language_codes,
+        '#default_value' => $existingFacets[$i]['facet_language'],
       ];
     }
 
     $form['facets']['actions']['add_facet'] = [
-        '#type' => 'submit',
-        '#value' => t('Add facet'),
-        '#submit' => array('::addOne'),
-        '#ajax' => [
-            'callback' => '::addmoreCallback',
-            'wrapper' => 'facets-fieldset-wrapper',
-        ],
+      '#type' => 'submit',
+      '#value' => t('Add facet'),
+      '#submit' => ['::addOne'],
+      '#ajax' => [
+        'callback' => '::addmoreCallback',
+        'wrapper' => 'facets-fieldset-wrapper',
+      ],
     ];
+
     if ($form_state->get('num_facets') > 1) {
-        $form['facets']['actions']['remove_facet'] = [
-            '#type' => 'submit',
-            '#value' => t('Remove facet'),
-            '#submit' => array('::removeCallback'),
-            '#ajax' => [
-                'callback' => '::addmoreCallback',
-                'wrapper' => 'facets-fieldset-wrapper',
-            ]
-        ];
+      $form['facets']['actions']['remove_facet'] = [
+        '#type' => 'submit',
+        '#value' => t('Remove facet'),
+        '#submit' => ['::removeCallback'],
+        '#ajax' => [
+          'callback' => '::addmoreCallback',
+          'wrapper' => 'facets-fieldset-wrapper',
+        ],
+      ];
     }
     $form_state->setCached(FALSE);
 
@@ -221,17 +272,14 @@ class QuantSearchPageForm extends EntityForm {
     }
 
     // Ensure API is aware of facets and enable as required.
-    $facets = $form_state->getValue(array('facets'));
+    $facets = $form_state->getValue(['facets']);
     unset($facets['actions']);
 
-    $keys = [];
-    foreach ($facets as $f) {
-      $keys[] = $f['facet_filter'];
-    }
+    $keys = Search::processTranslatedFacetKeys($facets);
 
     if (!empty($keys)) {
       $client = \Drupal::service('quant_api.client');
-      $client->addFacets($keys);
+      $client->addFacets(array_keys($keys));
     }
 
     \Drupal::service('router.builder')->rebuild();
@@ -248,6 +296,9 @@ class QuantSearchPageForm extends EntityForm {
     return (bool) $entity;
   }
 
+  /**
+   *
+   */
   public function addOne(array &$form, FormStateInterface $form_state) {
     $facets_count_field = $form_state->get('num_facets');
     $add_button = $facets_count_field + 1;
@@ -255,11 +306,17 @@ class QuantSearchPageForm extends EntityForm {
     $form_state->setRebuild();
   }
 
+  /**
+   *
+   */
   public function addmoreCallback(array &$form, FormStateInterface $form_state) {
     $facets_count_field = $form_state->get('num_facets');
     return $form['facets'];
   }
 
+  /**
+   *
+   */
   public function removeCallback(array &$form, FormStateInterface $form_state) {
 
     $facets_count_field = $form_state->get('num_facets');
@@ -269,6 +326,5 @@ class QuantSearchPageForm extends EntityForm {
     }
     $form_state->setRebuild();
   }
-
 
 }

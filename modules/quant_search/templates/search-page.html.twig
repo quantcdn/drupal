@@ -9,10 +9,10 @@
         {% if page.facets.0 is not empty %}
         <div class="col facets">
             <div id="clear-refinements"></div>
-            {% for facet in page.facets %}
+            {% for facet in facets %}
             <div class="facet-container">
             <div class="facet-heading">{{ facet.facet_heading }}</div>
-            <div id="facet_{{ facet.facet_filter }}"></div>
+            <div id="facet_{{ facet.facet_key }}"></div>
             </div>
             {% endfor %}
         </div>

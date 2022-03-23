@@ -278,7 +278,6 @@ class SearchEntitiesForm extends ConfigFormBase {
       ->set('quant_search_content_viewmode', $nodeTokens['quant_search_content_viewmode'])
       ->save();
 
-
     // Iterate node type overrides.
     $types = \Drupal::entityTypeManager()
       ->getStorage('node_type')

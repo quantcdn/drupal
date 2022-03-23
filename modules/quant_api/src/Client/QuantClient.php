@@ -151,7 +151,6 @@ class QuantClient implements QuantClientInterface {
     return FALSE;
   }
 
-
   /**
    * {@inheritdoc}
    */
@@ -189,7 +188,6 @@ class QuantClient implements QuantClientInterface {
 
     return FALSE;
   }
-
 
   /**
    * {@inheritdoc}
@@ -306,7 +304,6 @@ class QuantClient implements QuantClientInterface {
     return json_decode($response->getBody(), TRUE);
   }
 
-
   /**
    * {@inheritdoc}
    */
@@ -322,7 +319,6 @@ class QuantClient implements QuantClientInterface {
 
     return json_decode($response->getBody(), TRUE);
   }
-
 
   /**
    * {@inheritdoc}

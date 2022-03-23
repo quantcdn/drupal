@@ -20,6 +20,7 @@ function quant_search_theme($existing, $type, $theme, $path) {
       'variables' => [
         'index' => NULL,
         'page' => NULL,
+        'facets' => NULL,
       ],
     ],
   ];
@@ -33,7 +34,7 @@ function quant_search_theme($existing, $type, $theme, $path) {
  * @param array $context
  *   The batch context.
  */
-function quant_search_run_index($nids, array &$context) {
+function quant_search_run_index($nids, $languages, array &$context) {
 
   $client = \Drupal::service('quant_api.client');
   $config = \Drupal::config('quant_search.entities.settings');
@@ -52,8 +53,8 @@ function quant_search_run_index($nids, array &$context) {
     // Multilang support.
     $filter = [];
 
-    if (!empty($config->get('quant_search_entity_node_languages'))) {
-      $filter = array_filter($config->get('quant_search_entity_node_languages'));
+    if (!empty($languages)) {
+      $filter = array_filter($languages);
     }
 
     foreach ($node->getTranslationLanguages() as $langcode => $language) {

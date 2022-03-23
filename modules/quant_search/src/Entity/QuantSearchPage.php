@@ -120,17 +120,16 @@ class QuantSearchPage extends ConfigEntityBase implements QuantSearchPageInterfa
 
   /**
    * Manual filter string.
-   * 
+   *
    * @var string
    */
   protected $manual_filters;
 
   /**
    * Facets.
-   * 
+   *
    * @var array
    */
   protected $facets = [];
-
 
 }

@@ -163,8 +163,11 @@ class SearchIndexForm extends ConfigFormBase {
       'error_message'    => $this->t('An error occurred during processing'),
     ];
 
+    // Filter by language.
+    $languages = $form_state->getValue('quant_search_index_entity_node_languages');
+
     foreach ($batches as $b) {
-      $batch['operations'][] = ['quant_search_run_index', [$b]];
+      $batch['operations'][] = ['quant_search_run_index', [$b, $languages]];
     }
 
     batch_set($batch);

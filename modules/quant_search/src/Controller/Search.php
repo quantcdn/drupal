@@ -59,7 +59,7 @@ class Search extends ControllerBase {
 
     if (!isset($search->index)) {
       return [
-        '#markup' => $this->t('Unable to retrieve search index values.')
+        '#markup' => $this->t('Unable to retrieve search index values.'),
       ];
     }
 
@@ -70,7 +70,6 @@ class Search extends ControllerBase {
       '#pages' => NULL,
     ];
   }
-
 
   /**
    * {@inheritdoc}
@@ -84,6 +83,8 @@ class Search extends ControllerBase {
     $manualFilters = $page->get('manual_filters');
     $facets = $page->get('facets');
     unset($facets['actions']);
+
+    $facetKeys = self::processTranslatedFacetKeys($facets);
 
     $filters = [];
 
@@ -113,12 +114,13 @@ class Search extends ControllerBase {
             'algolia_read_key' => $project->config->search_index->algolia_read_key,
             'algolia_index' => $project->config->search_index->algolia_index,
             'filters' => $filtersString,
-            'facets' => $facets,
-          ]
-        ]
+            'facets' => $facetKeys,
+          ],
+        ],
       ],
       '#index' => $project->config->search_index,
       '#page' => $page->toArray(),
+      '#facets' => $facetKeys,
     ];
   }
 
@@ -204,18 +206,24 @@ class Search extends ControllerBase {
     if (!empty($langcode)) {
       $language = \Drupal::languageManager()->getLanguage($langcode);
       $options['language'] = $language;
+      $record['lang_code'] = $langcode;
+
+      $language_label = \Drupal::service('string_translation')->translate($language->getName(), [], ['langcode' => $langcode]);
+      $record["language_${langcode}"] = $language_label;
     }
 
-    // @todo: Node only logic..
+    // @todo Node only logic..
     $record['url'] = Url::fromRoute('entity.node.canonical', ['node' => $entity->id()], $options)->toString();
 
     // Add search meta for node entities.
     if ($entity->getEntityTypeId() == 'node') {
-      $record += self::getNodeTerms($entity);
-      $record['content_type'] = $entity->type->entity->label();
+      $record += self::getNodeTerms($entity, $langcode);
+      $record["content_type"] = $entity->type->entity->id();
+
+      $translated_type = \Drupal::service('string_translation')->translate($entity->type->entity->label(), [], ['langcode' => $langcode]);
+      $record["content_type_{$langcode}"] = $translated_type;
     }
 
-    $record['lang_code'] = $langcode;
     return $record;
   }
 
@@ -228,7 +236,7 @@ class Search extends ControllerBase {
    * @return array
    *   Terms tagged to the node.
    */
-  private static function getNodeTerms(Node $entity) {
+  private static function getNodeTerms(Node $entity, $langcode) {
     $query = \Drupal::database()
       ->select('taxonomy_index', 'ti')
       ->fields('ti', ['tid'])
@@ -243,10 +251,58 @@ class Search extends ControllerBase {
     $terms = [];
 
     foreach ($tids as $term) {
-      $terms[$term->bundle()][] = $term->label();
+      $entity = $term->getTranslation($langcode);
+      $key = $term->bundle() . '_' . $langcode;
+      $terms[$key][] = $entity->label();
     }
 
     return $terms;
+  }
+
+  /**
+   * Determine translated facet keys.
+   *
+   * @param array
+   *   The facets array attached to the custom entity.
+   *
+   * @return array
+   *   The processed array.
+   */
+  public static function processTranslatedFacetKeys($facets) {
+
+    $keys = [];
+    foreach ($facets as $f) {
+      $lang = $f['facet_language'];
+
+      switch ($f['facet_type']) {
+        case "taxonomy":
+          $key = $f['taxonomy_vocabulary'] . '_' . $lang;
+          $f['facet_key'] = $key;
+          $keys[$key] = $f;
+          break;
+
+        case "content_type":
+          $key = "content_type_{$lang}";
+          $f['facet_key'] = $key;
+          $keys[$key] = $f;
+          break;
+
+        case "language":
+          $key = "language_{$lang}";
+          $f['facet_key'] = $key;
+          $keys[$key] = $f;
+          break;
+
+        case "custom":
+          // @todo This
+          break;
+
+        default:
+          // Nada.
+      }
+    }
+
+    return $keys;
   }
 
 }

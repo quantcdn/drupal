@@ -67,7 +67,7 @@ final class QuantEvent extends Event {
   protected $rid;
 
   /**
-   * The entity itself
+   * The entity itself.
    *
    * @var Drupal\Core\Entity\EntityInterface
    */
@@ -124,7 +124,7 @@ final class QuantEvent extends Event {
 
   /**
    * Get the langcode associated with the event.
-   * 
+   *
    * @return string
    *   The langcode.
    */
