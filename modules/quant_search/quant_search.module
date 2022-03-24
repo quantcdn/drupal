@@ -2,7 +2,8 @@
 
 use Drupal\quant_search\Controller\Search;
 use Drupal\node\Entity\Node;
-
+use Drupal\quant\Event\QuantEvent;
+use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Implements hook_theme().
@@ -82,4 +83,13 @@ function quant_search_run_index($nids, $languages, array &$context) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'];
   }
 
+}
+
+
+/**
+ * Implements hook_ENTITY_TYPE_delete().
+ */
+function quant_search_quant_search_page_delete(EntityInterface $entity) {
+  $route = $entity->get('route');
+  \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $route, [], NULL));
 }

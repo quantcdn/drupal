@@ -8,6 +8,8 @@ use Drupal\Core\Form\FormStateInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\taxonomy\Entity\Vocabulary;
 use Drupal\quant_search\Controller\Search;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\quant\Event\QuantEvent;
 
 /**
  * Form handler for the Quant Search page add and edit forms.
@@ -283,6 +285,19 @@ class QuantSearchPageForm extends EntityForm {
     }
 
     \Drupal::service('router.builder')->rebuild();
+
+    // Seed the route in Quant.
+    $published = $form_state->getValue('status');
+    $route = $form_state->getValue('route');
+
+    if ($published) {
+      $item = new RouteItem(['route' => $route]);
+      $item->send();
+    }
+    else {
+      \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $route, [], NULL));
+    }
+
     $form_state->setRedirect('entity.quant_search_page.collection');
   }
 

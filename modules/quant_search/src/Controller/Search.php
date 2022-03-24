@@ -141,6 +141,35 @@ class Search extends ControllerBase {
       $entity = $entity->getTranslation($langcode);
     }
 
+    // Get override values.
+    $typeConfig = \Drupal::config('quant_search.entities.settings.' . $entity->bundle());
+
+    // Determine whether this entity should be skipped.
+    $skipRecord = FALSE;
+    $nodeEnabled = $config->get('quant_search_entity_node');
+    $taxonomyEnabled = $config->get('quant_search_entity_taxonomy_term');
+
+    if ($entity->getEntityTypeId() == 'node' && !$nodeEnabled) {
+      $skipRecord = TRUE;
+    }
+
+    // Skip if 'exclude' is set on this type.
+    if (!empty($typeConfig) && $typeConfig->get('exclude')) {
+      $skipRecord = TRUE;
+    }
+
+    // Determine whether language should be skipped.
+    $allowedLanguage = $config->get('quant_search_entity_node_languages');
+
+    if (!empty($allowedLanguage)) {
+      $allowedLanguage = array_filter($allowedLanguage);
+      if (!empty($allowedLanguage)) {
+        if (!in_array($langcode, $allowedLanguage)) {
+          $skipRecord = TRUE;
+        }
+      }
+    }
+
     // Determine whether the search record should be created or skipped.
     $allowedBundles = $config->get('quant_search_entity_node_bundles');
 
@@ -148,12 +177,17 @@ class Search extends ControllerBase {
       $allowedBundles = array_filter($allowedBundles);
       if (!empty($allowedBundles)) {
         if (!in_array($entity->bundle(), $allowedBundles)) {
-          $record = [
-            'skip' => TRUE,
-          ];
-          return $record;
+          $skipRecord = TRUE;
         }
       }
+    }
+
+    // Skip search record.
+    if ($skipRecord) {
+      $record = [
+        'skip' => TRUE,
+      ];
+      return $record;
     }
 
     // Get default values.
@@ -161,9 +195,6 @@ class Search extends ControllerBase {
     $summaryToken = $config->get('quant_search_summary_token');
     $imageToken = $config->get('quant_search_image_token');
     $viewMode = $config->get('quant_search_content_viewmode');
-
-    // Get override values.
-    $typeConfig = \Drupal::config('quant_search.entities.settings.' . $entity->bundle());
 
     if (!empty($typeConfig) && $typeConfig->get('enabled')) {
       $titleToken = $typeConfig->get('quant_search_title_token');
