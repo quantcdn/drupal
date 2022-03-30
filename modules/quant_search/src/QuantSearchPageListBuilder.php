@@ -29,7 +29,6 @@ class QuantSearchPageListBuilder extends ConfigEntityListBuilder {
     $row['id'] = $entity->id();
     $row['enabled'] = $entity->status();
     $row['route'] = $entity->get('route');
-
     return $row + parent::buildRow($entity);
   }
 

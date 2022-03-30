@@ -230,18 +230,28 @@ class Seed {
   }
 
   /**
-   * Unpublish the path from Quant.
+   * Unpublish the node path from Quant.
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
-   *   The entity.
+   *   The node entity.
    */
-  public static function unpublishRoute(EntityInterface $entity) {
-    // @todo This should be a quant service.
-    $url = $entity->toUrl()->toString();
+  public static function unpublishNode(EntityInterface $entity) {
+
+    $langcode = $entity->language()->getId();
+    $nid = $entity->get('nid')->value;
+
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
+
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
     if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
-      $url = "/";
+      \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', '/', [], NULL));
     }
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $url, [], NULL));
@@ -391,10 +401,15 @@ class Seed {
    * @return string
    *   Sanitised markup string.
    */
-  private static function rewriteRelative($markup) {
+  public static function rewriteRelative($markup) {
     $config = \Drupal::config('quant.settings');
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-    return preg_replace("/(https?:\/\/)?{$hostname}/i", '', $markup);
+    $port = $_SERVER['SERVER_PORT'];
+    $markup = preg_replace("/(https?:\/\/)?{$hostname}(\:{$port})?/i", '', $markup);
+
+    // Edge case: Replace http://default when run via drush without a base_url set.
+    $markup = preg_replace("/http:\/\/default/i", '', $markup);
+    return $markup;
   }
 
 }

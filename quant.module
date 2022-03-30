@@ -68,7 +68,7 @@ function quant_node_update(EntityInterface $entity) {
   // If entity default revision is unpublished then unpublish in quant.
   if (!$entity->isPublished() && $entity->isDefaultRevision()) {
     // Trigger an unpublish event.
-    Seed::unpublishRoute($entity);
+    Seed::unpublishNode($entity);
   }
 
   // Exclude draft revisions from Quant if enabled.
@@ -234,13 +234,15 @@ function quant_redirect_delete($redirect) {
  */
 function _quant_entity_update_op(EntityInterface $entity) {
 
+  $langcode = $entity->language()->getId();
+
   switch ($entity->getEntityTypeId()) {
     case 'node':
-      Seed::seedNode($entity);
+      Seed::seedNode($entity, $langcode);
       break;
 
     case 'taxonomy_term':
-      Seed::seedTaxonomyTerm($entity);
+      Seed::seedTaxonomyTerm($entity, $langcode);
       break;
   }
 
@@ -261,8 +263,23 @@ function _quant_entity_delete_op(EntityInterface $entity) {
     return;
   }
 
-  Seed::unpublishRoute($entity);
+  Seed::unpublishNode($entity);
 }
+
+/**
+ * Implements hook_ENTITY_TYPE_translation_delete().
+ */
+function quant_node_translation_delete($entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+  $quant_node_enabled = \Drupal::config('quant.settings')->get('quant_enabled_nodes');
+
+  if (!$quant_enabled || !$quant_node_enabled) {
+    return;
+  }
+
+  Seed::unpublishNode($entity);
+}
+
 
 /**
  * Process the queue.

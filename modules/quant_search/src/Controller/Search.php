@@ -7,6 +7,7 @@ use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\node\Entity\Node;
 use Drupal\Core\Url;
+use Drupal\quant\Seed;
 
 /**
  * Quant configuration form.
@@ -213,7 +214,7 @@ class Search extends ControllerBase {
 
     $view_builder = \Drupal::entityTypeManager()->getViewBuilder($entityType);
     $build = $view_builder->view($entity, $viewMode, $langcode);
-    $output = render($build);
+    $output = \Drupal::service('renderer')->renderRoot($build);
 
     $record = [];
 
@@ -231,6 +232,8 @@ class Search extends ControllerBase {
 
     if (!empty($image)) {
       $record['image'] = strip_tags(html_entity_decode($image));
+      // Rewrite images as relative paths.
+      $record['image'] = Seed::rewriteRelative($record['image']);
     }
 
     $options = ['absolute' => FALSE];
