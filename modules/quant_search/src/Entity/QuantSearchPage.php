@@ -44,7 +44,8 @@ use Drupal\quant_search\QuantSearchPageInterface;
  *     "languages" = "languages",
  *     "bundles" = "bundles",
  *     "manual_filters" = "manual_filters",
- *     "facets" = "facets"
+ *     "facets" = "facets",
+ *     "display" = "display"
  *   },
  *   config_export = {
  *     "id",
@@ -56,7 +57,8 @@ use Drupal\quant_search\QuantSearchPageInterface;
  *     "languages",
  *     "bundles",
  *     "manual_filters",
- *     "facets"
+ *     "facets",
+ *     "display"
  *   }
  * )
  */
@@ -131,5 +133,12 @@ class QuantSearchPage extends ConfigEntityBase implements QuantSearchPageInterfa
    * @var array
    */
   protected $facets = [];
+
+  /**
+   * Display configuration.
+   *
+   * @var array
+   */
+  protected $display = [];
 
 }

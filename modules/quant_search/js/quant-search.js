@@ -40,30 +40,76 @@
                     }
                 };
 
-                search.addWidgets([
-                    instantsearch.widgets.searchBox({
-                        container: '#searchbox',
-                    }),
-                ]);
+                if (drupalSettings.quantSearch.display.results.display_search) {
+                    search.addWidgets([
+                        instantsearch.widgets.searchBox({
+                            container: '#searchbox',
+                        }),
+                    ]);
+                }
 
-                console.log(drupalSettings.quantSearch.facets);
 
+                if (drupalSettings.quantSearch.display.results.show_clear_refinements) {
+                    search.addWidgets([
+                        instantsearch.widgets.clearRefinements({
+                            container: '#clear-refinements',
+                        }),
+                    ]);
+                }
 
-                // search.addWidgets([
-                //     instantsearch.widgets.clearRefinements({
-                //     container: '#clear-refinements',
-                //     }),
-                // ]);
+                if (drupalSettings.quantSearch.display.pagination.pagination_enabled) {
+                    search.addWidgets([
+                        instantsearch.widgets.pagination({
+                            container: '#pagination',
+                        }),
+                    ]);
+                }
+
+                if (drupalSettings.quantSearch.display.results.display_stats) {
+                    search.addWidgets([
+                        instantsearch.widgets.stats({
+                            container: '#stats',
+                            templates: {
+                                text: `
+                        {{#hasOneResult}}1 result{{/hasOneResult}}
+                        {{#hasManyResults}}{{#helpers.formatNumber}}{{nbHits}}{{/helpers.formatNumber}} results{{/hasManyResults}}
+                        `,
+                            },
+                        }),
+                    ]);
+                }
 
                 for (var facet_key in drupalSettings.quantSearch.facets) {
                     const facet = drupalSettings.quantSearch.facets[facet_key];
 
-                    search.addWidgets([
-                        instantsearch.widgets.refinementList({
-                            container: '#facet_' + facet_key,
-                            attribute: facet.facet_key,
-                        }),
-                    ]);
+                    switch (facet.facet_display) {
+                        case "checkbox":
+                            search.addWidgets([
+                                instantsearch.widgets.refinementList({
+                                    container: '#facet_' + facet.facet_container,
+                                    attribute: facet.facet_key,
+                                }),
+                            ]);
+                            break;
+
+                        case "menu":
+                            search.addWidgets([
+                                instantsearch.widgets.menu({
+                                    container: '#facet_' + facet.facet_container,
+                                    attribute: facet.facet_key,
+                                }),
+                            ]);
+                            break;
+
+                        case "select":
+                            search.addWidgets([
+                                instantsearch.widgets.menuSelect({
+                                    container: '#facet_' + facet.facet_container,
+                                    attribute: facet.facet_key,
+                                }),
+                            ]);
+                            break;
+                    }
                 }
 
                 search.addWidgets([
@@ -71,6 +117,7 @@
                         attributesToSnippet: ['summary:100'],
                         snippetEllipsisText: '…',
                         filters: drupalSettings.quantSearch.filters,
+                        hitsPerPage: drupalSettings.quantSearch.display.pagination.per_page
                     }),
                     instantsearch.widgets.hits({
                         container: '#hits',
@@ -88,19 +135,6 @@
                             {{#helpers.snippet}}{ "attribute": "summary" }{{/helpers.snippet}}
                         </div>
                     </div>
-                    `,
-                        },
-                    }),
-                    instantsearch.widgets.pagination({
-                        container: '#pagination',
-                    }),
-
-                    instantsearch.widgets.stats({
-                        container: '#stats',
-                        templates: {
-                            text: `
-                    {{#hasOneResult}}1 result{{/hasOneResult}}
-                    {{#hasManyResults}}{{#helpers.formatNumber}}{{nbHits}}{{/helpers.formatNumber}} results{{/hasManyResults}}
                     `,
                         },
                     }),

@@ -116,6 +116,7 @@ class Search extends ControllerBase {
             'algolia_index' => $project->config->search_index->algolia_index,
             'filters' => $filtersString,
             'facets' => $facetKeys,
+            'display' => $page->get('display'),
           ],
         ],
       ],
@@ -140,6 +141,9 @@ class Search extends ControllerBase {
     $entityType = $entity->getEntityTypeId();
     if (!empty($langcode)) {
       $entity = $entity->getTranslation($langcode);
+    }
+    else {
+      $langcode = $entity->language()->getId();
     }
 
     // Get override values.
@@ -242,9 +246,12 @@ class Search extends ControllerBase {
       $options['language'] = $language;
       $record['lang_code'] = $langcode;
 
-      $language_label = \Drupal::service('string_translation')->translate($language->getName(), [], ['langcode' => $langcode]);
-      $record["language_${langcode}"] = $language_label;
+      foreach ($entity->getTranslationLanguages() as $code => $l) {
+        $language_label = \Drupal::service('string_translation')->translate($language->getName(), [], ['langcode' => $code]);
+        $record["language_${code}"] = $language_label;
+      }
     }
+
 
     // @todo Node only logic..
     $record['url'] = Url::fromRoute('entity.node.canonical', ['node' => $entity->id()], $options)->toString();
@@ -305,26 +312,32 @@ class Search extends ControllerBase {
   public static function processTranslatedFacetKeys($facets) {
 
     $keys = [];
-    foreach ($facets as $f) {
+    foreach ($facets as $k => $f) {
       $lang = $f['facet_language'];
 
       switch ($f['facet_type']) {
         case "taxonomy":
           $key = $f['taxonomy_vocabulary'] . '_' . $lang;
+          $containerKey = $key . "_{$k}";
           $f['facet_key'] = $key;
-          $keys[$key] = $f;
+          $f['facet_container'] = $containerKey;
+          $keys[$containerKey] = $f;
           break;
 
         case "content_type":
           $key = "content_type_{$lang}";
+          $containerKey = $key . "_{$k}";
           $f['facet_key'] = $key;
-          $keys[$key] = $f;
+          $f['facet_container'] = $containerKey;
+          $keys[$containerKey] = $f;
           break;
 
         case "language":
           $key = "language_{$lang}";
+          $containerKey = $key . "_{$k}";
           $f['facet_key'] = $key;
-          $keys[$key] = $f;
+          $f['facet_container'] = $containerKey;
+          $keys[$containerKey] = $f;
           break;
 
         case "custom":

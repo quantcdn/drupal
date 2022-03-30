@@ -8,21 +8,32 @@
 
         {% if page.facets.0 is not empty %}
         <div class="col facets">
+            {% if page.display.results.show_clear_refinements %}
             <div id="clear-refinements"></div>
+            {% endif %}
+
             {% for facet in facets %}
             <div class="facet-container">
-            <div class="facet-heading">{{ facet.facet_heading }}</div>
-            <div id="facet_{{ facet.facet_key }}"></div>
+                <div class="facet-heading">{{ facet.facet_heading }}</div>
+                <div id="facet_{{ facet.facet_container }}"></div>
             </div>
             {% endfor %}
         </div>
         {% endif %}
 
         <div class="col content">
+            {% if page.display.results.display_search %}
             <div id="searchbox" class="ais-SearchBox"></div>
+            {% endif %}
+
+            {% if page.display.results.display_stats %}
             <div id="stats"></div>
+            {% endif %}
             <div id="hits"></div>
+
+            {% if page.display.results.pagination_enabled %}
             <div id="pagination"></div>
+            {% endif %}
         </div>
     </div>
 </div>
