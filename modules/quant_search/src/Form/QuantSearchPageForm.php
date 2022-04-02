@@ -215,6 +215,9 @@ class QuantSearchPageForm extends EntityForm {
     if (!empty($vals['facets'])) {
       $existingFacets = $vals['facets'];
     }
+    else {
+      $existingFacets[] = [];
+    }
 
     foreach ($existingFacets as $i => $facet) {
 
@@ -325,9 +328,7 @@ class QuantSearchPageForm extends EntityForm {
     }
 
     // Add "add facet" button to last item in the array.
-    $last = array_key_last($form['facets']);
-
-    $form['facets'][$last]['actions']['add_facet'] = [
+    $form['facets'][$i]['actions']['add_facet'] = [
       '#type' => 'submit',
       '#value' => t('Add facet'),
       '#submit' => ['::addOne'],
