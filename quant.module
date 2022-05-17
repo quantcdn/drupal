@@ -197,7 +197,6 @@ function quant_forbidden() {
   die('Forbidden');
 }
 
-
 /**
  * Implements hook_init().
  *
@@ -773,7 +772,7 @@ function _quant_queue_theme_assets() {
   $queue = quant_get_queue();
 
   // Allow modules to provide some files if they need to.
-  drupal_alter('quant_seed_files', $file);
+  drupal_alter('quant_seed_files', $files);
 
   foreach ($files as $file) {
 
