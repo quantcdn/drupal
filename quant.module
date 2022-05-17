@@ -192,17 +192,6 @@ function quant_menu_local_tasks_alter(&$data, $router_item, $root_path) {
   }
 }
 
-/**
- * Implements hook_cron().
- */
-function quant_cron() {
-  // Tokens can be used multiple times in a single request, this causes issues
-  // with the access check by removing the token clean up to core cron we can
-  // persist a single token for multiple uses, the 1 minute timeout still
-  // ensures that the token will expire naturally.
-  db_query('TRUNCATE {quant_token}');
-}
-
 function quant_forbidden() {
   http_response_code(403);
   die('Forbidden');
