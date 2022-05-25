@@ -2,7 +2,8 @@
 
 namespace Drupal\quant\Controller;
 
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Drupal\Core\Url;
 
 /**
  * Returns a success response on a Quant route.
@@ -16,8 +17,30 @@ class QuantValidateController {
    *   The validation content to return.
    */
   public function index() {
-    $response = new Response();
-    $response->setContent('quant success');
+    $response = new JsonResponse(['status' => 'okay']);
+    $response->setStatusCode(JsonResponse::HTTP_OK);
+
+    $request = \Drupal::request();
+
+    $request->headers->set('quant-token', \Drupal::service('quant.token_manager')->create("/quant/validate"));
+
+    try {
+      \Drupal::service('quant.token_manager')->validate("/quant/validate", FALSE);
+    } catch (\Exception $e) {
+      $response->setData([
+        'status' => 'error',
+        'reason' => 'Invalid token signature, please regenerate token.'
+      ]);
+    }
+
+    $client = \Drupal::service('quant_api.client');
+    if (!$client->ping()) {
+      $response->setData([
+        'status' => 'error',
+        'reason' => 'Cannot connect to the QuantAPI.'
+      ]);
+    }
+
     return $response;
   }
 

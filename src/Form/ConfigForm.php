@@ -183,18 +183,25 @@ class ConfigForm extends ConfigFormBase {
   private function checkValidationRoute() {
 
     $base = \Drupal::request()->getBaseUrl();
-    $markup = Seed::markupFromRoute($base . '/quant/validate');
+    $validate = Seed::markupFromRoute($base . '/quant/validate');
 
-    if (!empty($markup[0])) {
-      if (strpos($markup[0], 'quant success') !== FALSE) {
-        \Drupal::messenger()->addMessage(t('Connected successfully.'));
-        return TRUE;
-      }
+    if (empty($validate[0])) {
+      \Drupal::messenger()->addError('Unable to verify Quant!');
+      return FALSE;
     }
 
-    \Drupal::messenger()->addError(t('Unable to connect to local webserver. Check webserver and host header settings.'));
-    return FALSE;
+    $validate = json_decode($validate[0]);
 
+    switch ($validate->status) {
+      case 'error':
+        \Drupal::messenger()->addError($validate->reason);
+        break;
+      default:
+        \Drupal::messenger()->addMessage('Connected successfully');
+        break;
+    }
+
+    return $validate->status == 'okay';
   }
 
 }
