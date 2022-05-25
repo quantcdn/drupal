@@ -330,6 +330,17 @@ class Seed {
       $_SERVER['PHP_AUTH_PW'],
     ] : [];
 
+    // Infer basic auth details from site configuration.
+    if (\Drupal::service('module_handler')->moduleExists('shield')) {
+      $config = \Drupal::config('shield.settings');
+      if ($config->get('credentials.shield')) {
+        $auth = [
+          $config->get('credentials.shield.user'),
+          $config->get('credentials.shield.pass'),
+        ];
+      }
+    }
+
     // @todo ; Note: Passing in the Host header fixes issues with absolute links.
     // It may also cause some redirects to the real host.
     // Best to trap redirects and re-run against the final path.
