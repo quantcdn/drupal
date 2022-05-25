@@ -196,9 +196,11 @@ class ConfigForm extends ConfigFormBase {
       case 'error':
         \Drupal::messenger()->addError($validate->reason);
         break;
+
       default:
         \Drupal::messenger()->addMessage('Connected successfully');
         break;
+
     }
 
     return $validate->status == 'okay';
