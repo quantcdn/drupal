@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @file
+ * Quant Search module.
+ */
+
 use Drupal\quant_search\Controller\Search;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
@@ -26,8 +31,6 @@ function quant_search_theme($existing, $type, $theme, $path) {
     ],
   ];
 }
-
-
 
 /**
  * Process the queue.
@@ -84,7 +87,6 @@ function quant_search_run_index($nids, $languages, array &$context) {
   }
 
 }
-
 
 /**
  * Implements hook_ENTITY_TYPE_delete().

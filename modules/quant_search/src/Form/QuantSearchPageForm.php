@@ -318,7 +318,7 @@ class QuantSearchPageForm extends EntityForm {
         '#type' => 'submit',
         '#value' => t('Remove facet'),
         '#name' => 'remove_facet_' . $i,
-        '#index' => $i, 
+        '#index' => $i,
         '#submit' => ['::removeCallback'],
         '#ajax' => [
           'callback' => '::addmoreCallback',
@@ -399,7 +399,7 @@ class QuantSearchPageForm extends EntityForm {
   }
 
   /**
-   * Helper function to check whether an search page configuration entity exists.
+   * Helper function to check if a search page configuration entity exists.
    */
   public function exist($id) {
     $entity = $this->entityTypeManager->getStorage('quant_search_page')->getQuery()
@@ -409,7 +409,7 @@ class QuantSearchPageForm extends EntityForm {
   }
 
   /**
-   *
+   * Adds one more facet to the form.
    */
   public function addOne(array &$form, FormStateInterface $form_state) {
     $vals = $form_state->getValues();
@@ -419,14 +419,14 @@ class QuantSearchPageForm extends EntityForm {
   }
 
   /**
-   *
+   * Callback: Add more facet form group.
    */
   public function addmoreCallback(array &$form, FormStateInterface $form_state) {
     return $form['facets'];
   }
 
   /**
-   *
+   * Callback: Remove facet form group.
    */
   public function removeCallback(array &$form, FormStateInterface $form_state) {
     $values = $form_state->getValues();
@@ -449,7 +449,6 @@ class QuantSearchPageForm extends EntityForm {
 
     $form_state->setValues($values);
     $form_state->setRebuild();
-    return;
   }
 
 }

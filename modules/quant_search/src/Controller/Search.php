@@ -212,9 +212,18 @@ class Search extends ControllerBase {
     $ctx = [];
     $ctx[$entityType] = $entity;
 
-    $title = \Drupal::token()->replace($titleToken, $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
-    $summary = \Drupal::token()->replace($summaryToken, $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
-    $image = \Drupal::token()->replace($imageToken, $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
+    $title = \Drupal::token()->replace($titleToken, $ctx, [
+      'langcode' => $langcode,
+      'clear' => TRUE,
+    ]);
+    $summary = \Drupal::token()->replace($summaryToken, $ctx, [
+      'langcode' => $langcode,
+      'clear' => TRUE,
+    ]);
+    $image = \Drupal::token()->replace($imageToken, $ctx, [
+      'langcode' => $langcode,
+      'clear' => TRUE,
+    ]);
 
     $view_builder = \Drupal::entityTypeManager()->getViewBuilder($entityType);
     $build = $view_builder->view($entity, $viewMode, $langcode);
@@ -252,7 +261,6 @@ class Search extends ControllerBase {
       }
     }
 
-
     // @todo Node only logic..
     $record['url'] = Url::fromRoute('entity.node.canonical', ['node' => $entity->id()], $options)->toString();
 
@@ -273,6 +281,8 @@ class Search extends ControllerBase {
    *
    * @param Drupal\node\Entity\Node $entity
    *   The entity to gather info for.
+   * @param string $langcode
+   *   The language code for the entity.
    *
    * @return array
    *   Terms tagged to the node.
@@ -303,13 +313,13 @@ class Search extends ControllerBase {
   /**
    * Determine translated facet keys.
    *
-   * @param array
+   * @param array $facets
    *   The facets array attached to the custom entity.
    *
    * @return array
    *   The processed array.
    */
-  public static function processTranslatedFacetKeys($facets) {
+  public static function processTranslatedFacetKeys(array $facets) {
 
     $keys = [];
     foreach ($facets as $k => $f) {

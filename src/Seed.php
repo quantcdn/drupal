@@ -125,7 +125,7 @@ class Seed {
     }
 
     $meta = [];
-    list($markup, $content_type) = $response;
+    [$markup, $content_type] = $response;
 
     if (!empty($content_type)) {
       $meta['content_type'] = $content_type;
@@ -192,7 +192,7 @@ class Seed {
       return;
     }
 
-    list($markup, $content_type) = $response;
+    [$markup, $content_type] = $response;
 
     if (!empty($content_type)) {
       $meta['content_type'] = $content_type;
@@ -407,7 +407,7 @@ class Seed {
     $port = $_SERVER['SERVER_PORT'];
     $markup = preg_replace("/(https?:\/\/)?{$hostname}(\:{$port})?/i", '', $markup);
 
-    // Edge case: Replace http://default when run via drush without a base_url set.
+    // Edge case: Replace http://default when run via drush without base_url.
     $markup = preg_replace("/http:\/\/default/i", '', $markup);
     return $markup;
   }

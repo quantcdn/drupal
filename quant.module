@@ -280,7 +280,6 @@ function quant_node_translation_delete($entity) {
   Seed::unpublishNode($entity);
 }
 
-
 /**
  * Process the queue.
  *

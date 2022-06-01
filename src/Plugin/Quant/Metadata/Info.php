@@ -112,7 +112,10 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
     $ctx['user'] = $author;
 
     if (!empty($this->getConfig('author_name'))) {
-      $meta['info']['author_name'] = $this->token->replace($this->getConfig('author_name'), $ctx, ['langcode' => $langcode, 'clear' => TRUE]);
+      $meta['info']['author_name'] = $this->token->replace($this->getConfig('author_name'), $ctx, [
+        'langcode' => $langcode,
+        'clear' => TRUE,
+      ]);
     }
 
     $meta['content_timestamp'] = intval($date);
@@ -126,7 +129,7 @@ class Info extends MetadataBase implements ContainerFactoryPluginInterface {
     }
 
     // Add search meta for node entities.
-    // @todo: these will all need translating..
+    // @todo these will all need translating..
     if ($entity->getEntityTypeId() == 'node') {
       $meta['search_record']['categories'] = $this->getNodeTerms($entity);
       $meta['search_record']['categories']['content_type'] = $entity->type->entity->label();

@@ -16,6 +16,7 @@ class QuantSearchRoutes {
    * Dynamically generate the routes for the entity details.
    *
    * @return \Symfony\Component\Routing\RouteCollection
+   *   The search page routes.
    *
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
