@@ -160,6 +160,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
     $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.ico|.js|.css)$/i', \RecursiveRegexIterator::GET_MATCH);
 
     foreach ($regex as $name => $r) {
+      // Skip node_modules.
+      if (preg_match('/node_modules/i', $name)) {
+        continue;
+      }
+
       $path = str_replace(DRUPAL_ROOT, '', $name);
       $event->queueItem(['file' => $path]);
     }
