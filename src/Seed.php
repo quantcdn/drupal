@@ -125,7 +125,7 @@ class Seed {
     }
 
     $meta = [];
-    list($markup, $content_type) = $response;
+    [$markup, $content_type] = $response;
 
     if (!empty($content_type)) {
       $meta['content_type'] = $content_type;
@@ -147,7 +147,7 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301));
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta));
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode));
   }
 
   /**
@@ -192,7 +192,7 @@ class Seed {
       return;
     }
 
-    list($markup, $content_type) = $response;
+    [$markup, $content_type] = $response;
 
     if (!empty($content_type)) {
       $meta['content_type'] = $content_type;
@@ -202,7 +202,7 @@ class Seed {
     foreach ($metaManager->getDefinitions() as $pid => $def) {
       $plugin = $metaManager->createInstance($pid);
       if ($plugin->applies($entity)) {
-        $meta = array_merge($meta, $plugin->build($entity));
+        $meta = array_merge($meta, $plugin->build($entity, $langcode));
       }
     }
 
@@ -219,7 +219,7 @@ class Seed {
       }
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid));
+    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode));
 
     // Create canonical redirects from node/123 to the published revision route.
     if ("/node/{$nid}" != $url && $entity->isPublished() && $entity->isDefaultRevision()) {
@@ -230,18 +230,28 @@ class Seed {
   }
 
   /**
-   * Unpublish the path from Quant.
+   * Unpublish the node path from Quant.
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
-   *   The entity.
+   *   The node entity.
    */
-  public static function unpublishRoute(EntityInterface $entity) {
-    // @todo This should be a quant service.
-    $url = $entity->toUrl()->toString();
+  public static function unpublishNode(EntityInterface $entity) {
+
+    $langcode = $entity->language()->getId();
+    $nid = $entity->get('nid')->value;
+
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
+
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
     if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
-      $url = "/";
+      \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', '/', [], NULL));
     }
 
     \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $url, [], NULL));
@@ -391,10 +401,15 @@ class Seed {
    * @return string
    *   Sanitised markup string.
    */
-  private static function rewriteRelative($markup) {
+  public static function rewriteRelative($markup) {
     $config = \Drupal::config('quant.settings');
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-    return preg_replace("/(https?:\/\/)?{$hostname}/i", '', $markup);
+    $port = $_SERVER['SERVER_PORT'];
+    $markup = preg_replace("/(https?:\/\/)?{$hostname}(\:{$port})?/i", '', $markup);
+
+    // Edge case: Replace http://default when run via drush without base_url.
+    $markup = preg_replace("/http:\/\/default/i", '', $markup);
+    return $markup;
   }
 
 }

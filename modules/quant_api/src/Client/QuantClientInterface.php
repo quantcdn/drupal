@@ -16,6 +16,22 @@ interface QuantClientInterface {
   public function ping();
 
   /**
+   * Retrieves project data.
+   *
+   * @return mixed
+   *   Contains object containing project information.
+   */
+  public function project();
+
+  /**
+   * Retrieves project search configuration.
+   *
+   * @return mixed
+   *   Contains object containing search information.
+   */
+  public function search();
+
+  /**
    * Send a payload to the API.
    *
    * @param array $data
@@ -72,5 +88,35 @@ interface QuantClientInterface {
    *   The API response.
    */
   public function unpublish(string $url) : array;
+
+  /**
+   * Send a search record payload to Quant.
+   *
+   * @param array $records
+   *   The array of search records to submit.
+   *
+   * @return array
+   *   The API response.
+   */
+  public function sendSearchRecords(array $records) : array;
+
+  /**
+   * Clear a search index.
+   *
+   * @return array
+   *   The API response.
+   */
+  public function clearSearchIndex() : array;
+
+  /**
+   * Ensure facets are appropriated enabled in Quant Search.
+   *
+   * @param array $facets
+   *   The array of facet keys to ensure are enabled.
+   *
+   * @return array
+   *   The API response.
+   */
+  public function addFacets(array $facets) : array;
 
 }

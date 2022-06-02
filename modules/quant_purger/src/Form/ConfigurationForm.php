@@ -58,7 +58,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
         if (empty($form["{$key}_fieldset"][$key][$delta])) {
           $form["{$key}_fieldset"][$key][$delta] = [
             '#type' => 'textfield',
-            '#default_value' => isset($items[$delta]) ? $items[$delta] : '',
+            '#default_value' => $items[$delta] ?? '',
           ];
         }
       }
