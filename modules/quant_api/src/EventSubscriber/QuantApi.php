@@ -41,7 +41,7 @@ class QuantApi implements EventSubscriberInterface {
   protected $eventDispatcher;
 
   /**
-   * QuantAPI event subcsriber.
+   * QuantAPI event subscriber.
    *
    * Listens to Quant events and triggers requests to the configured
    * API endpoint for different operations.
@@ -63,10 +63,10 @@ class QuantApi implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   public static function getSubscribedEvents() {
-    $events[QuantEvent::OUTPUT][] = ['onOutput'];
-    $events[QuantFileEvent::OUTPUT][] = ['onMedia'];
-    $events[QuantRedirectEvent::UPDATE][] = ['onRedirect'];
-    $events[QuantEvent::UNPUBLISH][] = ['onUnpublish'];
+    $events[QuantEvent::OUTPUT] = ['onOutput', -999];
+    $events[QuantFileEvent::OUTPUT] = ['onMedia', -999];
+    $events[QuantRedirectEvent::UPDATE] = ['onRedirect', -999];
+    $events[QuantEvent::UNPUBLISH] = ['onUnpublish', -999];
     return $events;
   }
 

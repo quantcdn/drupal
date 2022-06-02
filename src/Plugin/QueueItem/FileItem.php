@@ -23,8 +23,8 @@ class FileItem implements QuantQueueItemInterface {
    */
   public function __construct(array $data = []) {
     $this->file = $data['file'];
-    $this->url = isset($data['url']) ? $data['url'] : NULL;
-    $this->fullPath = isset($data['full_path']) ? $data['full_path'] : NULL;
+    $this->url = $data['url'] ?? NULL;
+    $this->fullPath = $data['full_path'] ?? NULL;
   }
 
   /**

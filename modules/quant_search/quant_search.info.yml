@@ -1,0 +1,11 @@
+name: Quant Search
+description: 'Allows creation of Quant Search pages.'
+package: Quant
+
+type: module
+core_version_requirement: ^8 || ^9
+core: 8.x
+
+dependencies:
+  - drupal:quant
+  - drupal:quant_api

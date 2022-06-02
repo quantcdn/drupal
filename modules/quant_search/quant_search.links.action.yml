@@ -1,0 +1,11 @@
+entity.quant_search_page.add_form:
+  route_name: 'entity.quant_search_page.add_form'
+  title: 'Add Quant search page'
+  appears_on:
+    - entity.quant_search_page.collection
+
+entity.quant_search_page.clear_index:
+  route_name: 'quant_search.clear_index'
+  title: 'Clear index'
+  appears_on:
+    - quant_search.main

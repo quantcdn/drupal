@@ -65,7 +65,7 @@ abstract class MetadataBase extends PluginBase implements MetadataInterface {
    */
   public function getConfig($key = '') {
     $default = $this->defaultConfiguration();
-    return isset($this->config[$key]) ? $this->config[$key] : $default[$key];
+    return $this->config[$key] ?? $default[$key];
   }
 
   /**

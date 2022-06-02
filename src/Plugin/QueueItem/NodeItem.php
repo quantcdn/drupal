@@ -38,7 +38,7 @@ class NodeItem implements QuantQueueItemInterface {
    */
   public function __construct(array $data = []) {
     $this->id = $data['id'];
-    $this->vid = isset($data['vid']) ? $data['vid'] : FALSE;
+    $this->vid = $data['vid'] ?? FALSE;
     $this->filter = isset($data['lang_filter']) && is_array($data['lang_filter']) ? array_filter($data['lang_filter']) : [];
   }
 

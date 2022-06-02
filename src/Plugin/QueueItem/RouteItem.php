@@ -23,7 +23,7 @@ class RouteItem implements QuantQueueItemInterface {
    * {@inheritdoc}
    */
   public function __construct(array $data = []) {
-    $route = isset($data['route']) ? $data['route'] : NULL;
+    $route = $data['route'] ?? NULL;
 
     if (!is_string($route)) {
       throw new \UnexpectedValueException(self::class . ' requires a string value.');
@@ -62,7 +62,7 @@ class RouteItem implements QuantQueueItemInterface {
       return;
     }
 
-    list($markup, $content_type) = $response;
+    [$markup, $content_type] = $response;
 
     $config = \Drupal::config('quant.settings');
     $proxy_override = boolval($config->get('proxy_override', FALSE));

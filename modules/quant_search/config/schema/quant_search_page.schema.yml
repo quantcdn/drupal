@@ -1,0 +1,10 @@
+quant_search.quant_search_page.*:
+  type: config_entity
+  label: 'Quant search page config'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+      type: label
+      label: 'Label'
