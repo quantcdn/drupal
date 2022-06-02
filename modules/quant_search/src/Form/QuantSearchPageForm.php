@@ -370,6 +370,11 @@ class QuantSearchPageForm extends EntityForm {
     $keys = Search::processTranslatedFacetKeys($facets);
 
     $uniqKeys = [];
+
+    // Add default filters (lang_code/bundle).
+    $uniqKeys[] = 'lang_code';
+    $uniqKeys[] = 'content_type';
+
     foreach ($keys as $k) {
       if (!isset($uniqKeys[$k['facet_key']])) {
         $uniqKeys[] = $k['facet_key'];
