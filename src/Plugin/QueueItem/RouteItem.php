@@ -19,6 +19,10 @@ class RouteItem implements QuantQueueItemInterface {
    */
   private $route;
 
+  private $uri;
+
+  private $file_path;
+
   /**
    * {@inheritdoc}
    */
@@ -34,7 +38,11 @@ class RouteItem implements QuantQueueItemInterface {
       $route = "/{$route}";
     }
 
-    $this->route = trim($route);
+    $route = trim($route);
+
+    $this->route = $route;
+    $this->uri = isset($data['uri']) ? $data['uri'] : strtok($route, '?');
+    $this->file_path = isset($data['file_path']) ? $data['file_path'] : DRUPAL_ROOT . strtok($route, '?');
   }
 
   /**
@@ -43,19 +51,23 @@ class RouteItem implements QuantQueueItemInterface {
   public function send() {
 
     // Wrapper for routes that resolve as files.
-    $ext = pathinfo(strtok($this->route, '?'), PATHINFO_EXTENSION);
+    $ext = pathinfo($this->uri, PATHINFO_EXTENSION);
+    $response = FALSE;
 
-    if ($ext && file_exists(DRUPAL_ROOT . strtok($this->route, '?'))) {
-      $file_item = new FileItem([
-        'file' => strtok($this->route, '?'),
-        'url' => $this->route,
-        'full_path' => DRUPAL_ROOT . $this->route,
-      ]);
-      $file_item->send();
-      return;
+    if (file_exists($this->file_path) && !empty($ext)) {
+      if ($ext != 'html') {
+        $file_item = new FileItem([
+          'file' => $this->file_path,
+          'url' => $this->uri,
+        ]);
+        $file_item->send();
+        return;
+      }
+      // Synthetic response - load the content directly.
+      $response = [file_get_contents($this->file_path), 'text/html; charset=UTF-8'];
+    } else {
+      $response = Seed::markupFromRoute($this->route);
     }
-
-    $response = Seed::markupFromRoute($this->route);
 
     if (!$response) {
       \Drupal::logger('quant_seed')->error("Unable to send {$this->route}");
