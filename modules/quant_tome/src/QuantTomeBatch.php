@@ -9,6 +9,8 @@ use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant_api\Client\QuantClient;
+use Drupal\Core\Queue\QueueFactory;
+use Drupal\quant\Plugin\QueueItem\RedirectItem;
 
 class QuantTomeBatch {
 
@@ -37,6 +39,13 @@ class QuantTomeBatch {
   protected $client;
 
   /**
+   * The queue factory.
+   *
+   * @var \Drupal\Core\Queue\QueueFactory
+   */
+  protected $queueFactory;
+
+  /**
    * Constructor.
    *
    * @param \Drupal\tome_static\StaticGeneratorInterface $static
@@ -46,10 +55,11 @@ class QuantTomeBatch {
    * @param \Drupal\quant_api\Client\QuantClient $client
    *   The Quant api client.
    */
-  public function __construct(StaticGeneratorInterface $static, FileSystemInterface $file_system, QuantClient $client) {
+  public function __construct(StaticGeneratorInterface $static, FileSystemInterface $file_system, QuantClient $client, QueueFactory $queue_factory) {
     $this->static = $static;
     $this->fileSystem = $file_system;
     $this->client = $client;
+    $this->queueFactory = $queue_factory;
   }
 
   /**
@@ -131,22 +141,37 @@ class QuantTomeBatch {
   public function checkRequiredFiles(&$context) {
     $file_hashes = $context['results']['files'];
 
-    foreach ($file_hashes as $file_path => $hash) {
-      // @TODO: Quant meta check.
-      // unset($file_hashes[$file_path]);
-    }
+    $queue = $this->queueFactory->get('quant_seed_worker');
+    $queue->deleteQueue();
 
-    $batch_builder = new BatchBuilder();
     foreach ($file_hashes as $file_path => $hash) {
+      if (strpos($file_path, 'redirect') > -1) {
+        if ($handle = fopen($file_path, 'r')) {
+          while (!feof($handle)) {
+            $line = fgets($handle);
+            $redirect = explode(' ', $line);
+            if (empty($redirect[0])) {
+              break;
+            }
+            $queue->createItem(new RedirectItem([
+              'source' => trim($redirect[0]),
+              'destination' => trim($redirect[1]),
+              'status_code' => 301,
+            ]));
+          }
+        }
+        fclose($handle);
+        continue;
+      }
+
       $item = new RouteItem([
         'route' => $this->pathToUri($file_path),
         'uri' => $this->pathToUri($file_path),
         'file_path' => $file_path,
       ]);
-      $batch_builder->addOperation([$this, 'deploy'], [$item]);
-    }
 
-    batch_set($batch_builder->toArray());
+      $queue->createItem($item);
+    }
   }
 
   /**
@@ -172,6 +197,14 @@ class QuantTomeBatch {
       '%s' => $item->log(),
     ]);
     $item->send();
+  }
+
+  public function finish($success, &$context) {
+    if ($success) {
+      \Drupal::logger('quant_tome')->info('Complete!');
+    } else {
+      \Drupal::logger('quant_tome')->error('Failed to deploy all files, check the logs!');
+    }
   }
 
 }
