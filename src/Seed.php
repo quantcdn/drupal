@@ -403,12 +403,22 @@ class Seed {
    */
   public static function rewriteRelative($markup) {
     $config = \Drupal::config('quant.settings');
+
+    // Do not strip host domain unless configured.
+    $strip = $config->get('host_domain_strip') ?: FALSE;
+    if (!$strip) {
+      return $markup;
+    }
+
+    // Strip the host domain from everywhere in the content including header
+    // metadata such as canonical links.
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
     $port = $_SERVER['SERVER_PORT'];
     $markup = preg_replace("/(https?:\/\/)?{$hostname}(\:{$port})?/i", '', $markup);
 
     // Edge case: Replace http://default when run via drush without base_url.
     $markup = preg_replace("/http:\/\/default/i", '', $markup);
+
     return $markup;
   }
 
