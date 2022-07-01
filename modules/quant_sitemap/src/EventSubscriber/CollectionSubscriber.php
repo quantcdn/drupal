@@ -2,11 +2,12 @@
 
 namespace Drupal\quant_sitemap\EventSubscriber;
 
-use Drupal\quant\Event\CollectRoutesEvent;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Drupal\quant\Event\QuantCollectionEvents;
-use Drupal\Core\Extension\ModuleHandler;
 use Drupal\Core\Entity\EntityTypeManager;
+use Drupal\Core\Extension\ModuleHandler;
+use Drupal\quant\Event\CollectRoutesEvent;
+use Drupal\quant\Event\QuantCollectionEvents;
+use Drupal\simple_sitemap\Entity\SimpleSitemap;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Collection subscriber for Sitemap routes.
@@ -50,7 +51,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    *   The sitemap manager.
    */
   public function getSitemapManager() {
-    return \Drupal::service('simple_sitemap.manager');
+    return \Drupal::service('simple_sitemap.entity_manager');
   }
 
   /**
@@ -74,9 +75,13 @@ class CollectionSubscriber implements EventSubscriberInterface {
    *   A list of routes that sitemaps are accessible by.
    */
   public function getSimpleSitemapItems() : array {
-    $items = ['/sitemap.xml'];
-    foreach ($this->getSitemapManager()->getSitemapVariants() as $variant => $def) {
-      $items[] = "/$variant/sitemap.xml";
+    // Always include base sitemap and default stylesheet.
+    $items = ['/sitemap.xml', '/sitemap_generator/default/sitemap.xsl'];
+    $variants = array_keys(SimpleSitemap::loadMultiple());
+    if (!empty($variants)) {
+      foreach ($variants as $variant) {
+        $items[] = "/$variant/sitemap.xml";
+      }
     }
     return $items;
   }
