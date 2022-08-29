@@ -40,10 +40,12 @@ class Search extends ControllerBase {
   public function statusPage() {
     $config = $this->config(self::SETTINGS);
 
+    $searchEnabled = FALSE;
     if ($config->get('api_token')) {
       if ($project = $this->client->project()) {
         if ($project->config->search_enabled) {
           $message = t('Search is enabled for @api', ['@api' => $config->get('api_project')]);
+          $searchEnabled = TRUE;
           \Drupal::messenger()->addMessage($message);
         }
         else {
@@ -59,8 +61,9 @@ class Search extends ControllerBase {
     $search = $this->client->search();
 
     if (!isset($search->index)) {
+      $markup = $searchEnabled ? $this->t('Unable to retrieve search index values.') : '';
       return [
-        '#markup' => $this->t('Unable to retrieve search index values.'),
+        '#markup' => $markup,
       ];
     }
 
