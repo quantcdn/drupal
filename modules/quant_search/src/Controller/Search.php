@@ -43,20 +43,19 @@ class Search extends ControllerBase {
     $config = $this->config(self::SETTINGS);
 
     $searchEnabled = $this->enabled();
-    if ($searchEnabled) {
-      \Drupal::messenger()->addMessage(t('Search is enabled for @api', ['@api' => $config->get('api_project')]));
-    }
-    elseif ($config->get('api_token') && $project = $this->client->project()) {
-      \Drupal::messenger()->addError(t('Search is not enabled for this project. Enable via the Quant Dashboard.'));
-    }
-    else {
-      \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
+    if (!$searchEnabled) {
+      if ($config->get('api_token') && $project = $this->client->project()) {
+        \Drupal::messenger()->addError(t('Search is not enabled for this project. It can be enabled via the Quant Dashboard. See <a href="https://docs.quantcdn.io/docs/dashboard/search">Quant Search documentation</a>.'));
+      }
+      else {
+        \Drupal::messenger()->addError(t('Unable to connect to Quant API. See <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">Quant setup documentation</a>.'));
+      }
     }
 
     // Retrieve search stats.
     $search = $this->client->search();
 
-    if (!isset($search->index)) {
+    if (!$searchEnabled || !isset($search->index)) {
       $markup = $searchEnabled ? $this->t('Unable to retrieve search index values.') : '';
       return [
         '#markup' => $markup,
@@ -382,7 +381,12 @@ class Search extends ControllerBase {
   public function enabled() {
     $config = $this->config(self::SETTINGS);
 
-    return ($config->get('api_token') && $project = $this->client->project() && $project->config->search_enabled);
+    $searchEnabled = ($config->get('api_token') && $this->client->project() && $this->client->project()->config->search_enabled);
+    if ($searchEnabled) {
+      \Drupal::messenger()->addMessage(t('Search is enabled for project %api.', ['%api' => $config->get('api_project')]));
+    }
+
+    return $searchEnabled;
   }
 
 }

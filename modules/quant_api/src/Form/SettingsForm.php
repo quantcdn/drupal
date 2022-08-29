@@ -117,6 +117,9 @@ class SettingsForm extends ConfigFormBase {
       ->set('api_tls_disabled', $form_state->getValue('api_tls_disabled'))
       ->save();
 
+    // Clear router cache in case search has been enabled or disabled.
+    \Drupal::service('router.builder')->rebuild();
+
     parent::submitForm($form, $form_state);
   }
 
