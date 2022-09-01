@@ -1,0 +1,33 @@
+<?php
+
+/**
+ * @file
+ * Contains install and update functions for Quant Search.
+ */
+
+/**
+ * Group search page facet_type configuration.
+ */
+function quant_search_update_8101() {
+  // Get all search pages.
+  $storage = \Drupal::entityTypeManager()->getStorage('quant_search_page');
+  $ids = \Drupal::entityQuery('quant_search_page')->execute();
+  $pages = $storage->loadMultiple($ids);
+
+  // Combine facet_type configuration fields for better tabledrag UX.
+  foreach ($pages as $page) {
+    $facets = $page->get('facets');
+    $fields = ['facet_type', 'custom_key', 'taxonomy_vocabulary'];
+    foreach ($facets as $i => $facet) {
+      foreach ($fields as $field) {
+        if (isset($facet[$field])) {
+          $facets[$i]['facet_type_config'][$field] = $facet[$field];
+          unset($facets[$i][$field]);
+        }
+      }
+      $page->set('facets', $facets);
+    }
+    $page->save();
+  }
+
+}

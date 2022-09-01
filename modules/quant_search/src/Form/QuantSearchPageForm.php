@@ -265,11 +265,11 @@ class QuantSearchPageForm extends EntityForm {
         ],
       ];
 
-      $form['facets'][$i]['facet_type'] = [
+      $form['facets'][$i]['facet_type_config']['facet_type'] = [
         '#type' => 'select',
         '#title' => $this->t('Facet type'),
         '#options' => $types,
-        '#default_value' => $facet['facet_type'],
+        '#default_value' => $facet['facet_type_config']['facet_type'],
         '#attributes' => [
           'id' => "facet_{$i}_type",
         ],
@@ -282,11 +282,11 @@ class QuantSearchPageForm extends EntityForm {
         $vocab_options[$vocab->id()] = $vocab->label();
       }
 
-      $form['facets'][$i]['taxonomy_vocabulary'] = [
+      $form['facets'][$i]['facet_type_config']['taxonomy_vocabulary'] = [
         '#type' => 'select',
         '#title' => t('Vocabulary'),
         '#options' => $vocab_options,
-        '#default_value' => $facet['taxonomy_vocabulary'],
+        '#default_value' => $facet['facet_type_config']['taxonomy_vocabulary'],
         '#states' => [
           'visible' => [
             ':input[id="facet_' . $i . '_type"]' => ['value' => 'taxonomy'],
@@ -294,12 +294,12 @@ class QuantSearchPageForm extends EntityForm {
         ],
       ];
 
-      $form['facets'][$i]['custom_key'] = [
+      $form['facets'][$i]['facet_type_config']['custom_key'] = [
         '#type' => 'textfield',
         '#title' => t('Custom key'),
         '#size' => 20,
-        '#description' => t('Provide a custom key as defined in your entity token configuration'),
-        '#default_value' => $facet['custom_key'],
+        '#description' => t('Entity token configuration key.'),
+        '#default_value' => $facet['facet_type_config']['custom_key'],
         '#states' => [
           'visible' => [
             ':input[id="facet_' . $i . '_type"]' => ['value' => 'custom'],

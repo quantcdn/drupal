@@ -325,9 +325,9 @@ class Search extends ControllerBase {
     foreach ($facets as $k => $f) {
       $lang = $f['facet_language'];
 
-      switch ($f['facet_type']) {
+      switch ($f['facet_type_config']['facet_type']) {
         case "taxonomy":
-          $key = $f['taxonomy_vocabulary'] . '_' . $lang;
+          $key = $f['facet_type_config']['taxonomy_vocabulary'] . '_' . $lang;
           $containerKey = $key . "_{$k}";
           $f['facet_key'] = $key;
           $f['facet_container'] = $containerKey;
