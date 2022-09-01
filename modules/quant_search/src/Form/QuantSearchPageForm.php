@@ -314,6 +314,7 @@ class QuantSearchPageForm extends EntityForm {
         '#default_value' => $facet['facet_heading'],
       ];
 
+      // @todo Only show if more than one language but beware of colspan.
       $languages = \Drupal::languageManager()->getLanguages();
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $language_codes = [];
