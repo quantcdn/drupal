@@ -70,7 +70,7 @@
                     ]);
                 }
 
-                if (count(drupalSettings.quantSearch.facets) > 0)) {
+                if (count(drupalSettings.quantSearch.facets) > 0) {
                     drupalSettings.quantSearch.display.results.show_clear_refinements) {
                         search.addWidgets([
                             instantsearch.widgets.clearRefinements({
