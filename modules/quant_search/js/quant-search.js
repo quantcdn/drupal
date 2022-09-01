@@ -48,7 +48,8 @@
                     ]);
                 }
 
-
+/*
+ * @todo Fix clear-refinements bug.
                 if (drupalSettings.quantSearch.display.results.show_clear_refinements) {
                     search.addWidgets([
                         instantsearch.widgets.clearRefinements({
@@ -56,6 +57,7 @@
                         }),
                     ]);
                 }
+*/
 
                 if (drupalSettings.quantSearch.display.pagination.pagination_enabled) {
                     search.addWidgets([
