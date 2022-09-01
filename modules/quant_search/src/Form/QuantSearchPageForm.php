@@ -199,9 +199,24 @@ class QuantSearchPageForm extends EntityForm {
       '#default_value' => $existingDisplayConfig['pagination']['per_page'] ?? 20,
     ];
 
+    // Create tabledrag facets table.
     $form['facets'] = [
-      '#type' => 'fieldset',
-      '#title' => $this->t('Facets'),
+      '#type' => 'table',
+      '#header' => [
+        [
+          'data' => $this->t('Facet configuration'),
+          // IMPORTANT: This must be the correct value or tabledrag doesn't work!
+          'colspan' => 7,
+        ],
+        $this->t('Weight'),
+      ],
+      '#tabledrag' => [
+        [
+          'action' => 'order',
+          'relationship' => 'sibling',
+          'group' => 'facet-sort-weight',
+        ],
+      ],
       '#prefix' => '<div id="facets-fieldset-wrapper">',
       '#suffix' => '</div>',
     ];
@@ -221,11 +236,11 @@ class QuantSearchPageForm extends EntityForm {
 
     foreach ($existingFacets as $i => $facet) {
 
-      $form['facets'][$i] = [
-        '#type' => 'details',
-        '#open' => TRUE,
-        '#title' => $this->t('Facet configuration'),
-      ];
+      // Mark the table row as draggable.
+      $form['facets'][$i]['#attributes']['class'][] = 'draggable';
+
+      // Sort the table row according to its configured weight.
+      $form['facets'][$i]['#weight'] = $facet['weight'] ?? 10;
 
       $types = [
         'taxonomy' => 'Taxonomy',
@@ -269,7 +284,7 @@ class QuantSearchPageForm extends EntityForm {
 
       $form['facets'][$i]['taxonomy_vocabulary'] = [
         '#type' => 'select',
-        '#title' => t('Taxonomy vocabulary'),
+        '#title' => t('Vocabulary'),
         '#options' => $vocab_options,
         '#default_value' => $facet['taxonomy_vocabulary'],
         '#states' => [
@@ -282,6 +297,7 @@ class QuantSearchPageForm extends EntityForm {
       $form['facets'][$i]['custom_key'] = [
         '#type' => 'textfield',
         '#title' => t('Custom key'),
+        '#size' => 20,
         '#description' => t('Provide a custom key as defined in your entity token configuration'),
         '#default_value' => $facet['custom_key'],
         '#states' => [
@@ -294,6 +310,7 @@ class QuantSearchPageForm extends EntityForm {
       $form['facets'][$i]['facet_heading'] = [
         '#type' => 'textfield',
         '#title' => t('Facet heading'),
+        '#size' => 20,
         '#default_value' => $facet['facet_heading'],
       ];
 
@@ -309,7 +326,6 @@ class QuantSearchPageForm extends EntityForm {
       $form['facets'][$i]['facet_language'] = [
         '#type' => 'select',
         '#title' => $this->t('Facet language'),
-        '#description' => $this->t('Language to use for the facet.'),
         '#options' => $language_codes,
         '#default_value' => $facet['facet_language'],
       ];
@@ -325,6 +341,19 @@ class QuantSearchPageForm extends EntityForm {
           'wrapper' => 'facets-fieldset-wrapper',
         ],
       ];
+
+      // Weight column element.
+      $form['facets'][$i]['weight'] = [
+        '#type' => 'weight',
+        '#title' => $this->t('Facet weight'),
+        '#default_value' => $facet['weight'] ?? 10,
+        '#attributes' => [
+          'class' => [
+            'facet-sort-weight',
+          ],
+        ],
+      ];
+
     }
 
     // Add "add facet" button to last item in the array.
