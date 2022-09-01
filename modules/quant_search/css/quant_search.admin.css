@@ -2,12 +2,12 @@
   width: 20%;
 }
 
-.quant-search-page-edit-form #edit-facets td.tabledrag-hide {
-  min-width: 110px;
-}
-
 .quant-search-page-edit-form #edit-facets td input[type=submit] {
   min-width: 155px;
+}
+
+.quant-search-page-edit-form #edit-facets .facet-remove {
+  margin-top: 2.25rem;
 }
 
 .quant-search-page-edit-form #edit-facets .facet-add {

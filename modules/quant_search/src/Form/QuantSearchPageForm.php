@@ -205,13 +205,13 @@ class QuantSearchPageForm extends EntityForm {
     // Create tabledrag facets table.
     $form['facets'] = [
       '#type' => 'table',
+      // Do not show the weight header as each select has a label.
       '#header' => [
         [
           'data' => $this->t('Facet configuration'),
           // IMPORTANT: Must be the correct value or tabledrag doesn't work!
-          'colspan' => 5,
+          'colspan' => 6,
         ],
-        $this->t('Weight'),
       ],
       '#tabledrag' => [
         [
@@ -334,18 +334,6 @@ class QuantSearchPageForm extends EntityForm {
         '#default_value' => $facet['facet_language'],
       ];
 
-      $form['facets'][$i]['actions']['remove_facet'] = [
-        '#type' => 'submit',
-        '#value' => t('Remove facet'),
-        '#name' => 'remove_facet_' . $i,
-        '#index' => $i,
-        '#submit' => ['::removeCallback'],
-        '#ajax' => [
-          'callback' => '::addmoreCallback',
-          'wrapper' => 'facets-fieldset-wrapper',
-        ],
-      ];
-
       // Weight column element.
       $form['facets'][$i]['weight'] = [
         '#type' => 'weight',
@@ -358,12 +346,34 @@ class QuantSearchPageForm extends EntityForm {
         ],
       ];
 
+      $form['facets'][$i]['actions']['remove_facet'] = [
+        '#type' => 'submit',
+        '#value' => t('Remove facet'),
+        '#name' => 'remove_facet_' . $i,
+        '#index' => $i,
+        '#attributes' => [
+          'class' => [
+            'facet-remove',
+          ],
+        ],
+        '#submit' => ['::removeCallback'],
+        '#ajax' => [
+          'callback' => '::addmoreCallback',
+          'wrapper' => 'facets-fieldset-wrapper',
+        ],
+      ];
+
     }
 
     // Add "add facet" button to last item in the array.
     $form['facets'][$i]['actions']['add_facet'] = [
       '#type' => 'submit',
       '#value' => t('Add facet'),
+      '#attributes' => [
+        'class' => [
+          'facet-add',
+        ],
+      ],
       '#submit' => ['::addOne'],
       '#ajax' => [
         'callback' => '::addmoreCallback',
