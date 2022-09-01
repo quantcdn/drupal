@@ -250,7 +250,7 @@ class QuantSearchPageForm extends EntityForm {
         'content_type' => 'Content type',
         'language' => 'Language',
         // @todo Needs to be supported in Search Controller before uncommenting.
-        //'custom' => 'Custom',
+        // 'custom' => 'Custom',
       ];
 
       $displayTypes = [
