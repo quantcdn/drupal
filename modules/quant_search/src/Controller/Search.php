@@ -351,7 +351,7 @@ class Search extends ControllerBase {
           break;
 
         case "custom":
-          // @todo This
+          // @todo Allow custom entity key.
           break;
 
         default:
