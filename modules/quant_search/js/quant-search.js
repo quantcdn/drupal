@@ -70,8 +70,8 @@
                     ]);
                 }
 
-                if (count(drupalSettings.quantSearch.facets) > 0) {
-                    drupalSettings.quantSearch.display.results.show_clear_refinements) {
+                if (drupalSettings.quantSearch.facets.length > 0) {
+                   if (drupalSettings.quantSearch.display.results.show_clear_refinements) {
                         search.addWidgets([
                             instantsearch.widgets.clearRefinements({
                                 container: '#clear-refinements',
