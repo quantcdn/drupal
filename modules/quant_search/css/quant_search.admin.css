@@ -1,0 +1,21 @@
+.quant-search-page-edit-form #edit-facets td {
+  width: 20%;
+}
+
+@media (max-width: 980px) {
+
+  .quant-search-page-edit-form #edit-facets td {
+    display: block;
+    width: auto;
+    height: auto;
+    margin-left: 1rem;
+  }
+
+  .quant-search-page-edit-form #edit-facets td.tabledrag-cell {
+    margin-left: auto;
+  }
+
+  .quant-search-page-edit-form #edit-facets td.tabledrag-cell div {
+    width: calc(100% + .25rem);
+  }
+}
