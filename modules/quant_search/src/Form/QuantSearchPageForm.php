@@ -254,6 +254,7 @@ class QuantSearchPageForm extends EntityForm {
         'menu' => 'Menu list (single select)',
       ];
 
+      // @todo Make required. When adding '#required', it didn't save.
       $form['facets'][$i]['facet_display'] = [
         '#type' => 'select',
         '#title' => $this->t('Facet display'),
@@ -273,6 +274,7 @@ class QuantSearchPageForm extends EntityForm {
         'custom' => 'Custom',
       ];
 
+      // @todo Make required. When adding '#required', it didn't save.
       $form['facets'][$i]['facet_type'] = [
         '#type' => 'select',
         '#title' => $this->t('Facet type'),
@@ -286,6 +288,7 @@ class QuantSearchPageForm extends EntityForm {
       // For taxonomy option, store all vocabularies.
       $vocabularies = Vocabulary::loadMultiple();
 
+      // @todo Add empty option.
       $vocab_options = [];
       foreach ($vocabularies as $vocab) {
         $vocab_options[$vocab->id()] = $vocab->label();
@@ -355,7 +358,7 @@ class QuantSearchPageForm extends EntityForm {
       ];
     }
 
-    // Add "add facet" button to last item in the array.
+    // Add "Add facet" button to last item in the array.
     $form['facets'][$i]['actions']['add_facet'] = [
       '#type' => 'submit',
       '#value' => $this->t('Add facet'),
@@ -378,6 +381,17 @@ class QuantSearchPageForm extends EntityForm {
 
     unset($form['facets']['actions']);
     $page = $this->entity;
+
+    // Remove all empty facets, so they are not added to the page.
+    $facets = $page->get('facets');
+    $nonEmptyFacets = [];
+    foreach ($facets as $i => $facet) {
+      if ($facet['facet_display'] && $facet['facet_type']) {
+        $nonEmptyFacets[$i] = $facet;
+      }
+    }
+    $page->set('facets', $nonEmptyFacets);
+
     $status = $page->save();
 
     if ($status === SAVED_NEW) {
