@@ -154,7 +154,7 @@ class QuantSearchPageForm extends EntityForm {
     // Get entity display configuration.
     $existingDisplayConfig = $this->entity->get('display');
 
-    // If the form state has values, use those instead of the entity state values.
+    // If form state has values, use those instead of the entity state values.
     $vals = $form_state->getValues();
     if (!empty($vals['display'])) {
       $existingDisplayConfig = $vals['display'];
@@ -228,7 +228,7 @@ class QuantSearchPageForm extends EntityForm {
     // Get entity facets configuration.
     $existingFacets = $this->entity->get('facets');
 
-    // If the form state has values, use those instead of the entity state values.
+    // If form state has values, use those instead of the entity state values.
     $vals = $form_state->getValues();
     if (!empty($vals['facets'])) {
       $existingFacets = $vals['facets'];
