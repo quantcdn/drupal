@@ -206,7 +206,7 @@ class QuantSearchPageForm extends EntityForm {
         [
           'data' => $this->t('Facet configuration'),
           // IMPORTANT: Must be the correct value or tabledrag doesn't work!
-          'colspan' => 7,
+          'colspan' => 5,
         ],
         $this->t('Weight'),
       ],
