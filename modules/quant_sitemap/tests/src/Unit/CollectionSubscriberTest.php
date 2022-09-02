@@ -8,7 +8,6 @@ use Drupal\quant_sitemap\EventSubscriber\CollectionSubscriber;
 use Drupal\simple_sitemap\SimplesitemapManager;
 use Drupal\Tests\UnitTestCase;
 use Drupal\xmlsitemap\Entity\XmlSitemap;
-use Prophecy\PhpUnit\ProphecyTrait;
 
 /**
  * Test the collection subscriber.
@@ -17,8 +16,6 @@ use Prophecy\PhpUnit\ProphecyTrait;
  * @coversDefaultClass Drupal\quant_sitemap\EventSubscriber\CollectionSubscriber
  */
 class CollectionSubscriberTest extends UnitTestCase {
-
-  use ProphecyTrait;
 
   /**
    * Ensure that the XmlSitemapItems are generated correctly.
