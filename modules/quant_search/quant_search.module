@@ -93,5 +93,5 @@ function quant_search_run_index($nids, $languages, array &$context) {
  */
 function quant_search_quant_search_page_delete(EntityInterface $entity) {
   $route = $entity->get('route');
-  \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $route, [], NULL));
+  \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $route, [], NULL), QuantEvent::UNPUBLISH);
 }

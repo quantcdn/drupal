@@ -54,7 +54,7 @@ class FileItem implements QuantQueueItemInterface {
     }
 
     if (file_exists(DRUPAL_ROOT . $this->file)) {
-      \Drupal::service('event_dispatcher')->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $this->file, $this->file));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantFileEvent(DRUPAL_ROOT . $this->file, $this->file), QuantFileEvent::OUTPUT);
     }
   }
 
