@@ -8,7 +8,7 @@ use Drupal\Core\Link;
 use Drupal\Core\Url;
 
 /**
- * Provides a listing of Quant Search page.
+ * Provides a listing of Quant Search Page entities.
  */
 class QuantSearchPageListBuilder extends ConfigEntityListBuilder {
 

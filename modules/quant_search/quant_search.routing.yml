@@ -5,8 +5,6 @@ quant_search.main:
     _title: 'Quant Search'
   requirements:
     _permission: 'administer quant search'
-  options:
-    _admin_route: TRUE
 
 quant_search.main.index:
   path: '/admin/config/development/quant/search/index'
@@ -15,8 +13,6 @@ quant_search.main.index:
     _title: 'Quant Search Index'
   requirements:
     _permission: 'administer quant search'
-  options:
-    _admin_route: TRUE
 
 entity.quant_search_page.collection:
   path: '/admin/config/development/quant/search/pages'
@@ -25,14 +21,12 @@ entity.quant_search_page.collection:
     _title: 'Quant Search Pages'
   requirements:
     _permission: 'administer quant search'
-  options:
-    _admin_route: TRUE
 
 entity.quant_search_page.add_form:
   path: '/admin/config/development/quant/search/pages/add'
   defaults:
     _entity_form: 'quant_search_page.add'
-    _title: 'Add Quant search page'
+    _title: 'Add Quant Search Page'
   requirements:
     _permission: 'administer quant search'
 
@@ -40,7 +34,7 @@ entity.quant_search_page.edit_form:
   path: '/admin/config/development/quant/search/pages/{quant_search_page}'
   defaults:
     _entity_form: 'quant_search_page.edit'
-    _title: 'Edit Quant search page'
+    _title: 'Edit Quant Search Page'
   requirements:
     _permission: 'administer quant search'
 
@@ -48,7 +42,7 @@ entity.quant_search_page.delete_form:
   path: '/admin/config/development/quant/search/pages/{quant_search_page}/delete'
   defaults:
     _entity_form: 'quant_search_page.delete'
-    _title: 'Delete Quant search page'
+    _title: 'Delete Quant Search Page'
   requirements:
     _permission: 'administer quant search'
 
@@ -59,17 +53,14 @@ quant_search.main.entities:
     _title: 'Quant Search Entities'
   requirements:
     _permission: 'administer quant search'
-  options:
-    _admin_route: TRUE
 
 quant_search.clear_index:
   path: '/admin/config/development/quant/search/clear'
   defaults:
     _form: '\Drupal\quant_search\Form\ConfirmIndexClearForm'
-    _title: 'Confirm Index clear'
+    _title: 'Confirm Clear Quant Search Index'
   requirements:
     _permission: 'clear quant search index'
-
 
 route_callbacks:
     - '\Drupal\quant_search\Routing\QuantSearchRoutes::searchPageRoutes'

@@ -3,11 +3,11 @@
 namespace Drupal\quant_search\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Url;
+use Drupal\node\Entity\Node;
+use Drupal\quant\Seed;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\node\Entity\Node;
-use Drupal\Core\Url;
-use Drupal\quant\Seed;
 
 /**
  * Quant configuration form.
@@ -261,7 +261,7 @@ class Search extends ControllerBase {
       }
     }
 
-    // @todo Node only logic..
+    // @todo Update node-only logic.
     $record['url'] = Url::fromRoute('entity.node.canonical', ['node' => $entity->id()], $options)->toString();
 
     // Add search meta for node entities.

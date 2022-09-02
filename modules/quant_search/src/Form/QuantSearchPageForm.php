@@ -5,11 +5,11 @@ namespace Drupal\quant_search\Form;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\taxonomy\Entity\Vocabulary;
-use Drupal\quant_search\Controller\Search;
-use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Event\QuantEvent;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\quant_search\Controller\Search;
+use Drupal\taxonomy\Entity\Vocabulary;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Form handler for the Quant Search Page add and edit forms.
@@ -148,7 +148,7 @@ class QuantSearchPageForm extends EntityForm {
       '#title' => $this->t('Manual filters'),
       '#maxlength' => 2048,
       '#default_value' => $this->entity->get('manual_filters'),
-      '#description' => $this->t('Optionally provide manual filters that can include ANDs and ORs. For example: <code>cost > 10 AND cost < 99.5</code>'),
+      '#description' => $this->t('Optionally, provide manual filters that can include ANDs and ORs. For example: <code>cost > 10 AND cost < 99.5</code>'),
     ];
 
     // Get entity display configuration.
