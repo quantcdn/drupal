@@ -288,7 +288,6 @@ class QuantSearchPageForm extends EntityForm {
       // For taxonomy option, store all vocabularies.
       $vocabularies = Vocabulary::loadMultiple();
 
-      // @todo Add empty option.
       $vocab_options = [
         '' => $this->t('Select vocabulary'),
       ];
