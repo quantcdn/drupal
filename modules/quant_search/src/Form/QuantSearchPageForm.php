@@ -290,7 +290,7 @@ class QuantSearchPageForm extends EntityForm {
 
       // @todo Add empty option.
       $vocab_options = [
-        '' => $this->t('Select vocabulary')
+        '' => $this->t('Select vocabulary'),
       ];
       foreach ($vocabularies as $vocab) {
         $vocab_options[$vocab->id()] = $vocab->label();
