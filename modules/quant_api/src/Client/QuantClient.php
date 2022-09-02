@@ -2,6 +2,7 @@
 
 namespace Drupal\quant_api\Client;
 
+use function GuzzleHttp\Psr7\stream_for;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\RequestOptions;
@@ -235,7 +236,7 @@ class QuantClient implements QuantClientInterface {
 
     // Prepare a stream.
     $resource = fopen($file, 'r');
-    $stream = Psr7\stream_for($resource);
+    $stream = stream_for($resource);
 
     $headers = [
       'Quant-File-Url' => $url,

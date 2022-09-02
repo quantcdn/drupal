@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\quant_sitemap\Unit;
 
+use Prophecy\PhpUnit\ProphecyTrait;
 use Drupal\Core\KeyValueStore\StorageBase;
 use Drupal\Core\Language\Language;
 use Drupal\Tests\UnitTestCase;
@@ -17,6 +18,7 @@ use Drupal\xmlsitemap\Entity\XmlSitemap;
  */
 class CollectionSubscriberTest extends UnitTestCase {
 
+  use ProphecyTrait;
   /**
    * Ensure that the XmlSitemapItems are generated correctly.
    */

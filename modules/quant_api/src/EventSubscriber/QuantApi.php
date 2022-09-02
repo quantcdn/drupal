@@ -184,7 +184,7 @@ class QuantApi implements EventSubscriberInterface {
       // If the file exists we send it directly to quant otherwise we add it
       // to the queue to generate assets on the next run.
       if (file_exists($fileOnDisk)) {
-        $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent($fileOnDisk, $item['full_path'] ?? $file));
+        $this->eventDispatcher->dispatch(new QuantFileEvent($fileOnDisk, $item['full_path'] ?? $file), QuantFileEvent::OUTPUT);
       }
       else {
         $file_item = new FileItem([

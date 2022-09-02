@@ -2,7 +2,7 @@
 
 namespace Drupal\quant\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use Symfony\Contracts\EventDispatcher\Event;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 

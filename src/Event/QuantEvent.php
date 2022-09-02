@@ -2,7 +2,7 @@
 
 namespace Drupal\quant\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use Symfony\Contracts\EventDispatcher\Event;
 
 /**
  * The transport event.

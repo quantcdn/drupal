@@ -59,8 +59,8 @@ class Seed {
       $files[] = str_replace(DRUPAL_ROOT, '', $filename->getPathname());
     }
 
-    $files[] = '/' . drupal_get_path('module', 'lunr') . '/js/search.worker.js';
-    $files[] = '/' . drupal_get_path('module', 'lunr') . '/js/vendor/lunr/lunr.min.js';
+    $files[] = '/' . \Drupal::service('extension.list.module')->getPath('lunr') . '/js/search.worker.js';
+    $files[] = '/' . \Drupal::service('extension.list.module')->getPath('lunr') . '/js/vendor/lunr/lunr.min.js';
 
     return $files;
   }
