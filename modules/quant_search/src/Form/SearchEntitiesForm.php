@@ -120,8 +120,8 @@ class SearchEntitiesForm extends ConfigFormBase {
     }
 
     $node_view_modes = [];
-    foreach (\Drupal::service('entity_display.repository')->getViewModes('node') as $k => $vm) {
-      $node_view_modes[$k] = $vm['label'];
+    foreach (\Drupal::service('entity_display.repository')->getViewModes('node') as $key => $view_mode) {
+      $node_view_modes[$key] = $view_mode['label'];
     }
 
     $form['node_details']['quant_search_entity_node_bundles'] = [

@@ -164,12 +164,12 @@ class Search extends ControllerBase {
     }
 
     // Determine whether language should be skipped.
-    $allowedLanguage = $config->get('quant_search_entity_node_languages');
+    $allowedLanguages = $config->get('quant_search_entity_node_languages');
 
-    if (!empty($allowedLanguage)) {
-      $allowedLanguage = array_filter($allowedLanguage);
-      if (!empty($allowedLanguage)) {
-        if (!in_array($langcode, $allowedLanguage)) {
+    if (!empty($allowedLanguages)) {
+      $allowedLanguages = array_filter($allowedLanguages);
+      if (!empty($allowedLanguages)) {
+        if (!in_array($langcode, $allowedLanguages)) {
           $skipRecord = TRUE;
         }
       }
@@ -209,18 +209,18 @@ class Search extends ControllerBase {
     }
 
     // Get token values from context.
-    $ctx = [];
-    $ctx[$entityType] = $entity;
+    $context = [];
+    $context[$entityType] = $entity;
 
-    $title = \Drupal::token()->replace($titleToken, $ctx, [
+    $title = \Drupal::token()->replace($titleToken, $context, [
       'langcode' => $langcode,
       'clear' => TRUE,
     ]);
-    $summary = \Drupal::token()->replace($summaryToken, $ctx, [
+    $summary = \Drupal::token()->replace($summaryToken, $context, [
       'langcode' => $langcode,
       'clear' => TRUE,
     ]);
-    $image = \Drupal::token()->replace($imageToken, $ctx, [
+    $image = \Drupal::token()->replace($imageToken, $context, [
       'langcode' => $langcode,
       'clear' => TRUE,
     ]);
@@ -255,7 +255,7 @@ class Search extends ControllerBase {
       $options['language'] = $language;
       $record['lang_code'] = $langcode;
 
-      foreach ($entity->getTranslationLanguages() as $code => $l) {
+      foreach ($entity->getTranslationLanguages() as $code => $lang) {
         $language_label = \Drupal::service('string_translation')->translate($language->getName(), [], ['langcode' => $code]);
         $record["language_${code}"] = $language_label;
       }
@@ -322,32 +322,32 @@ class Search extends ControllerBase {
   public static function processTranslatedFacetKeys(array $facets) {
 
     $keys = [];
-    foreach ($facets as $k => $f) {
-      $lang = $f['facet_language'];
+    foreach ($facets as $k => $facet) {
+      $lang = $facet['facet_language'];
 
-      switch ($f['facet_type']) {
+      switch ($facet['facet_type']) {
         case "taxonomy":
-          $key = $f['taxonomy_vocabulary'] . '_' . $lang;
+          $key = $facet['taxonomy_vocabulary'] . '_' . $lang;
           $containerKey = $key . "_{$k}";
-          $f['facet_key'] = $key;
-          $f['facet_container'] = $containerKey;
-          $keys[$containerKey] = $f;
+          $facet['facet_key'] = $key;
+          $facet['facet_container'] = $containerKey;
+          $keys[$containerKey] = $facet;
           break;
 
         case "content_type":
           $key = "content_type_{$lang}";
           $containerKey = $key . "_{$k}";
-          $f['facet_key'] = $key;
-          $f['facet_container'] = $containerKey;
-          $keys[$containerKey] = $f;
+          $facet['facet_key'] = $key;
+          $facet['facet_container'] = $containerKey;
+          $keys[$containerKey] = $facet;
           break;
 
         case "language":
           $key = "language_{$lang}";
           $containerKey = $key . "_{$k}";
-          $f['facet_key'] = $key;
-          $f['facet_container'] = $containerKey;
-          $keys[$containerKey] = $f;
+          $facet['facet_key'] = $key;
+          $facet['facet_container'] = $containerKey;
+          $keys[$containerKey] = $facet;
           break;
 
         case "custom":
@@ -355,7 +355,7 @@ class Search extends ControllerBase {
           break;
 
         default:
-          // Nada.
+          // Nothing to do.
       }
     }
 

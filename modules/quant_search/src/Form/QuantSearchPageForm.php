@@ -353,7 +353,7 @@ class QuantSearchPageForm extends EntityForm {
         '#index' => $i,
         '#submit' => ['::removeCallback'],
         '#ajax' => [
-          'callback' => '::addmoreCallback',
+          'callback' => '::addCallback',
           'wrapper' => 'facets-fieldset-wrapper',
         ],
       ];
@@ -365,7 +365,7 @@ class QuantSearchPageForm extends EntityForm {
       '#value' => $this->t('Add facet'),
       '#submit' => ['::addOne'],
       '#ajax' => [
-        'callback' => '::addmoreCallback',
+        'callback' => '::addCallback',
         'wrapper' => 'facets-fieldset-wrapper',
       ],
     ];
@@ -458,7 +458,7 @@ class QuantSearchPageForm extends EntityForm {
   }
 
   /**
-   * Adds one more facet to the form.
+   * Adds facet to the form.
    */
   public function addOne(array &$form, FormStateInterface $form_state) {
     $vals = $form_state->getValues();
@@ -468,9 +468,9 @@ class QuantSearchPageForm extends EntityForm {
   }
 
   /**
-   * Callback: Add more facet form group.
+   * Callback: Add facet form group.
    */
-  public function addmoreCallback(array &$form, FormStateInterface $form_state) {
+  public function addCallback(array &$form, FormStateInterface $form_state) {
     return $form['facets'];
   }
 
