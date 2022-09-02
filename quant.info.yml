@@ -2,7 +2,7 @@ name: Quant
 description: Quant content export
 package: Quant
 type: module
-core_version_requirement: ^9 || ^10
+core_version_requirement: ^9.3 || ^10
 
 dependencies:
   - quant:quant_api
