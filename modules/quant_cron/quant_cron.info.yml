@@ -1,10 +1,8 @@
 name: Quant cron
 description: Run Quant tasks during cron
 package: Quant
-
 type: module
-core_version_requirement: ^8 || ^9
-core: 8.x
+core_version_requirement: ^9 || ^10
 
 dependencies:
   - quant:quant_api

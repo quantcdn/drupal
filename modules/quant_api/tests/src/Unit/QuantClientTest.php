@@ -169,8 +169,7 @@ class QuantClientTest extends UnitTestCase {
 
     $client = new QuantClient($http, $config, $logger);
 
-    $this->assertFalse($client->ping();
-    );
+    $this->assertFalse($client->ping());
   }
 
   /**

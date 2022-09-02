@@ -236,7 +236,7 @@ class QuantClient implements QuantClientInterface {
 
     // Prepare a stream.
     $resource = fopen($file, 'r');
-    $stream = stream_for($resource);
+    $stream = Utils::streamFor($resource);
 
     $headers = [
       'Quant-File-Url' => $url,
