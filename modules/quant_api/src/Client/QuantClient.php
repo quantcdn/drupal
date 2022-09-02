@@ -2,16 +2,16 @@
 
 namespace Drupal\quant_api\Client;
 
-use function GuzzleHttp\Psr7\stream_for;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use GuzzleHttp\Client;
-use GuzzleHttp\RequestOptions;
-use GuzzleHttp\Exception\RequestException;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7;
-use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\MultipartStream;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Utils;
+use GuzzleHttp\RequestOptions;
 
 /**
  * Quant API client.
