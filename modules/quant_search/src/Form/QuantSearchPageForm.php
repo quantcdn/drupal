@@ -259,7 +259,7 @@ class QuantSearchPageForm extends EntityForm {
         '#type' => 'select',
         '#title' => $this->t('Facet display'),
         '#options' => $displayTypes,
-        '#default_value' => $facet['facet_display'],
+        '#default_value' => $facet['facet_display'] ?? '',
         '#attributes' => [
           'id' => "facet_{$i}_display_type",
         ],
@@ -279,7 +279,7 @@ class QuantSearchPageForm extends EntityForm {
         '#type' => 'select',
         '#title' => $this->t('Facet type'),
         '#options' => $types,
-        '#default_value' => $facet['facet_type'],
+        '#default_value' => $facet['facet_type'] ?? '',
         '#attributes' => [
           'id' => "facet_{$i}_type",
         ],
@@ -289,7 +289,9 @@ class QuantSearchPageForm extends EntityForm {
       $vocabularies = Vocabulary::loadMultiple();
 
       // @todo Add empty option.
-      $vocab_options = [];
+      $vocab_options = [
+        '' => $this->t('Select vocabulary')
+      ];
       foreach ($vocabularies as $vocab) {
         $vocab_options[$vocab->id()] = $vocab->label();
       }
@@ -298,7 +300,7 @@ class QuantSearchPageForm extends EntityForm {
         '#type' => 'select',
         '#title' => $this->t('Taxonomy vocabulary'),
         '#options' => $vocab_options,
-        '#default_value' => $facet['taxonomy_vocabulary'],
+        '#default_value' => $facet['taxonomy_vocabulary'] ?? '',
         '#states' => [
           'visible' => [
             ':input[id="facet_' . $i . '_type"]' => ['value' => 'taxonomy'],
@@ -311,7 +313,7 @@ class QuantSearchPageForm extends EntityForm {
         '#type' => 'textfield',
         '#title' => $this->t('Custom key'),
         '#description' => $this->t('Provide a custom key as defined in your entity token configuration'),
-        '#default_value' => $facet['custom_key'],
+        '#default_value' => $facet['custom_key'] ?? '',
         '#states' => [
           'visible' => [
             ':input[id="facet_' . $i . '_type"]' => ['value' => 'custom'],
@@ -324,7 +326,7 @@ class QuantSearchPageForm extends EntityForm {
       $form['facets'][$i]['facet_heading'] = [
         '#type' => 'textfield',
         '#title' => $this->t('Facet heading'),
-        '#default_value' => $facet['facet_heading'],
+        '#default_value' => $facet['facet_heading'] ?? '',
       ];
 
       // Facet language.
@@ -341,7 +343,7 @@ class QuantSearchPageForm extends EntityForm {
         '#title' => $this->t('Facet language'),
         '#description' => $this->t('Language to use for the facet.'),
         '#options' => $language_codes,
-        '#default_value' => $facet['facet_language'],
+        '#default_value' => $facet['facet_language'] ?? 'en',
       ];
 
       // Remove facet button.
