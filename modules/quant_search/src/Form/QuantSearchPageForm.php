@@ -436,11 +436,13 @@ class QuantSearchPageForm extends EntityForm {
     $published = $form_state->getValue('status');
     $route = $form_state->getValue('route');
 
+    // Send route for enabled pages.
     if ($published) {
       $item = new RouteItem(['route' => $route]);
       $item->send();
     }
-    else {
+    // Only unpublish if page already exists, so was sent before.
+    elseif ($status !== SAVED_NEW) {
       \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $route, [], NULL));
     }
 
