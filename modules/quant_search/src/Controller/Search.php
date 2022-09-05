@@ -2,7 +2,9 @@
 
 namespace Drupal\quant_search\Controller;
 
+use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Seed;
@@ -40,27 +42,23 @@ class Search extends ControllerBase {
   public function statusPage() {
     $config = $this->config(self::SETTINGS);
 
-    if ($config->get('api_token')) {
-      if ($project = $this->client->project()) {
-        if ($project->config->search_enabled) {
-          $message = t('Search is enabled for @api', ['@api' => $config->get('api_project')]);
-          \Drupal::messenger()->addMessage($message);
-        }
-        else {
-          \Drupal::messenger()->addError(t('Search is not enabled for this project. Enable via the Quant Dashboard.'));
-        }
+    $searchEnabled = $this->enabled();
+    if (!$searchEnabled) {
+      if ($config->get('api_token') && $project = $this->client->project()) {
+        \Drupal::messenger()->addError(t('Search is not enabled for this project. It can be enabled via the Quant Dashboard. See <a href="https://docs.quantcdn.io/docs/dashboard/search">Quant Search documentation</a>.'));
       }
       else {
-        \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
+        \Drupal::messenger()->addError(t('Unable to connect to Quant API. See <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">Quant setup documentation</a>.'));
       }
     }
 
     // Retrieve search stats.
     $search = $this->client->search();
 
-    if (!isset($search->index)) {
+    if (!$searchEnabled || !isset($search->index)) {
+      $markup = $searchEnabled ? $this->t('Unable to retrieve search index values.') : '';
       return [
-        '#markup' => $this->t('Unable to retrieve search index values.'),
+        '#markup' => $markup,
       ];
     }
 
@@ -360,6 +358,35 @@ class Search extends ControllerBase {
     }
 
     return $keys;
+  }
+
+  /**
+   * Checks search administration access.
+   *
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   Run access checks for this account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The access result.
+   */
+  public function administerAccess(AccountInterface $account) {
+    // In order to hide search configuration options when search is disabled,
+    // use this rather than just the `administer quant search` permission.
+    return AccessResult::allowedIf($account->hasPermission('administer quant search') && $this->enabled());
+  }
+
+  /**
+   * Checks search is enabled.
+   */
+  public function enabled() {
+    $config = $this->config(self::SETTINGS);
+
+    $searchEnabled = ($config->get('api_token') && $this->client->project() && $this->client->project()->config->search_enabled);
+    if ($searchEnabled) {
+      \Drupal::messenger()->addMessage(t('Search is enabled for project %api.', ['%api' => $config->get('api_project')]));
+    }
+
+    return $searchEnabled;
   }
 
 }
