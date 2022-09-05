@@ -88,7 +88,7 @@ class SearchIndexForm extends ConfigFormBase {
       $form['node_details']['quant_search_index_entity_node_languages'] = [
         '#type' => 'checkboxes',
         '#title' => $this->t('Languages'),
-        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be exported.'),
+        '#description' => $this->t('Optionally, restrict to these languages. If none are selected, all languages will be included.'),
         '#options' => $language_codes,
       ];
     }
@@ -106,7 +106,7 @@ class SearchIndexForm extends ConfigFormBase {
     $form['node_details']['quant_search_index_entity_node_bundles'] = [
       '#type' => 'checkboxes',
       '#title' => $this->t('Enabled bundles'),
-      '#description' => $this->t('Optionally restrict to these content types.'),
+      '#description' => $this->t('Optionally, restrict to these content types. If none are selected, all content types will be included.'),
       '#options' => $content_types,
     ];
 
@@ -144,9 +144,9 @@ class SearchIndexForm extends ConfigFormBase {
     $batch = [
       'title' => $this->t('Exporting to Quant...'),
       'operations' => [],
-      'init_message'     => $this->t('Commencing'),
+      'init_message'     => $this->t('Starting'),
       'progress_message' => $this->t('Processed @current out of @total.'),
-      'error_message'    => $this->t('An error occurred during processing'),
+      'error_message'    => $this->t('An error occurred during processing.'),
     ];
 
     // Filter by language.

@@ -2,11 +2,11 @@
 
 namespace Drupal\quant_search\EventSubscriber;
 
-use Drupal\Core\Logger\LoggerChannelFactoryInterface;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant_search\Controller\Search;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Inject search_record object during push.
