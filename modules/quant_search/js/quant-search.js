@@ -70,7 +70,8 @@
                     ]);
                 }
 
-                if (drupalSettings.quantSearch.facets.length > 0) {
+                var facets = drupalSettings.quantSearch.facets;
+                if (typeof facets === 'object' && facets !== null && !Array.isArray(facets)) {
                    if (drupalSettings.quantSearch.display.results.show_clear_refinements) {
                         search.addWidgets([
                             instantsearch.widgets.clearRefinements({
@@ -78,8 +79,8 @@
                             }),
                         ]);
                     }
-                    for (var facet_key in drupalSettings.quantSearch.facets) {
-                        const facet = drupalSettings.quantSearch.facets[facet_key];
+                    for (var facet_key in facets) {
+                        const facet = facets[facet_key];
 
                         switch (facet.facet_display) {
                             case "checkbox":
