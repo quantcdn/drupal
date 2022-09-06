@@ -5,10 +5,10 @@
  * Quant Search module.
  */
 
-use Drupal\quant_search\Controller\Search;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
-use Drupal\Core\Entity\EntityInterface;
+use Drupal\quant_search\Controller\Search;
 
 /**
  * Implements hook_theme().
@@ -54,7 +54,7 @@ function quant_search_run_index($nids, $languages, array &$context) {
   foreach ($nids as $idx => $nid) {
     $node = Node::load($nid);
 
-    // Multilang support.
+    // Multilingual support.
     $filter = [];
 
     if (!empty($languages)) {

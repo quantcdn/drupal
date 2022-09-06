@@ -89,7 +89,7 @@ class SearchEntitiesForm extends ConfigFormBase {
       $form['node_details']['quant_search_entity_node_languages'] = [
         '#type' => 'checkboxes',
         '#title' => $this->t('Languages'),
-        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will have a search record created.'),
+        '#description' => $this->t('Optionally, restrict to these languages. If none are selected, all languages will be included.'),
         '#options' => $language_codes,
         '#default_value' => $config->get('quant_search_entity_node_languages') ?: [],
       ];
@@ -106,14 +106,14 @@ class SearchEntitiesForm extends ConfigFormBase {
     }
 
     $node_view_modes = [];
-    foreach (\Drupal::service('entity_display.repository')->getViewModes('node') as $k => $vm) {
-      $node_view_modes[$k] = $vm['label'];
+    foreach (\Drupal::service('entity_display.repository')->getViewModes('node') as $key => $view_mode) {
+      $node_view_modes[$key] = $view_mode['label'];
     }
 
     $form['node_details']['quant_search_entity_node_bundles'] = [
       '#type' => 'checkboxes',
       '#title' => $this->t('Enabled bundles'),
-      '#description' => $this->t('Optionally restrict to these content types.'),
+      '#description' => $this->t('Optionally, restrict to these content types. If none are selected, all content types will be included.'),
       '#options' => $content_types,
       '#default_value' => $config->get('quant_search_entity_node_bundles') ?: [],
     ];
