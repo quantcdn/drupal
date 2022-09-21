@@ -221,7 +221,7 @@ class QuantApi implements EventSubscriberInterface {
     }
 
     // Media oEmbed support.
-    // Core media may be embeded via an iFrame that is not included in the seed process.
+    // Core media may be embedded via iFrame not included by the seed process.
     // This content can be detected and included on the fly.
     /** @var \DOMElement $node */
     foreach ($xpath->query('//iframe[contains(@src, "/media/oembed")]') as $node) {
