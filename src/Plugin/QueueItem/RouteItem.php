@@ -51,7 +51,7 @@ class RouteItem implements QuantQueueItemInterface {
   public function send() {
 
     // Wrapper for routes that resolve as files.
-    $ext = pathinfo($this->uri, PATHINFO_EXTENSION);
+    $ext = pathinfo($this->file_path, PATHINFO_EXTENSION);
     $response = FALSE;
 
     if (file_exists($this->file_path) && !empty($ext)) {

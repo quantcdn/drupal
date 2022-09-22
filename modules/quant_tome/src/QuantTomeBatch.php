@@ -164,9 +164,10 @@ class QuantTomeBatch {
         continue;
       }
 
+      $uri = $this->pathToUri($file_path);
       $item = new RouteItem([
-        'route' => $this->pathToUri($file_path),
-        'uri' => $this->pathToUri($file_path),
+        'route' => $uri,
+        'uri' => $uri,
         'file_path' => $file_path,
       ]);
 
@@ -183,7 +184,10 @@ class QuantTomeBatch {
    * @return string
    */
   public function pathToUri($file_path) {
-    return str_replace($this->static->getStaticDirectory(), '', $file_path);
+    // Strip directory and index.html from paths to match regular Quant processing.
+    $uri = str_replace($this->static->getStaticDirectory(), '', $file_path);
+    $uri = str_replace('/index.html', '', $uri);
+    return $uri;
   }
 
   /**
