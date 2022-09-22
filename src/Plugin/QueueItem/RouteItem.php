@@ -31,7 +31,7 @@ class RouteItem implements QuantQueueItemInterface {
    *
    * @var string
    */
-  private $file_path;
+  private $filePath;
 
   /**
    * {@inheritdoc}
@@ -51,7 +51,7 @@ class RouteItem implements QuantQueueItemInterface {
 
     $this->route = $route;
     $this->uri = isset($data['uri']) ? $data['uri'] : strtok($route, '?');
-    $this->file_path = isset($data['file_path']) ? $data['file_path'] : DRUPAL_ROOT . strtok($route, '?');
+    $this->filePath = isset($data['file_path']) ? $data['file_path'] : DRUPAL_ROOT . strtok($route, '?');
   }
 
   /**
@@ -60,20 +60,23 @@ class RouteItem implements QuantQueueItemInterface {
   public function send() {
 
     // Wrapper for routes that resolve as files.
-    $extension = pathinfo($this->file_path, PATHINFO_EXTENSION);
+    $extension = pathinfo($this->filePath, PATHINFO_EXTENSION);
     $response = FALSE;
 
-    if (file_exists($this->file_path) && !empty($extension)) {
+    if (file_exists($this->filePath) && !empty($extension)) {
       if ($extension != 'html') {
         $file_item = new FileItem([
-          'file' => $this->file_path,
+          'file' => $this->filePath,
           'url' => $this->uri,
         ]);
         $file_item->send();
         return;
       }
-      // Synthetic response - load the content directly.
-      $response = [file_get_contents($this->file_path), 'text/html; charset=UTF-8'];
+      // Get the content from the file.
+      $response = [
+        file_get_contents($this->filePath),
+        'text/html; charset=UTF-8'
+      ];
     }
     else {
       $response = Seed::markupFromRoute($this->route);
