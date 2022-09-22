@@ -64,4 +64,5 @@ class RedirectSubscriber implements EventSubscriberInterface {
     $events[KernelEvents::RESPONSE][] = ['onResponse'];
     return $events;
   }
+
 }

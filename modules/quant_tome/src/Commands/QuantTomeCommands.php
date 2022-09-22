@@ -21,7 +21,7 @@ class QuantTomeCommands extends DrushCommands {
   /**
    * QuantTomeCommands constructor.
    *
-   * @param \Drupal\quant_tome\QuantTomeBatch;
+   * @param \Drupal\quant_tome\QuantTomeBatch $batch
    *   The batch service.
    */
   public function __construct(QuantTomeBatch $batch) {
