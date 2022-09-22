@@ -133,6 +133,13 @@ class ConfigForm extends ConfigFormBase {
       '#default_value' => $config->get('host_domain'),
     ];
 
+    $form['host_domain_strip'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Strip host domain from content'),
+      '#description' => $this->t('Optionally strip out the host domain above from any generated content. This includes body content and header metadata such as canonical links. If disabled, check your content is using relative links as expected.'),
+      '#default_value' => $config->get('host_domain_strip'),
+    ];
+
     $form['ssl_cert_verify'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Verify SSL certificates'),
@@ -157,6 +164,7 @@ class ConfigForm extends ConfigFormBase {
       ->set('proxy_override', $form_state->getValue('proxy_override'))
       ->set('local_server', $form_state->getValue('local_server'))
       ->set('host_domain', $form_state->getValue('host_domain'))
+      ->set('host_domain_strip', $form_state->getValue('host_domain_strip'))
       ->set('disable_content_drafts', $form_state->getValue('disable_content_drafts'))
       ->set('ssl_cert_verify', $form_state->getValue('ssl_cert_verify'))
       ->set('xpath_selectors', $form_state->getValue('xpath_selectors'))

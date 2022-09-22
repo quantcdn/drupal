@@ -5,19 +5,19 @@ namespace Drupal\quant_search\Form;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\taxonomy\Entity\Vocabulary;
-use Drupal\quant_search\Controller\Search;
-use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Event\QuantEvent;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\quant_search\Controller\Search;
+use Drupal\taxonomy\Entity\Vocabulary;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Form handler for the Quant Search page add and edit forms.
+ * Form handler for the Quant Search Page add and edit forms.
  */
 class QuantSearchPageForm extends EntityForm {
 
   /**
-   * Constructs an QuantSearchPageForm object.
+   * Constructs a QuantSearchPageForm object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entityTypeManager.
@@ -45,15 +45,24 @@ class QuantSearchPageForm extends EntityForm {
 
     $form['#tree'] = TRUE;
 
+    // Search page status.
+    $form['status'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enabled'),
+      '#default_value' => $this->entity->status(),
+    ];
+
+    // Search page administrative label.
     $form['label'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Label'),
       '#maxlength' => 255,
       '#default_value' => $page->label(),
-      '#description' => $this->t("Administrative label for the search page."),
+      '#description' => $this->t('Administrative label for the search page.'),
       '#required' => TRUE,
     ];
 
+    // Search page machine name.
     $form['id'] = [
       '#type' => 'machine_name',
       '#default_value' => $page->id(),
@@ -63,27 +72,34 @@ class QuantSearchPageForm extends EntityForm {
       '#disabled' => !$page->isNew(),
     ];
 
-    $form['status'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Enabled'),
-      '#default_value' => $this->entity->status(),
+    // Search page route.
+    $form['route'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Route'),
+      '#maxlength' => 255,
+      '#default_value' => $this->entity->get('route'),
+      '#description' => $this->t('Page route for the search page without a starting slash.'),
+      '#required' => TRUE,
     ];
 
+    // Search page title shown on page.
     $form['title'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Title'),
       '#maxlength' => 255,
       '#default_value' => $this->entity->get('title'),
-      '#description' => $this->t("Page title."),
+      '#description' => $this->t('Page title shown on the search page.'),
     ];
 
+    // Search page description shown on page.
     $form['description'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Description'),
       '#default_value' => $this->entity->get('description'),
-      '#description' => $this->t('Search page description.'),
+      '#description' => $this->t('Description shown on the search page.'),
     ];
 
+    // If there is more than one language, allow language restriction.
     $languages = \Drupal::languageManager()->getLanguages();
 
     if (count($languages) > 1) {
@@ -98,57 +114,53 @@ class QuantSearchPageForm extends EntityForm {
       $form['languages'] = [
         '#type' => 'select',
         '#title' => $this->t('Languages'),
-        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be included.'),
+        '#description' => $this->t('Optionally, restrict search to these languages. If none are selected, all languages will be included.'),
         '#options' => $language_codes,
         '#default_value' => $this->entity->get('languages'),
         '#multiple' => TRUE,
       ];
     }
 
-    // Seed by bundle.
+    // If there is more than one content type, allow content type restriction.
     $types = \Drupal::entityTypeManager()
       ->getStorage('node_type')
       ->loadMultiple();
 
-    $content_types = [];
-    foreach ($types as $type) {
-      $content_types[$type->id()] = $type->label();
+    if (count($types) > 1) {
+      $content_types = [];
+      foreach ($types as $type) {
+        $content_types[$type->id()] = $type->label();
+      }
+
+      $form['bundles'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Content types'),
+        '#description' => $this->t('Optionally, restrict search to these content types. If none are selected, all content types will be included.'),
+        '#options' => $content_types,
+        '#default_value' => $this->entity->get('bundles'),
+        '#multiple' => TRUE,
+      ];
     }
 
-    $form['bundles'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Enabled bundles'),
-      '#description' => $this->t('Optionally restrict to these content types.'),
-      '#options' => $content_types,
-      '#default_value' => $this->entity->get('bundles'),
-      '#multiple' => TRUE,
-    ];
-
+    // Search page manual filters.
     $form['manual_filters'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Manual Filters'),
+      '#title' => $this->t('Manual filters'),
       '#maxlength' => 2048,
       '#default_value' => $this->entity->get('manual_filters'),
-      '#description' => $this->t('Optionally provide complex filters. For example: <code>cost>10 AND cost<99.5</code>. You may join with ANDs, ORs.'),
+      '#description' => $this->t('Optionally, provide manual filters that can include ANDs and ORs. For example: <code>cost > 10 AND cost < 99.5</code>'),
     ];
 
-    $form['route'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Route'),
-      '#maxlength' => 255,
-      '#default_value' => $this->entity->get('route'),
-      '#description' => $this->t('Page route for the search page.'),
-      '#required' => TRUE,
-    ];
-
+    // Get entity display configuration.
     $existingDisplayConfig = $this->entity->get('display');
 
-    // Form state facets trump the entity state.
+    // If form state has values, use those instead of the entity state values.
     $vals = $form_state->getValues();
     if (!empty($vals['display'])) {
       $existingDisplayConfig = $vals['display'];
     }
 
+    // Display options.
     $form['display'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Display options'),
@@ -156,49 +168,56 @@ class QuantSearchPageForm extends EntityForm {
       '#suffix' => '</div>',
     ];
 
+    // Form display options.
     $form['display']['results'] = [
       '#type' => 'details',
       '#open' => FALSE,
-      '#title' => $this->t('Results display'),
+      '#title' => $this->t('Form display'),
     ];
 
+    // Show the keyword field.
     $form['display']['results']['display_search'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Display search textfield'),
+      '#title' => $this->t('Display search keyword field'),
       '#default_value' => $existingDisplayConfig['results']['display_search'] ?? TRUE,
     ];
 
+    // Show the number of results.
     $form['display']['results']['display_stats'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Display stats'),
-      '#description' => $this->t('e.g number of hits/results for a query'),
+      '#title' => $this->t('Display number of results'),
       '#default_value' => $existingDisplayConfig['results']['display_stats'] ?? TRUE,
     ];
 
+    // Show the "Clear refinements" button.
     $form['display']['results']['show_clear_refinements'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Display clear refinements button'),
+      '#title' => $this->t('Display "Clear refinements" button'),
       '#default_value' => $existingDisplayConfig['results']['show_clear_refinements'] ?? TRUE,
     ];
 
+    // Pagination display options.
     $form['display']['pagination'] = [
       '#type' => 'details',
       '#open' => FALSE,
-      '#title' => $this->t('Pagination options'),
+      '#title' => $this->t('Pagination display'),
     ];
 
+    // Enable pagination.
     $form['display']['pagination']['pagination_enabled'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Pagination enabled'),
+      '#title' => $this->t('Enable pagination'),
       '#default_value' => $existingDisplayConfig['pagination']['pagination_enabled'] ?? TRUE,
     ];
 
+    // Number of results per page.
     $form['display']['pagination']['per_page'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Hits per page'),
+      '#title' => $this->t('Results per page'),
       '#default_value' => $existingDisplayConfig['pagination']['per_page'] ?? 20,
     ];
 
+    // Facet configuration.
     $form['facets'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Facets'),
@@ -206,11 +225,10 @@ class QuantSearchPageForm extends EntityForm {
       '#suffix' => '</div>',
     ];
 
-    // Retrieve facets attached to the entity.
+    // Get entity facets configuration.
     $existingFacets = $this->entity->get('facets');
-    $existingDisplayConfig = $this->entity->get('display');
 
-    // Form state facets trump the entity state.
+    // If form state has values, use those instead of the entity state values.
     $vals = $form_state->getValues();
     if (!empty($vals['facets'])) {
       $existingFacets = $vals['facets'];
@@ -219,6 +237,7 @@ class QuantSearchPageForm extends EntityForm {
       $existingFacets[] = [];
     }
 
+    // Configuration fields for all the facets.
     foreach ($existingFacets as $i => $facet) {
 
       $form['facets'][$i] = [
@@ -227,51 +246,60 @@ class QuantSearchPageForm extends EntityForm {
         '#title' => $this->t('Facet configuration'),
       ];
 
+      // Facet display.
+      $displayTypes = [
+        '' => 'Select facet display',
+        'checkbox' => 'Checkbox (multi select)',
+        'select' => 'Select list (single select)',
+        'menu' => 'Menu list (single select)',
+      ];
+
+      // @todo Make required. When adding '#required', it didn't save.
+      $form['facets'][$i]['facet_display'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Facet display'),
+        '#options' => $displayTypes,
+        '#default_value' => $facet['facet_display'] ?? '',
+        '#attributes' => [
+          'id' => "facet_{$i}_display_type",
+        ],
+      ];
+
+      // Facet type based on common usage patterns.
       $types = [
+        '' => 'Select facet type',
         'taxonomy' => 'Taxonomy',
         'content_type' => 'Content type',
         'language' => 'Language',
         'custom' => 'Custom',
       ];
 
-      $displayTypes = [
-        'checkbox' => "Checkbox (multi select)",
-        'select' => "Select list (single select)",
-        'menu' => "Menu list (single select)",
-      ];
-
-      $form['facets'][$i]['facet_display'] = [
-        '#type' => 'select',
-        '#title' => $this->t('Facet type'),
-        '#options' => $displayTypes,
-        '#default_value' => $facet['facet_display'],
-        '#attributes' => [
-          'id' => "facet_{$i}_display_type",
-        ],
-      ];
-
+      // @todo Make required. When adding '#required', it didn't save.
       $form['facets'][$i]['facet_type'] = [
         '#type' => 'select',
         '#title' => $this->t('Facet type'),
         '#options' => $types,
-        '#default_value' => $facet['facet_type'],
+        '#default_value' => $facet['facet_type'] ?? '',
         '#attributes' => [
           'id' => "facet_{$i}_type",
         ],
       ];
 
+      // For taxonomy option, store all vocabularies.
       $vocabularies = Vocabulary::loadMultiple();
 
-      $vocab_options = [];
+      $vocab_options = [
+        '' => $this->t('Select vocabulary'),
+      ];
       foreach ($vocabularies as $vocab) {
         $vocab_options[$vocab->id()] = $vocab->label();
       }
 
       $form['facets'][$i]['taxonomy_vocabulary'] = [
         '#type' => 'select',
-        '#title' => t('Taxonomy vocabulary'),
+        '#title' => $this->t('Taxonomy vocabulary'),
         '#options' => $vocab_options,
-        '#default_value' => $facet['taxonomy_vocabulary'],
+        '#default_value' => $facet['taxonomy_vocabulary'] ?? '',
         '#states' => [
           'visible' => [
             ':input[id="facet_' . $i . '_type"]' => ['value' => 'taxonomy'],
@@ -279,11 +307,12 @@ class QuantSearchPageForm extends EntityForm {
         ],
       ];
 
+      // Allow custom option using defined entity.
       $form['facets'][$i]['custom_key'] = [
         '#type' => 'textfield',
-        '#title' => t('Custom key'),
-        '#description' => t('Provide a custom key as defined in your entity token configuration'),
-        '#default_value' => $facet['custom_key'],
+        '#title' => $this->t('Custom key'),
+        '#description' => $this->t('Provide a custom key as defined in your entity token configuration'),
+        '#default_value' => $facet['custom_key'] ?? '',
         '#states' => [
           'visible' => [
             ':input[id="facet_' . $i . '_type"]' => ['value' => 'custom'],
@@ -291,13 +320,15 @@ class QuantSearchPageForm extends EntityForm {
         ],
       ];
 
+      // Facet heading to display.
+      // @todo If only one language, default to default language.
       $form['facets'][$i]['facet_heading'] = [
         '#type' => 'textfield',
-        '#title' => t('Facet heading'),
-        '#default_value' => $facet['facet_heading'],
+        '#title' => $this->t('Facet heading'),
+        '#default_value' => $facet['facet_heading'] ?? '',
       ];
 
-      $languages = \Drupal::languageManager()->getLanguages();
+      // Facet language.
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $language_codes = [];
 
@@ -311,29 +342,30 @@ class QuantSearchPageForm extends EntityForm {
         '#title' => $this->t('Facet language'),
         '#description' => $this->t('Language to use for the facet.'),
         '#options' => $language_codes,
-        '#default_value' => $facet['facet_language'],
+        '#default_value' => $facet['facet_language'] ?? 'en',
       ];
 
+      // Remove facet button.
       $form['facets'][$i]['actions']['remove_facet'] = [
         '#type' => 'submit',
-        '#value' => t('Remove facet'),
+        '#value' => $this->t('Remove facet'),
         '#name' => 'remove_facet_' . $i,
         '#index' => $i,
         '#submit' => ['::removeCallback'],
         '#ajax' => [
-          'callback' => '::addmoreCallback',
+          'callback' => '::addCallback',
           'wrapper' => 'facets-fieldset-wrapper',
         ],
       ];
     }
 
-    // Add "add facet" button to last item in the array.
+    // Add "Add facet" button to last item in the array.
     $form['facets'][$i]['actions']['add_facet'] = [
       '#type' => 'submit',
-      '#value' => t('Add facet'),
+      '#value' => $this->t('Add facet'),
       '#submit' => ['::addOne'],
       '#ajax' => [
-        'callback' => '::addmoreCallback',
+        'callback' => '::addCallback',
         'wrapper' => 'facets-fieldset-wrapper',
       ],
     ];
@@ -350,6 +382,17 @@ class QuantSearchPageForm extends EntityForm {
 
     unset($form['facets']['actions']);
     $page = $this->entity;
+
+    // Remove all empty facets, so they are not added to the page.
+    $facets = $page->get('facets');
+    $nonEmptyFacets = [];
+    foreach ($facets as $i => $facet) {
+      if ($facet['facet_display'] && $facet['facet_type']) {
+        $nonEmptyFacets[$i] = $facet;
+      }
+    }
+    $page->set('facets', $nonEmptyFacets);
+
     $status = $page->save();
 
     if ($status === SAVED_NEW) {
@@ -363,40 +406,43 @@ class QuantSearchPageForm extends EntityForm {
       ]));
     }
 
-    // Ensure API is aware of facets and enable as required.
+    // Ensure the API is aware of the facets and enable them as required.
     $facets = $form_state->getValue(['facets']);
     unset($facets['actions']);
 
     $keys = Search::processTranslatedFacetKeys($facets);
 
-    $uniqKeys = [];
+    $uniqueKeys = [];
 
     // Add default filters (lang_code/bundle).
-    $uniqKeys[] = 'lang_code';
-    $uniqKeys[] = 'content_type';
+    $uniqueKeys[] = 'lang_code';
+    $uniqueKeys[] = 'content_type';
 
     foreach ($keys as $k) {
-      if (!isset($uniqKeys[$k['facet_key']])) {
-        $uniqKeys[] = $k['facet_key'];
+      if (!isset($uniqueKeys[$k['facet_key']])) {
+        $uniqueKeys[] = $k['facet_key'];
       }
     }
 
     if (!empty($keys)) {
       $client = \Drupal::service('quant_api.client');
-      $client->addFacets($uniqKeys);
+      $client->addFacets($uniqueKeys);
     }
 
+    // In case the route is new, rebuild the router, so it is added.
     \Drupal::service('router.builder')->rebuild();
 
-    // Seed the route in Quant.
+    // Add or remove the route in Quant.
     $published = $form_state->getValue('status');
     $route = $form_state->getValue('route');
 
+    // Send route for enabled pages.
     if ($published) {
       $item = new RouteItem(['route' => $route]);
       $item->send();
     }
-    else {
+    // Only unpublish if page already exists, so was sent before.
+    elseif ($status !== SAVED_NEW) {
       \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $route, [], NULL));
     }
 
@@ -414,7 +460,7 @@ class QuantSearchPageForm extends EntityForm {
   }
 
   /**
-   * Adds one more facet to the form.
+   * Adds facet to the form.
    */
   public function addOne(array &$form, FormStateInterface $form_state) {
     $vals = $form_state->getValues();
@@ -424,9 +470,9 @@ class QuantSearchPageForm extends EntityForm {
   }
 
   /**
-   * Callback: Add more facet form group.
+   * Callback: Add facet form group.
    */
-  public function addmoreCallback(array &$form, FormStateInterface $form_state) {
+  public function addCallback(array &$form, FormStateInterface $form_state) {
     return $form['facets'];
   }
 

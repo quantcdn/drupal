@@ -2,12 +2,14 @@
 
 namespace Drupal\quant_search\Controller;
 
+use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
+use Drupal\node\Entity\Node;
+use Drupal\quant\Seed;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\node\Entity\Node;
-use Drupal\Core\Url;
-use Drupal\quant\Seed;
 
 /**
  * Quant configuration form.
@@ -40,27 +42,23 @@ class Search extends ControllerBase {
   public function statusPage() {
     $config = $this->config(self::SETTINGS);
 
-    if ($config->get('api_token')) {
-      if ($project = $this->client->project()) {
-        if ($project->config->search_enabled) {
-          $message = t('Search is enabled for @api', ['@api' => $config->get('api_project')]);
-          \Drupal::messenger()->addMessage($message);
-        }
-        else {
-          \Drupal::messenger()->addError(t('Search is not enabled for this project. Enable via the Quant Dashboard.'));
-        }
+    $searchEnabled = $this->enabled();
+    if (!$searchEnabled) {
+      if ($config->get('api_token') && $project = $this->client->project()) {
+        \Drupal::messenger()->addError(t('Search is not enabled for this project. It can be enabled via the Quant Dashboard. See <a href="https://docs.quantcdn.io/docs/dashboard/search">Quant Search documentation</a>.'));
       }
       else {
-        \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
+        \Drupal::messenger()->addError(t('Unable to connect to Quant API. See <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">Quant setup documentation</a>.'));
       }
     }
 
     // Retrieve search stats.
     $search = $this->client->search();
 
-    if (!isset($search->index)) {
+    if (!$searchEnabled || !isset($search->index)) {
+      $markup = $searchEnabled ? $this->t('Unable to retrieve search index values.') : '';
       return [
-        '#markup' => $this->t('Unable to retrieve search index values.'),
+        '#markup' => $markup,
       ];
     }
 
@@ -164,12 +162,12 @@ class Search extends ControllerBase {
     }
 
     // Determine whether language should be skipped.
-    $allowedLanguage = $config->get('quant_search_entity_node_languages');
+    $allowedLanguages = $config->get('quant_search_entity_node_languages');
 
-    if (!empty($allowedLanguage)) {
-      $allowedLanguage = array_filter($allowedLanguage);
-      if (!empty($allowedLanguage)) {
-        if (!in_array($langcode, $allowedLanguage)) {
+    if (!empty($allowedLanguages)) {
+      $allowedLanguages = array_filter($allowedLanguages);
+      if (!empty($allowedLanguages)) {
+        if (!in_array($langcode, $allowedLanguages)) {
           $skipRecord = TRUE;
         }
       }
@@ -209,18 +207,18 @@ class Search extends ControllerBase {
     }
 
     // Get token values from context.
-    $ctx = [];
-    $ctx[$entityType] = $entity;
+    $context = [];
+    $context[$entityType] = $entity;
 
-    $title = \Drupal::token()->replace($titleToken, $ctx, [
+    $title = \Drupal::token()->replace($titleToken, $context, [
       'langcode' => $langcode,
       'clear' => TRUE,
     ]);
-    $summary = \Drupal::token()->replace($summaryToken, $ctx, [
+    $summary = \Drupal::token()->replace($summaryToken, $context, [
       'langcode' => $langcode,
       'clear' => TRUE,
     ]);
-    $image = \Drupal::token()->replace($imageToken, $ctx, [
+    $image = \Drupal::token()->replace($imageToken, $context, [
       'langcode' => $langcode,
       'clear' => TRUE,
     ]);
@@ -255,13 +253,13 @@ class Search extends ControllerBase {
       $options['language'] = $language;
       $record['lang_code'] = $langcode;
 
-      foreach ($entity->getTranslationLanguages() as $code => $l) {
+      foreach ($entity->getTranslationLanguages() as $code => $lang) {
         $language_label = \Drupal::service('string_translation')->translate($language->getName(), [], ['langcode' => $code]);
         $record["language_${code}"] = $language_label;
       }
     }
 
-    // @todo Node only logic..
+    // @todo Update node-only logic.
     $record['url'] = Url::fromRoute('entity.node.canonical', ['node' => $entity->id()], $options)->toString();
 
     // Add search meta for node entities.
@@ -322,32 +320,32 @@ class Search extends ControllerBase {
   public static function processTranslatedFacetKeys(array $facets) {
 
     $keys = [];
-    foreach ($facets as $k => $f) {
-      $lang = $f['facet_language'];
+    foreach ($facets as $k => $facet) {
+      $lang = $facet['facet_language'];
 
-      switch ($f['facet_type']) {
+      switch ($facet['facet_type']) {
         case "taxonomy":
-          $key = $f['taxonomy_vocabulary'] . '_' . $lang;
+          $key = $facet['taxonomy_vocabulary'] . '_' . $lang;
           $containerKey = $key . "_{$k}";
-          $f['facet_key'] = $key;
-          $f['facet_container'] = $containerKey;
-          $keys[$containerKey] = $f;
+          $facet['facet_key'] = $key;
+          $facet['facet_container'] = $containerKey;
+          $keys[$containerKey] = $facet;
           break;
 
         case "content_type":
           $key = "content_type_{$lang}";
           $containerKey = $key . "_{$k}";
-          $f['facet_key'] = $key;
-          $f['facet_container'] = $containerKey;
-          $keys[$containerKey] = $f;
+          $facet['facet_key'] = $key;
+          $facet['facet_container'] = $containerKey;
+          $keys[$containerKey] = $facet;
           break;
 
         case "language":
           $key = "language_{$lang}";
           $containerKey = $key . "_{$k}";
-          $f['facet_key'] = $key;
-          $f['facet_container'] = $containerKey;
-          $keys[$containerKey] = $f;
+          $facet['facet_key'] = $key;
+          $facet['facet_container'] = $containerKey;
+          $keys[$containerKey] = $facet;
           break;
 
         case "custom":
@@ -355,11 +353,40 @@ class Search extends ControllerBase {
           break;
 
         default:
-          // Nada.
+          // Nothing to do.
       }
     }
 
     return $keys;
+  }
+
+  /**
+   * Checks search administration access.
+   *
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   Run access checks for this account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The access result.
+   */
+  public function administerAccess(AccountInterface $account) {
+    // In order to hide search configuration options when search is disabled,
+    // use this rather than just the `administer quant search` permission.
+    return AccessResult::allowedIf($account->hasPermission('administer quant search') && $this->enabled());
+  }
+
+  /**
+   * Checks search is enabled.
+   */
+  public function enabled() {
+    $config = $this->config(self::SETTINGS);
+
+    $searchEnabled = ($config->get('api_token') && $this->client->project() && $this->client->project()->config->search_enabled);
+    if ($searchEnabled) {
+      \Drupal::messenger()->addMessage(t('Search is enabled for project %api.', ['%api' => $config->get('api_project')]));
+    }
+
+    return $searchEnabled;
   }
 
 }

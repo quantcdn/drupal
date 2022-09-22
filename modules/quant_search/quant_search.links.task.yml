@@ -13,7 +13,7 @@ entity.quant_search_page.collection:
   title: 'Pages'
   parent_id: quant_search.main
 
-quant_search.main.main:
+quant_search.main.index:
   route_name: quant_search.main.index
   title: 'Index'
   parent_id: quant_search.main

@@ -6,14 +6,14 @@ use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
 /**
- * Class EntityOverview.
+ * Generates Quant Search Page routes.
  *
  * @package Drupal\quant_search\Routing
  */
 class QuantSearchRoutes {
 
   /**
-   * Dynamically generate the routes for the entity details.
+   * Dynamically generate the routes for the Quant Search Page entities.
    *
    * @return \Symfony\Component\Routing\RouteCollection
    *   The search page routes.
@@ -29,6 +29,7 @@ class QuantSearchRoutes {
 
     foreach ($pages as $page) {
 
+      // Only process enabled pages.
       if (!$page->get('status')) {
         continue;
       }

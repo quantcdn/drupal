@@ -52,22 +52,8 @@ class SearchIndexForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
+    // The `_custom_access` in routing ensures search is enabled for this page.
     $config = $this->config(self::SETTINGS);
-
-    if ($config->get('api_token')) {
-      if ($project = $this->client->project()) {
-        if ($project->config->search_enabled) {
-          $message = t('Search is enabled for @api', ['@api' => $config->get('api_project')]);
-          \Drupal::messenger()->addMessage($message);
-        }
-        else {
-          \Drupal::messenger()->addError(t('Search is not enabled for this project. Enable via the Quant Dashboard.'));
-        }
-      }
-      else {
-        \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
-      }
-    }
 
     $form['quant_search_index_entity_node'] = [
       '#type' => 'checkbox',
@@ -102,7 +88,7 @@ class SearchIndexForm extends ConfigFormBase {
       $form['node_details']['quant_search_index_entity_node_languages'] = [
         '#type' => 'checkboxes',
         '#title' => $this->t('Languages'),
-        '#description' => $this->t('Optionally restrict to these languages. If no options are selected all languages will be exported.'),
+        '#description' => $this->t('Optionally, restrict to these languages. If none are selected, all languages will be included.'),
         '#options' => $language_codes,
       ];
     }
@@ -120,7 +106,7 @@ class SearchIndexForm extends ConfigFormBase {
     $form['node_details']['quant_search_index_entity_node_bundles'] = [
       '#type' => 'checkboxes',
       '#title' => $this->t('Enabled bundles'),
-      '#description' => $this->t('Optionally restrict to these content types.'),
+      '#description' => $this->t('Optionally, restrict to these content types. If none are selected, all content types will be included.'),
       '#options' => $content_types,
     ];
 
@@ -158,9 +144,9 @@ class SearchIndexForm extends ConfigFormBase {
     $batch = [
       'title' => $this->t('Exporting to Quant...'),
       'operations' => [],
-      'init_message'     => $this->t('Commencing'),
+      'init_message'     => $this->t('Starting'),
       'progress_message' => $this->t('Processed @current out of @total.'),
-      'error_message'    => $this->t('An error occurred during processing'),
+      'error_message'    => $this->t('An error occurred during processing.'),
     ];
 
     // Filter by language.
