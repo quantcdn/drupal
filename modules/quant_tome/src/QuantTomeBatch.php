@@ -153,12 +153,15 @@ class QuantTomeBatch {
           while (!feof($handle)) {
             $line = fgets($handle);
             $redirect = explode(' ', $line);
-            if (empty($redirect[0])) {
+            $source = trim($redirect[0]);
+            if (empty($source)) {
               break;
             }
+            // Only use the destination URI.
+            $destination = parse_url(trim($redirect[1]), PHP_URL_PATH);
             $queue->createItem(new RedirectItem([
-              'source' => trim($redirect[0]),
-              'destination' => trim($redirect[1]),
+              'source' => $source,
+              'destination' => $destination,
               'status_code' => 301,
             ]));
           }
@@ -179,13 +182,13 @@ class QuantTomeBatch {
   }
 
   /**
-   * Convert the path to a URI used by Quant.
+   * Convert the path to a URI.
    *
    * @param string $file_path
    *   The file path.
    *
    * @return string
-   *   URI based on file path.
+   *   URI based on the file path.
    */
   public function pathToUri($file_path) {
     // Strip directory and index.html to match regular Quant processing.
