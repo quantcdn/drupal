@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Drupal\quant_tome\EventSubscriber;
 
 use Drupal\Core\File\FileSystemInterface;

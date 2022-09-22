@@ -19,8 +19,18 @@ class RouteItem implements QuantQueueItemInterface {
    */
   private $route;
 
+  /**
+   * URI for the file.
+   *
+   * @var string
+   */
   private $uri;
 
+  /**
+   * Path to the file.
+   *
+   * @var string
+   */
   private $file_path;
 
   /**
@@ -33,11 +43,10 @@ class RouteItem implements QuantQueueItemInterface {
       throw new \UnexpectedValueException(self::class . ' requires a string value.');
     }
 
-    // Ensure route starts with a slash.
+    // Ensure route starts with a slash and has no empty spaces.
     if (substr($route, 0, 1) != '/') {
       $route = "/{$route}";
     }
-
     $route = trim($route);
 
     $this->route = $route;
@@ -51,11 +60,11 @@ class RouteItem implements QuantQueueItemInterface {
   public function send() {
 
     // Wrapper for routes that resolve as files.
-    $ext = pathinfo($this->file_path, PATHINFO_EXTENSION);
+    $extension = pathinfo($this->file_path, PATHINFO_EXTENSION);
     $response = FALSE;
 
-    if (file_exists($this->file_path) && !empty($ext)) {
-      if ($ext != 'html') {
+    if (file_exists($this->file_path) && !empty($extension)) {
+      if ($extension != 'html') {
         $file_item = new FileItem([
           'file' => $this->file_path,
           'url' => $this->uri,
@@ -65,7 +74,8 @@ class RouteItem implements QuantQueueItemInterface {
       }
       // Synthetic response - load the content directly.
       $response = [file_get_contents($this->file_path), 'text/html; charset=UTF-8'];
-    } else {
+    }
+    else {
       $response = Seed::markupFromRoute($this->route);
     }
 

@@ -3,8 +3,8 @@
 namespace Drupal\quant_tome\Commands;
 
 use Drush\Commands\DrushCommands;
-use Drupal\quant_tome\QuantTomeBatch;
 use Drupal\quant\Commands\QuantDrushCommands;
+use Drupal\quant_tome\QuantTomeBatch;
 
 /**
  * Contains the quant:tome:deploy command.
@@ -29,7 +29,7 @@ class QuantTomeCommands extends DrushCommands {
   }
 
   /**
-   * Deploy a tome static build to Quant.
+   * Deploy a Tome static build to Quant.
    *
    * @command quant:tome:deploy
    */
@@ -37,11 +37,11 @@ class QuantTomeCommands extends DrushCommands {
     $this->io()->writeln('Preparing Tome output for Quant...');
 
     if (!$this->batch->checkConfig()) {
-      $this->io()->error('Cannot connect to the QuantAPI, please check configuration.');
+      $this->io()->error('Cannot connect to the Quant API. Please check the Quant configuration.');
       return 1;
     }
     if (!$this->batch->checkBuild()) {
-      $this->io()->error('No static build available for deploy, please run "drush tome:static"');
+      $this->io()->error('No Tome static build is available. Please run "drush tome:static".');
       return 1;
     }
 
@@ -51,7 +51,7 @@ class QuantTomeCommands extends DrushCommands {
     $result = drush_backend_batch_process();
 
     if (!empty($result['object'][0]['errors'])) {
-      $this->io()->error('Deploy failed! Consult the error log for more information');
+      $this->io()->error('Deploy failed. Please consult the error log for more information.');
       return 1;
     }
 

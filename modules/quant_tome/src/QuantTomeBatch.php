@@ -3,14 +3,14 @@
 namespace Drupal\quant_tome;
 
 use Drupal\Core\Batch\BatchBuilder;
-use Drupal\tome_base\PathTrait;
-use Drupal\tome_static\StaticGeneratorInterface;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\File\FileSystemInterface;
-use Drupal\quant\Plugin\QueueItem\RouteItem;
-use Drupal\quant_api\Client\QuantClient;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\quant\Plugin\QueueItem\RedirectItem;
+use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\quant_api\Client\QuantClient;
+use Drupal\tome_base\PathTrait;
+use Drupal\tome_static\StaticGeneratorInterface;
 
 class QuantTomeBatch {
 
@@ -49,11 +49,11 @@ class QuantTomeBatch {
    * Constructor.
    *
    * @param \Drupal\tome_static\StaticGeneratorInterface $static
-   *   The tome static generator.
+   *   The Tome static generator.
    * @param \Drupal\Core\File\FileSystemInterface $file_system
    *   The file system interface.
    * @param \Drupal\quant_api\Client\QuantClient $client
-   *   The Quant api client.
+   *   The Quant API client.
    */
   public function __construct(StaticGeneratorInterface $static, FileSystemInterface $file_system, QuantClient $client, QueueFactory $queue_factory) {
     $this->static = $static;
@@ -63,17 +63,17 @@ class QuantTomeBatch {
   }
 
   /**
-   * Check to see if quant is configured correctly.
+   * Check to see if Quant is configured correctly.
    *
    * @return bool
-   *   If we can connect to the Quant api.
+   *   If we can connect to the Quant API.
    */
   public function checkConfig() {
     return $this->client->ping();
   }
 
   /**
-   * Determine if tome export exists.
+   * Determine if Tome export exists.
    *
    * @return bool
    *   State of the export location.
@@ -83,7 +83,7 @@ class QuantTomeBatch {
   }
 
   /**
-   * Generate the batch to seed tome exports.
+   * Generate the batch to seed Tome exports.
    *
    * @return \Drupal\Core\Batch\BatchBuilder
    *   A batch builder object.
@@ -107,9 +107,8 @@ class QuantTomeBatch {
   /**
    * Generate hashes of the files.
    *
-   * Generate hashes as Quant's API would for the file content.
-   * This will reduce the number of files that we need to seed
-   * in the final batch operation.
+   * Generate hashes as Quant's API would for the file content. This will reduce
+   * the number of files that we need to seed in the final batch operation.
    *
    * @param array $files
    *   List of file URIs.
@@ -131,9 +130,8 @@ class QuantTomeBatch {
   /**
    * Processes the hashed records and generates the deploy batch.
    *
-   * Takes the computed file hashes and evaluates which files
-   * need to be sent back to Quant. Will then create another batch
-   * operation to seed the data.
+   * Takes the computed file hashes and evaluates which files need to be sent
+   * to Quant. Then, it creates another batch operation to seed the data.
    *
    * @param array|\ArrayAccess $context
    *   The batch context.
@@ -184,7 +182,7 @@ class QuantTomeBatch {
    * @return string
    */
   public function pathToUri($file_path) {
-    // Strip directory and index.html from paths to match regular Quant processing.
+    // Strip directory and index.html to match regular Quant processing.
     $uri = str_replace($this->static->getStaticDirectory(), '', $file_path);
     $uri = str_replace('/index.html', '', $uri);
     return $uri;
@@ -194,7 +192,7 @@ class QuantTomeBatch {
    * Deploy a file to Quant.
    *
    * @var \Drupal\quant\Plugin\QueueItem $item
-   *   The file item to send to Quants API.
+   *   The file item to send to Quant API.
    */
   public function deploy($item, &$context) {
     \Drupal::logger('quant_tome')->notice('Sending %s', [
@@ -203,6 +201,14 @@ class QuantTomeBatch {
     $item->send();
   }
 
+  /**
+   * Finish deploy process.
+   *
+   * @param bool $success
+   *   TRUE if batch successfully completed.
+   * @param array $context
+   *   Batch context.
+   */
   public function finish($success, &$context) {
     if ($success) {
       \Drupal::logger('quant_tome')->info('Complete!');
