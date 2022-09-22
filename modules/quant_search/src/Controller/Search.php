@@ -323,9 +323,9 @@ class Search extends ControllerBase {
     foreach ($facets as $k => $facet) {
       $lang = $facet['facet_language'];
 
-      switch ($facet['facet_type']) {
+      switch ($facet['facet_type_config']['facet_type']) {
         case "taxonomy":
-          $key = $facet['taxonomy_vocabulary'] . '_' . $lang;
+          $key = $facet['facet_type_config']['taxonomy_vocabulary'] . '_' . $lang;
           $containerKey = $key . "_{$k}";
           $facet['facet_key'] = $key;
           $facet['facet_container'] = $containerKey;
@@ -349,7 +349,7 @@ class Search extends ControllerBase {
           break;
 
         case "custom":
-          // @todo This
+          // @todo Allow custom entity key.
           break;
 
         default:

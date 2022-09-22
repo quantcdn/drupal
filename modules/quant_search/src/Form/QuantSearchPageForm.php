@@ -39,7 +39,10 @@ class QuantSearchPageForm extends EntityForm {
    * {@inheritdoc}
    */
   public function form(array $form, FormStateInterface $form_state) {
+
     $form = parent::form($form, $form_state);
+
+    $form['#attached']['library'][] = 'quant_search/drupal.quant_search.admin';
 
     $page = $this->entity;
 
@@ -217,10 +220,24 @@ class QuantSearchPageForm extends EntityForm {
       '#default_value' => $existingDisplayConfig['pagination']['per_page'] ?? 20,
     ];
 
-    // Facet configuration.
+    // Create tabledrag facets table.
     $form['facets'] = [
-      '#type' => 'fieldset',
-      '#title' => $this->t('Facets'),
+      '#type' => 'table',
+      // Do not show the weight header as each select has a label.
+      '#header' => [
+        [
+          'data' => $this->t('Facet configuration'),
+          // IMPORTANT: Must be the correct value or tabledrag doesn't work!
+          'colspan' => 6,
+        ],
+      ],
+      '#tabledrag' => [
+        [
+          'action' => 'order',
+          'relationship' => 'sibling',
+          'group' => 'facet-sort-weight',
+        ],
+      ],
       '#prefix' => '<div id="facets-fieldset-wrapper">',
       '#suffix' => '</div>',
     ];
@@ -240,11 +257,11 @@ class QuantSearchPageForm extends EntityForm {
     // Configuration fields for all the facets.
     foreach ($existingFacets as $i => $facet) {
 
-      $form['facets'][$i] = [
-        '#type' => 'details',
-        '#open' => TRUE,
-        '#title' => $this->t('Facet configuration'),
-      ];
+      // Mark the table row as draggable.
+      $form['facets'][$i]['#attributes']['class'][] = 'draggable';
+
+      // Sort the table row according to its configured weight.
+      $form['facets'][$i]['#weight'] = $facet['weight'] ?? 10;
 
       // Facet display.
       $displayTypes = [
@@ -275,11 +292,11 @@ class QuantSearchPageForm extends EntityForm {
       ];
 
       // @todo Make required. When adding '#required', it didn't save.
-      $form['facets'][$i]['facet_type'] = [
+      $form['facets'][$i]['facet_type_config']['facet_type'] = [
         '#type' => 'select',
         '#title' => $this->t('Facet type'),
         '#options' => $types,
-        '#default_value' => $facet['facet_type'] ?? '',
+        '#default_value' => $facet['facet_type_config']['facet_type'] ?? '',
         '#attributes' => [
           'id' => "facet_{$i}_type",
         ],
@@ -295,11 +312,11 @@ class QuantSearchPageForm extends EntityForm {
         $vocab_options[$vocab->id()] = $vocab->label();
       }
 
-      $form['facets'][$i]['taxonomy_vocabulary'] = [
+      $form['facets'][$i]['facet_type_config']['taxonomy_vocabulary'] = [
         '#type' => 'select',
-        '#title' => $this->t('Taxonomy vocabulary'),
+        '#title' => $this->t('Vocabulary'),
         '#options' => $vocab_options,
-        '#default_value' => $facet['taxonomy_vocabulary'] ?? '',
+        '#default_value' => $facet['facet_type_config']['taxonomy_vocabulary'] ?? '',
         '#states' => [
           'visible' => [
             ':input[id="facet_' . $i . '_type"]' => ['value' => 'taxonomy'],
@@ -308,11 +325,12 @@ class QuantSearchPageForm extends EntityForm {
       ];
 
       // Allow custom option using defined entity.
-      $form['facets'][$i]['custom_key'] = [
+      $form['facets'][$i]['facet_type_config']['custom_key'] = [
         '#type' => 'textfield',
         '#title' => $this->t('Custom key'),
-        '#description' => $this->t('Provide a custom key as defined in your entity token configuration'),
-        '#default_value' => $facet['custom_key'] ?? '',
+        '#size' => 20,
+        '#description' => t('Entity token configuration key.'),
+        '#default_value' => $facet['facet_type_config']['custom_key'] ?? '',
         '#states' => [
           'visible' => [
             ':input[id="facet_' . $i . '_type"]' => ['value' => 'custom'],
@@ -325,10 +343,12 @@ class QuantSearchPageForm extends EntityForm {
       $form['facets'][$i]['facet_heading'] = [
         '#type' => 'textfield',
         '#title' => $this->t('Facet heading'),
+        '#size' => 20,
         '#default_value' => $facet['facet_heading'] ?? '',
       ];
 
       // Facet language.
+      // @todo Only show if more than one language but beware of colspan.
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $language_codes = [];
 
@@ -340,9 +360,20 @@ class QuantSearchPageForm extends EntityForm {
       $form['facets'][$i]['facet_language'] = [
         '#type' => 'select',
         '#title' => $this->t('Facet language'),
-        '#description' => $this->t('Language to use for the facet.'),
         '#options' => $language_codes,
         '#default_value' => $facet['facet_language'] ?? 'en',
+      ];
+
+      // Weight column element.
+      $form['facets'][$i]['weight'] = [
+        '#type' => 'weight',
+        '#title' => $this->t('Facet weight'),
+        '#default_value' => $facet['weight'] ?? 10,
+        '#attributes' => [
+          'class' => [
+            'facet-sort-weight',
+          ],
+        ],
       ];
 
       // Remove facet button.
@@ -351,18 +382,29 @@ class QuantSearchPageForm extends EntityForm {
         '#value' => $this->t('Remove facet'),
         '#name' => 'remove_facet_' . $i,
         '#index' => $i,
+        '#attributes' => [
+          'class' => [
+            'facet-remove',
+          ],
+        ],
         '#submit' => ['::removeCallback'],
         '#ajax' => [
           'callback' => '::addCallback',
           'wrapper' => 'facets-fieldset-wrapper',
         ],
       ];
+
     }
 
     // Add "Add facet" button to last item in the array.
     $form['facets'][$i]['actions']['add_facet'] = [
       '#type' => 'submit',
       '#value' => $this->t('Add facet'),
+      '#attributes' => [
+        'class' => [
+          'facet-add',
+        ],
+      ],
       '#submit' => ['::addOne'],
       '#ajax' => [
         'callback' => '::addCallback',
@@ -387,7 +429,7 @@ class QuantSearchPageForm extends EntityForm {
     $facets = $page->get('facets');
     $nonEmptyFacets = [];
     foreach ($facets as $i => $facet) {
-      if ($facet['facet_display'] && $facet['facet_type']) {
+      if ($facet['facet_display'] && $facet['facet_type_config']['facet_type']) {
         $nonEmptyFacets[$i] = $facet;
       }
     }
