@@ -75,7 +75,7 @@ class RouteItem implements QuantQueueItemInterface {
       // Get the content from the file.
       $response = [
         file_get_contents($this->filePath),
-        'text/html; charset=UTF-8'
+        'text/html; charset=UTF-8',
       ];
     }
     else {
