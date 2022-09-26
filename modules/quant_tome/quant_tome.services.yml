@@ -1,0 +1,13 @@
+services:
+  quant_tome.redirect_subscriber:
+    class: Drupal\quant_tome\EventSubscriber\RedirectSubscriber
+    arguments: ['@tome_static.generator', '@file_system']
+    tags:
+      - { name: event_subscriber }
+  quant_tome.deploy_batch:
+    class: Drupal\quant_tome\QuantTomeBatch
+    arguments:
+    - '@tome_static.generator'
+    - '@file_system'
+    - '@quant_api.client'
+    - '@queue'

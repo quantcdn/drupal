@@ -320,8 +320,11 @@ class Seed {
    */
   public static function markupFromRoute($route, array $headers = []) {
 
-    // Cleanse route.
-    $route = str_replace('//', '/', $route);
+    // Clean double slashes from routes.
+    // The exception is oEmbed routes which passes a full URL as query param.
+    if (!preg_match('/\/media\/oembed\?url=/', $route)) {
+      $route = str_replace('//', '/', $route);
+    }
 
     // Build internal request.
     $config = \Drupal::config('quant.settings');

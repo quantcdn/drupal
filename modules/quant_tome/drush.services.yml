@@ -1,0 +1,6 @@
+services:
+  quant_tome.commands:
+    class: \Drupal\quant_tome\Commands\QuantTomeCommands
+    arguments: ['@quant_tome.deploy_batch']
+    tags:
+      - { name: drush.command }

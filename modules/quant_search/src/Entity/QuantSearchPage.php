@@ -15,8 +15,8 @@ use Drupal\quant_search\QuantSearchPageInterface;
  *   label_singular = @Translation("Quant Search Page"),
  *   label_plural = @Translation("Quant Search Pages"),
  *   label_count = @PluralTranslation(
- *     singular = "@count quant_search_page",
- *     plural = "@count quant_search_pages",
+ *     singular = "@count Quant Search Page",
+ *     plural = "@count Quant Search Pages",
  *   ),
  *   handlers = {
  *     "list_builder" = "Drupal\quant_search\QuantSearchPageListBuilder",

@@ -1,8 +1,13 @@
+drupal.quant_search.admin:
+  css:
+    theme:
+      css/quant_search.admin.css: {}
+
 algolia:
   css:
     theme:
       https://cdn.jsdelivr.net/npm/instantsearch.css@7/themes/algolia-min.css: { type: external, minified: true }
-      css/quant-search.css: {}
+      css/quant_search.algolia.css: {}
   js:
     https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js: { type: external, minified: true }
     https://cdn.jsdelivr.net/npm/instantsearch.js@4: { type: external, minified: true }

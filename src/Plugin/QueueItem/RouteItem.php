@@ -20,6 +20,20 @@ class RouteItem implements QuantQueueItemInterface {
   private $route;
 
   /**
+   * URI for the file.
+   *
+   * @var string
+   */
+  private $uri;
+
+  /**
+   * Path to the file.
+   *
+   * @var string
+   */
+  private $filePath;
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(array $data = []) {
@@ -29,12 +43,15 @@ class RouteItem implements QuantQueueItemInterface {
       throw new \UnexpectedValueException(self::class . ' requires a string value.');
     }
 
-    // Ensure route starts with a slash.
+    // Ensure route starts with a slash and has no empty spaces.
     if (substr($route, 0, 1) != '/') {
       $route = "/{$route}";
     }
+    $route = trim($route);
 
-    $this->route = trim($route);
+    $this->route = $route;
+    $this->uri = isset($data['uri']) ? $data['uri'] : strtok($route, '?');
+    $this->filePath = isset($data['file_path']) ? $data['file_path'] : DRUPAL_ROOT . strtok($route, '?');
   }
 
   /**
@@ -43,19 +60,27 @@ class RouteItem implements QuantQueueItemInterface {
   public function send() {
 
     // Wrapper for routes that resolve as files.
-    $ext = pathinfo(strtok($this->route, '?'), PATHINFO_EXTENSION);
+    $extension = pathinfo($this->filePath, PATHINFO_EXTENSION);
+    $response = FALSE;
 
-    if ($ext && file_exists(DRUPAL_ROOT . strtok($this->route, '?'))) {
-      $file_item = new FileItem([
-        'file' => strtok($this->route, '?'),
-        'url' => $this->route,
-        'full_path' => DRUPAL_ROOT . $this->route,
-      ]);
-      $file_item->send();
-      return;
+    if (file_exists($this->filePath) && !empty($extension)) {
+      if ($extension != 'html') {
+        $file_item = new FileItem([
+          'file' => $this->filePath,
+          'url' => $this->uri,
+        ]);
+        $file_item->send();
+        return;
+      }
+      // Get the content from the file.
+      $response = [
+        file_get_contents($this->filePath),
+        'text/html; charset=UTF-8',
+      ];
     }
-
-    $response = Seed::markupFromRoute($this->route);
+    else {
+      $response = Seed::markupFromRoute($this->route);
+    }
 
     if (!$response) {
       \Drupal::logger('quant_seed')->error("Unable to send {$this->route}");
