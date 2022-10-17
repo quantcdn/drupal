@@ -79,7 +79,7 @@ class CronSettingsForm extends FormBase {
             ':input[name="entity_node"]' => ['checked' => TRUE],
           ],
         ],
-        '#default_value' => $config->get('entity_node_languages'),
+        '#default_value' => $config->get('entity_node_languages') ?? [],
       ];
     }
 
@@ -103,7 +103,7 @@ class CronSettingsForm extends FormBase {
           ':input[name="entity_node"]' => ['checked' => TRUE],
         ],
       ],
-      '#default_value' => $config->get('entity_node_bundles'),
+      '#default_value' => $config->get('entity_node_bundles') ?? [],
     ];
 
     $form['entity_taxonomy_term'] = [

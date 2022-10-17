@@ -59,8 +59,8 @@ class Seed {
       $files[] = str_replace(DRUPAL_ROOT, '', $filename->getPathname());
     }
 
-    $files[] = '/' . drupal_get_path('module', 'lunr') . '/js/search.worker.js';
-    $files[] = '/' . drupal_get_path('module', 'lunr') . '/js/vendor/lunr/lunr.min.js';
+    $files[] = '/' . \Drupal::service('extension.list.module')->getPath('lunr') . '/js/search.worker.js';
+    $files[] = '/' . \Drupal::service('extension.list.module')->getPath('lunr') . '/js/vendor/lunr/lunr.min.js';
 
     return $files;
   }
@@ -90,11 +90,11 @@ class Seed {
     $statusCode = $redirect->getStatusCode();
 
     if (!(bool) $statusCode && !$redirect->isNew()) {
-      \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $source, [], NULL));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
       return;
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($source, $destination, $statusCode));
+    \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($source, $destination, $statusCode), QuantRedirectEvent::UPDATE);
   }
 
   /**
@@ -102,7 +102,7 @@ class Seed {
    */
   public static function deleteRedirect($redirect) {
     $source = $redirect->getSourcePathWithQuery();
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $source, [], NULL));
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
   }
 
   /**
@@ -144,10 +144,10 @@ class Seed {
       // Use the default language alias in the event of multi-lang setup.
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
-      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode));
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
   }
 
   /**
@@ -180,7 +180,7 @@ class Seed {
     if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
       if ($entity->isPublished() && $entity->isDefaultRevision()) {
         // Trigger redirect event from alias to home.
-        \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($url, "/", 301));
+        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($url, "/", 301), QuantRedirectEvent::UPDATE);
       }
       $url = "/";
     }
@@ -219,13 +219,13 @@ class Seed {
       }
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode));
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
 
     // Create canonical redirects from node/123 to the published revision route.
     if ("/node/{$nid}" != $url && $entity->isPublished() && $entity->isDefaultRevision()) {
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $defaultUrl = Url::fromRoute('entity.node.canonical', ['node' => $nid], ['language' => $defaultLanguage])->toString();
-      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/node/{$nid}", $defaultUrl, 301));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/node/{$nid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
     }
   }
 
@@ -251,10 +251,10 @@ class Seed {
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
     if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
-      \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', '/', [], NULL));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $url, [], NULL));
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }
 
   /**
@@ -371,7 +371,7 @@ class Seed {
         $destination = reset($location_header);
         // Ensure relative for internal redirect.
         $destination = self::rewriteRelative($destination);
-        \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
+        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($route, $destination, $response->getStatusCode()), QuantRedirectEvent::UPDATE);
         return FALSE;
 
       case 200:

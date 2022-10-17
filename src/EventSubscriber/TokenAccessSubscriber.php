@@ -9,9 +9,9 @@ use Drupal\quant\Exception\StrictTokenException;
 use Drupal\quant\Exception\TokenValidationDisabledException;
 use Drupal\quant\TokenManager;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpKernel\Event\GetResponseEvent;
-use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
+use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
  * Validates token for internal requests.
@@ -51,7 +51,7 @@ class TokenAccessSubscriber implements EventSubscriberInterface {
   /**
    * Validate the token on the incoming request.
    */
-  public function validateToken(GetResponseEvent $event) {
+  public function validateToken(RequestEvent $event) {
     /** @var Symfony\Component\HttpFoundation\Request $request */
     $request = $event->getRequest();
 

@@ -352,23 +352,23 @@ class SeedForm extends FormBase {
     if ($form_state->getValue('redirects')) {
       // Collect the redirects for the seed.
       $event = new CollectRedirectsEvent($form_state);
-      $this->dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
+      $this->dispatcher->dispatch($event, QuantCollectionEvents::REDIRECTS);
     }
 
     if ($form_state->getValue('entity_node') || $form_state->getValue('entity_node_revisions')) {
       $event = new CollectEntitiesEvent($form_state);
-      $this->dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
+      $this->dispatcher->dispatch($event, QuantCollectionEvents::ENTITIES);
     }
 
     $event = new CollectRoutesEvent($form_state);
-    $this->dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
+    $this->dispatcher->dispatch($event, QuantCollectionEvents::ROUTES);
 
     foreach ($routes as $route) {
       $event->queueItem($route);
     }
 
     $event = new CollectFilesEvent($form_state);
-    $this->dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
+    $this->dispatcher->dispatch($event, QuantCollectionEvents::FILES);
 
     foreach ($assets as $asset) {
       $event->queueItem($asset);
