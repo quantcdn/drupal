@@ -24,6 +24,9 @@
                       window.open(itemUrl, '_blank', 'noopener');
                     },
                   },
+                  onSubmit({ state, event }) {
+                    window.location.href = drupalSettings.quantSearchAutocomplete.search_path + '?' + drupalSettings.quantSearchAutocomplete.algolia_index + '%5Bquery%5D=' + state.query;
+                  },
                   container: "#quant-search-autocomplete",
                   detachedMediaQuery: "none",
                   placeholder: drupalSettings.quantSearchAutocomplete.placeholder,
@@ -46,6 +49,9 @@
                                       },
                                   ],
                               });
+                          },
+                          onSelect: function (event) {
+                            window.location.assign(event.item.url);
                           },
                           templates: {
                               item({ item, html }) {

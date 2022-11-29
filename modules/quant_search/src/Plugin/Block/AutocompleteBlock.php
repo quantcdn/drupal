@@ -95,6 +95,12 @@ class AutocompleteBlock extends BlockBase {
     $languages = $page->get('languages');
     $bundles = $page->get('bundles');
     $manualFilters = $page->get('manual_filters');
+    $route = $page->get('route');
+
+    // Ensure route starts with a slash.
+    if (substr($route, 0, 1) != '/') {
+      $route = "/{$route}";
+    }
 
     $filters = [];
 
@@ -130,6 +136,7 @@ class AutocompleteBlock extends BlockBase {
             'algolia_index' => $project->config->search_index->algolia_index,
             'placeholder' => $this->configuration['placeholder'] ?? 'Search..',
             'show_summary' => $this->configuration['show_summary'] ?? FALSE,
+            'search_path' => $route,
             'filters' => $filtersString,
           ],
         ],
