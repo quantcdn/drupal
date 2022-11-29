@@ -118,6 +118,7 @@ class SettingsForm extends ConfigFormBase {
       ->save();
 
     // Clear router cache in case search has been enabled or disabled.
+    // @todo: Need to clear any search autocomplete blocks in case of config change.
     \Drupal::service('router.builder')->rebuild();
 
     parent::submitForm($form, $form_state);

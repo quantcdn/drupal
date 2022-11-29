@@ -105,7 +105,8 @@ class Search extends ControllerBase {
       '#theme' => 'search_page',
       '#attached' => [
         'library' => [
-          'quant_search/algolia',
+          'quant_search/algolia-page',
+          'quant_search/search-page',
         ],
         'drupalSettings' => [
           'quantSearch' => [
@@ -230,7 +231,7 @@ class Search extends ControllerBase {
     $record = [];
 
     if (!empty($title)) {
-      $record['title'] = $title;
+      $record['title'] = strip_tags(html_entity_decode($title));
     }
 
     if (!empty($summary)) {
