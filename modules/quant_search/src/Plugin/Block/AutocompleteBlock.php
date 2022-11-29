@@ -19,8 +19,7 @@ class AutocompleteBlock extends BlockBase {
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
-    return [
-    ] + parent::defaultConfiguration();
+    return [] + parent::defaultConfiguration();
   }
 
   /**
@@ -67,7 +66,6 @@ class AutocompleteBlock extends BlockBase {
       '#default_value' => $this->configuration['show_summary'] ?? FALSE,
       '#weight' => '0',
     ];
-
 
     return $form;
   }
