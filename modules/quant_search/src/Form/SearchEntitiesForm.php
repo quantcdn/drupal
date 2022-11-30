@@ -62,7 +62,6 @@ class SearchEntitiesForm extends ConfigFormBase {
       '#suffix' => '<hr/>',
     ];
 
-    // Node configuration.
     $form['quant_search_entity_node'] = [
       '#type' => 'checkbox',
       '#default_value' => $config->get('quant_search_entity_node'),
@@ -280,10 +279,10 @@ class SearchEntitiesForm extends ConfigFormBase {
 
     // Get all tokens.
     $tokens = [];
-    foreach ($nodeTypeIds as $node_type_id) {
-      $typeTokens = $form_state->getValue('search_tokens_node_' . $node_type_id);
-      // Only include if default or overriding the defaults.
-      if ($node_type_id === 'default' || $typeTokens['enabled']) {
+    foreach ($nodeTypeIds as $nodeTypeId) {
+      $typeTokens = $form_state->getValue('search_tokens_node_' . $nodeTypeId);
+      // Only check tokens if default or node type is overriding the defaults.
+      if ($nodeTypeId === 'default' || $typeTokens['enabled']) {
         $tokens[] = $typeTokens['quant_search_title_token'];
         $tokens[] = $typeTokens['quant_search_summary_token'];
         $tokens[] = $typeTokens['quant_search_image_token'];
