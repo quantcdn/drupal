@@ -263,7 +263,6 @@ class SearchEntitiesForm extends ConfigFormBase {
     // Get all tokens.
     $tokens = [];
     foreach ($node_type_ids as $node_type_id) {
-      \Drupal::logger('kptesting')->error("node_type_id: " . print_r($node_type_id, TRUE));
       $typeTokens = $form_state->getValue('search_tokens_node_' . $node_type_id);
       // Only include if overriding the defaults.
       if ($node_type_id != 'default' && $typeTokens['enabled']) {
@@ -298,7 +297,7 @@ class SearchEntitiesForm extends ConfigFormBase {
 
     // Set one error if there are any invalid tokens.
     if (!empty($invalid_tokens)) {
-      $form_state->setErrorByName('invalid-tokens', $this->t('You have one or more invalid tokens: ' . implode(', ', array_unique($invalid_tokens))));
+      $form_state->setErrorByName('invalid-tokens', $this->t('You have one or more invalid tokens: @invalid_tokens', array('@invalid_tokens' => implode(', ', array_unique($invalid_tokens)))));
     }
   }
 
