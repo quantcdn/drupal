@@ -29,6 +29,12 @@ function quant_search_theme($existing, $type, $theme, $path) {
         'facets' => NULL,
       ],
     ],
+    'autocomplete_block' => [
+      'variables' => [
+        'page' => NULL,
+      ],
+      'template' => 'autocomplete-block',
+    ],
   ];
 }
 
