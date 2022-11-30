@@ -4,7 +4,6 @@ package: Quant
 
 type: module
 core_version_requirement: ^9.3 || ^10
-core: 8.x
 
 dependencies:
   - drupal:quant
