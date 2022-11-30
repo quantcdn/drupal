@@ -248,6 +248,63 @@ class SearchEntitiesForm extends ConfigFormBase {
   /**
    * {@inheritdoc}
    */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    parent::validateForm($form, $form_state);
+
+    // Get all node type ids.
+    $node_type_ids = ['default'];
+    $node_types = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+    foreach ($node_types as $node_type) {
+      $node_type_ids[] = $node_type->id();
+    }
+
+    // Get all tokens.
+    $tokens = [];
+    foreach ($node_type_ids as $node_type_id) {
+      \Drupal::logger('kptesting')->error("node_type_id: " . print_r($node_type_id, TRUE));
+      $typeTokens = $form_state->getValue('search_tokens_node_' . $node_type_id);
+      // Only include if overriding the defaults.
+      if ($node_type_id != 'default' && $typeTokens['enabled']) {
+        $tokens[] = $typeTokens['quant_search_title_token'];
+        $tokens[] = $typeTokens['quant_search_summary_token'];
+        $tokens[] = $typeTokens['quant_search_image_token'];
+      }
+    }
+
+    // Token module will find some of the invalid ones.
+    $invalid_tokens = \Drupal::token()->getInvalidTokensByContext(implode(' ', $tokens), ['all']);
+
+    // Also need to check for missing colon because token module does not.
+    foreach ($tokens as $token) {
+      // Multiple tokens might be present with text before, between, or after.
+      preg_match_all('/
+        ([^\\s\\[\\]:]*)  # match before the token
+        \\[             # [ - pattern start
+        ([^\\s\\[\\]:]*)  # match $type not containing whitespace : [ or ]
+        :*              # : - separator
+        ([^\\[\\]]*)     # match $name not containing [ or ]
+        \\]             # ] - pattern end
+        ([^\\s\\[\\]:]*)  # match after the token
+        /x', $token, $matches);
+      foreach ([$matches[1], $matches[2]] as $value) {
+        if (empty($value)) {
+          \Drupal::logger('kptesting')->error("invalid token: " . print_r($token, TRUE));
+          $invalid_tokens[] = $token;
+        }
+      }
+    }
+
+    // Set one error if there are any invalid tokens.
+    if (!empty($invalid_tokens)) {
+      $form_state->setErrorByName('invalid-tokens', $this->t('You have one or more invalid tokens: ' . implode(', ', array_unique($invalid_tokens))));
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
     $nodeTokens = $form_state->getValue('search_tokens_node_default');
