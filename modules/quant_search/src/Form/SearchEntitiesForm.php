@@ -283,9 +283,9 @@ class SearchEntitiesForm extends ConfigFormBase {
       $typeTokens = $form_state->getValue('search_tokens_node_' . $nodeTypeId);
       // Only check tokens if default or node type is overriding the defaults.
       if ($nodeTypeId === 'default' || $typeTokens['enabled']) {
-        $tokens[] = $typeTokens['quant_search_title_token'];
-        $tokens[] = $typeTokens['quant_search_summary_token'];
-        $tokens[] = $typeTokens['quant_search_image_token'];
+        $tokens[] = trim($typeTokens['quant_search_title_token']);
+        $tokens[] = trim($typeTokens['quant_search_summary_token']);
+        $tokens[] = trim($typeTokens['quant_search_image_token']);
       }
     }
 
@@ -296,17 +296,23 @@ class SearchEntitiesForm extends ConfigFormBase {
     foreach ($tokens as $token) {
       // Multiple tokens might be present with text before, between or after.
       // Also need to check for missing colon because the token module does not.
+      // @todo There might be a cleaner way to do this.
       preg_match_all('/
-        \\[*              # Start token
+        \\[               # Start token
         ([^\\s\\[\\]:]*)  # Match 1
         (:*)              # Match 2
         ([^\\[\\]]*)      # Match 3
-        \\]*              # End token
+        \\]               # End token
         /x', $token, $matches);
       // If any value in the matches is empty, then it is invalid.
       $results = [$matches[1], $matches[2], $matches[3]];
       foreach ($results as $result) {
+        // If entire matches array is empty, it's invalid.
+        if (empty($result)) {
+          $invalidTokens[] = $token;
+        }
         foreach ($result as $value) {
+          // If any value in the matches array is empty, it's invalid.
           if (empty($value)) {
             $invalidTokens[] = $token;
           }
