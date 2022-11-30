@@ -74,7 +74,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
 
-    $entities = $query->execute();
+    $entities = $query->accessCheck(TRUE)->execute();
     $includeLatest = $event->includeLatest();
     $includeRevisions = $event->includeRevisions();
 

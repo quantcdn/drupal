@@ -4,7 +4,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    container: quantcdn/drupal-ci:9.2.x-dev
+    container: quantcdn/drupal-ci:9.3.x-dev
     steps:
       - uses: actions/checkout@v2
       - name: Lint
@@ -12,7 +12,7 @@ jobs:
 
   phpunit:
     runs-on: ubuntu-latest
-    container: quantcdn/drupal-ci:9.2.x-dev
+    container: quantcdn/drupal-ci:9.3.x-dev
 
     services:
       mariadb:
@@ -20,13 +20,13 @@ jobs:
         ports:
           - 3306
         env:
-          MYSQL_DATABASE: drupal8
+          MYSQL_DATABASE: drupal9
           MYSQL_ROOT_PASSWORD: drupal
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
       - name: Install Drupal
-        run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal8 -y
+        run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal9 -y
         working-directory: /var/www/drupal
 
       - name: Set up custom module

@@ -104,7 +104,7 @@ class RouteItem implements QuantQueueItemInterface {
       'content_type' => $content_type,
     ];
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $this->route, $meta));
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $this->route, $meta), QuantEvent::OUTPUT);
   }
 
   /**

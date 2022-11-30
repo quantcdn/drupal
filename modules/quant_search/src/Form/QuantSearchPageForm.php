@@ -485,7 +485,7 @@ class QuantSearchPageForm extends EntityForm {
     }
     // Only unpublish if page already exists, so was sent before.
     elseif ($status !== SAVED_NEW) {
-      \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $route, [], NULL));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $route, [], NULL), QuantEvent::UNPUBLISH);
     }
 
     $form_state->setRedirect('entity.quant_search_page.collection');

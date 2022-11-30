@@ -24,7 +24,7 @@ class QuantSearchRoutes {
     $collection = new RouteCollection();
 
     $storage = \Drupal::entityTypeManager()->getStorage('quant_search_page');
-    $ids = \Drupal::entityQuery('quant_search_page')->execute();
+    $ids = \Drupal::entityQuery('quant_search_page')->accessCheck(TRUE)->execute();
     $pages = $storage->loadMultiple($ids);
 
     foreach ($pages as $page) {

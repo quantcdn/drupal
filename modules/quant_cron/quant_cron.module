@@ -53,7 +53,7 @@ function quant_cron_cron() {
       }
     }
 
-    $entities = $query->execute();
+    $entities = $query->accessCheck(TRUE)->execute();
 
     foreach ($entities as $vid => $nid) {
       $entity = Node::load($nid);

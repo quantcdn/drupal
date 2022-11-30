@@ -2,7 +2,7 @@ name: 'Quant Tome'
 type: module
 description: 'Deploy Tome static output to Quant.'
 core: 8.x
-core_version_requirement: ^8 || ^9
+core_version_requirement: ^9.3 || ^10
 package: Quant
 dependencies:
 - tome:tome_static
