@@ -9,7 +9,7 @@ use Drupal\Core\Form\FormStateInterface;
  * Provides a 'AutocompleteBlock' block.
  *
  * @Block(
- *  id = "autocomplete_block",
+ *  id = "quant_autocomplete_block",
  *  admin_label = @Translation("Quant Search Autocomplete"),
  * )
  */
