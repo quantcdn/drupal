@@ -2,7 +2,6 @@
 
 namespace Drupal\quant_api\Client;
 
-
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
