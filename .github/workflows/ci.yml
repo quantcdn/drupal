@@ -29,6 +29,11 @@ jobs:
         run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal8 -y
         working-directory: /var/www/drupal
 
+     - name: Install module dependencies
+       run: |
+        composer --no-interaction --no-progress require \
+          drupal/token
+
       - name: Set up custom module
         run: mkdir -p /var/www/drupal/web/modules/custom/quant
 
