@@ -4,7 +4,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    container: quantcdn/drupal-10-ci:9.5.x-dev
+    container: quantcdn/drupal-ci:9.3.x-dev
     steps:
       - uses: actions/checkout@v2
       - name: Lint
