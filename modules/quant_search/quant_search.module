@@ -29,6 +29,12 @@ function quant_search_theme($existing, $type, $theme, $path) {
         'facets' => NULL,
       ],
     ],
+    'autocomplete_block' => [
+      'variables' => [
+        'page' => NULL,
+      ],
+      'template' => 'autocomplete-block',
+    ],
   ];
 }
 
@@ -93,5 +99,5 @@ function quant_search_run_index($nids, $languages, array &$context) {
  */
 function quant_search_quant_search_page_delete(EntityInterface $entity) {
   $route = $entity->get('route');
-  \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $route, [], NULL));
+  \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $route, [], NULL), QuantEvent::UNPUBLISH);
 }

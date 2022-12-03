@@ -420,6 +420,39 @@ class QuantSearchPageForm extends EntityForm {
   /**
    * {@inheritdoc}
    */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    parent::validateForm($form, $form_state);
+
+    // Completely empty facets are allowed since they will be removed during the
+    // form save, so we only need to validate when facet data is set.
+    $facets = $form_state->getValue(['facets']);
+    foreach ($facets as $facet) {
+      // Check if facet display is set but not type.
+      if ($facet['facet_display'] && empty($facet['facet_type_config']['facet_type'])) {
+        $form_state->setErrorByName('missing-type', $this->t('Missing facet type.'));
+      }
+
+      // Check facet type configuration.
+      if ($facet['facet_type_config']['facet_type']) {
+        // Check for missing display.
+        if (empty($facet['facet_display'])) {
+          $form_state->setErrorByName('missing-display', $this->t('Missing facet display.'));
+        }
+        // Check for taxonomy facets without corresponding vocabulary.
+        if ($facet['facet_type_config']['facet_type'] == "taxonomy" && empty($facet['facet_type_config']['taxonomy_vocabulary'])) {
+          $form_state->setErrorByName('missing-vocabulary', $this->t('Missing taxonomy facet vocabulary.'));
+        }
+        // Check for custom facets without corresponding key.
+        if ($facet['facet_type_config']['facet_type'] == "custom" && empty($facet['facet_type_config']['custom_key'])) {
+          $form_state->setErrorByName('missing-custom-key', $this->t('Missing custom facet key.'));
+        }
+      }
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function save(array $form, FormStateInterface $form_state) {
 
     unset($form['facets']['actions']);
@@ -485,7 +518,7 @@ class QuantSearchPageForm extends EntityForm {
     }
     // Only unpublish if page already exists, so was sent before.
     elseif ($status !== SAVED_NEW) {
-      \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $route, [], NULL));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $route, [], NULL), QuantEvent::UNPUBLISH);
     }
 
     $form_state->setRedirect('entity.quant_search_page.collection');

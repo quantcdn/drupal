@@ -2,15 +2,16 @@
 
 namespace Drupal\quant_api\Client;
 
+
 use Drupal\Core\Config\ConfigFactoryInterface;
-use GuzzleHttp\Client;
-use GuzzleHttp\RequestOptions;
-use GuzzleHttp\Exception\RequestException;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
-use GuzzleHttp\Psr7;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\MultipartStream;
+use GuzzleHttp\Psr7\Utils;
+use GuzzleHttp\RequestOptions;
 
 /**
  * Quant API client.
@@ -235,7 +236,7 @@ class QuantClient implements QuantClientInterface {
 
     // Prepare a stream.
     $resource = fopen($file, 'r');
-    $stream = Psr7\stream_for($resource);
+    $stream = Utils::streamFor($resource);
 
     $headers = [
       'Quant-File-Url' => $url,

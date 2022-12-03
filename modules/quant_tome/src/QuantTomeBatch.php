@@ -128,7 +128,7 @@ class QuantTomeBatch {
       $file_hashes[$file] = md5(file_get_contents($file));
     }
 
-    $context['results']['files'] = isset($context['results']['files']) ? $context['results']['files'] : [];
+    $context['results']['files'] = $context['results']['files'] ?? [];
     $context['results']['files'] = array_merge($context['results']['files'], $file_hashes);
   }
 

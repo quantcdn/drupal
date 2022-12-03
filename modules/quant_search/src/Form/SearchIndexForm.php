@@ -125,6 +125,7 @@ class SearchIndexForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
     $query = \Drupal::entityQuery('node')
+      ->accessCheck(TRUE)
       ->condition('status', 1);
 
     $bundles = $form_state->getValue('quant_search_index_entity_node_bundles');

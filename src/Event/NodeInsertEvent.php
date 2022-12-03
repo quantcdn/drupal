@@ -2,7 +2,7 @@
 
 namespace Drupal\quant\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use Drupal\Component\EventDispatcher\Event;
 use Drupal\Core\Entity\EntityInterface;
 
 /**
