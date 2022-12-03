@@ -74,7 +74,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
 
-    $entities = $query->execute();
+    $entities = $query->accessCheck(TRUE)->execute();
     $includeLatest = $event->includeLatest();
     $includeRevisions = $event->includeRevisions();
 
@@ -272,10 +272,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
         $paths = [];
 
-        $displays = array_keys($view->storage->get('display'));
-        foreach ($displays as $display) {
-          $view->setDisplay($display);
-          if ($view->access($display, $anon) && $path = $view->getPath()) {
+        $display_ids = array_keys($view->storage->get('display'));
+        foreach ($display_ids as $display_id) {
+          $view->setDisplay($display_id);
+          if ($display_id != 'default' && $view->display_handler->isEnabled() && $view->access($display_id, $anon) && $path = $view->getPath()) {
+
             // Exclude contextual filters for now.
             if (strpos($path, '%') !== FALSE) {
               continue;
