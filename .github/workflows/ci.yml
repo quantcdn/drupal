@@ -4,7 +4,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    container: quantcdn/drupal-ci:9.3.x-dev
+    container: quantcdn/drupal-ci:9.2.x-dev
     steps:
       - uses: actions/checkout@v2
       - name: Lint
@@ -12,7 +12,7 @@ jobs:
 
   phpunit:
     runs-on: ubuntu-latest
-    container: quantcdn/drupal-ci:9.3.x-dev
+    container: quantcdn/drupal-ci:9.2.x-dev
 
     services:
       mariadb:
