@@ -98,17 +98,17 @@ function quant_cron_cron() {
 
   // Add theme file routes.
   if ($form_state->getValue('theme_assets')) {
-    $routes = array_merge($routes, get_theme_routes());
+    $routes = array_merge($routes, quant_cron_get_theme_routes());
   }
 
   // Add views routes.
   if ($form_state->getValue('views_pages')) {
-    $routes = array_merge($routes, get_views_routes());
+    $routes = array_merge($routes, quant_cron_get_views_routes());
   }
 
   // Add taxonomy term routes.
   if ($form_state->getValue('entity_taxonomy_term')) {
-    $routes = array_merge($routes, get_taxonomy_routes());
+    $routes = array_merge($routes, quant_cron_get_taxonomy_routes());
   }
 
   // Send any added routes.
@@ -123,7 +123,7 @@ function quant_cron_cron() {
 /**
  * Helper: Get taxonomy routes.
  */
-function get_taxonomy_routes() {
+function quant_cron_get_taxonomy_routes() {
 
   $paths = [];
   $taxonomy_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
@@ -152,7 +152,7 @@ function get_taxonomy_routes() {
 /**
  * Helper: Get theme assets.
  */
-function get_theme_routes() {
+function quant_cron_get_theme_routes() {
 
   $paths = [];
 
@@ -203,7 +203,7 @@ function get_theme_routes() {
 /**
  * Helper: Get views routes.
  */
-function get_views_routes() {
+function quant_cron_get_views_routes() {
 
   $views_storage = \Drupal::entityTypeManager()->getStorage('view');
   $anon = User::getAnonymousUser();
