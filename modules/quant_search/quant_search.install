@@ -31,3 +31,14 @@ function quant_search_update_8101() {
   }
 
 }
+
+/**
+ * Install the token module.
+ */
+function quant_search_update_8102() {
+  if (!\Drupal::service('module_handler')->moduleExists('token')) {
+    \Drupal::service('module_installer')->install(['token']);
+    return t('The token module has been installed.');
+  }
+  return t('The token module is already installed.');
+}

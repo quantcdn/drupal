@@ -55,6 +55,13 @@ class SearchEntitiesForm extends ConfigFormBase {
     // The `_custom_access` in routing ensures search is enabled for this page.
     $config = $this->config(self::SETTINGS);
 
+    // Node configuration.
+    $form['quant_search_entity_node_markup'] = [
+      '#type' => 'markup',
+      '#markup' => '<h2>Node configuration</h2>',
+      '#suffix' => '<hr/>',
+    ];
+
     $form['quant_search_entity_node'] = [
       '#type' => 'checkbox',
       '#default_value' => $config->get('quant_search_entity_node'),
@@ -66,6 +73,7 @@ class SearchEntitiesForm extends ConfigFormBase {
       '#type' => 'details',
       '#tree' => FALSE,
       '#title' => $this->t('Node configuration'),
+      '#open' => TRUE,
       '#states' => [
         'visible' => [
           ':input[name="quant_search_entity_node"]' => ['checked' => TRUE],
@@ -88,7 +96,7 @@ class SearchEntitiesForm extends ConfigFormBase {
 
       $form['node_details']['quant_search_entity_node_languages'] = [
         '#type' => 'checkboxes',
-        '#title' => $this->t('Languages'),
+        '#title' => $this->t('Node languages'),
         '#description' => $this->t('Optionally, restrict to these languages. If none are selected, all languages will be included.'),
         '#options' => $language_codes,
         '#default_value' => $config->get('quant_search_entity_node_languages') ?: [],
@@ -112,21 +120,15 @@ class SearchEntitiesForm extends ConfigFormBase {
 
     $form['node_details']['quant_search_entity_node_bundles'] = [
       '#type' => 'checkboxes',
-      '#title' => $this->t('Enabled bundles'),
+      '#title' => $this->t('Node bundles'),
       '#description' => $this->t('Optionally, restrict to these content types. If none are selected, all content types will be included.'),
       '#options' => $content_types,
       '#default_value' => $config->get('quant_search_entity_node_bundles') ?: [],
     ];
 
-    $form['quant_search_entity_taxonomy_term'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Taxonomy terms'),
-      '#description' => $this->t('Keep search records for taxonomy terms updated.'),
-      '#default_value' => $config->get('quant_search_entity_taxonomy_term'),
-    ];
-
     $form['search_tokens_node'] = [
       '#type' => 'vertical_tabs',
+      '#title' => $this->t('Node search record tokens'),
       '#states' => [
         'visible' => [
           ':input[name="quant_search_entity_node"]' => ['checked' => TRUE],
@@ -242,7 +244,98 @@ class SearchEntitiesForm extends ConfigFormBase {
       ];
     }
 
+    // Taxonomy configuration.
+    $form['quant_search_entity_taxonomy_markup'] = [
+      '#type' => 'markup',
+      '#markup' => '<h2>Taxonomy configuration</h2>',
+      '#suffix' => '<hr/>',
+    ];
+
+    // Taxonomy configuration.
+    $form['quant_search_entity_taxonomy_term'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Taxonomy terms'),
+      '#description' => $this->t('Keep search records for taxonomy terms updated.'),
+      '#default_value' => $config->get('quant_search_entity_taxonomy_term'),
+    ];
+
     return parent::buildForm($form, $form_state);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    parent::validateForm($form, $form_state);
+
+    // Get all node type ids. Add 'default' to handle default values.
+    $nodeTypeIds = ['default'];
+    $nodeTypes = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+    foreach ($nodeTypes as $nodeType) {
+      $nodeTypeIds[] = $nodeType->id();
+    }
+
+    // Get all tokens.
+    $tokens = [];
+    foreach ($nodeTypeIds as $nodeTypeId) {
+      $typeTokens = $form_state->getValue('search_tokens_node_' . $nodeTypeId);
+      // Only check tokens if default or node type is overriding the defaults.
+      if ($nodeTypeId === 'default' || $typeTokens['enabled']) {
+        $tokens[] = trim($typeTokens['quant_search_title_token']);
+        $tokens[] = trim($typeTokens['quant_search_summary_token']);
+        $tokens[] = trim($typeTokens['quant_search_image_token']);
+      }
+    }
+
+    // Token module will find some of the invalid tokens.
+    $invalidTokens = \Drupal::token()->getInvalidTokensByContext(implode(' ', $tokens), ['all']);
+
+    // Check for other misconfigured tokens.
+    foreach ($tokens as $token) {
+      // Multiple tokens might be present with text before, between or after.
+      // Also need to check for missing colon because the token module does not.
+      // @todo There might be a cleaner way to do this.
+      preg_match_all('/
+        \\[               # Start token
+        ([^\\s\\[\\]:]*)  # Match 1
+        (:*)              # Match 2
+        ([^\\[\\]]*)      # Match 3
+        \\]               # End token
+        /x', $token, $matches);
+      // If any value in the matches is empty, then it is invalid.
+      $results = [$matches[1], $matches[2], $matches[3]];
+      foreach ($results as $result) {
+        // If entire matches array is empty, it's invalid.
+        if (empty($result)) {
+          $invalidTokens[] = $token;
+        }
+        foreach ($result as $value) {
+          // If any value in the matches array is empty, it's invalid.
+          if (empty($value)) {
+            $invalidTokens[] = $token;
+          }
+        }
+      }
+    }
+
+    // Set errors if there are empty or invalid tokens.
+    if (!empty($invalidTokens)) {
+      $hasEmptyToken = FALSE;
+      foreach ($invalidTokens as $i => $invalidToken) {
+        if (empty($invalidToken)) {
+          $hasEmptyToken = TRUE;
+          unset($invalidTokens[$i]);
+        }
+      }
+      if ($hasEmptyToken) {
+        $form_state->setErrorByName('empty-tokens', $this->t('You have one or more empty tokens.'));
+      }
+      if (!empty($invalidTokens)) {
+        $form_state->setErrorByName('invalid-tokens', $this->t('You have one or more invalid tokens: @invalid_tokens', ['@invalid_tokens' => implode(', ', array_unique($invalidTokens))]));
+      }
+    }
   }
 
   /**
