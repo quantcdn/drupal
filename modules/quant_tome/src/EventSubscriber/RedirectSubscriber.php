@@ -6,7 +6,7 @@ use Drupal\Core\File\FileSystemInterface;
 use Drupal\tome_static\StaticGeneratorInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
+use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
@@ -44,10 +44,10 @@ class RedirectSubscriber implements EventSubscriberInterface {
   /**
    * Reacts to a response event.
    *
-   * @param \Symfony\Component\HttpKernel\Event\FilterResponseEvent $event
+   * @param \Symfony\Component\HttpKernel\Event\ResponseEvent $event
    *   The event.
    */
-  public function onResponse(FilterResponseEvent $event) {
+  public function onResponse(ResponseEvent $event) {
     $response = $event->getResponse();
     $request = $event->getRequest();
     if ($request->attributes->has(StaticGeneratorInterface::REQUEST_KEY) && $response instanceof RedirectResponse) {
