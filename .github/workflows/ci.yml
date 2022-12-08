@@ -31,6 +31,7 @@ jobs:
 
       - name: Install module dependencies
         run: composer --no-interaction --no-progress require drupal/token
+        working-directory: /var/www/drupal
 
       - name: Set up custom module
         run: mkdir -p /var/www/drupal/web/modules/custom/quant
