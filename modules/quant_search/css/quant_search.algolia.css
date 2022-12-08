@@ -152,7 +152,7 @@
   font-size: inherit;
 }
 
-.quant-search button,
-.quant-search button:hover {
+.quant-search button {
+  background-color: transparent;
   border: none;
 }
