@@ -53,6 +53,9 @@ class FileItem implements QuantQueueItemInterface {
       ]);
     }
 
+    // Ensure DRUPAL_ROOT prefix has not already been added.
+    $this->file = preg_replace('#^' . DRUPAL_ROOT . '#', '', $this->file);
+
     if (file_exists(DRUPAL_ROOT . $this->file)) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantFileEvent(DRUPAL_ROOT . $this->file, $this->file), QuantFileEvent::OUTPUT);
     }
