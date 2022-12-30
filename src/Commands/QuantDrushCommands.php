@@ -70,13 +70,28 @@ class QuantDrushCommands extends DrushCommands {
    * @option threads
    *   Number of threads to use (default 5)
    * @usage quant:run-queue --threads=5
+   * @option bail
+   *  Bail out of a seed run if another run is in progress. (default is false)
+   * @usage quant:run-queue --bail
    */
-  public function message($options = ['threads' => 5]) {
+  public function message($options = ['threads' => 5, 'bail' => false]) {
 
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
+    $lockFilePath = sys_get_temp_dir() . '/quant_seed_worker.lock';
     $cmd = $drushPath . ' queue:run quant_seed_worker';
     $this->output()->writeln("<comment>Using drush binary at $drushPath. Override with \$DRUSH_PATH if required.</comment>");
+
+    // Bail out if another run is in progress.
+    if ($options['bail']) {
+      if (file_exists($lockFilePath)) {
+        $this->output()->writeln("<info>Seeding bailed. Another seed run is in progress.</info>");
+        return;
+      } else {
+        // Create the new lock file.
+        file_put_contents($lockFilePath, null);
+      }
+    }
 
     for ($i = 0; $i < $options['threads']; $i++) {
       $this->runningProcs[] = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
@@ -89,6 +104,11 @@ class QuantDrushCommands extends DrushCommands {
       while ($procStatus['running']) {
         $procStatus = proc_get_status($proc);
       }
+    }
+
+    // Remove lock file.
+    if ($options['bail']) {
+      unlink($lockFilePath);
     }
 
     $this->output()->writeln("<info>Seeding complete.</info>");
