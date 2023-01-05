@@ -70,11 +70,11 @@ class QuantDrushCommands extends DrushCommands {
    * @option threads
    *   Number of threads to use (default 5)
    * @usage quant:run-queue --threads=5
-   * @option bail
-   *  Bail out of a seed run if another run is in progress. (default is false)
-   * @usage quant:run-queue --bail
+   * @option unlock
+   * Allow a queue run even if another run is in progress. (default is false)
+   * @usage quant:run-queue --unlock
    */
-  public function message($options = ['threads' => 5, 'bail' => false]) {
+  public function message($options = ['threads' => 5, 'unlock' => false]) {
 
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
@@ -82,13 +82,13 @@ class QuantDrushCommands extends DrushCommands {
     $cmd = $drushPath . ' queue:run quant_seed_worker';
     $this->output()->writeln("<comment>Using drush binary at $drushPath. Override with \$DRUSH_PATH if required.</comment>");
 
-    // Bail out if another run is in progress.
-    if ($options['bail']) {
+    // Bail if another run is in progress.
+    if (!$options['unlock']) {
       if (file_exists($lockFilePath)) {
         $this->output()->writeln("<info>Seeding bailed. Another seed run is in progress.</info>");
         return;
       } else {
-        // Create the new lock file.
+        // No lock currently present. Create new lock file.
         file_put_contents($lockFilePath, null);
       }
     }
@@ -107,7 +107,7 @@ class QuantDrushCommands extends DrushCommands {
     }
 
     // Remove lock file.
-    if ($options['bail']) {
+    if ($options['unlock']) {
       unlink($lockFilePath);
     }
 
