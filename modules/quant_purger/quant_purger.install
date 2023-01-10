@@ -34,3 +34,18 @@ function quant_purger_schema() {
   ];
   return $schema;
 }
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_purger_uninstall() {
+  // Disable the plugin to prevent it from getting in a way of uninstall.
+  $plugins = \Drupal::service('purge.queuers')->getPluginsEnabled();
+  // Exclude Quant plugin from the list of all enabled plugins.
+  if (($key = array_search('quant', $plugins)) !== false) {
+    unset($plugins[$key]);
+  }
+
+  // Set enabled plugins, now excluding quant.
+  \Drupal::service('purge.queuers')->setPluginsEnabled($plugins);
+}
