@@ -36,6 +36,18 @@ function quant_purger_schema() {
 }
 
 /**
+ * Implements hook_install().
+ */
+function quant_purger_install() {
+  // Disable the plugin to prevent it from getting in a way of uninstall.
+  $plugins = \Drupal::service('purge.queuers')->getPluginsEnabled();
+  array_push($plugins, 'quant');
+
+  // Set enabled plugins, including quant.
+  \Drupal::service('purge.queuers')->setPluginsEnabled($plugins);
+}
+
+/**
  * Implements hook_uninstall().
  */
 function quant_purger_uninstall() {
@@ -48,4 +60,6 @@ function quant_purger_uninstall() {
 
   // Set enabled plugins, now excluding quant.
   \Drupal::service('purge.queuers')->setPluginsEnabled($plugins);
+  // Reset services to apply change.
+  \Drupal::service('kernel')->rebuildContainer();
 }
