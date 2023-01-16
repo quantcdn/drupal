@@ -29,7 +29,11 @@ function quant_cron_menu() {
  * Implements hook_cron().
  */
 function quant_cron_cron() {
-  _quant_cron_seed_prepare();
+  // This process only runs when triggered via CLI.
+  // Batch processing via poor mans cron is not supported.
+  if (drupal_is_cli() && function_exists('drush_backend_batch_process')) {
+    _quant_cron_seed_prepare();
+  }
 }
 
 /**
