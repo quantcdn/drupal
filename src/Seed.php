@@ -2,11 +2,16 @@
 
 namespace Drupal\quant;
 
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Language\Language;
+use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Url;
+use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
+use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Url;
 use GuzzleHttp\Exception\ConnectException;
+
 
 /**
  * Seed Manager.
@@ -89,6 +94,60 @@ class Seed {
     $destination = $redirect->getRedirectUrl()->toString();
     $statusCode = $redirect->getStatusCode();
 
+    // If path prefix language negotiation is used, handle language prefixes.
+    $languageConfig = \Drupal::config('language.negotiation')->get('url');
+    if ($languageConfig && $languageConfig['source'] === LanguageNegotiationUrl::CONFIG_PATH_PREFIX) {
+
+      $langcode = $redirect->language()->getId();
+      $defaultLangcode = \Drupal::service('language.default')->get()->getId();
+
+      // Check if a node for this path exists.
+      $node = NULL;
+      $noLangcodeAlias = preg_replace('/^\/(' . $defaultLangcode . ')\//', '/', $destination);
+      $path = \Drupal::service('path_alias.manager')->getPathByAlias($noLangcodeAlias);
+      if (preg_match('/node\/(\d+)/', $path, $matches)) {
+        $node = Node::load($matches[1]);
+      }
+
+      // If the redirect is for all languages, create a redirect for each language.
+      $langcodes = [$langcode];
+      if ($langcode === LanguageInterface::LANGCODE_NOT_SPECIFIED) {
+        $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
+      }
+
+      $originalSource = $source;
+      $originalDestination = $destination;
+      foreach ($langcodes as $langcode) {
+        $pathPrefix = '/' . $langcode;
+        $source = $pathPrefix . $originalSource;
+
+        // For nodes, get alias associated with the langcode.
+        if ($node) {
+          $path = '/node/' . $node->id();
+          $alias = \Drupal::service('path_alias.manager')->getAliasByPath($path, $langcode);
+          if ($alias == $path) {
+            // No alias exists.
+            $destination = $originalDestination;
+          }
+          else {
+            // Redirect to the correct alias.
+            $destination = '/' . $langcode . $alias;
+          }
+        }
+        // @todo Test this use case.
+        else {
+          $destination = preg_replace('/^\/(' . $defaultLangcode . ')\//', $pathPrefix . '/', $originalDestination);
+        }
+
+        Seed::handleRedirectEvent($source, $destination, $statusCode);
+      }
+    }
+    else {
+      Seed::handleRedirectEvent($source, $destination, $statusCode);
+    }
+  }
+
+  protected static function handleRedirectEvent($source, $destination, $statusCode) {
     if (!(bool) $statusCode && !$redirect->isNew()) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
       return;
