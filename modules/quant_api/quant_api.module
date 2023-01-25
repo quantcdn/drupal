@@ -383,12 +383,14 @@ function _rebuild_file_url($url) {
     return $url;
   }
 
-  // First decode the path so we can ensure consistent encoding.
-  $path = urldecode($parsed_url['path']);
-  $dirname = pathinfo($path, PATHINFO_DIRNAME);
-  $filename = pathinfo($path, PATHINFO_BASENAME);
+  $parts = explode('/', rtrim($parsed_url['path'], '/'));
+  $cleansed = [];
+  foreach ($parts as $part) {
+    $path = urldecode($part);
+    $cleansed[] = rawurlencode($part);
+  }
 
-  $rebuilt_url = $dirname . '/' . rawurlencode($filename);
+  $rebuilt_url = '/' . implode('/', $cleansed);
 
   if (!empty($parsed_url['query'])) {
     $rebuilt_url .= "?" . $parsed_url['query'];

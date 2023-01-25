@@ -385,9 +385,11 @@ function _quant_post_entity_op($entity_info) {
 function quant_seed($url, array $context = array()) {
   global $base_url;
   $base = quant_get_base_url();
-
   $path = parse_url($url, PHP_URL_PATH);
   $path = ltrim($path, '/');
+
+  // Ensure URL is processed to account for special character encoding.
+  $url = _rebuild_url($url);
 
   if (path_is_admin($path)) {
     quant_log('Skip: !path is an admin path', array('!path' => $path));
@@ -488,7 +490,6 @@ function quant_seed($url, array $context = array()) {
     return;
   }
 
-
   if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
@@ -504,8 +505,15 @@ function quant_seed($url, array $context = array()) {
     return FALSE;
   }
 
-  $markup = $response->data;
+  if ($response->code != 200) {
+    quant_log('Non-200 response code for %url %status_code', array(
+      '%url' => $url,
+      '%status_code' => $response->code,
+    ), WATCHDOG_WARNING);
+    return FALSE;
+  }
 
+  $markup = $response->data;
   $queue = quant_get_queue();
 
   $document = new \DOMDocument();
@@ -1336,4 +1344,45 @@ function quant_get_base_url() {
   global $base_url;
   $base = variable_get('quant_base_url', $base_url);
   return $base;
+}
+
+/**
+ * Helper function to rebuild a URL with encoded path.
+ *
+ * @param string $url
+ *   The URL to rebuild.
+ *
+ * @return string
+ *   The rebuild URL for drupal_http_request.
+ */
+function _rebuild_url($url) {
+
+  // Parse the URL to capture query parameters (if any).
+  $parsed_url = parse_url($url);
+
+  // Return the raw string if we cannot parse the URL.
+  if (empty($parsed_url['path']) || $parsed_url['path'] == '/') {
+    return $url;
+  }
+
+  // First decode the path so we can ensure consistent encoding.
+  $parts = explode('/', rtrim($parsed_url['path'], '/'));
+  $cleansed = [];
+  foreach ($parts as $part) {
+    $path = urldecode($part);
+    $cleansed[] = rawurlencode($part);
+  }
+
+  $rebuilt_url = (isset($parsed_url['scheme']) ? "{$parsed_url['scheme']}:" : '') .
+    ((isset($parsed_url['user']) || isset($parsed_url['host'])) ? '//' : '') .
+    (isset($parsed_url['user']) ? "{$parsed_url['user']}" : '') .
+    (isset($parsed_url['pass']) ? ":{$parsed_url['pass']}" : '') .
+    (isset($parsed_url['user']) ? '@' : '') .
+    (isset($parsed_url['host']) ? "{$parsed_url['host']}" : '') .
+    (isset($parsed_url['port']) ? ":{$parsed_url['port']}" : '') .
+    implode('/', $cleansed).
+    (isset($parsed_url['query']) ? "?{$parsed_url['query']}" : '');
+
+  return $rebuilt_url;
+
 }
