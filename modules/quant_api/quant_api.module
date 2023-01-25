@@ -199,6 +199,9 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
 function quant_api_quant_seed_file($url, $context) {
   global $base_url;
 
+  // Rebuild the file URL used for the local HEAD request.
+  $url = _rebuild_file_url($url);
+
   $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
 
   if (empty($api)) {
@@ -359,4 +362,38 @@ function quant_api_unpublish_route($url) {
   }
 
   return TRUE;
+}
+
+/**
+ * Rebuild a raw file URL for a local HEAD request.
+ *
+ * @param string $url
+ *   The URL to rebuild.
+ *
+ * @return string
+ *   The rebuild URL for drupal_http_request.
+ */
+function _rebuild_file_url($url) {
+
+  // Parse the URL to capture query parameters (if any).
+  $parsed_url = parse_url($url);
+
+  // Return the raw string if we cannot parse the URL.
+  if (empty($parsed_url['path'])) {
+    return $url;
+  }
+
+  // First decode the path so we can ensure consistent encoding.
+  $path = urldecode($parsed_url['path']);
+  $dirname = pathinfo($path, PATHINFO_DIRNAME);
+  $filename = pathinfo($path, PATHINFO_BASENAME);
+
+  $rebuilt_url = $dirname . '/' . rawurlencode($filename);
+
+  if (!empty($parsed_url['query'])) {
+    $rebuilt_url .= "?" . $parsed_url['query'];
+  }
+
+  return $rebuilt_url;
+
 }
