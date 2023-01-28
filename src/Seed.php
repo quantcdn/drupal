@@ -12,7 +12,6 @@ use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use GuzzleHttp\Exception\ConnectException;
 
-
 /**
  * Seed Manager.
  *
@@ -94,52 +93,53 @@ class Seed {
     $destination = $redirect->getRedirectUrl()->toString();
     $statusCode = $redirect->getStatusCode();
 
-    // If path prefix language negotiation is used, handle language prefixes.
-    $languageConfig = \Drupal::config('language.negotiation')->get('url');
-    if ($languageConfig && $languageConfig['source'] === LanguageNegotiationUrl::CONFIG_PATH_PREFIX) {
+    // Special handling when using URL path prefixes, e.g. foo.com/en/my-page.
+    if (Seed::usesLanguagePathPrefixes()) {
+      // Get language and prefix configuration.
+      $redirectLangcode = $redirect->language()->getId();
+      $siteDefaultLangcode = \Drupal::service('language.default')->get()->getId();
+      $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
 
-      $langcode = $redirect->language()->getId();
-      $defaultLangcode = \Drupal::service('language.default')->get()->getId();
+      // Multilingual redirects can be configured for a specific language or
+      // for all languages. If the redirect is configured for all languages,
+      // create a redirect for each language.
+      $langcodes = [$redirectLangcode];
+      if ($redirectLangcode === LanguageInterface::LANGCODE_NOT_SPECIFIED) {
+        $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
+      }
 
       // Check if a node for this path exists.
       $node = NULL;
-      $noLangcodeAlias = preg_replace('/^\/(' . $defaultLangcode . ')\//', '/', $destination);
-      $path = \Drupal::service('path_alias.manager')->getPathByAlias($noLangcodeAlias);
+      $aliasWithoutLangcode = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', '/', $destination);
+      $path = \Drupal::service('path_alias.manager')->getPathByAlias($aliasWithoutLangcode);
       if (preg_match('/node\/(\d+)/', $path, $matches)) {
         $node = Node::load($matches[1]);
       }
 
-      // If the redirect is for all languages, create a redirect for each language.
-      $langcodes = [$langcode];
-      if ($langcode === LanguageInterface::LANGCODE_NOT_SPECIFIED) {
-        $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
-      }
-
-      $originalSource = $source;
-      $originalDestination = $destination;
       foreach ($langcodes as $langcode) {
-        $pathPrefix = '/' . $langcode;
-        $source = $pathPrefix . $originalSource;
+        // Path prefixes might not be the same as the langcode.
+        $pathPrefix = $pathPrefixes[$langcode] ? '/' . $pathPrefixes[$langcode] : '';
+        $updatedSource = $pathPrefix . $source;
 
-        // For nodes, get alias associated with the langcode.
+        // For nodes, get alias associated with the langcode, if any.
         if ($node) {
           $path = '/node/' . $node->id();
           $alias = \Drupal::service('path_alias.manager')->getAliasByPath($path, $langcode);
           if ($alias == $path) {
             // No alias exists.
-            $destination = $originalDestination;
+            $updatedDestination = $destination;
           }
           else {
-            // Redirect to the correct alias.
-            $destination = '/' . $langcode . $alias;
+            // Add the prefix to the correct alias.
+            $updatedDestination = $pathPrefix . $alias;
           }
         }
-        // @todo Test this use case.
+        // @todo Test use case where page is not a node.
         else {
-          $destination = preg_replace('/^\/(' . $defaultLangcode . ')\//', $pathPrefix . '/', $originalDestination);
+          $updatedDestination = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', $pathPrefix . '/', $destination);
         }
 
-        Seed::handleRedirectEvent($source, $destination, $statusCode);
+        Seed::handleRedirectEvent($updatedSource, $updatedDestination, $statusCode);
       }
     }
     else {
@@ -147,7 +147,24 @@ class Seed {
     }
   }
 
+  /**
+   * Determine if URL path prefix language negotiation is being used.
+   */
+  protected static function usesLanguagePathPrefixes() {
+    $usesPrefixes = FALSE;
+    $languageInterfaceEnabled = \Drupal::config('language.types')->get('negotiation.language_interface.enabled') ?: [];
+    if (isset($languageInterfaceEnabled['language-url'])) {
+      $languageUrl = \Drupal::config('language.negotiation')->get('url');
+      $usesPrefixes = $languageUrl && $languageUrl['source'] === LanguageNegotiationUrl::CONFIG_PATH_PREFIX;
+    }
+    return $usesPrefixes;
+  }
+
+  /**
+   *
+   */
   protected static function handleRedirectEvent($source, $destination, $statusCode) {
+    // Unpublish redirects when content is deleted?
     if (!(bool) $statusCode && !$redirect->isNew()) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
       return;
