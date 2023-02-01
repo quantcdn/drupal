@@ -228,7 +228,7 @@ class QuantSearchPageForm extends EntityForm {
     ];
 
     // Max number of facet values to display.
-    $form['display']['facets']['max_values'] = [
+    $form['display']['facets']['max_values_number'] = [
       '#type' => 'number',
       '#title' => $this->t('Maximum number of facet values to return for each'),
       '#default_value' => $existingDisplayConfig['facets']['max_values_number'] ?? 100,
