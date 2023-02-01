@@ -119,7 +119,7 @@
                         snippetEllipsisText: '…',
                         filters: drupalSettings.quantSearch.filters,
                         hitsPerPage: drupalSettings.quantSearch.display.pagination.per_page,
-                        maxValuesPerFacet: drupalSettings.quantSearch.facets.max_values_number
+                        maxValuesPerFacet: drupalSettings.quantSearch.display.facets.max_values_number
                     }),
                     instantsearch.widgets.hits({
                         container: '#hits',
