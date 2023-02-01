@@ -231,7 +231,7 @@ class QuantSearchPageForm extends EntityForm {
     $form['display']['facets']['max_values'] = [
       '#type' => 'number',
       '#title' => $this->t('Maximum number of facet values to return for each'),
-      '#default_value' => $existingDisplayConfig['facets']['max_values'] ?? 100,
+      '#default_value' => $existingDisplayConfig['facets']['max_values_number'] ?? 100,
     ];
 
     // Create tabledrag facets table.
