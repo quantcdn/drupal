@@ -213,27 +213,6 @@ class QuantSearchPageForm extends EntityForm {
       '#default_value' => $existingDisplayConfig['pagination']['pagination_enabled'] ?? TRUE,
     ];
 
-    // Number of results per page.
-    $form['display']['pagination']['per_page'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Results per page'),
-      '#default_value' => $existingDisplayConfig['pagination']['per_page'] ?? 20,
-    ];
-    
-    // Facets display options.
-    $form['display']['facets'] = [
-      '#type' => 'details',
-      '#open' => FALSE,
-      '#title' => $this->t('Facets display'),
-    ];
-
-    // Max number of facet values to display.
-    $form['display']['facets']['max_values_number'] = [
-      '#type' => 'number',
-      '#title' => $this->t('Maximum number of facet values to return for each'),
-      '#default_value' => $existingDisplayConfig['facets']['max_values_number'] ?? 100,
-    ];
-
     // Create tabledrag facets table.
     $form['facets'] = [
       '#type' => 'table',
@@ -376,6 +355,12 @@ class QuantSearchPageForm extends EntityForm {
         '#title' => $this->t('Facet language'),
         '#options' => $language_codes,
         '#default_value' => $facet['facet_language'] ?? 'en',
+      ];
+      
+      $form['facets'][$i]['facet_limit'] = [
+        '#type' => 'number',
+        '#title' => $this->t('Facet limit'),
+        '#default_value' => $facet['facet_limit'] ?? 10,
       ];
 
       // Weight column element.
