@@ -219,6 +219,20 @@ class QuantSearchPageForm extends EntityForm {
       '#title' => $this->t('Results per page'),
       '#default_value' => $existingDisplayConfig['pagination']['per_page'] ?? 20,
     ];
+    
+    // Facets display options.
+    $form['display']['facets'] = [
+      '#type' => 'details',
+      '#open' => FALSE,
+      '#title' => $this->t('Facets display'),
+    ];
+
+    // Max number of facet values to display.
+    $form['display']['facets']['max_values'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Maximum number of facet values to return for each'),
+      '#default_value' => $existingDisplayConfig['facets']['max_values'] ?? 100,
+    ];
 
     // Create tabledrag facets table.
     $form['facets'] = [
