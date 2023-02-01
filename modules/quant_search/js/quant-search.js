@@ -118,7 +118,8 @@
                         attributesToSnippet: ['summary:100'],
                         snippetEllipsisText: '…',
                         filters: drupalSettings.quantSearch.filters,
-                        hitsPerPage: drupalSettings.quantSearch.display.pagination.per_page
+                        hitsPerPage: drupalSettings.quantSearch.display.pagination.per_page,
+                        maxValuesPerFacet: drupalSettings.quantSearch.facets.max_count
                     }),
                     instantsearch.widgets.hits({
                         container: '#hits',
