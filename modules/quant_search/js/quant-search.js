@@ -88,6 +88,7 @@
                                     instantsearch.widgets.refinementList({
                                         container: '#facet_' + facet.facet_container,
                                         attribute: facet.facet_key,
+                                        limit: facet.facet_limit,
                                     }),
                                 ]);
                                 break;
@@ -97,6 +98,7 @@
                                     instantsearch.widgets.menu({
                                         container: '#facet_' + facet.facet_container,
                                         attribute: facet.facet_key,
+                                        limit: facet.facet_limit,
                                     }),
                                 ]);
                                 break;
@@ -106,6 +108,7 @@
                                     instantsearch.widgets.menuSelect({
                                         container: '#facet_' + facet.facet_container,
                                         attribute: facet.facet_key,
+                                        limit: facet.facet_limit,
                                     }),
                                 ]);
                                 break;
@@ -118,8 +121,7 @@
                         attributesToSnippet: ['summary:100'],
                         snippetEllipsisText: '…',
                         filters: drupalSettings.quantSearch.filters,
-                        hitsPerPage: drupalSettings.quantSearch.display.pagination.per_page,
-                        maxValuesPerFacet: drupalSettings.quantSearch.display.facets.max_values_number
+                        hitsPerPage: drupalSettings.quantSearch.display.pagination.per_page
                     }),
                     instantsearch.widgets.hits({
                         container: '#hits',
