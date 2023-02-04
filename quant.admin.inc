@@ -85,14 +85,14 @@ function quant_config() {
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
-    '#description' => t('Provide the FQDN that internal requests may route to. e.g: http://localhost, http://nginx:8080, http:127.0.0.1. <a href="#">More info</a>'),
+    '#description' => t('Provide the FQDN that internal requests may route to, e.g. http://localhost, http://nginx:8080, http:127.0.0.1. <a href="#">More info</a>'),
     '#default_value' => variable_get('quant_base_url', 'http://localhost'),
   );
 
   $form['quant_hostname'] = array(
     '#type' => 'textfield',
     '#title' => t('Hostname'),
-    '#description' => t('Optionally, provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain. e.g: www.example.com <a href="#">More info</a>'),
+    '#description' => t('Optionally, provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain, e.g. www.example.com <a href="#">More info</a>'),
     '#default_value' => variable_get('quant_hostname', 'www.example.com'),
   );
 
@@ -210,7 +210,7 @@ function quant_seed_settings() {
   $form['quant_custom_routes'] = [
     '#type' => 'textarea',
     '#title' => t('Routes'),
-    '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g: /about-us'),
+    '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g. /about-us'),
     '#states' => [
       'visible' => [
         ':input[name="quant_custom_routes_enabled"]' => ['checked' => TRUE],

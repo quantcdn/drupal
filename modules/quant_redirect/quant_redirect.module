@@ -162,6 +162,6 @@ function quant_redirect_quant_seed($location, $data, $meta = [], $context = []) 
     return;
   }
 
-  // @todo: generate canonical redirects (e.g node/123 or taxonomy/term/123)
+  // @todo: generate canonical redirects (e.g. node/123 or taxonomy/term/123)
 
 }
