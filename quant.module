@@ -985,7 +985,7 @@ function _quant_queue_batch() {
     'title' => t('Quant seeding'),
     'operations' => array(),
     'finished' => '_quant_batch_complete',
-    'init_message' => t('Initialising...'),
+    'init_message' => t('Initializing...'),
     'progress_message' => t('Operation @current out of @total'),
     'error_message' => t('Unable to export'),
     'file' => drupal_get_path('module', 'quant') . 'quant.module',
