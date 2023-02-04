@@ -34,7 +34,7 @@ function quant_cron_settings() {
   $form['quant_cron_entity_node_bundles'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Enabled bundles'),
-    '#description' => t('Optionally restrict to these content types.'),
+    '#description' => t('Optionally, restrict to these content types.'),
     '#options' => $options,
     '#states' => array(
       'visible' => array(

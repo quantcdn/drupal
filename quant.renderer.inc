@@ -21,7 +21,7 @@ function quant_page_title($node) {
 /**
  * Access callback.
  *
- * Incase we need to add some additional permissions to the node
+ * In case we need to add some additional permissions to the node
  * view.
  *
  * @TODO: This could potentially use entity access for view as
@@ -48,7 +48,7 @@ function quant_page_view($node) {
   $uri = entity_uri('node', $node);
 
   drupal_add_html_head_link(array(
-    'rel' => 'cannonical',
+    'rel' => 'canonical',
     'href' => url($uri['path'], $uri['options']),
   ), TRUE);
 
