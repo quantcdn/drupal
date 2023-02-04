@@ -192,6 +192,9 @@ function quant_menu_local_tasks_alter(&$data, $router_item, $root_path) {
   }
 }
 
+/**
+ * Access denied response.
+ */
 function quant_forbidden() {
   http_response_code(403);
   die('Forbidden');
@@ -1384,5 +1387,4 @@ function _rebuild_url($url) {
     (isset($parsed_url['query']) ? "?{$parsed_url['query']}" : '');
 
   return $rebuilt_url;
-
 }

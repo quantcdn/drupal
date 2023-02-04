@@ -22,7 +22,6 @@ function quant_cron_menu() {
   );
 
   return $items;
-
 }
 
 /**
@@ -116,7 +115,6 @@ function _quant_batch_nodes(&$batch, $bundles = array()) {
   return $batch;
 }
 
-
 /**
  * Prepare a batch process for taxonomy entities.
  *
@@ -142,7 +140,6 @@ function _quant_batch_taxonomy(&$batch) {
   }
 
   return $batch;
-
 }
 
 /**
