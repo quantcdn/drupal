@@ -41,11 +41,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_enabled_taxonomy', TRUE),
   ];
 
-  $form['tracking_fieldset']['quant_enabled_views'] = [
-    '#type' => 'checkbox',
-    '#title' => t('Views'),
-    '#default_value' => variable_get('quant_enabled_views', TRUE),
-  ];
+  if (module_exists('views')) {
+    $form['tracking_fieldset']['quant_enabled_views'] = [
+      '#type' => 'checkbox',
+      '#title' => t('Views'),
+      '#default_value' => variable_get('quant_enabled_views', TRUE),
+    ];
+  }
 
   $form['disable_content_drafts'] = array(
     '#type' => 'checkbox',
@@ -188,11 +190,13 @@ function quant_seed_settings() {
     '#default_value' => variable_get('quant_seed_theme_assets', FALSE),
   );
 
-  $form['quant_seed_views'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Export Views'),
-    '#default_value' => variable_get('quant_seed_views', FALSE),
-  );
+  if (module_exists('views')) {
+    $form['quant_seed_views'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Export Views'),
+      '#default_value' => variable_get('quant_seed_views', FALSE),
+    );
+  }
 
   // @TODO - Should we support user pages?
   $form['entity_users'] = array();
