@@ -52,7 +52,7 @@ function quant_drush_command() {
  */
 function drush_quant_info() {
   $queue = quant_get_queue();
-  drush_log($queue->numberOfItems() . ' items in the queue.', 'ok');
+  drush_log('Quant: ' . $queue->numberOfItems() . ' items in the queue.', 'ok');
 }
 
 /**
@@ -83,18 +83,17 @@ function drush_quant_process_queue($threads=5) {
 function drush_quant_clear_queue() {
   $queue = quant_get_queue();
   $queue->deleteQueue();
-  drush_log('Quant queue has been reset.', 'ok');
+  drush_log('Quant: Queue has been cleared.', 'ok');
 }
 
 /**
  * Callback function to populate the Quant queue via drush.
  */
 function drush_quant_seed() {
-  drush_log('Quant: Populating seed queue.', 'ok');
   _validate_quant_config();
+  drush_log('Quant: Populating seed queue.', 'ok');
   _quant_seed_prepare();
 }
-
 
 /**
  * Validate Quant configuration prior to drush operation.
@@ -117,5 +116,5 @@ function _validate_quant_config() {
     drush_log('Quant API project is not configured', 'error');
   }
 
-  drush_log("Running Quant operation for $customer: $project", 'ok');
+  drush_log("Quant: Running Quant operation for $customer: $project", 'ok');
 }
