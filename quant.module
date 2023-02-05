@@ -687,17 +687,32 @@ function _quant_prepare_entity($type, $entity_id) {
   switch ($type) {
     case 'file':
       $uri = entity_uri($type, $entity);
-      $path = $uri['path'];
-      $alias = drupal_get_path_alias($path);
-      $url = "$base/$alias";
+      if (!empty($uri)) {
+        $path = $uri['path'];
+        $alias = drupal_get_path_alias($path);
+        $url = "$base/$alias";
+      }
       break;
 
     default:
       $uri = entity_uri($type, $entity);
-      $path = $uri['path'];
-      $alias = drupal_get_path_alias($path);
-      $url = "$base/$alias";
+      if (!empty($uri)) {
+        $path = $uri['path'];
+        $alias = drupal_get_path_alias($path);
+        $url = "$base/$alias";
+      }
       break;
+  }
+
+  // Sometimes the URI can be empty, so log this.
+  if (empty($uri)) {
+    quant_log('No URI found for entity !type !entity_id',
+      array(
+        '!type' => $type,
+        '!entity_id', $entity_id,
+      ),
+      WATCHDOG_WARNING);
+    return FALSE;
   }
 
   list($id, $vid) = entity_extract_ids($type, $entity);
