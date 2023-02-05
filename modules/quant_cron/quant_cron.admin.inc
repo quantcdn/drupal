@@ -19,7 +19,7 @@ function quant_cron_settings() {
   $form['quant_cron_entity_node'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export nodes'),
-    '#description' => t('Note: It is advised you limit cron export to a subset of nodes (e.g a content type with limited content).'),
+    '#description' => t('Note: It is advised you limit cron export to a subset of nodes, e.g. a content type with limited content.'),
     '#default_value' => variable_get('quant_cron_entity_node', FALSE),
   );
 
@@ -34,7 +34,7 @@ function quant_cron_settings() {
   $form['quant_cron_entity_node_bundles'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Enabled bundles'),
-    '#description' => t('Optionally restrict to these content types.'),
+    '#description' => t('Optionally, restrict to these content types.'),
     '#options' => $options,
     '#states' => array(
       'visible' => array(
@@ -74,7 +74,7 @@ function quant_cron_settings() {
   $form['quant_cron_custom_routes'] = [
     '#type' => 'textarea',
     '#title' => t('Routes'),
-    '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g: /about-us'),
+    '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g. /about-us'),
     '#states' => [
       'visible' => [
         ':input[name="routes"]' => ['checked' => TRUE],

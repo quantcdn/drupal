@@ -33,7 +33,7 @@ function quant_cron_cron() {
 }
 
 /**
- * Prepare the quant seeding batch process.
+ * Prepare the Quant seeding batch process.
  */
 function _quant_cron_seed_prepare() {
 

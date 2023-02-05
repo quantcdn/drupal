@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Hooks defined by the quant module.
+ * Hooks defined by the Quant module.
  */
 
 /**
@@ -13,7 +13,7 @@
  * allow a module to hook into the collection process and
  * provide data for the seed process.
  *
- * Any items added to the quant queue needs to follow the
+ * Any items added to the Quant queue need to follow the
  * same structure as a batch operation; an array that has
  * callback and arguments as each item will be executed
  * with call_user_func_array.
@@ -27,7 +27,7 @@ function hook_quant_seed_queue() {
 /**
  * Invoked after the entity has been rendered.
  *
- * This function will recieve the data that is to be
+ * This function will receive the data that is to be
  * seeded to the storage interface.
  *
  * @param string $location
@@ -47,7 +47,7 @@ function hook_quant_seed($location, $data, $meta, $context) {
 /**
  * Invoked after the entity has been rendered.
  *
- * This function will recieve the data that is to be
+ * This function will receive the data that is to be
  * seeded to the storage interface.
  *
  * @param string $location

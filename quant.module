@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Support exporting to quant.
+ * Support exporting to Quant.
  */
 
 /**
@@ -68,7 +68,7 @@ function quant_menu() {
 
   $items['admin/config/services/quant/queue'] = array(
     'title' => 'Queue',
-    'description' => 'Prepared items ready to be sent to quant.',
+    'description' => 'Prepared items ready to be sent to Quant.',
     'page callback' => 'quant_queue_page',
     'file' => 'quant.admin.inc',
     'access arguments' => array('configure quant'),
@@ -96,7 +96,7 @@ function quant_menu() {
     'type' => MENU_CALLBACK,
   );
 
-  // Custom quant view controller.
+  // Custom Quant view controller.
   $items['node/%node/quant'] = array(
     'title callback' => 'quant_page_title',
     'title arguments' => array(1),
@@ -154,7 +154,7 @@ function quant_permission() {
   return array(
     'configure quant' => array(
       'description' => t('Configure the Quant exporter'),
-      'title' => t('Configure quant'),
+      'title' => t('Configure Quant'),
       'restrict access' => TRUE,
     ),
     'bulk quant export' => array(
@@ -173,7 +173,7 @@ function quant_node_menu_load($nid) {
   $revision = _quant_get_request_header('quant-revision');
   if (!empty($revision)) {
     $node = node_load($nid, $revision);
-    // Override the status - this prevents drupal from adding the standard
+    // Override the status. This prevents Drupal from adding the standard
     // unpublished classes to the node.
     $node->status = 1;
     return $node;
@@ -349,7 +349,7 @@ function quant_taxonomy_term_update($term) {
 /**
  * Intermediary shutdown function.
  *
- * This is an intermediary shutdown function to ensure that quants
+ * This is an intermediary shutdown function to ensure that Quant's
  * export will always be run after other processes.
  */
 function _quant_shutdown($entity_info) {
@@ -460,7 +460,7 @@ function quant_seed($url, array $context = array()) {
 
   // Add a redirect if 301|302.
   if (isset($response->redirect_code) && ($response->redirect_code == 301 || $response->redirect_code == 302)) {
-    // Strip quant params from destination.
+    // Strip Quant params from destination.
     $dest = $response->redirect_url;
 
     // Ensure relative for internal redirect.
@@ -837,7 +837,7 @@ function _quant_queue_views() {
 
     // @TODO: We have menu access callbacks so we should
     // validate anonymous has access before we add the operation.
-    // Pages will be exported to quant with 401.
+    // Pages will be exported to Quant with 401.
     $item = array(
       'quant_seed',
       array($url, $config),
@@ -1015,7 +1015,7 @@ function _quant_queue_batch() {
 }
 
 /**
- * Batch handler to process the quant seed queue.
+ * Batch handler to process the Quant seed queue.
  */
 function quant_batch_process_queue($queue_name, &$context) {
   $queue = DrupalQueue::get($queue_name);
@@ -1051,7 +1051,7 @@ function quant_batch_process_queue($queue_name, &$context) {
 }
 
 /**
- * Generate warning messsages for the seed form.
+ * Generate warning messages for the seed form.
  *
  * @param array &$form
  *   The form render array.

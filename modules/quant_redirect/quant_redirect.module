@@ -70,7 +70,7 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
   );
 
   // If the redirect is not new then we need to unpublish the URL
-  // in quant to ensure that the redirect is no longer visible.
+  // in Quant to ensure that the redirect is no longer visible.
   if (!(bool) $published && !(bool) $is_new) {
     $api = str_replace('redirect', 'unpublish', $api);
     $request = array(
@@ -151,7 +151,6 @@ function quant_redirect_quant_seed_queue() {
   }
 }
 
-
 /**
  * Implements hook_quant_seed().
  *
@@ -163,6 +162,6 @@ function quant_redirect_quant_seed($location, $data, $meta = [], $context = []) 
     return;
   }
 
-  // @todo: generate canonical redirects (e.g node/123 or taxonomy/term/123)
+  // @todo: generate canonical redirects (e.g. node/123 or taxonomy/term/123)
 
 }

@@ -41,7 +41,7 @@ function quant_api_menu() {
  * Get request headers.
  *
  * @return array
- *   The standard quant api headers.
+ *   The standard Quant API headers.
  */
 function quant_api_get_request_headers() {
   $token = variable_get('quant_api_token');
@@ -129,7 +129,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
 
   if (!empty($response->error)) {
     if (empty($response->data)) {
-      // This is a connection error between the drupal server and quant.
+      // This is a connection error between the Drupal server and Quant.
       quant_log('Connection error', [], WATCHDOG_ERROR);
       return;
     }
@@ -316,7 +316,7 @@ function quant_api_quant_seed_file($url, $context) {
 }
 
 /**
- * Unpublish a quant route.
+ * Unpublish a Quant route.
  *
  * @param string $url
  *   The URL to unpublish.
@@ -347,7 +347,7 @@ function quant_api_unpublish_route($url) {
   $response = drupal_http_request("$api/unpublish", $options);
   if (!empty($response->error)) {
     if (empty($response->data)) {
-      // This is a connection error between the drupal server and quant.
+      // This is a connection error between the Drupal server and Quant.
       quant_log('Connection error');
       return FALSE;
     }

@@ -80,21 +80,21 @@ function quant_config() {
   $form['quant_verify_ssl'] = array(
     '#type' => 'checkbox',
     '#title' => t('Verify SSL'),
-    '#description' => t('Optionally disable SSL verification when making internal requests for content to seed. This can be useful if your server is using a self-signed certificate.'),
+    '#description' => t('Optionally, disable SSL verification when making internal requests for content to seed. This can be useful if your server is using a self-signed certificate.'),
     '#default_value' => variable_get('quant_verify_ssl', TRUE),
   );
 
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
-    '#description' => t('Provide the FQDN that internal requests may route to. e.g: http://localhost, http://nginx:8080, http:127.0.0.1. <a href="#">More info</a>'),
+    '#description' => t('Provide the FQDN that internal requests may route to, e.g. http://localhost, http://nginx:8080, http:127.0.0.1. <a href="#">More info</a>'),
     '#default_value' => variable_get('quant_base_url', 'http://localhost'),
   );
 
   $form['quant_hostname'] = array(
     '#type' => 'textfield',
     '#title' => t('Hostname'),
-    '#description' => t('Optionally provide the expected hostname for content served via quant, this ensures that absolute links in content point to the correct domain. This ensures absolute links in content point to the correct domain. e.g: www.example.com <a href="#">More info</a>'),
+    '#description' => t('Optionally, provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain, e.g. www.example.com <a href="#">More info</a>'),
     '#default_value' => variable_get('quant_hostname', 'www.example.com'),
   );
 
@@ -168,7 +168,7 @@ function quant_seed_settings() {
   $form['quant_seed_entity_node_bundles'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Enabled bundles'),
-    '#description' => t('Optionally restrict to these content types.'),
+    '#description' => t('Optionally, restrict to these content types.'),
     '#default_value' => variable_get('quant_seed_entity_node_bundles', FALSE),
     '#options' => $options,
     '#states' => array(
@@ -214,7 +214,7 @@ function quant_seed_settings() {
   $form['quant_custom_routes'] = [
     '#type' => 'textarea',
     '#title' => t('Routes'),
-    '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g: /about-us'),
+    '#description' => t('Add routes to export, each on a new line. Routes must not include domain and start with a slash, e.g. /about-us'),
     '#states' => [
       'visible' => [
         ':input[name="quant_custom_routes_enabled"]' => ['checked' => TRUE],
@@ -252,7 +252,7 @@ function quant_seed_settings() {
 }
 
 /**
- * Present items that are queued for quant sending.
+ * Present items that are queued for Quant sending.
  */
 function quant_queue_page() {
   $items = quant_get_queue(TRUE);
@@ -336,7 +336,7 @@ function quant_token_settings() {
 
   $form['quant_token_secret_regenerate'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Regerenate signing secret'),
+    '#title' => t('Regenerate signing secret'),
     '#description' => t('This will regenerate the internal secret value Quant uses to sign internal requests'),
   );
 
@@ -346,7 +346,7 @@ function quant_token_settings() {
 }
 
 /**
- * Regenerate quant signing secret.
+ * Regenerate Quant signing secret.
  */
 function quant_token_regenerate($form, &$form_state) {
   if ($form_state['values']['quant_token_secret_regenerate']) {
