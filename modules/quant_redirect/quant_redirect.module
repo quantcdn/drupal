@@ -133,7 +133,7 @@ function quant_redirect_quant_seed_queue() {
   while ($redirect = $redirects->fetchAssoc()) {
     $status_code = empty($redirect['status_code']) ? variable_get('redirect_default_status_code', 301) : $redirect['status_code'];
 
-    // Strange behaviour; to/from are swapped.
+    // Strange behavior; to/from are swapped.
     if (strpos($redirect['redirect'], 'node') === 0 && $redirect['status_code'] == 0) {
       $redirect = array(
         'redirect' => $redirect['source'],
