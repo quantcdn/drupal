@@ -22,14 +22,17 @@ function quant_cron_menu() {
   );
 
   return $items;
-
 }
 
 /**
  * Implements hook_cron().
  */
 function quant_cron_cron() {
-  _quant_cron_seed_prepare();
+  // This process only runs when triggered via CLI.
+  // Batch processing via poor mans cron is not supported.
+  if (drupal_is_cli() && function_exists('drush_backend_batch_process')) {
+    _quant_cron_seed_prepare();
+  }
 }
 
 /**
@@ -37,7 +40,12 @@ function quant_cron_cron() {
  */
 function _quant_cron_seed_prepare() {
 
-  $node_bundles = array_filter(variable_get('quant_cron_entity_node_bundles'));
+  $bundles = variable_get('quant_cron_entity_node_bundles');
+  if (empty($bundles)) {
+    $bundles = [];
+  }
+
+  $node_bundles = array_filter($bundles);
   if (variable_get('quant_cron_entity_node')) {
     _quant_batch_nodes($batch, $node_bundles);
   }
@@ -58,6 +66,10 @@ function _quant_cron_seed_prepare() {
     _quant_batch_routes($batch, variable_get('quant_cron_custom_routes'));
   }
 
+  if (empty($batch)) {
+    return;
+  }
+
   batch_set($batch);
 
   $batch =& batch_get();
@@ -65,4 +77,160 @@ function _quant_cron_seed_prepare() {
 
   drush_backend_batch_process();
 
+}
+
+/**
+ * Prepare a batch process for the node entity type.
+ *
+ * @param array $batch
+ *   The batch array.
+ */
+function _quant_batch_nodes(&$batch, $bundles = array()) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+
+  $query = db_select('node', 'n')
+    ->fields('n', array('nid'))
+    ->condition('status', 1);
+
+  if (!empty($bundles)) {
+    $query->condition('n.type', array_keys($bundles), 'IN');
+  }
+
+  $nids = $query
+    ->execute()
+    ->fetchCol();
+
+  // Add the homepage to the operations.
+  $batch['operations'][] = array('quant_seed', array("$base/", array()));
+
+  foreach ($nids as $nid) {
+    quant_log('Adding [!nid] to the list.', array('!nid' => $nid));
+    $batch['operations'][] = array(
+      'quant_seed_node_batch',
+      array($nid),
+    );
+  }
+
+  return $batch;
+}
+
+/**
+ * Prepare a batch process for taxonomy entities.
+ *
+ * @param array $batch
+ *   The batch array.
+ */
+function _quant_batch_taxonomy(&$batch) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+
+  // @todo: Support select vocabs.
+  $tids = db_select('taxonomy_term_data', 't')
+    ->fields('t', array('tid'))
+    ->execute()
+    ->fetchCol();
+
+  foreach ($tids as $tid) {
+    quant_log('Adding [!tid] to the list.', array('!tid' => $tid));
+    $batch['operations'][] = array(
+      'quant_seed_taxonomy_batch',
+      array($tid),
+    );
+  }
+
+  return $batch;
+}
+
+/**
+ * Prepare the images to seed via batch.
+ *
+ * @param array $batch
+ *   The batch array.
+ */
+function _quant_batch_images(&$batch) {
+  $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
+
+  $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
+
+  // Allow modules to provide some files if they need to.
+  drupal_alter('quant_seed_files', $file);
+
+  foreach ($files as $file) {
+
+    $file_on_disk = $file->uri;
+    if (substr($file_on_disk, 0, strlen(DRUPAL_ROOT)) == DRUPAL_ROOT) {
+      $file_on_disk = substr($file_on_disk, strlen(DRUPAL_ROOT));
+    }
+
+    $context = array(
+      'location' => $file->uri,
+      'request' => $file_on_disk,
+    );
+
+    quant_log('Preparing !path', array('!path' => $file_on_disk));
+
+    $batch['operations'][] = array(
+      'quant_seed_file',
+      array($file_on_disk, $context),
+    );
+  }
+}
+
+/**
+ * Get a list of views paths.
+ *
+ * @param array $batch
+ *   The batch array.
+ */
+function _quant_batch_views(&$batch) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+
+  $menus = array();
+  if (module_exists('views')) {
+    views_menu_alter($menus);
+  }
+
+  foreach ($menus as $path => $config) {
+    $url = "$base/$path";
+
+    $config['find_pager'] = TRUE;
+    $config['type'] = 'view';
+
+    // @TODO: We have menu access callbacks so we should
+    // validate anonymous has access before we add the operation.
+    // Pages will be exported to quant with 401.
+    $batch['operations'][] = array(
+      'quant_seed',
+      array($url, $config),
+    );
+  }
+}
+
+/**
+ * Generate a batch of arbitrary routes.
+ *
+ * @param array $batch
+ *   The batch array.
+ * @param string $routes
+ *   Textarea entered routes.
+ */
+function _quant_batch_routes(&$batch, $routes) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+  $routes = is_array($routes) ? $routes : explode(PHP_EOL, $routes);
+
+  foreach ($routes as $route) {
+    if (strpos((trim($route)), '/') !== 0) {
+      continue;
+    }
+
+    $url = trim($base . $route);
+
+    $batch['operations'][] = array(
+      'quant_seed',
+      array($url, []),
+    );
+  }
 }

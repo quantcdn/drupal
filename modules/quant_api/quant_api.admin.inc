@@ -28,12 +28,6 @@ function quant_api_settings() {
     '#default_value' => variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT),
   );
 
-  $form['quant_api_token'] = array(
-    '#type' => 'password',
-    '#title' => t('API Token'),
-    '#decription' => t('The API token'),
-  );
-
   $form['quant_api_customer'] = array(
     '#type' => 'textfield',
     '#title' => t('API Customer'),
@@ -46,6 +40,12 @@ function quant_api_settings() {
     '#title' => t('API Project'),
     '#description' => t('The API project'),
     '#default_value' => variable_get('quant_api_project'),
+  );
+
+  $form['quant_api_token'] = array(
+    '#type' => 'password',
+    '#title' => t('API Token'),
+    '#decription' => t('The API token'),
   );
 
   $form['quant_api_ssl_verify'] = array(
