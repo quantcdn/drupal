@@ -56,11 +56,13 @@ function quant_cron_settings() {
     '#default_value' => variable_get('quant_cron_theme_assets', FALSE),
   );
 
-  $form['quant_cron_views'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Export Views'),
-    '#default_value' => variable_get('quant_cron_views', FALSE),
-  );
+  if (module_exists('views')) {
+    $form['quant_cron_views'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Export Views'),
+      '#default_value' => variable_get('quant_cron_views', FALSE),
+    );
+  }
 
   $form['quant_cron_custom_routes_enabled'] = [
     '#type' => 'checkbox',
