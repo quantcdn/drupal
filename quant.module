@@ -723,12 +723,13 @@ function _quant_queue_nodes(array $bundles = array()) {
   }
 
   $nids = $query->execute()->fetchCol();
+  asort($nids);
 
   $item = array('quant_seed', array("$base/"));
   $queue->createItem($item);
 
   foreach ($nids as $nid) {
-    quant_log('Adding [!nid] to the list.', array('!nid' => $nid));
+    quant_log('Quant: Adding node [!nid] to the list.', array('!nid' => $nid));
     $item = array(
       'quant_seed_node_batch',
       array($nid),
@@ -751,9 +752,10 @@ function _quant_queue_taxonomy() {
     ->fields('t', array('tid'))
     ->execute()
     ->fetchCol();
+  asort($tids);
 
   foreach ($tids as $tid) {
-    quant_log('Adding [!tid] to the list.', array('!tid' => $tid));
+    quant_log('Quant: Adding term [!tid] to the list.', array('!tid' => $tid));
     $item = array(
       'quant_seed_taxonomy_batch',
       array($tid),
@@ -768,6 +770,7 @@ function _quant_queue_taxonomy() {
 function _quant_queue_theme_assets() {
   $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
   $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
+  ksort($files);
 
   $queue = quant_get_queue();
 
@@ -786,7 +789,7 @@ function _quant_queue_theme_assets() {
       'request' => $file_on_disk,
     );
 
-    quant_log('Preparing !path', array('!path' => $file_on_disk));
+    quant_log('Quant: Adding file [!path] to the list.', array('!path' => $file_on_disk));
 
     $item = array(
       'quant_seed_file',
