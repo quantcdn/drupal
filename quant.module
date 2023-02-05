@@ -116,6 +116,16 @@ function quant_cron_queue_info() {
   $queues['quant_seed'] = array(
     'worker callback' => 'quant_queue_worker',
   );
+
+  if (drupal_is_cli() && module_exists('quant_cron')) {
+    // Module name clashes with hook system resulting in
+    // drush overriding with null pointer.
+    // @see https://www.drupal.org/project/queue_ui/issues/1233682.
+    $queues['quant_seed']['cron'] = array(
+      'callback' => 'quant_queue_worker',
+    );
+  }
+
   return $queues;
 }
 
