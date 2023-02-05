@@ -44,7 +44,6 @@ function quant_redirect_redirect_delete($redirect) {
  * Trigger an API request to Quant for a redirect.
  */
 function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $is_new = FALSE) {
-
   $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT);
 
   if (empty($api)) {
