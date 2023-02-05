@@ -69,10 +69,11 @@ function drush_quant_process_queue($threads=5) {
     drush_log('Invalid thread specification (must be an integer).', 'error');
   }
 
-  drush_log("Quant: Forking seed worker with $threads threads.", 'ok');
-  for ($i = 0; $i < $threads; $i++) {
+  drush_log("Quant: Creating $threads threads for sending content to Quant. Content will be sent when running cron.", 'ok');
+  for ($i = 1; $i < $threads + 1; $i++) {
     $cmd = 'drush queue-run quant_seed';
     $process = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
+    drush_log("Quant: Thread process $i: $process", 'ok');
   }
 
 }
