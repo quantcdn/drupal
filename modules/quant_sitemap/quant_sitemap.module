@@ -37,4 +37,9 @@ function quant_sitemap_quant_seed_queue() {
     );
     $queue->createItem($item);
   }
+
+  // Send the xmlsitemap stylesheet if it's enabled.
+  if (variable_get('xmlsitemap_xsl', 1)) {
+    $queue->createItem(array('quant_seed', array("$base_url/sitemap.xsl")));
+  }
 }
