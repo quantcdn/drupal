@@ -301,14 +301,14 @@ function quant_api_quant_seed_file($url, $context) {
   $info = curl_getinfo($ch);
   curl_close($ch);
 
-  $response = json_decode($result);
-
   if ($info['http_code'] == 413) {
     quant_log('Upload too large.');
     return FALSE;
   }
 
-  if (!empty($response->error) && strpos("MD5 already matches", $response->error) !== FALSE) {
+  $response = json_decode($result);
+
+  if (!empty($response->error) && strpos("MD5 already matches", $response->errorMsg) !== FALSE) {
     quant_log('Error sending request: %error', array(
       '%error' => $response->errorMsg,
     ), WATCHDOG_ERROR);
