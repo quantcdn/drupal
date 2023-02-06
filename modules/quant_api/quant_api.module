@@ -123,8 +123,8 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
 
   drupal_alter('quant_api_data', $request['data']);
   $request['data'] = json_encode($request['data']);
+  quant_log('Request data: %request_data', array('%request_data' => $request['data']), QUANT_VERBOSE);
 
-  quant_log('%request_options', array('%request_options' => json_encode($request)), QUANT_VERBOSE);
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
@@ -134,9 +134,9 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       return;
     }
     $body = json_decode($response->data);
-    quant_log('Error sending request: %error %res', array(
+    quant_log('Error sending request: %error %response', array(
       '%error' => $body->errorMsg,
-      '%res' => json_encode($response),
+      '%response' => json_encode($response),
     ), WATCHDOG_ERROR);
     return;
   }
