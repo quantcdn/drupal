@@ -67,6 +67,14 @@ function quant_file_quant_seed_queue() {
 
   while ($file = $files->fetchAssoc()) {
     list($url, $context) = _quant_prepare_entity('file', $file['fid']);
+    if (empty($url)) {
+      quant_log('No URL found for file !fid',
+        array(
+          '!fid' => $file['fid'],
+        ),
+        WATCHDOG_WARNING);
+      continue;
+    }
     $item = array(
       'quant_seed',
       array($url, $context),
