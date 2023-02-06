@@ -42,3 +42,25 @@ function quant_search_update_8102() {
   }
   return t('The token module is already installed.');
 }
+
+/**
+ * Add search page facet_limit configuration.
+ */
+function quant_search_update_8103() {
+  // Get all search pages.
+  $storage = \Drupal::entityTypeManager()->getStorage('quant_search_page');
+  $ids = \Drupal::entityQuery('quant_search_page')->execute();
+  $pages = $storage->loadMultiple($ids);
+
+  // Add default value for each facet, if not set.
+  foreach ($pages as $page) {
+    $facets = $page->get('facets');
+    foreach ($facets as $i => $facet) {
+      if (!isset($facet['facet_limit'])) {
+        $facets[$i]['facet_limit'] = 10;
+      }
+      $page->set('facets', $facets);
+    }
+    $page->save();
+  }
+}
