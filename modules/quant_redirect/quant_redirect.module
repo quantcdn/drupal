@@ -165,3 +165,49 @@ function quant_redirect_quant_seed($location, $data, $meta = [], $context = []) 
   // @todo: generate canonical redirects (e.g. node/123 or taxonomy/term/123)
 
 }
+
+/**
+ * Implements hook_node_insert().
+ */
+function quant_redirect_node_insert($node) {
+  quant_redirect_update_node_canonical($node);
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function quant_redirect_node_update($node) {
+  quant_redirect_update_node_canonical($node);
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function quant_redirect_node_delete($node) {
+  quant_redirect_update_node_canonical($node);
+}
+
+/**
+ * Handle node/123 redirect if globalredirect is enabled.
+ */
+function quant_redirect_update_node_canonical($node) {
+  if (!quant_is_enabled('redirects') || !module_exists('globalredirect')) {
+    return;
+  }
+
+  // Check for internal path or pathauto alias.
+  $from = 'node/' . $node->nid;
+  $path = drupal_lookup_path('alias', $from);
+  $alias = '';
+  if (module_exists('pathauto')) {
+    $alias = pathauto_node_update_alias($node, 'return');
+  }
+  $to = $path ?? $alias;
+
+  // No internal path or pathauto alias has been set.
+  if (empty($to)) {
+    return;
+  }
+
+  quant_redirect_request($from, $to, 301, $node->status, $node->is_new);
+}
