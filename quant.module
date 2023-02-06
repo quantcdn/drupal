@@ -990,7 +990,9 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
     _quant_queue_views();
   }
 
-  $routes = array('/_quant404');
+  if (variable_get('site_404', FALSE)) {
+    $routes = array('/_quant404');
+  }
 
   if (variable_get('quant_custom_routes_enabled')) {
     foreach (explode(PHP_EOL, variable_get('quant_custom_routes')) as $route) {
