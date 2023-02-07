@@ -56,7 +56,7 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
   $data = json_encode(array(
     'url' => '/' . ltrim($from, '/'),
     'redirect_url' => $to,
-    'redirect_http_code' => $status,
+    'redirect_http_code' => (int) $status,
     'published' => (bool) $published,
   ));
 
@@ -92,6 +92,12 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
     ));
   }
 
+  quant_log('Sending redirect: !from => !to',
+    array(
+      '!from' => $from,
+      '!to' => $to,
+    )
+  );
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
