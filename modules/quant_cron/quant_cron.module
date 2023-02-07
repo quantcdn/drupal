@@ -179,7 +179,6 @@ function quant_cron_get_theme_routes() {
     if (preg_match('/node_modules/i', $name)) {
       continue;
     }
-    
     $path = str_replace(DRUPAL_ROOT, '', $name);
     $paths[] = $path;
   }
