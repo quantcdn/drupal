@@ -71,7 +71,7 @@ class QuantDrushCommands extends DrushCommands {
    *   Number of threads to use (default 5)
    * @usage quant:run-queue --threads=5
    * @option unlock
-   * Allow a queue run even if another run is in progress. (default is false)
+   *   Allow a queue run even if another run is in progress (default is false)
    * @usage quant:run-queue --unlock
    */
   public function message($options = ['threads' => 5, 'unlock' => false]) {
@@ -82,13 +82,14 @@ class QuantDrushCommands extends DrushCommands {
     $cmd = $drushPath . ' queue:run quant_seed_worker';
     $this->output()->writeln("<comment>Using drush binary at $drushPath. Override with \$DRUSH_PATH if required.</comment>");
 
-    // Bail if another run is in progress.
+    // If another seed is running and is locked, don't run this one.
     if (!$options['unlock']) {
       if (file_exists($lockFilePath)) {
-        $this->output()->writeln("<info>Seeding bailed. Another seed run is in progress.</info>");
+        $this->output()->writeln("<info>A seed is currently running and is locked which prevents another seed from running right now.</info>");
         return;
-      } else {
-        // No lock currently present. Create new lock file.
+      }
+      else {
+        // No lock file exists, so create one.
         file_put_contents($lockFilePath, null);
       }
     }
