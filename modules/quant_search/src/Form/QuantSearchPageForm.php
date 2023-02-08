@@ -363,6 +363,12 @@ class QuantSearchPageForm extends EntityForm {
         '#options' => $language_codes,
         '#default_value' => $facet['facet_language'] ?? 'en',
       ];
+      
+      $form['facets'][$i]['facet_limit'] = [
+        '#type' => 'number',
+        '#title' => $this->t('Facet limit'),
+        '#default_value' => $facet['facet_limit'] ?? 10,
+      ];
 
       // Weight column element.
       $form['facets'][$i]['weight'] = [
