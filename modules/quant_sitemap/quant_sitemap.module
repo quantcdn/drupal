@@ -24,14 +24,22 @@ function quant_sitemap_quant_seed_queue() {
     return;
   }
 
+  $base_url = quant_get_base_url();
   $queue = quant_get_queue();
   $sitemaps = xmlsitemap_sitemap_load_multiple(FALSE);
 
   foreach ($sitemaps as $sitemap) {
+    // Switch sitemap base URL to the Quant value.
+    $sitemap->uri['options']['base_url'] = $base_url;
     $item = array(
       'quant_seed',
       array(url($sitemap->uri['path'], $sitemap->uri['options'])),
     );
     $queue->createItem($item);
+  }
+
+  // Send the xmlsitemap stylesheet if it's enabled.
+  if (variable_get('xmlsitemap_xsl', 1)) {
+    $queue->createItem(array('quant_seed', array("$base_url/sitemap.xsl")));
   }
 }
