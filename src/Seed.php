@@ -256,12 +256,12 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
     }
 
-   // Unpublish canonical redirects from node/123 to the unpublished revision route.
-   if ("/node/{$nid}" != $url) {
-     // QuantEvent can be used to unpublish any resource. Note, the source must
-     // be given here and not the destination.
-     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/node/{$nid}", [], NULL), QuantEvent::UNPUBLISH);
-   }
+    // Unpublish canonical redirect from node/123.
+    if ("/node/{$nid}" != $url) {
+      // QuantEvent can be used to unpublish any resource. Note, the source must
+      // be given here and not the destination.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/node/{$nid}", [], NULL), QuantEvent::UNPUBLISH);
+    }
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }
