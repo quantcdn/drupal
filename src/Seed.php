@@ -90,8 +90,7 @@ class Seed {
     $statusCode = $redirect->getStatusCode();
 
     if (!(bool) $statusCode && !$redirect->isNew()) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
-      return;
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH); return;
     }
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($source, $destination, $statusCode), QuantRedirectEvent::UPDATE);
@@ -252,6 +251,35 @@ class Seed {
     $front = $site_config->get('page.front');
     if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
+    }
+
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+  }
+
+  /**
+   * Unpublish the term path from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The term entity.
+   */
+  public static function unpublishTaxonomyTerm(EntityInterface $entity) {
+
+    $langcode = $entity->language()->getId();
+    $tid = $entity->get('tid')->value;
+
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+
+    // Unpublish canonical redirect from taxonomy/term/123.
+    if ("/taxonomy/term/{$tid}" != $url) {
+      // QuantEvent can be used to unpublish any resource. Note, the source must
+      // be given here and not the destination.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/taxonomy/term/{$tid}", [], NULL), QuantEvent::UNPUBLISH);
     }
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);

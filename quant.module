@@ -65,7 +65,7 @@ function quant_node_update(EntityInterface $entity) {
 
   $disable_drafts = \Drupal::config('quant.settings')->get('disable_content_drafts');
 
-  // If entity default revision is unpublished then unpublish in quant.
+  // If entity default revision is unpublished then unpublish in Quant.
   if (!$entity->isPublished() && $entity->isDefaultRevision()) {
     // Trigger an unpublish event.
     Seed::unpublishNode($entity);
@@ -112,6 +112,12 @@ function quant_taxonomy_term_update(EntityInterface $entity) {
 
   if (!$quant_enabled || !$quant_taxonomy_enabled) {
     return;
+  }
+
+  // If entity default revision is unpublished then unpublish in Quant.
+  if (!$entity->isPublished() && $entity->isDefaultRevision()) {
+    // Trigger an unpublish event.
+    Seed::unpublishTaxonomyTerm($entity);
   }
 
   $context = [
@@ -259,11 +265,17 @@ function _quant_entity_update_op(EntityInterface $entity) {
  * @todo Entity support.
  */
 function _quant_entity_delete_op(EntityInterface $entity) {
-  if ($entity->getEntityTypeId() != 'node') {
-    return;
+
+  switch ($entity->getEntityTypeId()) {
+    case 'node':
+      Seed::unpublishNode($entity);
+      break;
+
+    case 'taxonomy_term':
+      Seed::unpublishTaxonomyTerm($entity, $langcode);
+      break;
   }
 
-  Seed::unpublishNode($entity);
 }
 
 /**
