@@ -90,7 +90,8 @@ class Seed {
     $statusCode = $redirect->getStatusCode();
 
     if (!(bool) $statusCode && !$redirect->isNew()) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH); return;
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
+      return;
     }
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($source, $destination, $statusCode), QuantRedirectEvent::UPDATE);
