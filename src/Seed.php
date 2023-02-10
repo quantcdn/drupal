@@ -91,9 +91,11 @@ class Seed {
 
     // If the source path has changed, unpublish the old path as the redirect
     // from that path no longer works in Drupal.
-    $originalSource = $redirect->original->getSourcePathWithQuery();
-    if ($source != $originalSource) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $originalSource, [], NULL), QuantEvent::UNPUBLISH);
+    if (!$redirect->isNew()) {
+      $originalSource = $redirect->original->getSourcePathWithQuery();
+      if ($originalSource && $source != $originalSource) {
+        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $originalSource, [], NULL), QuantEvent::UNPUBLISH);
+      }
     }
 
     if (!(bool) $statusCode && !$redirect->isNew()) {
