@@ -148,6 +148,8 @@ class QuantDrushCommands extends DrushCommands {
       'redirects',
       'routes',
       'routes_textarea',
+      'file_paths',
+      'file_paths_textarea',
       'robots',
       'lunr',
     ];
