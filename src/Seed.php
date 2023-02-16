@@ -111,6 +111,8 @@ class Seed {
    */
   public static function deleteRedirect($redirect) {
     $source = $redirect->getSourcePathWithQuery();
+    // QuantEvent can be used to unpublish any resource. Note, the source must
+    // be given here and not the destination.
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
   }
 
@@ -259,8 +261,15 @@ class Seed {
 
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
-    if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
+    if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
+    }
+
+    // Unpublish canonical redirect from node/123.
+    if ("/node/{$nid}" != $url) {
+      // QuantEvent can be used to unpublish any resource. Note, the source must
+      // be given here and not the destination.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/node/{$nid}", [], NULL), QuantEvent::UNPUBLISH);
     }
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
