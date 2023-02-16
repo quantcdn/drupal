@@ -227,7 +227,7 @@ function quant_cron_get_files_from_paths($files_textarea) {
   }
 
   foreach ($paths as $path) {
-    foreach (glob($path) as $filename) {
+    foreach (glob(trim($path)) as $filename) {
       if (is_file($filename)) {
         $path = str_replace(DRUPAL_ROOT, '', $filename);
         $files[] = $path;
