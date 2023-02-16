@@ -138,7 +138,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    */
   private function collectFilesOnDisk($paths, $event) {
     foreach ($paths as $path) {
-      foreach (glob($path) as $filename) {
+      foreach (glob(trim($path)) as $filename) {
         if (is_file($filename)) {
           $path = str_replace(DRUPAL_ROOT, '', $filename);
           $event->queueItem(['file' => $path]);
