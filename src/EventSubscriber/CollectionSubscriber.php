@@ -134,12 +134,23 @@ class CollectionSubscriber implements EventSubscriberInterface {
   }
 
   /**
-   * Collect files for quant seeding.
+   * Collect files based on provided paths on disk.
    */
-  public function collectFiles(CollectFilesEvent $event) {
-    if (!$event->getFormState()->getValue('theme_assets')) {
-      return;
+  private function collectFilesOnDisk($paths, $event) {
+    foreach ($paths as $path) {
+      foreach (glob(trim($path)) as $filename) {
+        if (is_file($filename)) {
+          $path = str_replace(DRUPAL_ROOT, '', $filename);
+          $event->queueItem(['file' => $path]);
+        }
+      }
     }
+  }
+
+  /**
+   * Collect files based on provided paths on disk.
+   */
+  private function collectThemeFiles($event) {
 
     // @todo Support multiple themes (e.g site may have multiple themes changing by route).
     $config = $this->configFactory->get('system.theme');
@@ -186,6 +197,27 @@ class CollectionSubscriber implements EventSubscriberInterface {
       $path = str_replace(DRUPAL_ROOT, '', $fileInfo->getPathname());
       $event->queueItem(['file' => $path]);
     }
+
+  }
+
+  /**
+   * Collect files for quant seeding.
+   */
+  public function collectFiles(CollectFilesEvent $event) {
+
+    if ($event->getFormState()->getValue('file_paths')) {
+      $paths = [];
+      foreach (explode(PHP_EOL, $event->getFormState()->getValue('file_paths_textarea')) as $path) {
+        // Paths must be relative to the drupal web root.
+        $paths[] = DRUPAL_ROOT . "/" . ltrim($path, '/');
+      }
+      $this->collectFilesOnDisk($paths, $event);
+    }
+
+    if ($event->getFormState()->getValue('theme_assets')) {
+      $this->collectThemeFiles($event);
+    }
+
   }
 
   /**
