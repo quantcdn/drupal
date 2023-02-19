@@ -220,7 +220,7 @@ class SeedForm extends FormBase {
     $form['routes'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Custom routes'),
-      '#description' => $this->t('Exports custom list of routes.  May be content or files.'),
+      '#description' => $this->t('Exports custom list of individual routes.  May be content or files.'),
       '#default_value' => $seed_config->get('routes'),
     ];
 
@@ -234,6 +234,25 @@ class SeedForm extends FormBase {
         ],
       ],
       '#default_value' => $seed_config->get('routes_textarea'),
+    ];
+
+    $form['file_paths'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('File paths'),
+      '#description' => $this->t('Exports files with support for wildcards.'),
+      '#default_value' => $seed_config->get('file_paths'),
+    ];
+
+    $form['file_paths_textarea'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Local files'),
+      '#description' => $this->t('Add paths to local files on disk. Must be relative to the Drupal webroot. Wildcards are accepted.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="file_paths"]' => ['checked' => TRUE],
+        ],
+      ],
+      '#default_value' => $seed_config->get('file_paths_textarea'),
     ];
 
     $form['robots'] = [
@@ -308,6 +327,8 @@ class SeedForm extends FormBase {
       ->set('redirects', $form_state->getValue('redirects'))
       ->set('routes', $form_state->getValue('routes'))
       ->set('routes_textarea', $form_state->getValue('routes_textarea'))
+      ->set('file_paths', $form_state->getValue('file_paths'))
+      ->set('file_paths_textarea', $form_state->getValue('file_paths_textarea'))
       ->set('robots', $form_state->getValue('robots'))
       ->set('lunr', $form_state->getValue('lunr'))
       ->save();

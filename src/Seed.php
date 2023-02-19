@@ -161,10 +161,20 @@ class Seed {
   }
 
   /**
-   *
+   * Handle redirect event.
    */
   protected static function handleRedirectEvent($source, $destination, $statusCode) {
     // Unpublish redirects when content is deleted?
+
+    // If the source path has changed, unpublish the old path as the redirect
+    // from that path no longer works in Drupal.
+    if (!$redirect->isNew()) {
+      $originalSource = $redirect->original->getSourcePathWithQuery();
+      if ($originalSource && $source != $originalSource) {
+        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $originalSource, [], NULL), QuantEvent::UNPUBLISH);
+      }
+    }
+
     if (!(bool) $statusCode && !$redirect->isNew()) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
       return;
@@ -178,6 +188,8 @@ class Seed {
    */
   public static function deleteRedirect($redirect) {
     $source = $redirect->getSourcePathWithQuery();
+    // QuantEvent can be used to unpublish any resource. Note, the source must
+    // be given here and not the destination.
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
   }
 
@@ -326,8 +338,44 @@ class Seed {
 
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
-    if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
+    if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
+    }
+
+    // Unpublish canonical redirect from node/123.
+    if ("/node/{$nid}" != $url) {
+      // QuantEvent can be used to unpublish any resource. Note, the source must
+      // be given here and not the destination.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/node/{$nid}", [], NULL), QuantEvent::UNPUBLISH);
+    }
+
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+  }
+
+  /**
+   * Unpublish the term path from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The term entity.
+   */
+  public static function unpublishTaxonomyTerm(EntityInterface $entity) {
+
+    $langcode = $entity->language()->getId();
+    $tid = $entity->get('tid')->value;
+
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+
+    // Unpublish canonical redirect from taxonomy/term/123.
+    if ("/taxonomy/term/{$tid}" != $url) {
+      // QuantEvent can be used to unpublish any resource. Note, the source must
+      // be given here and not the destination.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/taxonomy/term/{$tid}", [], NULL), QuantEvent::UNPUBLISH);
     }
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
