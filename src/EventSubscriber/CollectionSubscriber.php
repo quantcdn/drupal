@@ -8,14 +8,15 @@ use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\Plugin\QueueItem\RedirectItem;
-use Drupal\user\Entity\User;
-use Drupal\views\Views;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Drupal\quant\Seed;
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 use Drupal\redirect\Entity\Redirect;
+use Drupal\user\Entity\User;
+use Drupal\views\Views;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Event subscribers for the quant collection events.
@@ -260,19 +261,18 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
           $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
           $event->queueItem(['route' => $url]);
+        }
 
-          // Generate a redirection QueueItem from canonical path to URL.
-          // Use the default language alias in the event of multi-lang setup.
+        // Generate QueueItem for each canonical redirect.
+        if ($term->isPublished()) {
           $queue_factory = \Drupal::service('queue');
           $queue = $queue_factory->get('quant_seed_worker');
 
-          if ("/taxonomy/term/{$tid}" != $url) {
-            $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
-            $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
-
+          $redirects = Seed::getCanonicalRedirects($term);
+          foreach ($redirects as $source => $destination) {
             $redirectItem = new RedirectItem([
-              'source' => "/taxonomy/term/{$tid}",
-              'destination' => $defaultUrl,
+              'source' => $source,
+              'destination' => $destination,
               'status_code' => 301,
             ]);
 

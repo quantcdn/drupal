@@ -489,7 +489,7 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    // Unpublish canonical redirect for node/123.
+    // Unpublish canonical redirects for node/123.
     Seed::updateCanonicalRedirects($entity, TRUE);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
@@ -514,7 +514,7 @@ class Seed {
 
     $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
 
-    // Unpublish canonical redirect for taxonomy/term/123.
+    // Unpublish canonical redirects for taxonomy/term/123.
     Seed::updateCanonicalRedirects($entity, TRUE);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
