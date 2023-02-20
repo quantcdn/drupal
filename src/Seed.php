@@ -408,12 +408,12 @@ class Seed {
 
     // Add /node/123 => /alias or /taxonomy/term/123 => /alias redirect. If the
     // site is multilingual and path prefix is used, the $defaultUrl might have
-    // the path prefix in it, e.g. /node/123 => /en/node123alias.
+    // the path prefix in it, e.g. /node/123 => /en/alias.
     $redirects[$source] = $defaultUrl;
 
     // Only add more redirects if path prefixes are being used.
     if (Seed::usesLanguagePathPrefixes()) {
-      // Add /alias => /[prefix]/alias, e.g. /node123alias => /en/node123alias.
+      // Add /alias => /[prefix]/alias, e.g. /alias => /en/alias.
       $pathPrefix = $pathPrefixes[$defaultLangcode] ? '/' . $pathPrefixes[$defaultLangcode] : '';
       $defaultUrlWithoutPrefix = str_replace($pathPrefix . '/', '/', $defaultUrl);
       $redirects[$defaultUrlWithoutPrefix] = $defaultUrl;
@@ -428,18 +428,25 @@ class Seed {
         // language, the path prefix can be empty.
         $pathPrefix = $pathPrefixes[$langcode] ? '/' . $pathPrefixes[$langcode] : '';
 
-        // Each language can have its own alias. Aliases do not include path prefixes.
-        // If no alias has been set, getAliasByPath returns the source path.
+        // Each translation can have its own alias. Aliases do not have path
+        // prefixes. If no alias is found for the translation, getAliasByPath
+        // returns the source path.
         $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
 
-        // If this is the default language or no alias has been set for this language, redirect to $defaultUrl.
-        if ($langcode == $defaultLangcode || $source == $alias) {
-          // Add /[prefix]/source => /defaultUrl, e.g. /en/node/123 => /en/node123alias.
+        // If the default path prefix is empty, still handle langcode paths.
+        if (empty($pathPrefix)) {
+          $redirects['/' . $langcode . $source] = $defaultUrl;
+          $redirects['/' . $langcode . $defaultUrl] = $defaultUrl;
+        }
+        // If this is the default language with a path prefix or no alias has
+        // been set for this language, redirect to $defaultUrl.
+        elseif ($langcode == $defaultLangcode || $source == $alias) {
+          // Add /[prefix]/source => /defaultUrl, e.g. /en/node/123 => /en/alias.
           $redirects[$pathPrefix . $source] = $defaultUrl;
         }
         // An alias has been set for this language, so add redirect for it.
         else {
-          // Add /[prefix]/node/123 => /[prefix]/alias, e.g. /es/node/123 => /es/esnode123alias
+          // Add /[prefix]/node/123 => /[prefix]/alias, e.g. /es/node/123 => /es/alias.
           $redirects[$pathPrefix . $source] = $pathPrefix . $alias;
         }
       }
