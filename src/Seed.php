@@ -100,6 +100,7 @@ class Seed {
     }
 
     // Special handling when using URL path prefixes, e.g. foo.com/en/my-page.
+    // @todo How to handle site with language aliases but path prefix disabled?
     if (Seed::usesLanguagePathPrefixes()) {
       Seed::handleMulitingualRedirectEvent($redirect);
     }
@@ -328,11 +329,11 @@ class Seed {
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
 
     // Create canonical redirects for /node/123.
-    // @fixme Should we check it's published?
     if ($entity->isPublished() && $entity->isDefaultRevision()) {
       Seed::updateCanonicalRedirects($entity);
     }
     else {
+      // @todo Should we handle unpublished content too?
       \Drupal::logger('quant')->notice('Bypassing canonical redirects for unpublished node %nid.', ['%nid' => $nid]);
     }
   }
@@ -385,7 +386,9 @@ class Seed {
     }
 
     $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+    $defaultLangcode = $defaultLanguage->getId();
     $defaultUrl = Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], ['language' => $defaultLanguage])->toString();
+    $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
 
     switch ($type) {
       case 'node':
@@ -406,38 +409,35 @@ class Seed {
     }
 
     // Add /alias => /[prefix]/alias, e.g. /node123alias => /en/node123alias.
-    // fixme... have to strip the prefix out.
-    //$redirects[$defaultUrlWithoutPrefix] = $defaultUrl;
+    $pathPrefix = $pathPrefixes[$defaultLangcode] ? '/' . $pathPrefixes[$defaultLangcode] : '';
+    $defaultUrlWithoutPrefix = str_replace($pathPrefix . '/', '/', $defaultUrl);
+    $redirects[$defaultUrlWithoutPrefix] = $defaultUrl;
 
     // Handle multilingual redirects.
-    // fixme what happens with multilingual site with language aliases but path prefix is disabled?
-    //if (Seed::usesLanguagePathPrefixes()) {
-      // Get language and prefix configuration.
-      $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
-      $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
+    // Get language and prefix configuration.
+    $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
 
-      // In case there are translations, process all languages.
-      foreach ($langcodes as $langcode) {
-        // Path prefix might not be the same as the langcode. For the default
-        // language, the path prefix can be empty.
-        $pathPrefix = $pathPrefixes[$langcode] ? '/' . $pathPrefixes[$langcode] : '';
+    // In case there are translations, process all languages.
+    foreach ($langcodes as $langcode) {
+      // Path prefix might not be the same as the langcode. For the default
+      // language, the path prefix can be empty.
+      $pathPrefix = $pathPrefixes[$langcode] ? '/' . $pathPrefixes[$langcode] : '';
 
-        // Each language can have its own alias. Aliases do not include path prefixes.
-        // If no alias has been set, getAliasByPath returns the source path.
-        $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
+      // Each language can have its own alias. Aliases do not include path prefixes.
+      // If no alias has been set, getAliasByPath returns the source path.
+      $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
 
-        // If this is the default language or no alias has been set for this language, redirect to $defaultUrl.
-        if ($langcode == $defaultLanguage->getId() || $source == $alias) {
-          // Add /[prefix]/source => /defaultUrl, e.g. /en/node/123 => /en/node123alias.
-          $redirects[$pathPrefix . $source] = $defaultUrl;
-        }
-        // An alias has been set for this language, so add redirect for it.
-        else {
-          // Add /[prefix]/node/123 => /[prefix]/alias, e.g. /es/node/123 => /es/esnode123alias
-          $redirects[$pathPrefix . $source] = $pathPrefix . $alias;
-        }
+      // If this is the default language or no alias has been set for this language, redirect to $defaultUrl.
+      if ($langcode == $defaultLangcode || $source == $alias) {
+        // Add /[prefix]/source => /defaultUrl, e.g. /en/node/123 => /en/node123alias.
+        $redirects[$pathPrefix . $source] = $defaultUrl;
       }
-    //}
+      // An alias has been set for this language, so add redirect for it.
+      else {
+        // Add /[prefix]/node/123 => /[prefix]/alias, e.g. /es/node/123 => /es/esnode123alias
+        $redirects[$pathPrefix . $source] = $pathPrefix . $alias;
+      }
+    }
 
 \Drupal::logger('kptesting')->notice('redirects = <pre>' . print_r($redirects, TRUE) . '</pre>');
 
