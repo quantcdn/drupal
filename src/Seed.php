@@ -230,7 +230,19 @@ class Seed {
       }
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
+    // Handle case where translation is unpublished.
+    $published = $entity->isPublished();
+    if ($entity->hasTranslation($langcode)) {
+      $translation = $entity->getTranslation($langcode);
+      $published = $translation->isPublished();
+    }
+
+    if ($published) {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
+    }
+    else {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    }
 
     // Create canonical redirects from node/123 to the published revision route.
     if ("/node/{$nid}" != $url && $entity->isPublished() && $entity->isDefaultRevision()) {
