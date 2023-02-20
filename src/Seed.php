@@ -89,16 +89,22 @@ class Seed {
    * Add/update redirect via API request.
    */
   public static function seedRedirect($redirect) {
-    $source = $redirect->getSourcePathWithQuery();
-    $destination = $redirect->getRedirectUrl()->toString();
-    $statusCode = $redirect->getStatusCode();
+
+    // If the source path has changed, unpublish the old path as the redirect
+    // from that path no longer works in Drupal.
+    if (!$redirect->isNew()) {
+      $originalSource = $redirect->original->getSourcePathWithQuery();
+      if ($originalSource && $originalSource != $redirect->getSourcePathWithQuery()) {
+        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $originalSource, [], NULL), QuantEvent::UNPUBLISH);
+      }
+    }
 
     // Special handling when using URL path prefixes, e.g. foo.com/en/my-page.
     if (Seed::usesLanguagePathPrefixes()) {
-      Seed::handleMulitingualRedirectEvent($source, $destination, $statusCode);
+      Seed::handleMulitingualRedirectEvent($redirect);
     }
     else {
-      Seed::handleRedirectEvent($source, $destination, $statusCode);
+      Seed::handleRedirectEvent($redirect);
     }
   }
 
@@ -117,26 +123,22 @@ class Seed {
 
   /**
    * Handle multilingual redirect event.
-   *
-   * @param string $source
-   *   The redirect source path.
-   * @param string $destination
-   *   The redirect destination path.
-   * @param int $statusCode
-   *   The redirect status code.
    */
-  protected static function handleMulitingualRedirectEvent($source, $destination, $statusCode) {
+  protected static function handleMulitingualRedirectEvent($redirect) {
+    $source = $redirect->getSourcePathWithQuery();
+    $destination = $redirect->getRedirectUrl()->toString();
+    $statusCode = $redirect->getStatusCode();
+    $langcode = $redirect->language()->getId();
 
     // Get language and prefix configuration.
-    $redirectLangcode = $redirect->language()->getId();
     $siteDefaultLangcode = \Drupal::service('language.default')->get()->getId();
     $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
 
     // Multilingual redirects can be configured for a specific language or
     // for all languages. If the redirect is configured for all languages,
     // create a redirect for each language.
-    $langcodes = [$redirectLangcode];
-    if ($redirectLangcode === LanguageInterface::LANGCODE_NOT_SPECIFIED) {
+    $langcodes = [$langcode];
+    if ($langcode === LanguageInterface::LANGCODE_NOT_SPECIFIED) {
       $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
     }
 
@@ -178,35 +180,25 @@ class Seed {
       // /en/node/123 => /en/node123alias
       // /node123alias => /en/node123alias
       //if ($source != $updatedSource) {
-        //Seed::handleRedirectEvent($source, $updatedDestination, $statusCode);
+      // \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($source, $updatedDestination, $statusCode), QuantRedirectEvent::UPDATE);
       //}
-      Seed::handleRedirectEvent($updatedSource, $updatedDestination, $statusCode);
+
+      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($updatedSource, $updatedDestination, $statusCode), QuantRedirectEvent::UPDATE);
     }
   }
 
   /**
    * Handle redirect event.
-   *
-   * @param string $source
-   *   The redirect source path.
-   * @param string $destination
-   *   The redirect destination path.
-   * @param int $statusCode
-   *   The redirect status code.
    */
-  protected static function handleRedirectEvent($source, $destination, $statusCode) {
+  protected static function handleRedirectEvent($redirect) {
     // @todo Unpublish redirects when content is deleted?
 
-    // If the source path has changed, unpublish the old path as the redirect
-    // from that path no longer works in Drupal.
-    if (!$redirect->isNew()) {
-      $originalSource = $redirect->original->getSourcePathWithQuery();
-      if ($originalSource && $source != $originalSource) {
-        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $originalSource, [], NULL), QuantEvent::UNPUBLISH);
-      }
-    }
+    $source = $redirect->getSourcePathWithQuery();
+    $destination = $redirect->getRedirectUrl()->toString();
+    $statusCode = $redirect->getStatusCode();
+    $isNew = $redirect->isNew();
 
-    if (!(bool) $statusCode && !$redirect->isNew()) {
+    if (!(bool) $statusCode && !$isNew) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
       return;
     }
@@ -337,9 +329,12 @@ class Seed {
 
     // Create canonical redirects for /node/123.
     // @fixme Should we check it's published?
-    //if ($entity->isPublished() && $entity->isDefaultRevision()) {
+    if ($entity->isPublished() && $entity->isDefaultRevision()) {
       Seed::updateCanonicalRedirects($entity);
-    //}
+    }
+    else {
+      \Drupal::logger('quant')->notice('Bypassing canonical redirects for unpublished node %nid.', ['%nid' => $nid]);
+    }
   }
 
   /**
@@ -354,7 +349,11 @@ class Seed {
     $redirects = Seed::getCanonicalRedirects($entity);
     foreach ($redirects as $source => $destination) {
       if (empty($source) || empty($destination)) {
-        \Drupal::logger('quant')->warning('Unable to process redirect for entity %type %id', ['%type' => $entity->getEntityTypeId(), '%id' => $entity->getId()]);
+        \Drupal::logger('quant')->warning('Unable to process redirect for entity %type %id due to empty data.', ['%type' => $entity->getEntityTypeId(), '%id' => $entity->getId()]);
+        continue;
+      }
+      if ($source == $destination) {
+        \Drupal::logger('quant')->warning('Unable to process redirect for entity %type %id because source and destination are the same.', ['%type' => $entity->getEntityTypeId(), '%id' => $entity->getId()]);
         continue;
       }
       if ($unpublish) {
@@ -439,6 +438,8 @@ class Seed {
         }
       }
     //}
+
+\Drupal::logger('kptesting')->notice('redirects = <pre>' . print_r($redirects, TRUE) . '</pre>');
 
     return $redirects;
   }
