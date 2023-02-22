@@ -331,7 +331,19 @@ class Seed {
       }
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
+    // Handle case where translation is unpublished.
+    $published = $entity->isPublished();
+    if ($entity->hasTranslation($langcode)) {
+      $translation = $entity->getTranslation($langcode);
+      $published = $translation->isPublished();
+    }
+
+    if ($published) {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
+    }
+    else {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    }
 
     // Create canonical redirects for /node/123.
     if ($entity->isPublished() && $entity->isDefaultRevision()) {
@@ -346,12 +358,17 @@ class Seed {
   /**
    * Update canonical redirects.
    *
+   * Canonical redirects are intentionally never unpublished. The content, if
+   * unpublished, will cause a 404, which is sufficient. This simplifies the
+   * logic for these redirects. This is different than for manually created
+   * redirects which can be published and unpublished.
+   *
    * @param Drupal\Core\Entity\EntityInterface $entity
    *   The entity.
    * @param bool $unpublish
    *   Whether or not to unpublish the redirect.
    */
-  public static function updateCanonicalRedirects(EntityInterface $entity, $unpublish = FALSE) {
+  public static function updateCanonicalRedirects(EntityInterface $entity) {
     $redirects = Seed::getCanonicalRedirects($entity);
     foreach ($redirects as $source => $destination) {
       if (empty($source) || empty($destination)) {
@@ -362,14 +379,7 @@ class Seed {
         \Drupal::logger('quant_seed')->warning('Unable to process redirect for entity %type because source and destination are the same.', ['%type' => $entity->getEntityTypeId()]);
         continue;
       }
-      if ($unpublish) {
-        // QuantEvent can be used to unpublish any resource. Note, the source must
-        // be given here and not the destination.
-        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $source, [], NULL), QuantEvent::UNPUBLISH);
-      }
-      else {
-        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($source, $destination, 301), QuantRedirectEvent::UPDATE);
-      }
+      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($source, $destination, 301), QuantRedirectEvent::UPDATE);
     }
   }
 
