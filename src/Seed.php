@@ -190,7 +190,8 @@ class Seed {
        * /node123alias => /en/node123alias.
        * if ($source != $updatedSource) {
        *   \Drupal::service('event_dispatcher')->
-       *   dispatch(new QuantRedirectEvent($source, $updatedDestination, $statusCode), 
+       *   dispatch(
+       *   new QuantRedirectEvent($source, $updatedDestination, $statusCode),
        *   QuantRedirectEvent::UPDATE);
        * }
        */
@@ -201,10 +202,10 @@ class Seed {
 
   /**
    * Handle redirect event.
+   *
+   * @todo Unpublish redirects when content is deleted?
    */
   protected static function handleRedirectEvent($redirect) {
-    // @todo Unpublish redirects when content is deleted?
-
     $source = $redirect->getSourcePathWithQuery();
     $destination = $redirect->getRedirectUrl()->toString();
     $statusCode = $redirect->getStatusCode();
