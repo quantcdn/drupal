@@ -3,7 +3,6 @@
 namespace Drupal\quant;
 
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Language\Language;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Url;
 use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
@@ -183,13 +182,18 @@ class Seed {
         $updatedDestination = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', $pathPrefix . '/', $destination);
       }
 
-      // Example redirects:
-      // /node/123 => /en/node123alias
-      // /en/node/123 => /en/node123alias
-      // /node123alias => /en/node123alias
-      //if ($source != $updatedSource) {
-      // \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($source, $updatedDestination, $statusCode), QuantRedirectEvent::UPDATE);
-      //}
+      /*
+       * @fixme
+       * Example redirects:
+       * /node/123 => /en/node123alias.
+       * /en/node/123 => /en/node123alias.
+       * /node123alias => /en/node123alias.
+       * if ($source != $updatedSource) {
+       *   \Drupal::service('event_dispatcher')->
+       *   dispatch(new QuantRedirectEvent($source, $updatedDestination, $statusCode), 
+       *   QuantRedirectEvent::UPDATE);
+       * }
+       */
 
       \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($updatedSource, $updatedDestination, $statusCode), QuantRedirectEvent::UPDATE);
     }
@@ -396,7 +400,8 @@ class Seed {
     $id = $entity->id();
     $type = $entity->getEntityTypeId();
     if (!in_array($type, ['node', 'taxonomy_term'])) {
-      \Drupal::logger('quant_seed', 'Unsupported entity: %type (%id)', ['%type' => $type, '%id' => $id]);
+      \Drupal::logger('quant_seed', 'Unsupported entity: %type (%id)',
+        ['%type' => $type, '%id' => $id]);
       return [];
     }
 
@@ -408,6 +413,7 @@ class Seed {
       case 'node':
         $source = "/node/{$id}";
         break;
+
       case 'taxonomy_term':
         $source = "/taxonomy/term/{$id}";
         break;
@@ -446,7 +452,7 @@ class Seed {
         $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
 
         // If the path prefix is empty, still add redirect with langcode.
-        // E.g. /[langcode]/node/123 => /defaulturl
+        // E.g. /[langcode]/node/123 => /defaulturl.
         if (empty($pathPrefix)) {
           $redirects['/' . $langcode . $source] = $defaultUrl;
           $redirects['/' . $langcode . $defaultUrl] = $defaultUrl;
@@ -473,7 +479,7 @@ class Seed {
       }
     }
 
-\Drupal::logger('kptesting')->notice('redirects = <pre>' . print_r($redirects, TRUE) . '</pre>');
+    \Drupal::logger('kptesting')->notice('redirects = <pre>' . print_r($redirects, TRUE) . '</pre>');
 
     return $redirects;
   }
