@@ -149,6 +149,7 @@ class Seed {
     }
 
     // Check if a node for this path exists.
+    // @todo Handle taxonomy terms.
     $node = NULL;
     $aliasWithoutLangcode = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', '/', $destination);
     $path = \Drupal::service('path_alias.manager')->getPathByAlias($aliasWithoutLangcode);
@@ -164,6 +165,7 @@ class Seed {
       $updatedSource = $pathPrefix . $source;
 
       // For nodes, get alias associated with the langcode, if any.
+      // @todo Handle taxonomy terms.
       if ($node) {
         $path = '/node/' . $node->id();
         $alias = \Drupal::service('path_alias.manager')->getAliasByPath($path, $langcode);
@@ -176,7 +178,7 @@ class Seed {
           $updatedDestination = $pathPrefix . $alias;
         }
       }
-      // @todo Test use case where page is not a node.
+      // @todo Test use case where page is not a node or term.
       else {
         $updatedDestination = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', $pathPrefix . '/', $destination);
       }
@@ -256,7 +258,7 @@ class Seed {
       }
     }
 
-    // Create canonical redirects for taxonomy/term/123.
+    // Update canonical redirects for taxonomy/term/123.
     Seed::updateCanonicalRedirects($entity);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
@@ -345,7 +347,7 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    // Create canonical redirects for /node/123.
+    // Update canonical redirects for /node/123.
     if ($entity->isPublished() && $entity->isDefaultRevision()) {
       Seed::updateCanonicalRedirects($entity);
     }
@@ -365,8 +367,6 @@ class Seed {
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
    *   The entity.
-   * @param bool $unpublish
-   *   Whether or not to unpublish the redirect.
    */
   public static function updateCanonicalRedirects(EntityInterface $entity) {
     $redirects = Seed::getCanonicalRedirects($entity);
@@ -400,10 +400,9 @@ class Seed {
       return [];
     }
 
+    // Get canonical URL in default language.
     $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
-    $defaultLangcode = $defaultLanguage->getId();
     $defaultUrl = Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], ['language' => $defaultLanguage])->toString();
-    $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
 
     switch ($type) {
       case 'node':
@@ -421,18 +420,21 @@ class Seed {
     // the path prefix in it, e.g. /node/123 => /en/alias.
     $redirects[$source] = $defaultUrl;
 
-    // Only add more redirects if path prefixes are being used.
+    // Only add more redirects if path prefixes are being used. For simplicity
+    // of logic, redirects are added here without checking if the source and the
+    // destination are the same, but later we remove any where this is the case.
     if (Seed::usesLanguagePathPrefixes()) {
-      // Add /alias => /[prefix]/alias, e.g. /alias => /en/alias.
+      // Get default langcode and path prefixes for all languages.
+      $defaultLangcode = $defaultLanguage->getId();
+      $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
+
+      // Add redirect for default language URL without path prefix.
       $pathPrefix = $pathPrefixes[$defaultLangcode] ? '/' . $pathPrefixes[$defaultLangcode] : '';
       $defaultUrlWithoutPrefix = str_replace($pathPrefix . '/', '/', $defaultUrl);
       $redirects[$defaultUrlWithoutPrefix] = $defaultUrl;
 
       // Handle multilingual redirects.
-      // Get language and prefix configuration.
       $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
-
-      // In case there are translations, process all languages.
       foreach ($langcodes as $langcode) {
         // Path prefix might not be the same as the langcode. For the default
         // language, the path prefix can be empty.
@@ -443,26 +445,28 @@ class Seed {
         // returns the source path.
         $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
 
-        // If the default path prefix is empty, still handle langcode paths.
+        // If the path prefix is empty, still add redirect with langcode.
+        // E.g. /[langcode]/node/123 => /defaulturl
         if (empty($pathPrefix)) {
           $redirects['/' . $langcode . $source] = $defaultUrl;
           $redirects['/' . $langcode . $defaultUrl] = $defaultUrl;
         }
         // If this is the default language with a path prefix or no alias has
-        // been set for this language, redirect to $defaultUrl.
+        // been set for this language, redirect to the default URL.
+        // E.g. /[prefix]/node/123 => /defaulturl.
         elseif ($langcode == $defaultLangcode || $source == $alias) {
-          // Add /[prefix]/source => /defaultUrl, e.g. /en/node/123 => /en/alias.
           $redirects[$pathPrefix . $source] = $defaultUrl;
         }
         // An alias has been set for this language, so add redirect for it.
+        // E.g. /[prefix]/node/123 => /[prefix]/languagealias.
         else {
-          // Add /[prefix]/node/123 => /[prefix]/alias, e.g. /es/node/123 => /es/alias.
           $redirects[$pathPrefix . $source] = $pathPrefix . $alias;
         }
       }
     }
 
-    // Remove any redirects where source and destination are the same.
+    // Remove any redirects where source and destination are the same, since
+    // we did not check these above to keep the logic simpler.
     foreach ($redirects as $source => $destination) {
       if ($source == $destination) {
         unset($redirects[$source]);
@@ -499,8 +503,8 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    // Unpublish canonical redirects for node/123.
-    Seed::updateCanonicalRedirects($entity, TRUE);
+    // Update canonical redirects for node/123.
+    Seed::updateCanonicalRedirects($entity);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }
@@ -524,8 +528,8 @@ class Seed {
 
     $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
 
-    // Unpublish canonical redirects for taxonomy/term/123.
-    Seed::updateCanonicalRedirects($entity, TRUE);
+    // Update canonical redirects for taxonomy/term/123.
+    Seed::updateCanonicalRedirects($entity);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }
