@@ -82,6 +82,24 @@ function quant_cron_cron() {
     }
   }
 
+  // Add taxonomy terms.
+  if ($form_state->getValue('entity_taxonomy_term')) {
+    $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple();
+
+    foreach ($terms as $term) {
+      foreach ($term->getTranslationLanguages() as $langcode => $language) {
+        Seed::seedTaxonomyTerm($term, $langcode);
+
+        \Drupal::logger('quant_cron')->notice("quant_cron sending term: tid: @tid, langcode: @lang",
+          [
+            '@tid' => $term->get('tid')->value,
+            '@lang' => $langcode,
+          ]
+        );
+      }
+    }
+  }
+
   // Add custom routes.
   if ($form_state->getValue('routes')) {
     foreach (explode(PHP_EOL, $form_state->getValue('routes_textarea')) as $route) {
@@ -113,11 +131,6 @@ function quant_cron_cron() {
     $routes = array_merge($routes, quant_cron_get_views_routes());
   }
 
-  // Add taxonomy term routes.
-  if ($form_state->getValue('entity_taxonomy_term')) {
-    $routes = array_merge($routes, quant_cron_get_taxonomy_routes());
-  }
-
   // Send files.
   foreach ($files as $file) {
     \Drupal::logger('quant_cron')->notice("quant_cron sending file: @route", ['@route' => $file]);
@@ -132,35 +145,6 @@ function quant_cron_cron() {
     $item->send();
   }
 
-}
-
-/**
- * Helper: Get taxonomy routes.
- */
-function quant_cron_get_taxonomy_routes() {
-
-  $paths = [];
-  $taxonomy_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
-
-  foreach ($taxonomy_storage->loadMultiple() as $term) {
-    foreach ($term->getTranslationLanguages() as $langcode => $language) {
-      // Retrieve the translated version.
-      $term = $term->getTranslation($langcode);
-      $tid = $term->id();
-
-      $options = ['absolute' => FALSE];
-
-      if (!empty($langcode)) {
-        $language = \Drupal::languageManager()->getLanguage($langcode);
-        $options['language'] = $language;
-      }
-
-      $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
-      $paths[] = $url;
-    }
-  }
-
-  return $paths;
 }
 
 /**
