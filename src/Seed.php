@@ -358,19 +358,7 @@ class Seed {
       }
     }
 
-    // Handle case where translation is unpublished.
-    $published = $entity->isPublished();
-    if ($entity->hasTranslation($langcode)) {
-      $translation = $entity->getTranslation($langcode);
-      $published = $translation->isPublished();
-    }
-
-    if ($published) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
-    }
-    else {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
-    }
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
 
     // Update canonical redirects for /node/123.
     Seed::updateCanonicalRedirects($entity);
