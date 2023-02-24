@@ -353,13 +353,7 @@ class Seed {
     }
 
     // Update canonical redirects for /node/123.
-    if ($entity->isPublished() && $entity->isDefaultRevision()) {
-      Seed::updateCanonicalRedirects($entity);
-    }
-    else {
-      // @todo Should we handle unpublished content too?
-      \Drupal::logger('quant_seed')->notice('Bypassing canonical redirects for unpublished node %nid.', ['%nid' => $nid]);
-    }
+    Seed::updateCanonicalRedirects($entity);
   }
 
   /**
@@ -374,10 +368,17 @@ class Seed {
    *   The entity.
    */
   public static function updateCanonicalRedirects(EntityInterface $entity) {
+    $id = $entity->id();
+    $type = $entity->getEntityTypeId();
+    if (!$entity->isPublished()) {
+      // @todo Should we handle unpublished content too?
+      \Drupal::logger('quant_seed')->notice('Bypassing canonical redirects for unpublished %type %id.', ['%type' => $type, '%id' => $id]);
+    }
+
     $redirects = Seed::getCanonicalRedirects($entity);
     foreach ($redirects as $source => $destination) {
       if (empty($source) || empty($destination)) {
-        \Drupal::logger('quant_seed')->warning('Unable to process redirect for entity %type due to empty data.', ['%type' => $entity->getEntityTypeId()]);
+        \Drupal::logger('quant_seed')->warning('Unable to process redirect for entity %type due to empty data.', ['%type' => $type]);
         continue;
       }
       if ($source == $destination) {
@@ -480,7 +481,7 @@ class Seed {
       }
     }
 
-    \Drupal::logger('kptesting')->notice('redirects = <pre>' . print_r($redirects, TRUE) . '</pre>');
+    \Drupal::logger('kptesting')->notice('redirects for type %type [%id] = <pre>' . print_r($redirects, TRUE) . '</pre>', ['%type' => $type, '%id' => $id]);
 
     return $redirects;
   }
