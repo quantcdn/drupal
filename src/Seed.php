@@ -270,6 +270,26 @@ class Seed {
   }
 
   /**
+   * Seeds all taxonomy terms.
+   */
+  public static function seedTaxonomyTerms() {
+    $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple();
+
+    foreach ($terms as $term) {
+      foreach ($term->getTranslationLanguages() as $langcode => $language) {
+        Seed::seedTaxonomyTerm($term, $langcode);
+
+        \Drupal::logger('quant_seed')->notice("quant_seed sending term: tid: @tid, langcode: @lang",
+          [
+            '@tid' => $term->get('tid')->value,
+            '@lang' => $langcode,
+          ]
+        );
+      }
+    }
+  }
+
+  /**
    * Trigger an internal http request to retrieve node markup.
    *
    * Seeds an individual node update to Quant.
@@ -357,7 +377,7 @@ class Seed {
   }
 
   /**
-   * Update canonical redirects.
+   * Update canonical redirects for the given entity.
    *
    * Canonical redirects are intentionally never unpublished. The content, if
    * unpublished, will cause a 404, which is sufficient. This simplifies the
@@ -368,17 +388,10 @@ class Seed {
    *   The entity.
    */
   public static function updateCanonicalRedirects(EntityInterface $entity) {
-    $id = $entity->id();
-    $type = $entity->getEntityTypeId();
-    if (!$entity->isPublished()) {
-      // @todo Should we handle unpublished content too?
-      \Drupal::logger('quant_seed')->notice('Bypassing canonical redirects for unpublished %type %id.', ['%type' => $type, '%id' => $id]);
-    }
-
     $redirects = Seed::getCanonicalRedirects($entity);
     foreach ($redirects as $source => $destination) {
       if (empty($source) || empty($destination)) {
-        \Drupal::logger('quant_seed')->warning('Unable to process redirect for entity %type due to empty data.', ['%type' => $type]);
+        \Drupal::logger('quant_seed')->warning('Unable to process redirect for entity %type due to empty data.', ['%type' => $entity->getEntityTypeId()]);
         continue;
       }
       if ($source == $destination) {

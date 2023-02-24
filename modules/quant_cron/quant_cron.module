@@ -83,20 +83,7 @@ function quant_cron_cron() {
 
   // Add taxonomy terms.
   if ($form_state->getValue('entity_taxonomy_term')) {
-    $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple();
-
-    foreach ($terms as $term) {
-      foreach ($term->getTranslationLanguages() as $langcode => $language) {
-        Seed::seedTaxonomyTerm($term, $langcode);
-
-        \Drupal::logger('quant_cron')->notice("quant_cron sending term: tid: @tid, langcode: @lang",
-          [
-            '@tid' => $term->get('tid')->value,
-            '@lang' => $langcode,
-          ]
-        );
-      }
-    }
+    Seed::seedTaxonomyTerms();
   }
 
   // Add custom routes.
