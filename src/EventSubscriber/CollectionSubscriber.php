@@ -243,6 +243,8 @@ class CollectionSubscriber implements EventSubscriberInterface {
       $event->queueItem(['route' => $page]);
     }
 
+    // @todo Move this to collectEntities logic?
+    // @see Drupal\quant\Seed::seedTaxonomyTerms for similar logic.
     if ($event->getFormState()->getValue('entity_taxonomy_term')) {
       $taxonomy_storage = $this->entityTypeManager->getStorage('taxonomy_term');
 
@@ -263,21 +265,19 @@ class CollectionSubscriber implements EventSubscriberInterface {
           $event->queueItem(['route' => $url]);
         }
 
-        // Generate QueueItem for each canonical redirect.
-        if ($term->isPublished()) {
-          $queue_factory = \Drupal::service('queue');
-          $queue = $queue_factory->get('quant_seed_worker');
+        // Generate redirect queue item for each canonical redirect.
+        $queue_factory = \Drupal::service('queue');
+        $queue = $queue_factory->get('quant_seed_worker');
 
-          $redirects = Seed::getCanonicalRedirects($term);
-          foreach ($redirects as $source => $destination) {
-            $redirectItem = new RedirectItem([
-              'source' => $source,
-              'destination' => $destination,
-              'status_code' => 301,
-            ]);
+        $redirects = Seed::getCanonicalRedirects($term);
+        foreach ($redirects as $source => $destination) {
+          $redirectItem = new RedirectItem([
+            'source' => $source,
+            'destination' => $destination,
+            'status_code' => 301,
+          ]);
 
-            $queue->createItem($redirectItem);
-          }
+          $queue->createItem($redirectItem);
         }
       }
     }
