@@ -252,16 +252,8 @@ class CollectionSubscriber implements EventSubscriberInterface {
         foreach ($term->getTranslationLanguages() as $langcode => $language) {
           // Retrieve the translated version.
           $term = $term->getTranslation($langcode);
-          $tid = $term->id();
 
-          $options = ['absolute' => FALSE];
-
-          if (!empty($langcode)) {
-            $language = \Drupal::languageManager()->getLanguage($langcode);
-            $options['language'] = $language;
-          }
-
-          $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+          $url = Seed::getEntityUrl($entity, $langcode);
           $event->queueItem(['route' => $url]);
         }
 
