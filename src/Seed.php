@@ -351,132 +351,6 @@ class Seed {
   }
 
   /**
-   * Update canonical redirects for the given entity.
-   *
-   * Canonical redirects are intentionally never unpublished. The content, if
-   * unpublished, will cause a 404, which is sufficient. This simplifies the
-   * logic for these redirects. This is different than for manually created
-   * redirects which can be published and unpublished.
-   *
-   * @param Drupal\Core\Entity\EntityInterface $entity
-   *   The entity.
-   */
-  public static function updateCanonicalRedirects(EntityInterface $entity) {
-    $redirects = self::getCanonicalRedirects($entity);
-    foreach ($redirects as $source => $destination) {
-      if (empty($source) || empty($destination)) {
-        \Drupal::logger('quant_seed')->warning('Unable to process redirect for entity %type due to empty data.', ['%type' => $entity->getEntityTypeId()]);
-        continue;
-      }
-      if ($source == $destination) {
-        \Drupal::logger('quant_seed')->warning('Unable to process redirect for entity %type because source and destination are the same.', ['%type' => $entity->getEntityTypeId()]);
-        continue;
-      }
-
-      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($source, $destination, 301), QuantRedirectEvent::UPDATE);
-    }
-  }
-
-  /**
-   * Get canoncial redirect data for the given entity.
-   *
-   * Currently only supports nodes and taxonomy terms.
-   *
-   * @param Drupal\Core\Entity\EntityInterface $entity
-   *   The entity.
-   */
-  public static function getCanonicalRedirects(EntityInterface $entity) {
-    // @todo Handle other entities besides nodes and terms.
-    $id = $entity->id();
-    $type = $entity->getEntityTypeId();
-    if (!in_array($type, ['node', 'taxonomy_term'])) {
-      \Drupal::logger('quant_seed', 'Unsupported entity: %type (%id)',
-        ['%type' => $type, '%id' => $id]);
-      return [];
-    }
-
-    // Get canonical URL in default language.
-    $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
-    $defaultUrl = Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], ['language' => $defaultLanguage])->toString();
-
-    switch ($type) {
-      case 'node':
-        $source = "/node/{$id}";
-        break;
-
-      case 'taxonomy_term':
-        $source = "/taxonomy/term/{$id}";
-        break;
-    }
-
-    // Add /node/123 => /alias or /taxonomy/term/123 => /alias redirect. If the
-    // site is multilingual and path prefix is used, the $defaultUrl might have
-    // the path prefix in it, e.g. /node/123 => /en/alias.
-    $redirects[$source] = $defaultUrl;
-
-    // Only add more redirects if path prefixes are being used. For simplicity
-    // of logic, redirects are added here without checking if the source and the
-    // destination are the same, but later we remove any where this is the case.
-    if (self::usesLanguagePathPrefixes()) {
-      // Get default langcode and path prefixes for all languages.
-      $defaultLangcode = $defaultLanguage->getId();
-      $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
-
-      // Add redirect for default language URL without path prefix.
-      $pathPrefix = $pathPrefixes[$defaultLangcode] ? '/' . $pathPrefixes[$defaultLangcode] : '';
-      $defaultUrlWithoutPrefix = str_replace($pathPrefix . '/', '/', $defaultUrl);
-      $redirects[$defaultUrlWithoutPrefix] = $defaultUrl;
-
-      // Handle multilingual redirects.
-      $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
-      foreach ($langcodes as $langcode) {
-        // Skip entity's langcode to avoid redirect loop.
-        if ($langcode == $entity->langcode->value) {
-          continue;
-        }
-        // Path prefix might not be the same as the langcode. For the default
-        // language, the path prefix can be empty.
-        $pathPrefix = $pathPrefixes[$langcode] ? '/' . $pathPrefixes[$langcode] : '';
-
-        // Each translation can have its own alias. Aliases do not have path
-        // prefixes. If no alias is found for the translation, getAliasByPath
-        // returns the source path.
-        $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
-
-        // If the path prefix is empty, still add redirect with langcode.
-        // E.g. /[langcode]/node/123 => /defaulturl.
-        if (empty($pathPrefix)) {
-          $redirects['/' . $langcode . $source] = $defaultUrl;
-          $redirects['/' . $langcode . $defaultUrl] = $defaultUrl;
-        }
-        // If this is the default language with a path prefix or no alias has
-        // been set for this language, redirect to the default URL.
-        // E.g. /[prefix]/node/123 => /defaulturl.
-        elseif ($langcode == $defaultLangcode || $source == $alias) {
-          $redirects[$pathPrefix . $source] = $defaultUrl;
-        }
-        // An alias has been set for this language, so add redirect for it.
-        // E.g. /[prefix]/node/123 => /[prefix]/languagealias.
-        else {
-          $redirects[$pathPrefix . $source] = $pathPrefix . $alias;
-        }
-      }
-    }
-
-    // Remove any redirects where source and destination are the same, since
-    // we did not check these above to keep the logic simpler.
-    foreach ($redirects as $source => $destination) {
-      if ($source == $destination) {
-        unset($redirects[$source]);
-      }
-    }
-
-    \Drupal::logger('kptesting')->notice('redirects for type %type [%id] = <pre>' . print_r($redirects, TRUE) . '</pre>', ['%type' => $type, '%id' => $id]);
-
-    return $redirects;
-  }
-
-  /**
    * Unpublish the node path from Quant.
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
@@ -512,26 +386,6 @@ class Seed {
 
     // Update canonical redirects for taxonomy/term/123.
     self::updateCanonicalRedirects($entity);
-  }
-
-  /**
-   * Get entity URL for the given langcode.
-   *
-   * @param Drupal\Core\Entity\EntityInterface $entity
-   *   The term entity.
-   * @param string $langcode
-   *   The node language.
-   */
-  public static function getEntityUrl(EntityInterface $entity, $langcode = NULL) {
-    $id = $entity->id();
-    $type = $entity->getEntityTypeId();
-    $options = ['absolute' => FALSE];
-    if (!empty($langcode)) {
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $options['language'] = $language;
-    }
-
-    return Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], $options)->toString();
   }
 
   /**
@@ -700,6 +554,152 @@ class Seed {
     $markup = preg_replace("/http:\/\/default/i", '', $markup);
 
     return $markup;
+  }
+
+  /**
+   * Get entity URL for the given langcode.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The term entity.
+   * @param string $langcode
+   *   The node language.
+   */
+  public static function getEntityUrl(EntityInterface $entity, $langcode = NULL) {
+    $id = $entity->id();
+    $type = $entity->getEntityTypeId();
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    return Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], $options)->toString();
+  }
+
+  /**
+   * Update canonical redirects for the given entity.
+   *
+   * Canonical redirects are intentionally never unpublished. The content, if
+   * unpublished, will cause a 404, which is sufficient. This simplifies the
+   * logic for these redirects. This is different than for manually created
+   * redirects which can be published and unpublished.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The entity.
+   */
+  public static function updateCanonicalRedirects(EntityInterface $entity) {
+    $redirects = self::getCanonicalRedirects($entity);
+    foreach ($redirects as $source => $destination) {
+      if (empty($source) || empty($destination)) {
+        \Drupal::logger('quant_seed')->warning('Unable to process redirect for entity %type due to empty data.', ['%type' => $entity->getEntityTypeId()]);
+        continue;
+      }
+      if ($source == $destination) {
+        \Drupal::logger('quant_seed')->warning('Unable to process redirect for entity %type because source and destination are the same.', ['%type' => $entity->getEntityTypeId()]);
+        continue;
+      }
+
+      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($source, $destination, 301), QuantRedirectEvent::UPDATE);
+    }
+  }
+
+  /**
+   * Get canoncial redirect data for the given entity.
+   *
+   * Currently only supports nodes and taxonomy terms.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The entity.
+   */
+  public static function getCanonicalRedirects(EntityInterface $entity) {
+    // @todo Handle other entities besides nodes and terms.
+    $id = $entity->id();
+    $type = $entity->getEntityTypeId();
+    if (!in_array($type, ['node', 'taxonomy_term'])) {
+      \Drupal::logger('quant_seed', 'Unsupported entity: %type (%id)',
+        ['%type' => $type, '%id' => $id]);
+      return [];
+    }
+
+    // Get canonical URL in default language.
+    $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+    $defaultUrl = Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], ['language' => $defaultLanguage])->toString();
+
+    switch ($type) {
+      case 'node':
+        $source = "/node/{$id}";
+        break;
+
+      case 'taxonomy_term':
+        $source = "/taxonomy/term/{$id}";
+        break;
+    }
+
+    // Add /node/123 => /alias or /taxonomy/term/123 => /alias redirect. If the
+    // site is multilingual and path prefix is used, the $defaultUrl might have
+    // the path prefix in it, e.g. /node/123 => /en/alias.
+    $redirects[$source] = $defaultUrl;
+
+    // Only add more redirects if path prefixes are being used. For simplicity
+    // of logic, redirects are added here without checking if the source and the
+    // destination are the same, but later we remove any where this is the case.
+    if (self::usesLanguagePathPrefixes()) {
+      // Get default langcode and path prefixes for all languages.
+      $defaultLangcode = $defaultLanguage->getId();
+      $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
+
+      // Add redirect for default language URL without path prefix.
+      $pathPrefix = $pathPrefixes[$defaultLangcode] ? '/' . $pathPrefixes[$defaultLangcode] : '';
+      $defaultUrlWithoutPrefix = str_replace($pathPrefix . '/', '/', $defaultUrl);
+      $redirects[$defaultUrlWithoutPrefix] = $defaultUrl;
+
+      // Handle multilingual redirects.
+      $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
+      foreach ($langcodes as $langcode) {
+        // Skip entity's langcode to avoid redirect loop.
+        if ($langcode == $entity->langcode->value) {
+          continue;
+        }
+        // Path prefix might not be the same as the langcode. For the default
+        // language, the path prefix can be empty.
+        $pathPrefix = $pathPrefixes[$langcode] ? '/' . $pathPrefixes[$langcode] : '';
+
+        // Each translation can have its own alias. Aliases do not have path
+        // prefixes. If no alias is found for the translation, getAliasByPath
+        // returns the source path.
+        $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
+
+        // If the path prefix is empty, still add redirect with langcode.
+        // E.g. /[langcode]/node/123 => /defaulturl.
+        if (empty($pathPrefix)) {
+          $redirects['/' . $langcode . $source] = $defaultUrl;
+          $redirects['/' . $langcode . $defaultUrl] = $defaultUrl;
+        }
+        // If this is the default language with a path prefix or no alias has
+        // been set for this language, redirect to the default URL.
+        // E.g. /[prefix]/node/123 => /defaulturl.
+        elseif ($langcode == $defaultLangcode || $source == $alias) {
+          $redirects[$pathPrefix . $source] = $defaultUrl;
+        }
+        // An alias has been set for this language, so add redirect for it.
+        // E.g. /[prefix]/node/123 => /[prefix]/languagealias.
+        else {
+          $redirects[$pathPrefix . $source] = $pathPrefix . $alias;
+        }
+      }
+    }
+
+    // Remove any redirects where source and destination are the same, since
+    // we did not check these above to keep the logic simpler.
+    foreach ($redirects as $source => $destination) {
+      if ($source == $destination) {
+        unset($redirects[$source]);
+      }
+    }
+
+    \Drupal::logger('kptesting')->notice('redirects for type %type [%id] = <pre>' . print_r($redirects, TRUE) . '</pre>', ['%type' => $type, '%id' => $id]);
+
+    return $redirects;
   }
 
 }
