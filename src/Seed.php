@@ -621,10 +621,6 @@ class Seed {
       return [];
     }
 
-    // Get canonical URL in default language.
-    $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
-    $defaultUrl = Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], ['language' => $defaultLanguage])->toString();
-
     switch ($type) {
       case 'node':
         $source = "/node/{$id}";
@@ -635,23 +631,27 @@ class Seed {
         break;
     }
 
+    // Get path using entity's language which might include the path prefix.
+    $entityLangcode = $entity->language()->getId();
+    $url = self::getEntityUrl($entity, $entityLangcode);
+
     // Add /node/123 => /alias or /taxonomy/term/123 => /alias redirect. If the
-    // site is multilingual and path prefix is used, the $defaultUrl might have
-    // the path prefix in it, e.g. /node/123 => /en/alias.
-    $redirects[$source] = $defaultUrl;
+    // site is multilingual and path prefix is used, the url might have the path
+    // prefix in it, e.g. /node/123 => /en/alias.
+    $redirects[$source] = $url;
 
     // Only add more redirects if path prefixes are being used. For simplicity
     // of logic, redirects are added here without checking if the source and the
     // destination are the same, but later we remove any where this is the case.
     if (self::usesLanguagePathPrefixes()) {
       // Get default langcode and path prefixes for all languages.
-      $defaultLangcode = $defaultLanguage->getId();
+      $defaultLangcode = \Drupal::languageManager()->getDefaultLanguage()->getId();
       $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
 
-      // Add redirect for default language URL without path prefix.
-      $pathPrefix = $pathPrefixes[$defaultLangcode] ? '/' . $pathPrefixes[$defaultLangcode] : '';
-      $defaultUrlWithoutPrefix = str_replace($pathPrefix . '/', '/', $defaultUrl);
-      $redirects[$defaultUrlWithoutPrefix] = $defaultUrl;
+      // Add redirect for language URL without path prefix.
+      $entityPathPrefix = $pathPrefixes[$entityLangcode] ? '/' . $pathPrefixes[$entityLangcode] : '';
+      $urlWithoutPrefix = str_replace($entityPathPrefix . '/', '/', $url);
+      $redirects[$urlWithoutPrefix] = $url;
 
       // Handle multilingual redirects.
       $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
@@ -672,14 +672,14 @@ class Seed {
         // If the path prefix is empty, still add redirect with langcode.
         // E.g. /[langcode]/node/123 => /defaulturl.
         if (empty($pathPrefix)) {
-          $redirects['/' . $langcode . $source] = $defaultUrl;
-          $redirects['/' . $langcode . $defaultUrl] = $defaultUrl;
+          $redirects['/' . $langcode . $source] = $url;
+          $redirects['/' . $langcode . $urlWithoutPrefix] = $url;
         }
         // If this is the default language with a path prefix or no alias has
         // been set for this language, redirect to the default URL.
         // E.g. /[prefix]/node/123 => /defaulturl.
         elseif ($langcode == $defaultLangcode || $source == $alias) {
-          $redirects[$pathPrefix . $source] = $defaultUrl;
+          $redirects[$pathPrefix . $source] = $url;
         }
         // An alias has been set for this language, so add redirect for it.
         // E.g. /[prefix]/node/123 => /[prefix]/languagealias.
