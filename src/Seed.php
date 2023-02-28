@@ -657,10 +657,6 @@ class Seed {
       // Handle multilingual redirects.
       $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
       foreach ($langcodes as $langcode) {
-        // Skip entity's langcode to avoid redirect loop.
-        if ($langcode == $entity->langcode->value) {
-          continue;
-        }
         // Path prefix might not be the same as the langcode. For the default
         // language, the path prefix can be empty.
         $pathPrefix = $pathPrefixes[$langcode] ? '/' . $pathPrefixes[$langcode] : '';
@@ -681,11 +677,13 @@ class Seed {
         // E.g. /[prefix]/node/123 => /defaulturl.
         elseif ($langcode == $defaultLangcode || $source == $alias) {
           $redirects[$pathPrefix . $source] = $url;
+          $redirects[$pathPrefix . $urlWithoutPrefix] = $url;
         }
         // An alias has been set for this language, so add redirect for it.
         // E.g. /[prefix]/node/123 => /[prefix]/languagealias.
         else {
           $redirects[$pathPrefix . $source] = $pathPrefix . $alias;
+          $redirects[$pathPrefix . $urlWithoutPrefix] = $pathPrefix . $alias;
         }
       }
     }
