@@ -253,7 +253,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
           // Retrieve the translated version.
           $term = $term->getTranslation($langcode);
 
-          $url = Seed::getEntityUrl($entity, $langcode);
+          $url = Seed::getEntityUrl($term, $langcode);
           $event->queueItem(['route' => $url]);
         }
 
