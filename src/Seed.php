@@ -698,7 +698,9 @@ class Seed {
       }
     }
 
-    \Drupal::logger('kptesting')->notice('redirects for type %type [%id] = <pre>' . print_r($redirects, TRUE) . '</pre>', ['%type' => $type, '%id' => $id]);
+    // @fixme Remove this after testing is done.
+    \Drupal::logger('kptesting')->notice('redirects for type %type [%id] = <pre>' .
+    print_r($redirects, TRUE) . '</pre>', ['%type' => $type, '%id' => $id]);
 
     return $redirects;
   }
