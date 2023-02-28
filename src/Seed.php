@@ -663,7 +663,7 @@ class Seed {
 
         // Each translation can have its own alias. Aliases do not have path
         // prefixes. If no alias is found for the translation, getAliasByPath
-        // returns the source path.
+        // returns the default path.
         $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
 
         // If the path prefix is empty, still add redirect with langcode.
@@ -675,7 +675,7 @@ class Seed {
         // If this is the default language with a path prefix or no alias has
         // been set for this language, redirect to the default URL.
         // E.g. /[prefix]/node/123 => /defaulturl.
-        elseif ($langcode == $defaultLangcode || $source == $alias) {
+        elseif ($langcode == $defaultLangcode || $alias == $urlWithoutPrefix) {
           $redirects[$pathPrefix . $source] = $url;
           $redirects[$pathPrefix . $urlWithoutPrefix] = $url;
         }
