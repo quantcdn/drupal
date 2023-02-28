@@ -650,7 +650,10 @@ class Seed {
       $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
 
       // Add redirect for language URL without path prefix.
-      $entityPathPrefix = $pathPrefixes[$entityLangcode] ? '/' . $pathPrefixes[$entityLangcode] : '';
+      $entityPathPrefix = '';
+      if (isset($pathPrefixes[$entityLangcode]) && !empty($pathPrefixes[$entityLangcode])) {
+        $entityPathPrefix = '/' . $pathPrefixes[$entityLangcode];
+      }
       $urlWithoutPrefix = str_replace($entityPathPrefix . '/', '/', $url);
       $redirects[$urlWithoutPrefix] = $url;
 
@@ -663,7 +666,7 @@ class Seed {
 
         // Each translation can have its own alias. Aliases do not have path
         // prefixes. If no alias is found for the translation, getAliasByPath
-        // returns the default path.
+        // returns the source or the default path.
         $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
 
         // If the path prefix is empty, still add redirect with langcode.
@@ -675,7 +678,7 @@ class Seed {
         // If this is the default language with a path prefix or no alias has
         // been set for this language, redirect to the default URL.
         // E.g. /[prefix]/node/123 => /defaulturl.
-        elseif ($langcode == $defaultLangcode || $alias == $urlWithoutPrefix) {
+        elseif ($langcode == $defaultLangcode || $alias == $source || $alias == $urlWithoutPrefix) {
           $redirects[$pathPrefix . $source] = $url;
           $redirects[$pathPrefix . $urlWithoutPrefix] = $url;
         }
