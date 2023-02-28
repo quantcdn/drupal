@@ -358,7 +358,7 @@ class Seed {
    */
   public static function unpublishNode(EntityInterface $entity) {
 
-    $url = self::getEntityUrl($entity, $entity->language()->getId());
+    $url = self::getEntityUrl($entity);
 
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
@@ -380,7 +380,7 @@ class Seed {
    */
   public static function unpublishTaxonomyTerm(EntityInterface $entity) {
 
-    $url = self::getEntityUrl($entity, $entity->language()->getId());
+    $url = self::getEntityUrl($entity);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
 
@@ -562,16 +562,17 @@ class Seed {
    * @param Drupal\Core\Entity\EntityInterface $entity
    *   The term entity.
    * @param string $langcode
-   *   The node language.
+   *   The entity language.
    */
   public static function getEntityUrl(EntityInterface $entity, $langcode = NULL) {
     $id = $entity->id();
     $type = $entity->getEntityTypeId();
     $options = ['absolute' => FALSE];
-    if (!empty($langcode)) {
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $options['language'] = $language;
+    if (empty($langcode)) {
+      $langcode = $entity->language()->getId();
     }
+    $language = \Drupal::languageManager()->getLanguage($langcode);
+    $options['language'] = $language;
 
     return Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], $options)->toString();
   }
