@@ -609,6 +609,25 @@ class Seed {
    *
    * Currently only supports nodes and taxonomy terms.
    *
+   * Examples:
+   * 1. No translations and no alias: /node/123.
+   *    Redirect: /en/node/123 => /node/123.
+   *    Redirect: /af/node/123 => /node/123.
+   * 2. No translations and has alias: /alias.
+   *    Redirect: /node/123 => /alias.
+   *    Redirect: /en/node/123 => /alias.
+   *    Redirect: /en/alias => /alias.
+   *    Redirect: /af/node/123 => /alias.
+   *    Redirect: /af/alias => /alias.
+   * 3. Translations and no alias: /node/123 and /af/node/123.
+   *    Redirect: /en/node/123 => /node/123.
+   * 4. Translations and has alias: /alias and /af/langalias.
+   *    Redirect: /node/123 => /alias.
+   *    Redirect: /en/node/123 => /alias.
+   *    Redirect: /en/alias => /alias.
+   *    Redirect: /af/node/123 => /af/langalias.
+   *    Redirect: /af/alias => /af/langalias.
+   *
    * @param Drupal\Core\Entity\EntityInterface $entity
    *   The entity.
    */
@@ -634,17 +653,21 @@ class Seed {
 
     // Get path using entity's language which might include the path prefix.
     $entityLangcode = $entity->language()->getId();
+
     $url = self::getEntityUrl($entity, $entityLangcode);
 
-    // Add /node/123 => /alias or /taxonomy/term/123 => /alias redirect. If the
-    // site is multilingual and path prefix is used, the url might have the path
-    // prefix in it, e.g. /node/123 => /en/alias.
-    $redirects[$source] = $url;
+\Drupal::logger('kptesting')->notice("entityLangcode = $entityLangcode"); 
 
-    // Only add more redirects if path prefixes are being used. For simplicity
-    // of logic, redirects are added here without checking if the source and the
+    // Handle case when the site does not use path prefixes because either it
+    // is not multilingual or has not been configured to use path prefixes
+    // Add /node/123 => /alias or /taxonomy/term/123 => /alias redirect.
+    if (!self::usesLanguagePathPrefixes()) {
+      $redirects[$source] = $url;
+    }
+    // Special handling if path prefixes are used. For simplicity of logic,
+    // redirects are added here without checking if the source and the
     // destination are the same, but later we remove any where this is the case.
-    if (self::usesLanguagePathPrefixes()) {
+    else {
       // Get default langcode and path prefixes for all languages.
       $defaultLangcode = \Drupal::languageManager()->getDefaultLanguage()->getId();
       $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
@@ -655,7 +678,6 @@ class Seed {
         $entityPathPrefix = '/' . $pathPrefixes[$entityLangcode];
       }
       $urlWithoutPrefix = str_replace($entityPathPrefix . '/', '/', $url);
-      $redirects[$urlWithoutPrefix] = $url;
 
       // Handle multilingual redirects.
       $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
@@ -669,24 +691,52 @@ class Seed {
         // returns the source or, in some cases, the default path.
         $alias = \Drupal::service('path_alias.manager')->getAliasByPath($source, $langcode);
 
-        // If the path prefix is empty, still add redirect with langcode.
-        // E.g. /[langcode]/node/123 => /defaulturl.
-        if (empty($pathPrefix)) {
+\Drupal::logger('kptesting')->notice("defaultLangcode = $defaultLangcode and langcode = $langcode and source = $source and alias = $alias and urlWithoutPrefix = $urlWithoutPrefix and pathPrefix = $pathPrefix");
+
+        // Handle redirects for default language.
+        if ($langcode == $defaultLangcode) {
+\Drupal::logger('kptesting')->notice("handle default: defaultLangcode = $defaultLangcode and langcode = $langcode and source = $source and alias = $alias and urlWithoutPrefix = $urlWithoutPrefix and pathPrefix = $pathPrefix");
+          // Add basic redirects.
+          // E.g. /node/123 => /prefix/alias and /alias => /prefix/alias.
+          $redirects[$source] = $url;
+          $redirects[$urlWithoutPrefix] = $url;
+
+          // Add path prefix redirects.
+          // E.g. /prefix/node/123 => /prefix/alias.
+          if (!empty($pathPrefix)) {
+            $redirects[$pathPrefix . $source] = $url;
+          }
+
+          // Add langcode redirects since prefix may be different.
+          // E.g. /en/node/123 => /prefix/alias and /en/alias => /prefix/alias.
+// this could be removed
           $redirects['/' . $langcode . $source] = $url;
           $redirects['/' . $langcode . $urlWithoutPrefix] = $url;
         }
-        // If this is the default language with a path prefix or no alias has
-        // been set for this language, redirect to the default URL.
-        // E.g. /[prefix]/node/123 => /defaulturl.
-        elseif ($langcode == $defaultLangcode || $alias == $source || $alias == $urlWithoutPrefix) {
-          $redirects[$pathPrefix . $source] = $url;
-          $redirects[$pathPrefix . $urlWithoutPrefix] = $url;
+        // Handle redirects for translations.
+        elseif ($entity->hasTranslation($langcode)) {
+\Drupal::logger('kptesting')->notice("handle translation: defaultLangcode = $defaultLangcode and langcode = $langcode and source = $source and alias = $alias and urlWithoutPrefix = $urlWithoutPrefix and pathPrefix = $pathPrefix");
+          // Don't add redirect when there is no language-specific alias.
+          // Content should be like /prefix/node/123.
+          if ($alias == $source || $alias == $urlWithoutPrefix) {
+            // Nothing to do.
+          }
+          // An alias has been set for this translation, so add redirect.
+          // E.g. /[prefix]/node/123 => /[prefix]/languagealias.
+          elseif (!empty($pathPrefix)) {
+            $redirects[$pathPrefix . $source] = $pathPrefix . $alias;
+          }
         }
-        // An alias has been set for this language, so add redirect for it.
-        // E.g. /[prefix]/node/123 => /[prefix]/languagealias.
+        // Handle redirects for non-default-language non-translations.
         else {
-          $redirects[$pathPrefix . $source] = $pathPrefix . $alias;
-          $redirects[$pathPrefix . $urlWithoutPrefix] = $pathPrefix . $alias;
+\Drupal::logger('kptesting')->notice("handle non-default non-translation: langcode = $langcode and source = $source and alias = $alias and urlWithoutPrefix = $urlWithoutPrefix and pathPrefix = $pathPrefix");
+          // Add basic redirects when there is a path prefix.
+          // E.g. /[prefix]/node/123 => /defaultpath and /[prefix]/defaultpath => /defaultpath.
+          if (!empty($pathPrefix)) {
+            $redirects[$pathPrefix . $source] = $url;
+// @fixme this probably won't work as it's probably stripping the wrong prefix
+            $redirects[$pathPrefix . $urlWithoutPrefix] = $url;
+          }
         }
       }
     }
