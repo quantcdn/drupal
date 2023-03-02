@@ -529,40 +529,39 @@ function quant_seed($url, array $context = array()) {
   $markup = $response->data;
   $queue = quant_get_queue();
 
+  // Pagination support.
   $document = new \DOMDocument();
   @$document->loadHTML($markup);
   $xpath = new \DOMXPath($document);
-  $page_urls = isset($context['page_urls']) ? $context['page_urls'] : [];
+  $xpath_urls = isset($context['xpath_urls']) ? $context['xpath_urls'] : [];
 
-  $pager_xpath = array(
-    '//a[contains(@href,"page=") and contains(text(), "next")]',
-    '//a[starts-with(@href, "/") and contains(text(), "first")]',
-  );
+  $xpath_selectors = array();
+  $links_config = variable_get('quant_xpath_selectors');
 
-  if (variable_get('quant_pager_xpath')) {
-    $pager_xpath = explode(PHP_EOL, variable_get('quant_pager_xpath'));
+  foreach (explode(PHP_EOL, $links_config) as $links_line) {
+    $xpath_selectors[] = trim($links_line);
   }
 
-  foreach ($pager_xpath as $xpath_query) {
+  foreach ($xpath_selectors as $xpath_query) {
     foreach ($xpath->query($xpath_query) as $node) {
       $original_href = $new_href = $node->getAttribute('href');
       if ($original_href[0] === '?') {
         $new_href = strtok($path, '?') . $original_href;
       }
 
-      $pager_url = $base . $new_href;
+      $xpath_url = $base . $new_href;
 
-      if (in_array($pager_url, $page_urls)) {
+      if (in_array($xpath_url, $xpath_urls)) {
         continue;
       }
 
-      $page_urls[] = $pager_url;
+      $xpath_urls[] = $xpath_url;
       $next_context = array(
         'find_pager' => TRUE,
         'type' => 'view',
-        'page_urls' => $page_urls,
+        'xpath_urls' => $xpath_urls,
       );
-      $item = array('quant_seed', array($pager_url, $next_context));
+      $item = array('quant_seed', array($xpath_url, $next_context));
       $queue->createItem($item);
     }
   }
