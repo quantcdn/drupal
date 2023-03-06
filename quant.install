@@ -24,3 +24,14 @@ function quant_update_7000() {
   variable_set('quant_token_secret', bin2hex(random_bytes(32)));
   variable_set('quant_token_timeout', '+1 minute');
 }
+
+
+/**
+ * Migrate to new default XPath selectors variable.
+ */
+function quant_update_7001() {
+  if (variable_get('quant_pager_xpath')) {
+    variable_set('quant_xpath_selectors', variable_get('quant_pager_xpath'));
+    variable_del('quant_pager_xpath');
+  }
+}
