@@ -527,7 +527,10 @@ function quant_seed($url, array $context = array()) {
   $xpath_urls = isset($context['xpath_urls']) ? $context['xpath_urls'] : [];
 
   $xpath_selectors = array();
-  $links_config = variable_get('quant_xpath_selectors');
+  $links_config = variable_get(
+    'quant_xpath_selectors',
+    "//a[contains(@href,\"page=\") and contains(text(), \"next\")]\r\n//a[starts-with(@href, \"/\") and contains(text(), \"first\")]"
+  );
 
   foreach (explode(PHP_EOL, $links_config) as $links_line) {
     $xpath_selectors[] = trim($links_line);
