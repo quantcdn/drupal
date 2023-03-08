@@ -49,6 +49,27 @@ function quant_config() {
     ];
   }
 
+  $form['follow_links_fieldset'] = [
+    '#type' => 'fieldset',
+    '#title' => t('Follow links'),
+    '#description' => t('Automatically add certain links to the queue (e.g Views pagination)'),
+    '#attached' => array(
+      'library' => array(
+        array('system', 'drupal.collapse'),
+      ),
+    ),
+    '#attributes' => array(
+      'class' => array('collapsible', 'collapsed')
+    ),
+  ];
+
+  $form['follow_links_fieldset']['quant_xpath_selectors'] = [
+    '#type' => 'textarea',
+    '#title' => t('Links to follow'),
+    '#default_value' => variable_get('quant_xpath_selectors', "//a[contains(@href,\"page=\") and contains(text(), \"next\")]\r\n//a[starts-with(@href, \"/\") and contains(text(), \"first\")]"),
+    '#description' => t('Provide one xpath per line for anchor links to queue when detected.'),
+  ];
+
   $form['disable_content_drafts'] = array(
     '#type' => 'checkbox',
     '#title' => t('Disable content drafts'),
