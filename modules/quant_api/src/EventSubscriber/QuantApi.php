@@ -93,6 +93,7 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (\Exception $error) {
       $this->logger->error($error->getMessage());
+      return;
     }
 
     return $res;
@@ -281,7 +282,7 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (\Exception $error) {
       $this->logger->error($error->getMessage());
-      return FALSE;
+      return;
     }
 
     return $res;

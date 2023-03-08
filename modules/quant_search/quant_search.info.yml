@@ -4,7 +4,7 @@ package: Quant
 
 type: module
 core_version_requirement: ^9.3 || ^10
-
+configure: quant_search.main
 dependencies:
   - drupal:quant
   - drupal:quant_api
