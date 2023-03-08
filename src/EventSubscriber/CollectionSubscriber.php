@@ -15,6 +15,7 @@ use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
+use Drupal\quant\Seed;
 use Drupal\redirect\Entity\Redirect;
 
 /**
@@ -120,16 +121,14 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
     foreach ($ids as $id) {
       $redirect = Redirect::load($id);
-
-      $source = $redirect->getSourcePathWithQuery();
-      $destination = $redirect->getRedirectUrl()->toString();
-      $status_code = $redirect->getStatusCode();
-
-      $event->queueItem([
-        'source' => $source,
-        'destination' => $destination,
-        'status_code' => $status_code,
-      ]);
+      $redirects = Seed::getRedirectLocationsFromRedirect($redirect);
+      foreach ($redirects as $r) {
+        $event->queueItem([
+          'source' => $r['source'],
+          'destination' => $r['destination'],
+          'status_code' => $r['status_code'],
+        ]);
+      }
     }
   }
 
