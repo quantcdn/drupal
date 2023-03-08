@@ -276,12 +276,12 @@ class QuantApi implements EventSubscriberInterface {
    */
   public function onUnpublish(QuantEvent $event) {
     $url = $event->getLocation();
-
     try {
       $res = $this->client->unpublish($url);
     }
     catch (\Exception $error) {
       $this->logger->error($error->getMessage());
+      return FALSE;
     }
 
     return $res;
