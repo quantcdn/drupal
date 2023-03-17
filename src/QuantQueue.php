@@ -7,7 +7,7 @@ use Drupal\Core\Queue\DatabaseQueue;
 
 /**
  * Additional handling for Quant queue items.
- * 
+ *
  * @see https://git.drupalcode.org/project/queue_unique
  */
 class QuantQueue extends DatabaseQueue {
@@ -41,7 +41,8 @@ class QuantQueue extends DatabaseQueue {
           'hash' => static::hash($this->name, $serialized_data),
         ]);
       return $query->execute();
-    } catch (IntegrityConstraintViolationException $err) {
+    }
+    catch (IntegrityConstraintViolationException $err) {
       return FALSE;
     }
   }
@@ -86,6 +87,5 @@ class QuantQueue extends DatabaseQueue {
       ]
     );
   }
-
 
 }
