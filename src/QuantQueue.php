@@ -4,6 +4,7 @@ namespace Drupal\quant;
 
 use Drupal\Core\Database\IntegrityConstraintViolationException;
 use Drupal\Core\Queue\DatabaseQueue;
+use Drupal\Core\Site\Settings;
 
 /**
  * Additional handling for Quant queue items.
@@ -61,6 +62,19 @@ class QuantQueue extends DatabaseQueue {
   public static function hash($name, $serialized_data) {
     $substr_length = static::HASH_LENGTH - strlen(static::HASH_METHOD);
     return static::HASH_METHOD . substr(base64_encode(hash('sha512', $name . $serialized_data, TRUE)), 0, $substr_length);
+  }
+
+  /**
+   * Get the queue table name.
+   *
+   * @return string
+   *   The table name to be used by this queue.
+   */
+  public static function getTableName() {
+    if (Settings::get('queue_service_quant_seed_worker') == "quant.queue_factory") {
+      return self::TABLE_NAME;
+    }
+    return 'queue';
   }
 
   /**
