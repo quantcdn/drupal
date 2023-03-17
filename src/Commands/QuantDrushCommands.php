@@ -2,6 +2,7 @@
 
 namespace Drupal\quant\Commands;
 
+use Drupal\Core\Site\Settings;
 use Drush\Commands\DrushCommands;
 use Drupal\Core\Form\FormState;
 use Drupal\quant\Seed;
@@ -72,7 +73,7 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:run-queue --threads=5
    */
   public function message($options = ['threads' => 5]) {
-    $queue_factory = \Drupal\Core\Site\Settings::get('queue_service_quant_seed_worker');
+    $queue_factory = Settings::get('queue_service_quant_seed_worker');
 
     if (empty($queue_factory)) {
       $this->output()->writeln('<error>Drush support is not configured</error>' . PHP_EOL);
