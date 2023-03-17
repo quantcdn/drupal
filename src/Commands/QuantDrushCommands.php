@@ -72,6 +72,18 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:run-queue --threads=5
    */
   public function message($options = ['threads' => 5]) {
+    $queue_factory = \Drupal\Core\Site\Settings::get('queue_service_quant_seed_worker');
+
+    if (empty($queue_factory)) {
+      $this->output()->writeln('<error>Drush support is not configured</error>' . PHP_EOL);
+      $this->output()->writeln('To enable Drush support, you need to define the queue factory for the quant_seed_worker queue');
+      $this->output()->writeln('by updating settings.php and adding the following' . PHP_EOL);
+      $this->output()->writeln('  $settings["queue_service_quant_seed_worker"] = "quant.queue_factory";' . PHP_EOL);
+      return;
+    }
+
+    var_dump($queue_factory);
+    exit;
 
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
@@ -103,7 +115,7 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:clear-queue
    */
   public function clear($options = []) {
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = \Drupal::service('quant.queue_factory');
     $queue = $queue_factory->get('quant_seed_worker');
     $queue->deleteQueue();
     $this->output()->writeln("Removed all items from Quant queue.");
@@ -123,7 +135,7 @@ class QuantDrushCommands extends DrushCommands {
 
     $config = \Drupal::configFactory()->getEditable('quant.settings');
 
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = \Drupal::service('quant.queue_factory');
     $queue = $queue_factory->get('quant_seed_worker');
 
     $dispatcher = \Drupal::service('event_dispatcher');

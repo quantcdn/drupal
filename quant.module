@@ -299,7 +299,7 @@ function quant_node_translation_delete($entity) {
  *   The batch context.
  */
 function quant_process_queue(array &$context) {
-  $factory = \Drupal::service('queue');
+  $factory = \Drupal::service('quant.queue_factory');
   $manager = \Drupal::service('plugin.manager.queue_worker');
 
   $queue = $factory->get('quant_seed_worker');

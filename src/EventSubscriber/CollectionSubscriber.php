@@ -262,7 +262,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
           // Generate a redirection QueueItem from canonical path to URL.
           // Use the default language alias in the event of multi-lang setup.
-          $queue_factory = \Drupal::service('queue');
+          $queue_factory = \Drupal::service('quant.queue_factory');
           $queue = $queue_factory->get('quant_seed_worker');
 
           if ("/taxonomy/term/{$tid}" != $url) {

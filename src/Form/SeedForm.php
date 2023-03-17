@@ -366,7 +366,7 @@ class SeedForm extends FormBase {
       }
     }
 
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = \Drupal::service('quant.queue_factory');
     $queue = $queue_factory->get('quant_seed_worker');
     $queue->deleteQueue();
 

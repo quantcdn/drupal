@@ -146,7 +146,7 @@ class QuantApi implements EventSubscriberInterface {
 
     $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents'], $res['attachments']['media']['video']);
 
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = \Drupal::service('quant.queue_factory');
     $queue = $queue_factory->get('quant_seed_worker');
 
     foreach ($media as $item) {
