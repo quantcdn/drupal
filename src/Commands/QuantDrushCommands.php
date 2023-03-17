@@ -82,9 +82,6 @@ class QuantDrushCommands extends DrushCommands {
       return;
     }
 
-    var_dump($queue_factory);
-    exit;
-
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
     $cmd = $drushPath . ' queue:run quant_seed_worker';
