@@ -70,11 +70,8 @@ class QuantDrushCommands extends DrushCommands {
    * @option threads
    *   Number of threads to use (default 5)
    * @usage quant:run-queue --threads=5
-   * @option unlock
-   * Allow a queue run even if another run is in progress. (default is false)
-   * @usage quant:run-queue --unlock
    */
-  public function message($options = ['threads' => 5, 'unlock' => false]) {
+  public function message($options = ['threads' => 5]) {
 
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
@@ -83,14 +80,12 @@ class QuantDrushCommands extends DrushCommands {
     $this->output()->writeln("<comment>Using drush binary at $drushPath. Override with \$DRUSH_PATH if required.</comment>");
 
     // Bail if another run is in progress.
-    if (!$options['unlock']) {
-      if (file_exists($lockFilePath)) {
-        $this->output()->writeln("<info>Seeding bailed. Another seed run is in progress.</info>");
-        return;
-      } else {
-        // No lock currently present. Create new lock file.
-        file_put_contents($lockFilePath, null);
-      }
+    if (file_exists($lockFilePath)) {
+      $this->output()->writeln("<info>Seeding bailed. Another seed run is in progress.</info>");
+      return;
+    } else {
+      // No lock currently present. Create new lock file.
+      file_put_contents($lockFilePath, null);
     }
 
     for ($i = 0; $i < $options['threads']; $i++) {
@@ -107,12 +102,24 @@ class QuantDrushCommands extends DrushCommands {
     }
 
     // Remove lock file.
-    if ($options['unlock']) {
-      unlink($lockFilePath);
-    }
+    unlink($lockFilePath);
 
     $this->output()->writeln("<info>Seeding complete.</info>");
 
+  }
+
+  /**
+   * Unlock quant queue.
+   *
+   * @command quant:unlock-queue
+   * @aliases quant-queue-unlock
+   * @usage quant:unlock-queue
+   */
+  public function unlock($options = []) {
+    $lockFilePath = sys_get_temp_dir() . '/quant_seed_worker.lock';
+    unlink($lockFilePath);
+
+    $this->output()->writeln("Unlocked Quant queue.");
   }
 
   /**
