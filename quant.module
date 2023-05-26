@@ -974,7 +974,7 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
   $queue = quant_get_queue();
 
   // Reset the queue whenever we want to fully prepare a seed.
-  // $queue->deleteQueue();
+  $queue->deleteQueue();
   $queue->createQueue();
 
   $routes = array();
