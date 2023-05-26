@@ -190,7 +190,7 @@ function quant_seed_settings() {
     '#type' => 'checkboxes',
     '#title' => t('Enabled bundles'),
     '#description' => t('Optionally, restrict to these content types.'),
-    '#default_value' => variable_get('quant_seed_entity_node_bundles', FALSE),
+    '#default_value' => variable_get('quant_seed_entity_node_bundles', []),
     '#options' => $options,
     '#states' => array(
       'visible' => array(
