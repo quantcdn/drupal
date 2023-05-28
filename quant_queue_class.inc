@@ -50,6 +50,9 @@ class QuantQueue implements DrupalReliableQueueInterface {
     ));
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function claimItem($lease_time = 3600) {
     // Claim an item by updating its expire fields. If claim is not successful
     // another thread may have claimed the item in the meantime. Therefore loop
@@ -61,7 +64,7 @@ class QuantQueue implements DrupalReliableQueueInterface {
       ))->fetchObject();
 
       if ($item) {
-        $update = db_update('queue')
+        $update = db_update('quant_queue')
           ->fields(array(
               'expire' => time() + $lease_time,
             ))
@@ -121,7 +124,7 @@ class QuantQueue implements DrupalReliableQueueInterface {
   }
 
   /**
-   * Generate a hashed string from a queue name a data struct.
+   * Generate a hashed string from the queue name and data.
    * 
    * @param string $name
    *   The queue name.
@@ -132,7 +135,7 @@ class QuantQueue implements DrupalReliableQueueInterface {
    *   The hash string.
    */
   public static function hash($name, $data) {
-    $method = variable_get('quant_queue_hash_method', 'sha2');
+    $method = variable_get('quant_queue_hash_method', 'sha256');
     $length = variable_get('quant_queue_hash_length', 48);
 
     if (!is_string($data)) {
