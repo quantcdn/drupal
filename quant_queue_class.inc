@@ -47,7 +47,7 @@ class QuantQueue implements DrupalReliableQueueInterface {
   public function numberOfItems() {
     return db_query('SELECT COUNT(item_id) FROM {quant_queue} WHERE name = :name', array(
       ':name' => $this->name,
-    ));
+    ))->fetchField();
   }
 
   /**
