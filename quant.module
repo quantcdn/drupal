@@ -17,6 +17,8 @@ define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.c
  */
 define('QUANT_VERBOSE', 'verbose');
 
+module_load_include('inc', 'quant', 'quant_queue_class');
+
 /**
  * Implements hook_help().
  */
@@ -772,7 +774,9 @@ function _quant_queue_nodes(array $bundles = array()) {
       'quant_seed_node_batch',
       array($nid),
     );
-    $queue->createItem($item);
+    if (!$queue->createItem($item)) {
+      quant_log('...Skipping duplicate entity');
+    }
   }
 }
 
@@ -930,7 +934,7 @@ function quant_seed_taxonomy_batch($tid) {
 function quant_get_queue($items = FALSE) {
   if ($items) {
     $items = array();
-    $query = db_select('queue', 'q')->extend('PagerDefault');
+    $query = db_select('quant_queue', 'q')->extend('PagerDefault');
     $query->condition('name', 'quant_seed')
       ->fields('q', array('item_id', 'data', 'expire', 'created'));
     $result = $query->limit(10)->orderBy('q.item_id')->execute();

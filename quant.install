@@ -5,6 +5,59 @@
  * Install operations for Quant.
  */
 
+function quant_schema() {
+  $schema['quant_queue'] = array(
+    'description' => 'Stores items in queues.',
+    'fields' => array(
+      'item_id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique item ID.',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The queue name.',
+      ),
+      'data' => array(
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+        'description' => 'The arbitrary data for the item.',
+      ),
+      'expire' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Timestamp when the claim lease expires on the item.',
+      ),
+      'created' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Timestamp when the item was created.',
+      ),
+      'hash' => array(
+        'type' => 'char',
+        'length' => variable_get('quant_queue_hash_length', 48),
+        'not null' => TRUE,
+        'description' => 'Item uniqueness.'
+      )
+    ),
+    'primary key' => array('item_id'),
+    'unique keys' => array('hash' => array('hash')),
+    'indexes' => array(
+      'name_created' => array('name', 'created'),
+      'expire' => array('expire'),
+    ),
+  );
+  return $schema;
+}
+
 /**
  * Perform setup tasks.
  */
@@ -12,6 +65,9 @@ function quant_install() {
   // Prepare configuration for Quant tokens.
   variable_set('quant_token_secret', bin2hex(random_bytes(32)));
   variable_set('quant_token_timeout', '+1 minute');
+  variable_set('queue_class_quant_seed', 'QuantQueue');
+  variable_set('quant_queue_hash_length', 48);
+  variable_set('quant_queue_hash_method', 'sha256');
 }
 
 /**
@@ -34,4 +90,14 @@ function quant_update_7001() {
     variable_set('quant_xpath_selectors', variable_get('quant_pager_xpath'));
     variable_del('quant_pager_xpath');
   }
+}
+
+/**
+ * Add the `quant_queue` table.
+ */
+function quant_update_7002() {
+  variable_set('queue_class_quant_seed', 'QuantQueue');
+  variable_set('quant_queue_hash_length', 48);
+  variable_set('quant_queue_hash_method', 'sha256');
+  db_create_table('quant_queue', drupal_get_schema_unprocessed('quant', 'quant_queue'));
 }
