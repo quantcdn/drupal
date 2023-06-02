@@ -187,8 +187,10 @@ function quant_node_menu_load($nid) {
     $node = node_load($nid, $revision);
     // Override the status. This prevents Drupal from adding the standard
     // unpublished classes to the node.
-    $node->status = 1;
-    return $node;
+    if (!empty($node)) {
+      $node->status = 1;
+      return $node;
+    }
   }
 
   return node_load($nid);
