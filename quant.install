@@ -67,6 +67,9 @@ function quant_install() {
   variable_set('quant_token_timeout', '+1 minute');
   variable_set('quant_queue_hash_length', 48);
   variable_set('quant_queue_hash_method', 'sha256');
+  variable_set('queue_class_quant_seed', 'QuantQueue');
+  variable_set('quant_queue_hash_length', 48);
+  variable_set('quant_queue_hash_method', 'sha256');
 }
 
 /**
