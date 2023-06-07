@@ -194,6 +194,14 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       'location' => $loc,
       'request' => $on_disk,
     ]);
+
+    // Remove temporary files where alternate file handler is enabled
+    // and the file path starts with the temporary directory.
+    if (variable_get('quant_alternate_file_handler', FALSE)) {
+      if (strpos($loc, sys_get_temp_dir()) === 0) {
+        unlink($loc);
+      }
+    }
   }
 
 }
