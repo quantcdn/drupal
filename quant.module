@@ -823,6 +823,11 @@ function _quant_queue_theme_assets() {
 
   foreach ($files as $file) {
 
+    // Skip node_modules.
+    if (preg_match('/node_modules/i', $file->uri)) {
+      continue;
+    }
+
     $file_on_disk = $file->uri;
     if (substr($file_on_disk, 0, strlen(DRUPAL_ROOT)) == DRUPAL_ROOT) {
       $file_on_disk = substr($file_on_disk, strlen(DRUPAL_ROOT));

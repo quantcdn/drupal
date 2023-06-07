@@ -167,6 +167,11 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       $loc = str_replace('/system/files', $private_path, $file);
     }
 
+    // Support alternate file handling if enabled
+    if (variable_get('quant_alternate_file_handler', FALSE)) {
+      $loc = _retrieve_file($file);
+    }
+
     if (!file_exists($loc)) {
       quant_log('File not found: %file', array(
         '%file' => $file,
@@ -189,6 +194,14 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       'location' => $loc,
       'request' => $on_disk,
     ]);
+
+    // Remove temporary files where alternate file handler is enabled
+    // and the file path starts with the temporary directory.
+    if (variable_get('quant_alternate_file_handler', FALSE)) {
+      if (strpos($loc, sys_get_temp_dir()) === 0) {
+        unlink($loc);
+      }
+    }
   }
 
 }
@@ -397,5 +410,57 @@ function _rebuild_file_url($url) {
   }
 
   return $rebuilt_url;
+
+}
+
+/**
+ * Retrieve a file via HTTP if alternate file handling is enabled.
+ *
+ * This allows for an option to retrieve files using custom
+ * stream wrappers (or remote) to ensure they can be included
+ * in the seed operation.
+ *
+ * @param string $url
+ *   The relative URL of a file to retrieve.
+ *
+ * @return string
+ *   The absolute local path on disk to the temporary file.
+ */
+function _retrieve_file($url) {
+
+  $path = $url;
+
+  // Issue a GET request to the file path.
+  $options = array(
+    'headers' => array(
+      'Host' => variable_get('quant_hostname', parse_url($base_url, PHP_URL_HOST)),
+      'User-Agent' => 'Quant (+http://quantcdn.io)',
+    ),
+    'method' => 'GET',
+  );
+
+  // Ensure url is absolute for internal GET request.
+  if(strpos($url, "http") !== 0) {
+    $base = variable_get('quant_base_url', $base_url);
+    $url = "{$base}{$url}";
+  }
+
+  if (!variable_get('quant_verify_ssl', TRUE)) {
+    $options['context'] = stream_context_create(array(
+      'ssl' => array(
+        'verify_peer' => FALSE,
+        'verify_peer_name' => FALSE,
+      )
+    ));
+  }
+
+  // Retrieve the file, store in a temporary location, and use for file upload.
+  $file_get = drupal_http_request($url, $options);
+  $tmp_filename = tempnam(sys_get_temp_dir(), basename($path));
+  $tmp_file = fopen($tmp_filename, "w+");
+  fwrite($tmp_file, $file_get->data);
+  fclose($tmp_file);
+
+  return $tmp_filename;
 
 }
