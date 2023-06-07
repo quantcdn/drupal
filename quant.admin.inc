@@ -105,6 +105,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_verify_ssl', TRUE),
   );
 
+  $form['quant_alternate_file_handler'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Alternate file handler'),
+    '#description' => t('Retrieves media assets via HTTP request. Adds support for custom stream wrappers, or any storage backend other than local files.'),
+    '#default_value' => variable_get('quant_alternate_file_handler', FALSE),
+  );
+
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
