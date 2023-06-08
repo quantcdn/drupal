@@ -607,6 +607,9 @@ function quant_seed($url, array $context = array()) {
  * Prepare a file export.
  */
 function quant_seed_file($url, $context = array()) {
+
+  quant_log('Sending file: !url', array('!url' => urldecode($url)));
+
   // @TODO: Files need different meta?
   $meta = array();
   drupal_alter('quant_file_meta', $meta, $context);
