@@ -63,6 +63,11 @@ function drush_quant_process_queue($threads=5) {
   $cmd = 'drush queue-run quant_seed';
   _validate_quant_config();
 
+  $site = drush_get_option('uri');
+  if (!empty($site)) {
+    $cmd .= " --uri=$site";
+  }
+
   if (drush_get_option('threads')) {
     $threads = drush_get_option('threads');
   }
