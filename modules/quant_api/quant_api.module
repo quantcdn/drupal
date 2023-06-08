@@ -247,6 +247,10 @@ function quant_api_quant_seed_file($url, $context) {
     $base = variable_get('quant_base_url', $base_url);
     // Clean up multiple slashes in the file path.
     $url = preg_replace('~/+~', '/', $url);
+    // Ensure url path starts with a slash.
+    if (substr($url, 0, 1) !== '/') {
+      $url = '/' . $url;
+    }
     $url = "{$base}{$url}";
   }
 
@@ -451,6 +455,10 @@ function _retrieve_file($url, $redirected=FALSE) {
     $base = variable_get('quant_base_url', $base_url);
     // Clean up multiple slashes in the file path.
     $url = preg_replace('~/+~', '/', $url);
+    // Ensure url path starts with a slash.
+    if (substr($url, 0, 1) !== '/') {
+      $url = '/' . $url;
+    }
     $url = "{$base}{$url}";
   }
 
