@@ -64,7 +64,10 @@ class UrlRegistrar implements HttpKernelInterface {
     if (is_array($blocklist)) {
       $path = $this->generateUrl($request);
       foreach ($blocklist as $needle) {
-        if (@strpos($path, $needle) > -1) {
+        $pattern = preg_quote($needle, '/');
+        $pattern = str_replace('\*', '.*', $pattern);
+        preg_match('/^(' . $pattern . ')/', $path, $is_match);
+        if (!empty($is_match)) {
           return FALSE;
         }
       }
@@ -75,7 +78,8 @@ class UrlRegistrar implements HttpKernelInterface {
     }
 
     // Don't gather responses that aren't going to be useful.
-    if (!count($response->getCacheableMetadata()->getCacheTags())) {
+    $tag_list = $this->getAcceptedCacheTags($response->getCacheableMetadata()->getCacheTags()); 
+    if (empty($tag_list)) {
       return FALSE;
     }
 
@@ -97,6 +101,22 @@ class UrlRegistrar implements HttpKernelInterface {
   }
 
   /**
+   * Generate the cache tag list to be stored with this route.
+   * 
+   * @param array $tag_list
+   *   A list of tags from the cacheable response.
+   * 
+   * @return array
+   *   A list of cache tags for the URL.
+   */
+  protected function getAcceptedCacheTags(array $tag_list) {
+    $blocklist = $this->config->get('tag_blocklist');
+    $blocklist = is_array($blocklist) ? $blocklist : [];
+    $tags = preg_grep('/^(' . implode('|', $blocklist) . ')/', $tag_list, PREG_GREP_INVERT);
+    return array_filter($tags);
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function handle(Request $request, $type = self::MASTER_REQUEST, $catch = TRUE) {
@@ -104,7 +124,7 @@ class UrlRegistrar implements HttpKernelInterface {
     if ($this->determine($request, $response)) {
       $this->registry->add(
         $this->generateUrl($request),
-        $response->getCacheableMetadata()->getCacheTags()
+        $this->getAcceptedCacheTags($response->getCacheableMetadata()->getCacheTags())
       );
     }
     return $response;

@@ -4,6 +4,8 @@ namespace Drupal\quant_purger\Form;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\purge_ui\Form\QueuerConfigFormBase;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\PrependCommand;
 
 /**
  * Configuration form for the Quant queuer.
@@ -127,13 +129,11 @@ class ConfigurationForm extends QueuerConfigFormBase {
   /**
    * {@inheritdoc}
    */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
+  public function submitFormSuccess(array &$form, FormStateInterface $form_state) {
     $this->config('quant_purger.settings')
       ->set('tag_blocklist', $form_state->getValue('tag_blocklist'))
       ->set('path_blocklist', $form_state->getValue('path_blocklist'))
       ->save();
-
-    return parent::submitForm($form, $form_state);
   }
 
   /**
@@ -145,9 +145,16 @@ class ConfigurationForm extends QueuerConfigFormBase {
    *   The form state object.
    */
   public function submitFormClear(array &$form, FormStateInterface $form_state) {
+    $response = new AjaxResponse();
+
     if (!$form_state->getErrors()) {
       \Drupal::service('quant_purger.registry')->clear();
     }
+
+    $message = $this->t('Succesfully cleared the traffic registry');
+    $response->addCommand(new PrependCommand('#purgedialogform', '<div class="messages messages--status" style="margin-top: 1rem"><div class="message__content">' . $message . '</div></div>'));
+    
+    return $response;
   }
 
 }

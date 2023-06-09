@@ -34,3 +34,21 @@ function quant_purger_schema() {
   ];
   return $schema;
 }
+
+/**
+ * 
+ */
+function quant_purger_update_0001(&$sandbox) {
+  $config = \Drupal::configFactory()->getEditable('quant_purger.settings');
+  $config->set('tag_blocklist', [
+    'rendered',
+    'http_response',
+    '4xx-response',
+    'block_view',
+    'block_view_content',
+    'config:*',
+    'node_view',
+    'node_list',
+    'media_view',
+  ])->save();
+}
