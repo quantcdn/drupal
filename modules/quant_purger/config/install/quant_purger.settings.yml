@@ -12,4 +12,5 @@ tag_blocklist:
   - 'paragraph_view'
   - 'config:*'
   - 'user:*'
-path_blocklist: []
+path_blocklist:
+  - '/admin/*'

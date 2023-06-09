@@ -50,5 +50,7 @@ function quant_purger_update_0001(&$sandbox) {
     'node_view',
     'node_list',
     'media_view',
-  ])->save();
+  ]);
+  $config->set('path_blocklist', ['/admin/*']);
+  $config->save();
 }
