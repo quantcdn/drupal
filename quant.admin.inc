@@ -126,6 +126,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_hostname', 'www.example.com'),
   );
 
+  $form['quant_allowed_external_domains'] = [
+    '#type' => 'textarea',
+    '#title' => t('Allowed external domains'),
+    '#description' => t('Optionally provide external domains embedded static assets should be retrieved from.'),
+    '#default_value' => variable_get('quant_allowed_external_domains', FALSE),
+  ];
+
   $form['#validate'][] = 'quant_form_quant_config_validate';
 
   return system_settings_form($form);
@@ -223,6 +230,14 @@ function quant_seed_settings() {
       '#type' => 'checkbox',
       '#title' => t('Export Views'),
       '#default_value' => variable_get('quant_seed_views', FALSE),
+    );
+  }
+
+  if (module_exists('page_manager')) {
+    $form['quant_seed_page_manager'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Export page manager pages'),
+      '#default_value' => variable_get('quant_seed_page_manager', FALSE),
     );
   }
 

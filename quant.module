@@ -852,6 +852,31 @@ function _quant_queue_theme_assets() {
 }
 
 /**
+ * Get a list of page manager paths.
+ */
+function _quant_queue_page_manager() {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+  $queue = quant_get_queue();
+
+  $config = array();
+  $pages = db_query('SELECT p.path FROM {page_manager_pages} p')->fetchAll();
+
+  foreach ($pages as $page) {
+    $url = "$base/" . $page->path;
+
+    $config['find_pager'] = TRUE;
+    $config['type'] = 'page_manager';
+
+    $item = array(
+      'quant_seed',
+      array(trim($url), $config),
+    );
+    $queue->createItem($item);
+  }
+}
+
+/**
  * Get a list of views paths.
  */
 function _quant_queue_views() {
@@ -1004,6 +1029,10 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
 
   if (variable_get('quant_seed_views')) {
     _quant_queue_views();
+  }
+
+  if (variable_get('quant_seed_page_manager')) {
+    _quant_queue_page_manager();
   }
 
   if (variable_get('site_404', FALSE)) {
