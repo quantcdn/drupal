@@ -78,7 +78,7 @@ class UrlRegistrar implements HttpKernelInterface {
     }
 
     // Don't gather responses that aren't going to be useful.
-    $tag_list = $this->getAcceptedCacheTags($response->getCacheableMetadata()->getCacheTags()); 
+    $tag_list = $this->getAcceptedCacheTags($response->getCacheableMetadata()->getCacheTags());
     if (empty($tag_list)) {
       return FALSE;
     }
@@ -102,10 +102,10 @@ class UrlRegistrar implements HttpKernelInterface {
 
   /**
    * Generate the cache tag list to be stored with this route.
-   * 
+   *
    * @param array $tag_list
    *   A list of tags from the cacheable response.
-   * 
+   *
    * @return array
    *   A list of cache tags for the URL.
    */

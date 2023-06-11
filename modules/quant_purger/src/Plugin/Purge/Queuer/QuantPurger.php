@@ -82,7 +82,7 @@ class QuantPurger implements CacheTagsInvalidatorInterface, ContainerAwareInterf
     if (!$this->initialize()) {
       return;
     }
-    
+
     // Clean up the tags that we care about for this run.
     $tags = array_diff($tags, $this->invalidatedTags);
 

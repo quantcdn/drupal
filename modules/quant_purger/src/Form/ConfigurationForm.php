@@ -153,7 +153,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
 
     $message = $this->t('Succesfully cleared the traffic registry');
     $response->addCommand(new PrependCommand('#purgedialogform', '<div class="messages messages--status" style="margin-top: 1rem"><div class="message__content">' . $message . '</div></div>'));
-    
+
     return $response;
   }
 

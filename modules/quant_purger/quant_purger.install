@@ -36,7 +36,7 @@ function quant_purger_schema() {
 }
 
 /**
- * 
+ * Update configuration for module settings.
  */
 function quant_purger_update_0001(&$sandbox) {
   $config = \Drupal::configFactory()->getEditable('quant_purger.settings');
