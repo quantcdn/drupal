@@ -209,6 +209,12 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
 
     if (isset($item['existing_md5']) && md5_file($loc) == $item['existing_md5']) {
       // This file hasn't changed since the last export.
+      // Remove any temporary files and continue.
+      if ($external_url || variable_get('quant_alternate_file_handler', FALSE)) {
+        if (strpos($loc, sys_get_temp_dir()) === 0) {
+          unlink($loc);
+        }
+      }
       continue;
     }
 
