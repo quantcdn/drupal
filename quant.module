@@ -1305,6 +1305,7 @@ function quant_token_validate($route, $strict = TRUE) {
 function _rewrite_relative($markup) {
   global $base_url;
   $base = variable_get('quant_hostname', $base_url);
+  $base = preg_quote($base, '/');
   return preg_replace("/(https?:\/\/)?{$base}/i", '', $markup);
 }
 
@@ -1314,6 +1315,7 @@ function _rewrite_relative($markup) {
 function _is_url_internal($url) {
   global $base_url;
   $base = variable_get('quant_hostname', $base_url);
+  $base = preg_quote($base, '/');
   if (preg_match("/(https?:\/\/)?{$base}/i", $url)) {
     return TRUE;
   }
