@@ -213,6 +213,34 @@ function quant_seed_settings() {
     ),
   );
 
+  $form['quant_seed_menu_paths_enabled'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Menu paths'),
+    '#description' => t('Exports routes as defined in a menu structure.'),
+    '#default_value' => variable_get('quant_seed_menu_paths_enabled', FALSE),
+  ];
+
+  // Filter by menu.
+  $menus = menu_get_menus();
+
+  $options = array();
+  foreach ($menus as $menu_name => $menu) {
+    $options[$menu_name] = $menu;
+  }
+
+  $form['quant_seed_menu_paths_bundles'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Enabled menus for paths'),
+    '#description' => t('Optionally, restrict to these menus.'),
+    '#default_value' => variable_get('quant_seed_menu_paths_bundles', []),
+    '#options' => $options,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="quant_seed_menu_paths_enabled"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
   $form['quant_seed_entity_taxonomy'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export taxonomy terms'),

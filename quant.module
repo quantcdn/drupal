@@ -748,6 +748,49 @@ function _quant_prepare_entity($type, $entity_id) {
 }
 
 /**
+ * Prepare a batch process for menu items.
+ *
+ * @param array $menus
+ *   Optionally filter by menu names.
+ */
+function _quant_queue_menu_paths(array $menus_filter = array()) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+  $menus = menu_get_menus();
+
+  $options = array();
+  foreach ($menus as $menu_name => $menu) {
+
+    // Skip if not in a provided menu filter.
+    if (!empty($menus_filter) && !in_array($menu_name, $menus_filter)) {
+      continue;
+    }
+
+    $items = menu_load_links($menu_name);
+    $queue = quant_get_queue();
+
+    foreach ($items as $item) {
+      $alias = drupal_get_path_alias($item['link_path']);
+
+      // Exclude special routes (like '<front>')
+      if (strpos((trim($alias)), '<') === 0) {
+        continue;
+      }
+      $url =  $base . base_path() . $alias;
+
+      $item = array(
+        'quant_seed',
+        array(trim($url)),
+      );
+      $queue->createItem($item);
+
+    }
+
+  }
+
+}
+
+/**
  * Prepare a batch process for the node entity type.
  *
  * @param array $bundles
@@ -1038,6 +1081,11 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
 
   if (variable_get('quant_seed_theme_assets')) {
     _quant_queue_theme_assets();
+  }
+
+  if (variable_get('quant_seed_menu_paths_bundles')) {
+    $menus = array_filter(variable_get('quant_seed_menu_paths_bundles'));
+    _quant_queue_menu_paths($menus);
   }
 
   if (variable_get('quant_seed_additional_theme_assets')) {
