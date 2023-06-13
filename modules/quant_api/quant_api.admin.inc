@@ -121,6 +121,6 @@ function quant_api_settings_validate($form, &$form_state) {
     drupal_set_message('QuantAPI error: <code>' . $message . '</code>', 'error');
   }
   else {
-    drupal_set_message('QuantAPI error: Successfully connected to Quant project <code>' . $body->project . '</code> for organization <code>' . $form_state['values']['quant_api_customer'] . '</code>.');
+    drupal_set_message('QuantAPI status: Successfully connected to Quant project <code>' . $body->project . '</code> for organization <code>' . $form_state['values']['quant_api_customer'] . '</code>.');
   }
 }
