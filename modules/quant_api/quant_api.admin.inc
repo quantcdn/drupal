@@ -39,6 +39,7 @@ function quant_api_settings() {
     '#default_value' => variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT),
   );
 
+  // @todo Switch from 'quant_api_customer' to 'quant_api_organization'.
   $form['quant_api_customer'] = array(
     '#type' => 'textfield',
     '#title' => t('API Organization'),
@@ -87,6 +88,7 @@ function quant_api_settings_validate($form, &$form_state) {
   $api = $url . '/v1';
 
   // Try a ping :).
+  // @todo Switch from 'quant-customer' to 'quant-organization'.
   $options = array(
     'headers' => array(
       'quant-customer' => $form_state['values']['quant_api_customer'],
@@ -115,7 +117,7 @@ function quant_api_settings_validate($form, &$form_state) {
 
   if (!empty($response->error)) {
     $message = !empty($body->errorMsg) ? $body->errorMsg : 'Unauthorized';
-    form_set_error('quant_api_token', 'Unable to connect to the Quant API please check the API token and customer match.');
+    form_set_error('quant_api_token', 'Unable to connect to the Quant API please check the API token and organization match.');
     drupal_set_message('QuantAPI error: ' . $message, 'error');
   }
   else {
