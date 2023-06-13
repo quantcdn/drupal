@@ -12,46 +12,57 @@
  */
 function quant_api_settings() {
   if (!variable_get('quant_api_ssl_verify', TRUE)) {
-    $form['markup'] = array(
+    $form['warning'] = array(
       '#type' => 'markup',
       '#prefix' => '<div class="messages error">',
       '#suffix' => '</div>',
-      '#markup' => '<b>DANGER ZONE</b> SSL verification is disabled for Quant API connections, it is recommended that you address server configuration rather than disabling SSL verification.'
+      '#markup' => '<strong>DANGER ZONE:</strong> SSL verification is disabled for Quant API connections. It is <strong>highly recommended</strong> that you update your server configuration to handle SSL rather than disabling SSL verification.'
     );
   }
+
+  $css_class = 'status';
+  if (empty(variable_get('quant_api_customer')) || empty(variable_get('quant_api_project')) || empty(variable_get('quant_api_token'))) {
+    $css_class = 'warning';
+  }
+  $form['help'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="messages ' . $css_class . '">',
+    '#suffix' => '</div>',
+    '#markup' => 'You can find your API information in your Quant dashboard. In the dashboard, first choose your organization and project. Then, go to the <code>Integrations</code> page and the API information is shown in the <code>Integration details</code> section.'
+  );
 
   $form['quant_api_endpoint'] = array(
     '#type' => 'textfield',
     '#required' => TRUE,
     '#title' => t('API Endpoint'),
-    '#description' => t('The FQDN for the API endpoint'),
+    '#description' => t('The fully-qualified domain name for the API endpoint, e.g. <code>@endpoint</code>', array('@endpoint' => QUANT_API_ENDPOINT_DEFAULT)),
     '#default_value' => variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT),
   );
 
   $form['quant_api_customer'] = array(
     '#type' => 'textfield',
-    '#title' => t('API Customer'),
-    '#description' => t('The API customer'),
+    '#title' => t('API Organization'),
+    '#description' => t('The API organization. This is shown on the Integrations page and with the account information.'),
     '#default_value' => variable_get('quant_api_customer'),
   );
 
   $form['quant_api_project'] = array(
     '#type' => 'textfield',
     '#title' => t('API Project'),
-    '#description' => t('The API project'),
+    '#description' => t('The API project. This is the <code>API name</code> shown on the Projects and Integrations pages.'),
     '#default_value' => variable_get('quant_api_project'),
   );
 
   $form['quant_api_token'] = array(
     '#type' => 'password',
     '#title' => t('API Token'),
-    '#decription' => t('The API token'),
+    '#description' => t('The API token. Use the clipboard icon in the dashboard to copy the token. Be careful with this information. It should be treated like any system password.'),
   );
 
   $form['quant_api_ssl_verify'] = array(
     '#type' => 'checkbox',
     '#title' => t('Verify SSL'),
-    '#description' => t('You can optionally disable SSL verification for all Quant API requests, this is <b>not recommended</b> but may be necessary in some configurations.'),
+    '#description' => t('You can optionally disable SSL verification for all Quant API requests. This is <strong>not recommended</strong>, but may be necessary in some configurations.'),
     '#default_value' => variable_get('quant_api_ssl_verify', TRUE),
   );
 
@@ -108,6 +119,6 @@ function quant_api_settings_validate($form, &$form_state) {
     drupal_set_message('QuantAPI error: ' . $message, 'error');
   }
   else {
-    drupal_set_message('QuantAPI: Successfully connected to ' . $body->project);
+    drupal_set_message('QuantAPI: Successfully connected to Quant project <code>' . $body->project . '</code> for organization <code>' . $form_state['values']['quant_api_customer'] . '</code>.');
   }
 }
