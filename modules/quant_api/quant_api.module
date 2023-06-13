@@ -45,6 +45,7 @@ function quant_api_menu() {
  */
 function quant_api_get_request_headers() {
   $token = variable_get('quant_api_token');
+  // @todo Switch from 'quant_api_customer' to 'quant_api_organization'.
   $customer = variable_get('quant_api_customer');
   $project = variable_get('quant_api_project');
 
@@ -54,7 +55,7 @@ function quant_api_get_request_headers() {
   }
 
   if (empty($customer)) {
-    quant_log('API Customer is not configured');
+    quant_log('API Organization is not configured');
     return [];
   }
 
@@ -63,6 +64,7 @@ function quant_api_get_request_headers() {
     return [];
   }
 
+  // @todo Switch from 'quant-customer' to 'quant-organization'.
   return array(
     'quant-customer' => $customer,
     'quant-token' => $token,
