@@ -221,8 +221,27 @@ function quant_seed_settings() {
 
   $form['quant_seed_theme_assets'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Export theme assets'),
+    '#title' => t('Export default theme assets'),
     '#default_value' => variable_get('quant_seed_theme_assets', FALSE),
+  );
+
+  $form['quant_seed_additional_theme_assets_enabled'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Additional theme assets'),
+    '#description' => t('Exports CSS/JS/static assets from non-default themes.'),
+    '#default_value' => variable_get('quant_seed_additional_theme_assets_enabled', FALSE),
+  ];
+
+  $form['quant_seed_additional_theme_assets'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Export additional theme assets'),
+    '#default_value' => variable_get('quant_seed_additional_theme_assets', ''),
+    '#description' => t('Provide additional theme machine names (separated by newline)'),
+    '#states' => [
+      'visible' => [
+        ':input[name="quant_seed_additional_theme_assets_enabled"]' => ['checked' => TRUE],
+      ],
+    ],
   );
 
   if (module_exists('views')) {

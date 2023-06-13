@@ -813,9 +813,22 @@ function _quant_queue_taxonomy() {
 
 /**
  * Prepare the images to seed via batch.
+ *
+ * @param string $theme_machine_name
+ *   Optional theme machine name to seed assets for.
  */
-function _quant_queue_theme_assets() {
-  $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
+function _quant_queue_theme_assets($theme_machine_name = NULL) {
+
+  if (empty($theme_machine_name)) {
+    $theme_machine_name = variable_get('theme_default', NULL);
+  }
+
+  $theme_dir = drupal_get_path('theme', $theme_machine_name);
+
+  if (empty($theme_dir)) {
+    return;
+  }
+
   $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
   ksort($files);
 
@@ -1025,6 +1038,12 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
 
   if (variable_get('quant_seed_theme_assets')) {
     _quant_queue_theme_assets();
+  }
+
+  if (variable_get('quant_seed_additional_theme_assets')) {
+    foreach (explode(PHP_EOL, variable_get('quant_seed_additional_theme_assets')) as $theme) {
+      _quant_queue_theme_assets(trim($theme));
+    }
   }
 
   if (variable_get('quant_seed_views')) {
@@ -1306,7 +1325,7 @@ function _rewrite_relative($markup) {
   global $base_url;
   $base = variable_get('quant_hostname', $base_url);
   $base = preg_quote($base, '/');
-  return preg_replace("/(https?:\/\/)?{$base}/i", '', $markup);
+  return preg_replace("/(https?:\/\/){$base}/i", '', $markup);
 }
 
 /**
