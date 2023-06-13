@@ -207,6 +207,12 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       continue;
     }
 
+    // Safety net: Return if mime type is text/html.
+    // This is to prevent any content routes incorrectly being sent as files.
+    if (preg_match('/text\/html/', mime_content_type($loc))) {
+      continue;
+    }
+
     if (isset($item['existing_md5']) && md5_file($loc) == $item['existing_md5']) {
       // This file hasn't changed since the last export.
       // Remove any temporary files and continue.
