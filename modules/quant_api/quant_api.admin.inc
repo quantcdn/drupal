@@ -43,14 +43,14 @@ function quant_api_settings() {
   $form['quant_api_customer'] = array(
     '#type' => 'textfield',
     '#title' => t('API Organization'),
-    '#description' => t('The API organization. This is shown on the Integrations page and with the account information.'),
+    '#description' => t('The API organization. This is shown on the <code>Integrations</code> page and with the account information.'),
     '#default_value' => variable_get('quant_api_customer'),
   );
 
   $form['quant_api_project'] = array(
     '#type' => 'textfield',
     '#title' => t('API Project'),
-    '#description' => t('The API project. This is the <code>API name</code> shown on the Projects and Integrations pages.'),
+    '#description' => t('The API project. This is the <code>API name</code> shown on the <code>Projects</code> and <code>Integrations</code> pages.'),
     '#default_value' => variable_get('quant_api_project'),
   );
 
@@ -109,7 +109,7 @@ function quant_api_settings_validate($form, &$form_state) {
   $response = drupal_http_request("$api/ping", $options);
 
   if (!property_exists($response, 'data')) {
-    form_set_error('quant_api_endpoint', 'Unable to connect to the Quant API please check the endpoint.');
+    form_set_error('quant_api_endpoint', 'QuantAPI error: Unable to connect to the Quant API please check the endpoint on the <code>Integrations</code> page in the Quant dashboard.');
     return;
   }
 
@@ -117,10 +117,10 @@ function quant_api_settings_validate($form, &$form_state) {
 
   if (!empty($response->error)) {
     $message = !empty($body->errorMsg) ? $body->errorMsg : 'Unauthorized';
-    form_set_error('quant_api_token', 'Unable to connect to the Quant API please check the API token and organization match.');
-    drupal_set_message('QuantAPI error: ' . $message, 'error');
+    form_set_error('quant_api_token', 'QuantAPI error: Unable to connect to the Quant API. Check the API organization, project, and token details on the <code>Integrations</code> page in the Quant dashboard.');
+    drupal_set_message('QuantAPI error: <code>' . $message . '</code>', 'error');
   }
   else {
-    drupal_set_message('QuantAPI: Successfully connected to Quant project <code>' . $body->project . '</code> for organization <code>' . $form_state['values']['quant_api_customer'] . '</code>.');
+    drupal_set_message('QuantAPI error: Successfully connected to Quant project <code>' . $body->project . '</code> for organization <code>' . $form_state['values']['quant_api_customer'] . '</code>.');
   }
 }
