@@ -120,6 +120,7 @@ function drush_quant_seed() {
  */
 function _validate_quant_config() {
   $token = variable_get('quant_api_token');
+  // @todo Switch code from $customer to $organization.
   $customer = variable_get('quant_api_customer');
   $project = variable_get('quant_api_project');
 
@@ -128,7 +129,7 @@ function _validate_quant_config() {
     return FALSE;
   }
   if (empty($customer)) {
-    drush_log('Quant API customer is not configured', 'error');
+    drush_log('Quant API organization is not configured', 'error');
     return FALSE;
   }
 
