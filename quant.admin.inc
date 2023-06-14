@@ -123,15 +123,15 @@ function quant_config() {
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
-    '#description' => t('Provide the FQDN that internal requests may route to, e.g. http://localhost, http://nginx:8080, http:127.0.0.1. <a href="#">More info</a>'),
+    '#description' => t('Provide the FQDN that internal requests may route to, e.g. <code>http://localhost</code>, <code>http://nginx:8080</code>, <code>http:127.0.0.1</code>'),
     '#default_value' => variable_get('quant_base_url', 'http://localhost'),
   );
 
   $form['quant_hostname'] = array(
     '#type' => 'textfield',
     '#title' => t('Hostname'),
-    '#description' => t('Optionally, provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain, e.g. www.example.com <a href="#">More info</a>'),
-    '#default_value' => variable_get('quant_hostname', 'www.example.com'),
+    '#description' => t('Optionally, provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain, e.g. <code>www.example.com</code>'),
+    '#default_value' => variable_get('quant_hostname', ''),
   );
 
   $form['#validate'][] = 'quant_form_quant_config_validate';
