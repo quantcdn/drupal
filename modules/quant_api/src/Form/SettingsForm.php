@@ -60,14 +60,14 @@ class SettingsForm extends ConfigFormBase {
         \Drupal::messenger()->addMessage($message);
       }
       else {
-        \Drupal::messenger()->addError($this->t('QuantAPI error: Unable to connect to the Quant API please check the endpoint on the <code>Integrations</code> page in the Quant dashboard.');
+        \Drupal::messenger()->addError($this->t('QuantAPI error: Unable to connect to the Quant API please check the endpoint on the <code>Integrations</code> page in the Quant dashboard.'));
       }
     }
 
     $form['api_endpoint'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Endpoint'),
-      '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code>');
+      '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code>'),
       '#default_value' => $config->get('api_endpoint'),
       '#required' => TRUE,
     ];
