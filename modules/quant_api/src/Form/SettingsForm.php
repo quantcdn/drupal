@@ -100,7 +100,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_tls_disabled'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Disable TLS verification'),
-      '#description' => $this->t('You can optionally disable SSL verification for all Quant API requests. This is <strong>not recommended</strong>, but may be necessary in some configurations. For example, old webservers may have issues validating modern certificates.'),
+      '#description' => $this->t('You can optionally disable SSL verification for all Quant API requests. This is <strong>not recommended</strong>, but may be necessary in some configurations. For example, old web servers may have issues validating modern SSL certificates.'),
 
       '#default_value' => $config->get('api_tls_disabled', FALSE),
     ];
