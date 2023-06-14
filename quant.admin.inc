@@ -12,6 +12,14 @@
  */
 function quant_config() {
 
+  // Link off to the most relevant documentation.
+  $form['docs'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="messages status">',
+    '#suffix' => '</div>',
+    '#markup' => 'Learn more about the Quant Drupal module in the <a href="https://docs.quantcdn.io/docs/integrations/drupal">Quant Drupal integration documentation</a>.'
+  );
+
   $form['quant_enabled'] = array(
     '#type' => 'checkbox',
     '#title' => t('Track content changes'),
@@ -179,6 +187,32 @@ function quant_seed_settings() {
   $form = array();
   _quant_get_seed_warnings($form);
 
+  // If all fields are empty, assume they haven't used the cron form before
+  // and show the message in a warning color rather than a status color.
+  $css_class = 'warning';
+  $fields = ['quant_seed_entity_node', 'quant_seed_entity_taxonomy', 'quant_seed_theme_assets', 'quant_custom_routes_enabled', 'quant_custom_routes', 'quant_robots'];
+  if (module_exists('quant_file')) {
+    $fields[] = 'quant_seed_files';
+  }
+  if (module_exists('quant_redirect')) {
+    $fields[] = 'quant_seed_redirects';
+  }
+  if (module_exists('quant_sitemap')) {
+    $fields[] = 'quant_seed_sitemap';
+  }
+  foreach ($fields as $field) {
+    if (!empty(variable_get($field))) {
+      $css_class = 'status';
+    }
+  }
+  // Link off to the most relevant documentation.
+  $form['docs'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="messages ' . $css_class . '">',
+    '#suffix' => '</div>',
+    '#markup' => 'Learn more about this feature in the <a href="https://docs.quantcdn.io/docs/integrations/drupal/seed">Quant seed documentation</a>.'
+  );
+
   $form['quant_seed_entity_node'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export nodes'),
@@ -310,6 +344,14 @@ function quant_queue_page() {
     $rows[] = $item;
   }
 
+  // Link off to the most relevant documentation.
+  $build['docs'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="messages status">',
+    '#suffix' => '</div>',
+    '#markup' => 'Learn more about this feature in the <a href="https://docs.quantcdn.io/docs/integrations/drupal/seed">Quant seed documentation</a>.'
+  );
+
   if (!empty($items)) {
     $queue = quant_get_queue();
     $build['desc'] = array(
@@ -339,6 +381,14 @@ function quant_queue_page() {
 function quant_token_settings() {
 
   $form = array();
+
+  // Link off to the most relevant documentation. Currently, there is no token-specific docs.
+  $form['docs'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="messages status">',
+    '#suffix' => '</div>',
+    '#markup' => 'Learn more about the Quant Drupal module in the <a href="https://docs.quantcdn.io/docs/integrations/drupal">Quant Drupal integration documentation</a>.'
+  );
 
   $form['quant_token_disable'] = array(
     '#type' => 'checkbox',
