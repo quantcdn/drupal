@@ -122,8 +122,8 @@ function quant_config() {
   $form['quant_hostname'] = array(
     '#type' => 'textfield',
     '#title' => t('Hostname'),
-    '#description' => t('Optionally, provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain, e.g. www.example.com <a href="#">More info</a>'),
-    '#default_value' => variable_get('quant_hostname', 'www.example.com'),
+    '#description' => t('Optionally, provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain, e.g. <code>www.example.com</code> <a href="#">More info</a>'),
+    '#default_value' => variable_get('quant_hostname', ''),
   );
 
   $form['#validate'][] = 'quant_form_quant_config_validate';
