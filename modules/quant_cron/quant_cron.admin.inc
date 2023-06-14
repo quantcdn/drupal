@@ -16,18 +16,10 @@ function quant_cron_settings() {
 
   _quant_get_seed_warnings($form);
 
-  // If all fields are empty, assume they haven't used the cron form before
-  // and show the message in a warning color rather than a status color.
-  $css_class = 'warning';
-  $fields = ['quant_cron_entity_node', 'quant_cron_entity_taxonomy', 'quant_cron_theme_assets', 'quant_cron_custom_routes_enabled', 'quant_cron_custom_routes'];
-  foreach ($fields as $field) {
-    if (!empty(variable_get($field))) {
-      $css_class = 'status';
-    }
-  }
+  // Link off to the most relevant documentation.
   $form['docs'] = array(
     '#type' => 'markup',
-    '#prefix' => '<div class="messages ' . $css_class . '">',
+    '#prefix' => '<div class="messages status">',
     '#suffix' => '</div>',
     '#markup' => 'Learn more about this feature in the <a href="https://docs.quantcdn.io/docs/integrations/drupal/drupal-cron">Quant cron documentation</a>.'
   );

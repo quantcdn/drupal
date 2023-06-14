@@ -20,18 +20,18 @@ function quant_api_settings() {
     );
   }
 
-  // If all fields are empty, assume they haven't used the cron form before
-  // and show the message in a warning color rather than a status color.
-  $css_class = 'warning';
-  if (empty(variable_get('quant_api_customer')) && empty(variable_get('quant_api_project')) && empty(variable_get('quant_api_token'))) {
-    $css_class = 'status';
+  // If essential fields are empty, assume they haven't used the form before and
+  // show the message in a warning color rather than a status color.
+  $css_class = 'status';
+  if (empty(variable_get('quant_api_customer')) || empty(variable_get('quant_api_project'))) {
+    $css_class = 'warning';
   }
   // Link off to the most relevant documentation.
   $form['docs'] = array(
     '#type' => 'markup',
     '#prefix' => '<div class="messages ' . $css_class . '">',
     '#suffix' => '</div>',
-    '#markup' => 'You can find your API information in your Quant dashboard. In the dashboard, first choose your organization and project. Then, go to the <code>Integrations</code> page and the API information is shown in the <code>Integration details</code> section. Learn more about getting connected in the <a href="https://docs.quantcdn.io/docs/integrations/drupal">Quant initial setup documentation</a>.'
+    '#markup' => 'You can find your API details in the Quant dashboard on the <code>Integrations</code> page. Learn more about getting started in the <a href="https://docs.quantcdn.io/docs/integrations/drupal">Quant initial setup documentation</a>.'
   );
 
   $form['quant_api_endpoint'] = array(
@@ -45,6 +45,7 @@ function quant_api_settings() {
   // @todo Switch from 'quant_api_customer' to 'quant_api_organization'.
   $form['quant_api_customer'] = array(
     '#type' => 'textfield',
+    '#required' => TRUE,
     '#title' => t('API Organization'),
     '#description' => t('The API organization. This is shown on the <code>Integrations</code> page and with the account information in the dashboard.'),
     '#default_value' => variable_get('quant_api_customer'),
@@ -52,6 +53,7 @@ function quant_api_settings() {
 
   $form['quant_api_project'] = array(
     '#type' => 'textfield',
+    '#required' => TRUE,
     '#title' => t('API Project'),
     '#description' => t('The API project. This is the <code>API name</code> shown on the <code>Projects</code> and <code>Integrations</code> pages in the dashboard.'),
     '#default_value' => variable_get('quant_api_project'),
@@ -59,6 +61,7 @@ function quant_api_settings() {
 
   $form['quant_api_token'] = array(
     '#type' => 'password',
+    '#required' => TRUE,
     '#title' => t('API Token'),
     '#description' => t('The API token. Use the clipboard icon in the dashboard to copy the token. Be careful with this information. It should be treated like any system password.'),
   );
