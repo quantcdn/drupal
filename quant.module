@@ -415,9 +415,14 @@ function quant_seed($url, array $context = array()) {
 
   quant_log('Sending content: !url', array('!url' => $url));
 
+  $quant_hostname = variable_get('quant_hostname');
+  if (empty($quant_hostname)) {
+    $quant_hostname = parse_url($base_url, PHP_URL_HOST);
+  }
+
   $options = array(
     'headers' => array(
-      'Host' => variable_get('quant_hostname', parse_url($base_url, PHP_URL_HOST)),
+      'Host' => $quant_hostname,
       'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
   );
