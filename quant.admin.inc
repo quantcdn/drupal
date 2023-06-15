@@ -330,7 +330,7 @@ function quant_queue_page() {
       if ($op == $batch_op) {
         $path = $prefix . $path;
         $alias = drupal_get_path_alias($path);
-        $path = ($path == $alias) ? '/' . $path : '/' . $path . ' (' . $alias . ')';
+        $path = ($path == $alias) ? '/' . $path : '/' . $path . ' (/' . $alias . ')';
       }
     }
 
