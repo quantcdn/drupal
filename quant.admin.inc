@@ -287,11 +287,18 @@ function quant_seed_settings() {
   $form['actions']['#weight'] = 998;
   $form['actions']['submit']['#validate'][] = 'quant_form_quant_seed_validate';
 
-  $form['save_and_queue'] = array(
+  $form['actions']['save_and_queue'] = array(
     '#type' => 'submit',
     '#value' => 'Save and Queue',
     '#submit' => array('system_settings_form_submit', '_quant_queue_batch'),
     '#weight' => 999,
+  );
+
+  $form['actions']['clear_queue'] = array(
+    '#type' => 'submit',
+    '#value' => 'Clear Queue',
+    '#submit' => array('system_settings_form_submit', '_quant_queue_clear'),
+    '#weight' => 9999,
   );
 
   return $form;
