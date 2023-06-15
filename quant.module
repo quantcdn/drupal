@@ -230,7 +230,7 @@ function quant_init() {
   }
 
   $path = current_path();
-  $path_alias = drupal_lookup_path('alias', $path);
+  $path_alias = drupal_get_path_alias($path);
   $strict = variable_get('quant_token_strict', true);
 
   if (quant_token_validate($path_alias, $strict)) {
@@ -1255,6 +1255,11 @@ function quant_token_validate($route, $strict = TRUE) {
 
   $expected_route = parse_url(ltrim($route, '/'), PHP_URL_PATH);
   $received_route = parse_url(ltrim($payload['route'], '/'), PHP_URL_PATH);
+
+  // Special case for home page.
+  if ($expected_route == 'node' && $received_route == '') {
+    $expected_route = '';
+  }
 
   if ($strict && $expected_route != $received_route) {
     watchdog('quant_token', 'Strict token mismatch: Expected [@expected] Received [@received]', array(
