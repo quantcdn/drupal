@@ -161,7 +161,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
   }
   else {
     // Check it's a valid URL.
-    $error = 'Your hostname is set incorrectly. It should be a valid domain name, e.g. <code>www.example.com</code>.'
+    $error = 'Your hostname is set incorrectly. It should be a valid domain name, e.g. <code>www.example.com</code>.';
     if (filter_var('http://' . $quant_hostname, FILTER_VALIDATE_URL) === FALSE) {
       form_set_error('quant_hostname', $error);
       return;
