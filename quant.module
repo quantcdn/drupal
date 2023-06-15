@@ -23,12 +23,54 @@ module_load_include('inc', 'quant', 'quant_queue_class');
  * Implements hook_help().
  */
 function quant_help($section) {
-  switch ($section) {
-    case 'quant/config':
-      return '';
 
-    case 'quant/api':
-      return '';
+    $enabled = [];
+    $modules = ['quant', 'quant_api', 'quant_cron', 'quant_file', 'quant_redirect', 'quant_scheduler', 'quant_sitemap'];
+    foreach ($modules as $module) {
+      $enabled[$module] = module_exists($module) ? t('(Enabled)') : t('(Disabled)');
+    }
+
+  // Technically, the help text for each module should be in the module, but we
+  // are using the same text for everything, so this makes it simpler.
+  $help_summary = t('The <a href="https://www.drupal.org/project/quantcdn">Quant module</a> integrates your Drupal site with <a href="https://www.quantcdn.io">QuantCDN</a> to create a static version of your website.');
+  switch ($section) {
+    case 'admin/config/services/quant':
+    case 'admin/config/services/quant/api':
+    case 'admin/config/services/quant/cron':
+    case 'admin/config/services/quant/queue':
+    case 'admin/config/services/quant/seed':
+    case 'admin/config/services/quant/token':
+      return $help_summary . ' <a href="/admin/help/quant">More info</a>' ;
+
+    case 'admin/help#quant':
+      $output = '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . $help_summary . '</p>';
+      $output .= '<p>' . t('You can learn more in the <a href="https://docs.quantcdn.io/docs/integrations/drupal">Quant Drupal integration documentation</a>.') . '</p>';
+      $output .= '<h3>' . t('Quant modules') . '</h3>';
+      $output .= '<ul>';
+      $output .= '<li><strong>Quant</strong> ' . $enabled['quant'] . ' - Main Quant module with general, seed, and token settings.</li>';
+      $output .= '<li><strong>Quant API</strong> ' . $enabled['quant_api'] . ' - API module to connect your Drupal site with your Quant project.</li>';
+      $output .= '<li><strong>Quant Cron</strong> ' . $enabled['quant_cron'] . ' - Cron module for syncing content during cron runs.</li>';
+      $output .= '<li><strong>Quant File*</strong> ' . $enabled['quant_file'] . ' - File module to sync file displays to Quant.</li>';
+      $output .= '<li><strong>Quant Redirect*</strong> ' . $enabled['quant_redirect'] . ' - Redirect module to sync redirects to Quant.</li>';
+      $output .= '<li><strong>Quant Scheduler*</strong> ' . $enabled['quant_scheduler'] . ' - Scheduler module to support scheduler transitions.</li>';
+      $output .= '<li><strong>Quant Sitemap*</strong> ' . $enabled['quant_sitemap'] . ' - Sitemap module to sync XML sitemaps to Quant.</li>';
+      $output .= '<p>Note: * indicates the module has no specific configuration page though there may be settings on other admin pages.</p>';
+      $output .= '</ul>';
+      $output .= '<h3>' . t('Quant menu') . '</h3>';
+      $output .= '<ul>';
+      $output .= '<li><a href="/admin/config/services/quant">Quant Config</a></li>';
+      if (module_exists('quant_api')) {
+        $output .= '<li><a href="/admin/config/services/quant/api">Quant API</a></li>';
+      }
+      if (module_exists('quant_cron')) {
+        $output .= '<li><a href="/admin/config/services/quant/cron">Quant Cron</a></li>';
+      }
+      $output .= '<li><a href="/admin/config/services/quant/queue">Quant Queue</a></li>';
+      $output .= '<li><a href="/admin/config/services/quant/seed">Quant Seed</a></li>';
+      $output .= '<li><a href="/admin/config/services/quant/token">Quant Token</a></li>';
+      $output .= '</ul>';
+      return $output;
   }
 }
 

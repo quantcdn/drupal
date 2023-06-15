@@ -6,6 +6,16 @@
  */
 
 /**
+ * Implements hook_help().
+ */
+function quant_redirect_help($section) {
+  switch ($section) {
+    case 'admin/help#quant_redirect':
+      return quant_help('admin/help#quant');
+  }
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function quant_redirect_form_quant_config_alter(&$form, $form_state) {

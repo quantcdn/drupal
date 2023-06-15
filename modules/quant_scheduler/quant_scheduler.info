@@ -2,5 +2,7 @@ name = Quant scheduler
 description = Support scheduler transitions.
 package = Quant
 core = 7.x
+configure = admin/config/content/scheduler
+
 dependencies[] = quant
 dependencies[] = scheduler
