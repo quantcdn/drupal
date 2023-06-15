@@ -144,9 +144,34 @@ function quant_config() {
  */
 function quant_form_quant_config_validate($form = array(), &$form_state = array()) {
   $base = quant_get_base_url();
+
+  // Check hostname is a valid domain.
+  $quant_hostname = trim($form_state['values']['quant_hostname']);
+  if (empty($quant_hostname)) {
+    // Use the base URL by default.
+    $quant_hostname = parse_url($base, PHP_URL_HOST);
+    if (empty($quant_hostname)) {
+      // Shouldn't happen, but check anyway.
+      form_set_error('quant_hostname', 'Your Drupal base URL is not configured correctly. Check your settings.php file.');
+      return;
+    }
+    else {
+      drupal_set_message(t('Since the Hostname field has been left empty, the base URL in your site will be used instead: <code>@quant_hostname</code>', array('@quant_hostname' => $quant_hostname)));
+    }
+  }
+  else {
+    // Basic check for stray characters. The final check is below when using it.
+    // Note that using dns_get_record or similar can be problematic.
+    $quant_hostname_check = parse_url('http://' . $quant_hostname, PHP_URL_HOST);
+    if ($quant_hostname_check != $quant_hostname) {
+      form_set_error('quant_hostname', 'Your hostname is set incorrectly. It should be a valid domain name, e.g. <code>www.example.com</code>.');
+      return;
+    }
+  }
+
   $options = array(
     'headers' => array(
-      'Host' => variable_get('quant_hostname', parse_url($base, PHP_URL_HOST)),
+      'Host' => $quant_hostname,
       'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
   );
