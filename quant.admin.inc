@@ -277,6 +277,7 @@ function quant_seed_settings() {
     '#type' => 'checkbox',
     '#title' => t('Trigger the batch'),
     '#description' => t('<strong>Note:</strong> This will attempt to trigger the seed from the UI. Depending on the size of your site and your PHP configuration, this may not work. To try it, enable the option and click the <code>Save and Queue</code> button.'),
+    '#default_value' => FALSE,
     '#weight' => 998,
   );
 
