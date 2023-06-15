@@ -9,6 +9,6 @@
  * Implements hook_uninstall().
  */
 function quant_sitemap_uninstall() {
-  // Remove variables from file configuration.
+  // Remove variables from sitemap configuration.
   variable_del('quant_seed_sitemap');
 }
