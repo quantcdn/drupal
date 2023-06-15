@@ -276,23 +276,33 @@ function quant_seed_settings() {
   $form['trigger_quant_seed'] = array(
     '#type' => 'checkbox',
     '#title' => t('Trigger the batch'),
-    '#description' => t('<strong>Note:</strong> This will attempt to trigger the seed from the UI, depending on the size of your site and PHP configuration this may not work.'),
+    '#description' => t('<strong>Note:</strong> This will attempt to trigger the seed from the UI. Depending on the size of your site and your PHP configuration, this may not work. To try it, enable the option and click the <code>Save and Queue</code> button.'),
     '#weight' => 998,
   );
 
   $form = system_settings_form($form);
 
+  $form['actions']['submit']['#value'] = 'Save';
   $form['actions']['#weight'] = 998;
-  $form['#submit'][] = '_quant_queue_batch';
+  $form['actions']['submit']['#validate'][] = 'quant_form_quant_seed_validate';
 
   $form['save_and_queue'] = array(
     '#type' => 'submit',
     '#value' => 'Save and Queue',
-    '#submit' => array('system_settings_form_submit', '_quant_seed_prepare'),
+    '#submit' => array('system_settings_form_submit', '_quant_queue_batch'),
     '#weight' => 999,
   );
 
   return $form;
+}
+
+/**
+ * Validate the seed form to ensure that the settings are valid.
+ */
+function quant_form_quant_seed_validate($form = array(), &$form_state = array()) {
+  if (!empty($form_state['values']['trigger_quant_seed'])) {
+    drupal_set_message(t('To trigger the batch in the UI, check the option and click <code>Save and Queue</code>.'), "warning");
+  }
 }
 
 /**

@@ -1029,11 +1029,13 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
  * Process the queue inline with a Drupal batch process.
  */
 function _quant_queue_batch() {
+  // Always prepare the queue.
+  _quant_seed_prepare();
+
+  // If it should be triggered via UI, create a batch process.
   if (!variable_get('trigger_quant_seed')) {
     return;
   }
-
-  _quant_seed_prepare();
 
   $batch = array(
     'title' => t('Quant seeding'),
