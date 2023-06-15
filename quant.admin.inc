@@ -160,11 +160,18 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
     }
   }
   else {
+    // Check it's a valid URL.
+    $error = 'Your hostname is set incorrectly. It should be a valid domain name, e.g. <code>www.example.com</code>.'
+    if (filter_var('http://' . $quant_hostname, FILTER_VALIDATE_URL) === FALSE) {
+      form_set_error('quant_hostname', $error);
+      return;
+    }
+
     // Basic check for stray characters. The final check is below when using it.
     // Note that using dns_get_record or similar can be problematic.
     $quant_hostname_check = parse_url('http://' . $quant_hostname, PHP_URL_HOST);
     if ($quant_hostname_check != $quant_hostname) {
-      form_set_error('quant_hostname', 'Your hostname is set incorrectly. It should be a valid domain name, e.g. <code>www.example.com</code>.');
+      form_set_error('quant_hostname', $error);
       return;
     }
   }
@@ -190,17 +197,19 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
   $response = drupal_http_request($url, $options);
 
   $data = @json_decode($response->data, TRUE);
+  // Most likely there is something wrong with the hostname.
+  $error = 'Invalid Quant configuration. Check your hostname is set correctly, e.g. <code>www.example.com</code>.';
   if (json_last_error() != JSON_ERROR_NONE) {
-    drupal_set_message(t("Invalid Quant configuration."), "error");
+    form_set_error('quant_hostname', $error);
     return;
   }
 
   if (empty($data['message']) || $data['message'] != 'quant success') {
-    drupal_set_message(t("Invalid Quant configuration."), "error");
+    form_set_error('quant_hostname', $error);
     return;
   }
 
-  drupal_set_message(t("Quant configured correctly."));
+  drupal_set_message(t('Quant has been configured correctly.'));
 }
 
 /**
