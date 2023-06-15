@@ -47,7 +47,7 @@ function quant_menu() {
   );
 
   $items['admin/config/services/quant/settings'] = array(
-    'title' => 'Config',
+    'title' => 'Configure',
     'description' => 'Configure the Quant static site generator.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('quant_config'),
@@ -65,7 +65,7 @@ function quant_menu() {
     'file' => 'quant.admin.inc',
     'access arguments' => array('bulk quant export'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 1,
+    'weight' => 20,
   );
 
   $items['admin/config/services/quant/queue'] = array(
@@ -75,7 +75,7 @@ function quant_menu() {
     'file' => 'quant.admin.inc',
     'access arguments' => array('configure quant'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 10,
+    'weight' => 30,
   );
 
   $items['admin/config/services/quant/token'] = array(
@@ -86,7 +86,7 @@ function quant_menu() {
     'file' => 'quant.admin.inc',
     'access arguments' => array('configure quant'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 3
+    'weight' => 50
   );
 
   $items['_quant/validate'] = array(
