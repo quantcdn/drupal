@@ -2,13 +2,13 @@
 
 /**
  * @file
- * Install hooks for quant_file.
+ * Install hooks for quant_sitemap.
  */
 
 /**
  * Implements hook_uninstall().
  */
-function quant_file_uninstall() {
+function quant_sitemap_uninstall() {
   // Remove variables from file configuration.
-  variable_del('quant_seed_files');
+  variable_del('quant_seed_sitemap');
 }
