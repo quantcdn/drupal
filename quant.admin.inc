@@ -318,9 +318,32 @@ function quant_queue_page() {
     }
     $item['created'] = date('r', $item['created']);
     list($op, $context) = unserialize($item['data']);
+    $path = current($context);
+
+    // Strip out base url.
+    $base_url = quant_get_base_url();
+    $path = str_replace($base_url, '', $path);
+
+    // Show entity URL and alias.
+    $type = ['quant_seed_node_batch' => 'node/', 'quant_seed_taxonomy_batch' => 'taxonomy/term/'];
+    foreach ($type as $batch_op => $prefix) {
+      if ($op == $batch_op) {
+        $path = $prefix . $path;
+        $alias = drupal_get_path_alias($path);
+        $path = ($path == $alias) ? '/' . $path : '/' . $path . ' (/' . $alias . ')';
+      }
+    }
+
+    // Show redirect info.
+    if ($op == 'quant_redirect_request') {
+      $destination = next($context);
+      $status_code = next($context);
+      $path = '/' . $path . ' => ' . $destination . ' [' . $status_code . ']';
+    }
+
     $item['content'] = t('<b>Callback:</b> %op<br /><b>URL:</b> %arg', array(
       '%op' => $op,
-      '%arg' => reset($context),
+      '%arg' => $path,
     ));
     unset($item['data']);
     $rows[] = $item;
