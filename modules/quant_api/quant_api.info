@@ -3,4 +3,3 @@ description = Quant API exporter
 package = Quant
 core = 7.x
 configure = admin/config/services/quant/api
-dependencies[] = quant

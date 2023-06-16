@@ -71,6 +71,50 @@ function quant_install() {
 }
 
 /**
+ * Implements hook_uninstall().
+ */
+function quant_uninstall() {
+  // Remove variables from install.
+  variable_del('quant_token_secret');
+  variable_del('quant_token_timeout');
+  variable_del('queue_class_quant_seed');
+  variable_del('quant_queue_hash_length');
+  variable_del('quant_queue_hash_method');
+
+  // Remove variables from main configuration.
+  variable_del('quant_enabled');
+  variable_del('quant_enabled_nodes');
+  variable_del('quant_enabled_taxonomy');
+  variable_del('quant_xpath_selectors');
+  // @todo Rename to add quant namespace.
+  variable_del('disable_content_drafts');
+  variable_del('quant_rewrite_relative');
+  variable_del('quant_proxy_override');
+  variable_del('quant_verbose_logging');
+  variable_del('quant_verify_ssl');
+  variable_del('quant_alternate_file_handler');
+  variable_del('quant_base_url');
+  variable_del('quant_hostname');
+
+  // Remove variables from seed configuration.
+  variable_del('quant_seed_entity_node');
+  variable_del('quant_seed_entity_node_bundles');
+  variable_del('quant_seed_entity_taxonomy');
+  variable_del('quant_seed_theme_assets');
+  variable_del('quant_seed_views');
+  variable_del('quant_custom_routes_enabled');
+  variable_del('quant_custom_routes');
+  variable_del('quant_robots');
+  variable_del('trigger_quant_seed');
+
+  // Remove variables from token configuration.
+  variable_del('quant_token_disable');
+  variable_del('quant_token_timeout');
+  variable_del('quant_token_strict');
+  variable_del('quant_token_secret_regenerate');
+}
+
+/**
  * Remove the quant_token table.
  */
 function quant_update_7000() {

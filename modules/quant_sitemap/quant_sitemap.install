@@ -1,0 +1,14 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for quant_sitemap.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_sitemap_uninstall() {
+  // Remove variables from sitemap configuration.
+  variable_del('quant_seed_sitemap');
+}

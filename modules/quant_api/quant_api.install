@@ -1,0 +1,18 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for quant_api.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_api_uninstall() {
+  // Remove variables from API configuration.
+  variable_del('quant_api_endpoint');
+  variable_del('quant_api_customer');
+  variable_del('quant_api_project');
+  variable_del('quant_api_token');
+  variable_del('quant_api_ssl_verify');
+}

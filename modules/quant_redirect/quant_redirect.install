@@ -4,3 +4,12 @@
  * @file
  * Install hooks for quant_redirect.
  */
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_redirect_uninstall() {
+  // Remove variables from redirect configuration.
+  variable_del('quant_enabled_redirects');
+  variable_del('quant_seed_redirects');
+}
