@@ -34,7 +34,7 @@ function quant_api_menu() {
     'file' => 'quant_api.admin.inc',
     'access arguments' => array('configure quant'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 2,
+    'weight' => 10,
   );
 
   return $items;

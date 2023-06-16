@@ -28,7 +28,7 @@ function quant_cron_menu() {
     'file' => 'quant_cron.admin.inc',
     'access arguments' => array('bulk quant export'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 1,
+    'weight' => 40,
   );
 
   return $items;
