@@ -420,11 +420,10 @@ function quant_token_settings() {
     '#default_value' => variable_get('quant_token_disable', FALSE),
   );
 
-
   $form['quant_token_timeout'] = array(
     '#type' => 'textfield',
     '#title' => t('Token timeout'),
-    '#description' => t('A string compatible with <a href="https://www.php.net/manual/en/function.strtotime.php">PHPs baseTimestamp</a> parameter'),
+    '#description' => t('A string compatible with <a href="https://www.php.net/manual/en/datetime.formats.php">PHP datetime formats</a>, e.g. <code>+1 minute</code>'),
     '#default_value' => variable_get('quant_token_timeout', '+1 minute'),
   );
 
@@ -442,8 +441,22 @@ function quant_token_settings() {
   );
 
   $form = system_settings_form($form);
+  $form['#validate'][] = 'quant_form_quant_token_validate';
   $form['#submit'][] = 'quant_token_regenerate';
   return $form;
+}
+
+/**
+ * Validate the token form to ensure that the settings are valid.
+ */
+function quant_form_quant_token_validate($form = array(), &$form_state = array()) {
+  // The timeout must be a valid format, be in the future, and include a plus sign.
+  $now = strtotime(date('Y-m-d'));
+  $timeout = $form_state['values']['quant_token_timeout'];
+  $time_check = strtotime($timeout);
+  if (!empty($timeout) && ($time_check === FALSE || $time_check < $now || strpos($timeout, '+') === FALSE)) {
+    form_set_error('quant_token_timeout', 'The <code>Token timeout</code> format is incorrect. See <a href="https://www.php.net/manual/en/datetime.formats.php">PHP datetime documentation</a> for valid formatting options. Example: <code>+1 minute</code>');
+  }
 }
 
 /**
