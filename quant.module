@@ -1451,7 +1451,10 @@ function _quant_get_request_header($header) {
  */
 function quant_get_base_url() {
   global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = variable_get('quant_base_url');
+  if (empty($base)) {
+    $base = $base_url;
+  }
   return $base;
 }
 
