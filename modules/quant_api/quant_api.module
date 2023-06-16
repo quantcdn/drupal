@@ -15,8 +15,11 @@ define('QUANT_API_ENDPOINT_DEFAULT', 'https://api.quantcdn.io');
 /**
  * Implements hook_help().
  */
-function quant_api_help() {
-  // @TODO.
+function quant_api_help($section) {
+  switch ($section) {
+    case 'admin/help#quant_api':
+      return quant_help('admin/help#quant');
+  }
 }
 
 /**

@@ -6,6 +6,16 @@
  */
 
 /**
+ * Implements hook_help().
+ */
+function quant_file_help($section) {
+  switch ($section) {
+    case 'admin/help#quant_file':
+      return quant_help('admin/help#quant');
+  }
+}
+
+/**
  * Implements hook_file_insert().
  */
 function quant_file_file_insert($file) {
