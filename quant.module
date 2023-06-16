@@ -1058,6 +1058,15 @@ function _quant_queue_batch() {
 }
 
 /**
+ * Clear the queue.
+ */
+function _quant_queue_clear() {
+  $queue = quant_get_queue();
+  $queue->deleteQueue();
+  drupal_set_message(t('The queue has been cleared.'), 'status');
+}
+
+/**
  * Batch handler to process the Quant seed queue.
  */
 function quant_batch_process_queue($queue_name, &$context) {
