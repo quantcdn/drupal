@@ -134,6 +134,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_hostname', ''),
   );
 
+  $form['quant_allowed_external_domains'] = [
+    '#type' => 'textarea',
+    '#title' => t('Allowed external domains'),
+    '#description' => t('Optionally provide external domains embedded static assets should be retrieved from.'),
+    '#default_value' => variable_get('quant_allowed_external_domains', FALSE),
+  ];
+
   $form['#validate'][] = 'quant_form_quant_config_validate';
 
   return system_settings_form($form);
@@ -256,6 +263,34 @@ function quant_seed_settings() {
     ),
   );
 
+  $form['quant_seed_menu_paths_enabled'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Menu paths'),
+    '#description' => t('Exports routes as defined in a menu structure.'),
+    '#default_value' => variable_get('quant_seed_menu_paths_enabled', FALSE),
+  ];
+
+  // Filter by menu.
+  $menus = menu_get_menus();
+
+  $options = array();
+  foreach ($menus as $menu_name => $menu) {
+    $options[$menu_name] = $menu;
+  }
+
+  $form['quant_seed_menu_paths_bundles'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Enabled menus for paths'),
+    '#description' => t('Optionally, restrict to these menus.'),
+    '#default_value' => variable_get('quant_seed_menu_paths_bundles', []),
+    '#options' => $options,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="quant_seed_menu_paths_enabled"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
   $form['quant_seed_entity_taxonomy'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export taxonomy terms'),
@@ -264,8 +299,27 @@ function quant_seed_settings() {
 
   $form['quant_seed_theme_assets'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Export theme assets'),
+    '#title' => t('Export default theme assets'),
     '#default_value' => variable_get('quant_seed_theme_assets', FALSE),
+  );
+
+  $form['quant_seed_additional_theme_assets_enabled'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Additional theme assets'),
+    '#description' => t('Exports CSS/JS/static assets from non-default themes.'),
+    '#default_value' => variable_get('quant_seed_additional_theme_assets_enabled', FALSE),
+  ];
+
+  $form['quant_seed_additional_theme_assets'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Export additional theme assets'),
+    '#default_value' => variable_get('quant_seed_additional_theme_assets', ''),
+    '#description' => t('Provide additional theme machine names (separated by newline)'),
+    '#states' => [
+      'visible' => [
+        ':input[name="quant_seed_additional_theme_assets_enabled"]' => ['checked' => TRUE],
+      ],
+    ],
   );
 
   if (module_exists('views')) {
@@ -273,6 +327,14 @@ function quant_seed_settings() {
       '#type' => 'checkbox',
       '#title' => t('Export Views'),
       '#default_value' => variable_get('quant_seed_views', FALSE),
+    );
+  }
+
+  if (module_exists('page_manager')) {
+    $form['quant_seed_page_manager'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Export page manager pages'),
+      '#default_value' => variable_get('quant_seed_page_manager', FALSE),
     );
   }
 

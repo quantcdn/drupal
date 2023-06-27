@@ -654,6 +654,9 @@ function quant_seed($url, array $context = array()) {
  * Prepare a file export.
  */
 function quant_seed_file($url, $context = array()) {
+
+  quant_log('Sending file: !url', array('!url' => urldecode($url)));
+
   // @TODO: Files need different meta?
   $meta = array();
   drupal_alter('quant_file_meta', $meta, $context);
@@ -792,6 +795,49 @@ function _quant_prepare_entity($type, $entity_id) {
 }
 
 /**
+ * Prepare a batch process for menu items.
+ *
+ * @param array $menus
+ *   Optionally filter by menu names.
+ */
+function _quant_queue_menu_paths(array $menus_filter = array()) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+  $menus = menu_get_menus();
+
+  $options = array();
+  foreach ($menus as $menu_name => $menu) {
+
+    // Skip if not in a provided menu filter.
+    if (!empty($menus_filter) && !in_array($menu_name, $menus_filter)) {
+      continue;
+    }
+
+    $items = menu_load_links($menu_name);
+    $queue = quant_get_queue();
+
+    foreach ($items as $item) {
+      $alias = drupal_get_path_alias($item['link_path']);
+
+      // Exclude special routes (like '<front>')
+      if (strpos((trim($alias)), '<') === 0) {
+        continue;
+      }
+      $url =  $base . base_path() . $alias;
+
+      $item = array(
+        'quant_seed',
+        array(trim($url)),
+      );
+      $queue->createItem($item);
+
+    }
+
+  }
+
+}
+
+/**
  * Prepare a batch process for the node entity type.
  *
  * @param array $bundles
@@ -857,9 +903,22 @@ function _quant_queue_taxonomy() {
 
 /**
  * Prepare the images to seed via batch.
+ *
+ * @param string $theme_machine_name
+ *   Optional theme machine name to seed assets for.
  */
-function _quant_queue_theme_assets() {
-  $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
+function _quant_queue_theme_assets($theme_machine_name = NULL) {
+
+  if (empty($theme_machine_name)) {
+    $theme_machine_name = variable_get('theme_default', NULL);
+  }
+
+  $theme_dir = drupal_get_path('theme', $theme_machine_name);
+
+  if (empty($theme_dir)) {
+    return;
+  }
+
   $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
   ksort($files);
 
@@ -890,6 +949,31 @@ function _quant_queue_theme_assets() {
     $item = array(
       'quant_seed_file',
       array($file_on_disk, $context),
+    );
+    $queue->createItem($item);
+  }
+}
+
+/**
+ * Get a list of page manager paths.
+ */
+function _quant_queue_page_manager() {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+  $queue = quant_get_queue();
+
+  $config = array();
+  $pages = db_query('SELECT p.path FROM {page_manager_pages} p')->fetchAll();
+
+  foreach ($pages as $page) {
+    $url = "$base/" . $page->path;
+
+    $config['find_pager'] = TRUE;
+    $config['type'] = 'page_manager';
+
+    $item = array(
+      'quant_seed',
+      array(trim($url), $config),
     );
     $queue->createItem($item);
   }
@@ -1046,8 +1130,23 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
     _quant_queue_theme_assets();
   }
 
+  if (variable_get('quant_seed_menu_paths_bundles')) {
+    $menus = array_filter(variable_get('quant_seed_menu_paths_bundles'));
+    _quant_queue_menu_paths($menus);
+  }
+
+  if (variable_get('quant_seed_additional_theme_assets')) {
+    foreach (explode(PHP_EOL, variable_get('quant_seed_additional_theme_assets')) as $theme) {
+      _quant_queue_theme_assets(trim($theme));
+    }
+  }
+
   if (variable_get('quant_seed_views')) {
     _quant_queue_views();
+  }
+
+  if (variable_get('quant_seed_page_manager')) {
+    _quant_queue_page_manager();
   }
 
   if (variable_get('site_404', FALSE)) {
@@ -1336,7 +1435,8 @@ function quant_token_validate($route, $strict = TRUE) {
 function _rewrite_relative($markup) {
   global $base_url;
   $base = variable_get('quant_hostname', $base_url);
-  return preg_replace("/(https?:\/\/)?{$base}/i", '', $markup);
+  $base = preg_quote($base, '/');
+  return preg_replace("/(https?:\/\/){$base}/i", '', $markup);
 }
 
 /**
@@ -1345,6 +1445,7 @@ function _rewrite_relative($markup) {
 function _is_url_internal($url) {
   global $base_url;
   $base = variable_get('quant_hostname', $base_url);
+  $base = preg_quote($base, '/');
   if (preg_match("/(https?:\/\/)?{$base}/i", $url)) {
     return TRUE;
   }

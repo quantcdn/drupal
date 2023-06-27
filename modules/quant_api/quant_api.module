@@ -158,6 +158,12 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     $file = urldecode($item['path']);
     $on_disk = parse_url($file, PHP_URL_PATH);
     $domain = parse_url($file, PHP_URL_HOST);
+    $external_url = FALSE;
+
+    // @todo: Support relative protocol assets.
+    if (substr($file, 0, 2) === "//") {
+      continue;
+    }
 
     if (!empty($domain) && stripos($base_url, $domain) == -1) {
       // @todo: Determine local vs. remote.
@@ -172,9 +178,31 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       $loc = str_replace('/system/files', $private_path, $file);
     }
 
-    // Support alternate file handling if enabled
-    if (variable_get('quant_alternate_file_handler', FALSE)) {
-      $loc = _retrieve_file($file);
+    // Support retrieval of assets in the allowed domains list.
+    // This will always use the alternate file handler (retrieve via HTTP).
+    $allowed_domains = [];
+    foreach (explode(PHP_EOL, variable_get('quant_allowed_external_domains', '')) as $domain) {
+      $allowed_domains[] = trim($domain);
+    }
+
+    $external_url = FALSE;
+    if (!empty($item['original_path']) && strpos($item['original_path'], "http") === 0) {
+      if (in_array(parse_url($item['original_path'], PHP_URL_HOST), $allowed_domains)) {
+        $external_url = TRUE;
+      }
+      else {
+        continue;
+      }
+    }
+
+    if ($external_url) {
+      $loc = _retrieve_file($item['original_path'], TRUE);
+    }
+    else {
+      // Support alternate file handling if enabled
+      if (variable_get('quant_alternate_file_handler', FALSE)) {
+        $loc = _retrieve_file($file);
+      }
     }
 
     if (!file_exists($loc)) {
@@ -184,8 +212,20 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       continue;
     }
 
+    // Safety net: Return if mime type is text/html.
+    // This is to prevent any content routes incorrectly being sent as files.
+    if (preg_match('/text\/html/', mime_content_type($loc))) {
+      continue;
+    }
+
     if (isset($item['existing_md5']) && md5_file($loc) == $item['existing_md5']) {
       // This file hasn't changed since the last export.
+      // Remove any temporary files and continue.
+      if ($external_url || variable_get('quant_alternate_file_handler', FALSE)) {
+        if (strpos($loc, sys_get_temp_dir()) === 0) {
+          unlink($loc);
+        }
+      }
       continue;
     }
 
@@ -198,11 +238,12 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     quant_seed_file($file, [
       'location' => $loc,
       'request' => $on_disk,
+      'external' => $external_url,
     ]);
 
     // Remove temporary files where alternate file handler is enabled
     // and the file path starts with the temporary directory.
-    if (variable_get('quant_alternate_file_handler', FALSE)) {
+    if ($external_url || variable_get('quant_alternate_file_handler', FALSE)) {
       if (strpos($loc, sys_get_temp_dir()) === 0) {
         unlink($loc);
       }
@@ -217,9 +258,6 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
 function quant_api_quant_seed_file($url, $context) {
   global $base_url;
 
-  // Rebuild the file URL used for the local HEAD request.
-  $url = _rebuild_file_url($url);
-
   $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
 
   if (empty($api)) {
@@ -232,52 +270,66 @@ function quant_api_quant_seed_file($url, $context) {
     return;
   }
 
-  if (!file_exists($context['location'])) {
-    quant_log('Unable to upload %u, file does not exist', ['%u' => $context['location']]);
-    return;
+  // Skip file exists and is accessible checks for external files.
+  if(empty($context['external']) || $context['external'] !== TRUE) {
+
+    // Rebuild the file URL used for the local HEAD request.
+    $url = _rebuild_file_url($url);
+
+    if (!file_exists($context['location'])) {
+      quant_log('Unable to upload %u, file does not exist', ['%u' => $context['location']]);
+      return;
+    }
+
+    // Issue a HEAD request to the file path.
+    $options = array(
+      'max_redirects' => 0,
+      'headers' => array(
+        'Host' => variable_get('quant_hostname', parse_url($base_url, PHP_URL_HOST)),
+        'User-Agent' => 'Quant (+http://quantcdn.io)',
+      ),
+      'method' => 'HEAD',
+    );
+
+    // Ensure url is absolute for internal HEAD request.
+    if(strpos($url, "http") !== 0) {
+      $base = variable_get('quant_base_url', $base_url);
+      // Ensure url path starts with a slash.
+      if (substr($url, 0, 1) !== '/') {
+        $url = '/' . $url;
+      }
+      $url = "{$base}{$url}";
+    }
+
+    if (!variable_get('quant_verify_ssl', TRUE)) {
+      $options['context'] = stream_context_create(array(
+        'ssl' => array(
+          'verify_peer' => FALSE,
+          'verify_peer_name' => FALSE,
+        )
+      ));
+    }
+
+    $file_head = drupal_http_request($url, $options);
+
+    // Disallow files that do not return 200 OK or redirect.
+    if ($file_head->code != 200 && $file_head->code != 302 && $file_head->code != 301) {
+      quant_log('Unable to seed file: %url. Unexpected response code: %code', array(
+        '%url' => $url,
+        '%code' => $file_head->code,
+      ), WATCHDOG_ERROR);
+      return;
+    }
+
+    // Support file specific additional headers.
+    if ($file_head->code == 200) {
+      $custom_headers = array_intersect_key($file_head->headers, array_flip(array(
+        'content-disposition',
+        'content-transfer-encoding',
+        'content-type'
+      )));
+    }
   }
-
-  // Issue a HEAD request to the file path.
-  $options = array(
-    'headers' => array(
-      'Host' => variable_get('quant_hostname', parse_url($base_url, PHP_URL_HOST)),
-      'User-Agent' => 'Quant (+http://quantcdn.io)',
-    ),
-    'method' => 'HEAD',
-  );
-
-  // Ensure url is absolute for internal HEAD request.
-  if(strpos($url, "http") !== 0) {
-    $base = variable_get('quant_base_url', $base_url);
-    $url = "{$base}{$url}";
-  }
-
-  if (!variable_get('quant_verify_ssl', TRUE)) {
-    $options['context'] = stream_context_create(array(
-      'ssl' => array(
-        'verify_peer' => FALSE,
-        'verify_peer_name' => FALSE,
-      )
-    ));
-  }
-
-  $file_head = drupal_http_request($url, $options);
-
-  // Disallow files that do not return 200 OK.
-  if ($file_head->code != 200) {
-    quant_log('Unable to seed file: %url. Unexpected response code: %code', array(
-      '%url' => $url,
-      '%code' => $file_head->code,
-    ), WATCHDOG_ERROR);
-    return;
-  }
-
-  // Support file specific additional headers.
-  $custom_headers = array_intersect_key($file_head->headers, array_flip(array(
-    'content-disposition',
-    'content-transfer-encoding',
-    'content-type'
-  )));
 
   $headers = quant_api_get_request_headers() + array(
     'Quant-File-Url' => $context['request'],
@@ -394,7 +446,7 @@ function quant_api_unpublish_route($url) {
 function _rebuild_file_url($url) {
 
   // Parse the URL to capture query parameters (if any).
-  $parsed_url = parse_url($url);
+  $parsed_url = parse_url(urldecode($url));
 
   // Return the raw string if we cannot parse the URL.
   if (empty($parsed_url['path'])) {
@@ -414,6 +466,9 @@ function _rebuild_file_url($url) {
     $rebuilt_url .= "?" . $parsed_url['query'];
   }
 
+  // Clean up multiple slashes in the file path.
+  $rebuilt_url = preg_replace('~/+~', '/', $rebuilt_url);
+
   return $rebuilt_url;
 
 }
@@ -431,14 +486,23 @@ function _rebuild_file_url($url) {
  * @return string
  *   The absolute local path on disk to the temporary file.
  */
-function _retrieve_file($url) {
+function _retrieve_file($url, $external_url=FALSE, $redirected=FALSE) {
 
   $path = $url;
+  $host = variable_get('quant_hostname', parse_url($base_url, PHP_URL_HOST));
+
+  if ($external_url) {
+    $host = parse_url($url, PHP_URL_HOST);
+  }
+  else {
+    $url = _rebuild_file_url($url);
+  }
 
   // Issue a GET request to the file path.
   $options = array(
+    'max_redirects' => 0,
     'headers' => array(
-      'Host' => variable_get('quant_hostname', parse_url($base_url, PHP_URL_HOST)),
+      'Host' => $host,
       'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
     'method' => 'GET',
@@ -447,6 +511,10 @@ function _retrieve_file($url) {
   // Ensure url is absolute for internal GET request.
   if(strpos($url, "http") !== 0) {
     $base = variable_get('quant_base_url', $base_url);
+    // Ensure url path starts with a slash.
+    if (substr($url, 0, 1) !== '/') {
+      $url = '/' . $url;
+    }
     $url = "{$base}{$url}";
   }
 
@@ -461,11 +529,29 @@ function _retrieve_file($url) {
 
   // Retrieve the file, store in a temporary location, and use for file upload.
   $file_get = drupal_http_request($url, $options);
-  $tmp_filename = tempnam(sys_get_temp_dir(), basename($path));
-  $tmp_file = fopen($tmp_filename, "w+");
-  fwrite($tmp_file, $file_get->data);
-  fclose($tmp_file);
 
-  return $tmp_filename;
+  if ($file_get->code == 200) {
+    $rnd = drupal_random_key();
+    $tmp_filename = sys_get_temp_dir() . '/' . $rnd . urldecode(basename($path));
+    $tmp_file = fopen($tmp_filename, "w+");
+    fwrite($tmp_file, $file_get->data);
+    fclose($tmp_file);
+    return $tmp_filename;
+  }
+  elseif (!$redirected && $file_get->code == 301 || $file_get->code == 302) {
+    // Note: The Drupal HTTP client will provide a redirect that is not always
+    // correct here, as it will bypass internal/loopback addresses.
+    // For this reason we intercept and rewrite it.
+    return (_retrieve_file($file_get->redirect_url, $skip_rebuild, TRUE));
+  }
+  else {
+    quant_log('Unable to retrieve file via alt handler: %url. Unexpected response code: %code', array(
+      '%url' => $url,
+      '%code' => $file_get->code,
+    ), WATCHDOG_ERROR);
+    return;
+  }
+
+  return null;
 
 }
