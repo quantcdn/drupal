@@ -107,7 +107,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
   $request = array(
     'headers' => quant_api_get_request_headers() + array(
       'content-type' => 'application/json',
-      'User-Agent' => 'Quant (+http://quant.io)',
+      'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
     'method' => 'POST',
     'data' => $data,
@@ -333,7 +333,7 @@ function quant_api_quant_seed_file($url, $context) {
 
   $headers = quant_api_get_request_headers() + array(
     'Quant-File-Url' => $context['request'],
-    'User-Agent' => 'Quant (+http://quant.io)',
+    'User-Agent' => 'Quant (+http://quantcdn.io)',
   );
 
   $curl_headers = array();
@@ -403,7 +403,7 @@ function quant_api_unpublish_route($url) {
   $options = array(
     'headers' => quant_api_get_request_headers() + array(
       'Quant-Url' => parse_url($url, PHP_URL_PATH),
-      'User-Agent' => 'Quant (+http://quant.io)',
+      'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
     'method' => 'PATCH',
   );
