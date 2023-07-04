@@ -446,6 +446,7 @@ function quant_seed($url, array $context = array()) {
   $base = quant_get_base_url();
   $path = parse_url($url, PHP_URL_PATH);
   $path = ltrim($path, '/');
+  $type = isset($context['type']) ? $context['type'] : 'unknown type';
 
   // Ensure URL is processed to account for special character encoding.
   $url = _rebuild_url($url);
@@ -517,6 +518,7 @@ function quant_seed($url, array $context = array()) {
         $fileCtx = array(
           'location' => $context['entity']->uri,
           'request' => $public_path,
+          'type' => 'file',
         );
 
         quant_seed_file("{$base}{$public_path}", $fileCtx);
@@ -612,7 +614,7 @@ function quant_seed($url, array $context = array()) {
       $xpath_urls[] = $xpath_url;
       $next_context = array(
         'find_pager' => TRUE,
-        'type' => 'view',
+        'type' => 'view', // @todo type='xpath'?
         'xpath_urls' => $xpath_urls,
       );
       $item = array('quant_seed', array($xpath_url, $next_context));
@@ -827,7 +829,7 @@ function _quant_queue_menu_paths(array $menus_filter = array()) {
 
       $item = array(
         'quant_seed',
-        array(trim($url)),
+        array(trim($url), array('type' => 'menu')),
       );
       $queue->createItem($item);
 
@@ -860,14 +862,14 @@ function _quant_queue_nodes(array $bundles = array()) {
   $nids = $query->execute()->fetchCol();
   asort($nids);
 
-  $item = array('quant_seed', array("$base/"));
+  $item = array('quant_seed', array("$base/", array('type' => 'home')));
   $queue->createItem($item);
 
   foreach ($nids as $nid) {
     quant_log('Quant: Adding node [!nid] to the list.', array('!nid' => $nid));
     $item = array(
       'quant_seed_node_batch',
-      array($nid),
+      array($nid, array('type' => 'node')),
     );
     if (!$queue->createItem($item)) {
       quant_log('...Skipping duplicate entity');
@@ -895,7 +897,7 @@ function _quant_queue_taxonomy() {
     quant_log('Quant: Adding term [!tid] to the list.', array('!tid' => $tid));
     $item = array(
       'quant_seed_taxonomy_batch',
-      array($tid),
+      array($tid, array('type' => 'taxonomy_term')),
     );
     $queue->createItem($item);
   }
@@ -942,6 +944,7 @@ function _quant_queue_theme_assets($theme_machine_name = NULL) {
     $context = array(
       'location' => $file->uri,
       'request' => $file_on_disk,
+      'type' => 'file',
     );
 
     quant_log('Quant: Adding file [!path] to the list.', array('!path' => $file_on_disk));
@@ -962,18 +965,18 @@ function _quant_queue_page_manager() {
   $base = variable_get('quant_base_url', $base_url);
   $queue = quant_get_queue();
 
-  $config = array();
+  $context = array();
   $pages = db_query('SELECT p.path FROM {page_manager_pages} p')->fetchAll();
 
   foreach ($pages as $page) {
     $url = "$base/" . $page->path;
 
-    $config['find_pager'] = TRUE;
-    $config['type'] = 'page_manager';
+    $context['find_pager'] = TRUE;
+    $context['type'] = 'page_manager';
 
     $item = array(
       'quant_seed',
-      array(trim($url), $config),
+      array(trim($url), $context),
     );
     $queue->createItem($item);
   }
@@ -994,18 +997,18 @@ function _quant_queue_views() {
     views_menu_alter($menus);
   }
 
-  foreach ($menus as $path => $config) {
+  foreach ($menus as $path => $context) {
     $url = "$base/$path";
 
-    $config['find_pager'] = TRUE;
-    $config['type'] = 'view';
+    $context['find_pager'] = TRUE;
+    $context['type'] = 'view';
 
     // @TODO: We have menu access callbacks so we should
     // validate anonymous has access before we add the operation.
     // Pages will be exported to Quant with 401.
     $item = array(
       'quant_seed',
-      array($url, $config),
+      array($url, $context),
     );
     $queue->createItem($item);
   }
@@ -1030,10 +1033,11 @@ function _quant_queue_routes($routes) {
     }
 
     $url = $base . $route;
+    $context = array('type' => 'route');
 
     $item = array(
       'quant_seed',
-      array(trim($url)),
+      array(trim($url), $context),
     );
     $queue->createItem($item);
   }
@@ -1055,7 +1059,6 @@ function quant_seed_taxonomy_batch($tid) {
 
   // Find pagination within taxonomy term pages.
   $context['find_pager'] = TRUE;
-  $context['type'] = 'taxonomy_term';
 
   quant_seed($url, $context);
 }
