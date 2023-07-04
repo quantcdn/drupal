@@ -97,6 +97,7 @@ $handler->display->display_options['fields']['id']['field'] = 'id';
 $handler->display->display_options['fields']['url']['id'] = 'url';
 $handler->display->display_options['fields']['url']['table'] = 'quant_log';
 $handler->display->display_options['fields']['url']['field'] = 'url';
+$handler->display->display_options['fields']['url']['alter']['path'] = '[url]';
 /* Field: Quant Log: Type */
 $handler->display->display_options['fields']['type']['id'] = 'type';
 $handler->display->display_options['fields']['type']['table'] = 'quant_log';

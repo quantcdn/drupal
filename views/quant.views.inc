@@ -40,7 +40,7 @@ function quant_views_data() {
     'title' => t('URL'),
     'help' => t('The url of the seed item, e.g. "http://localhost/node/123".'),
     'field' => array(
-      'handler' => 'views_handler_field',
+      'handler' => 'views_handler_field_url',
       'click sortable' => TRUE,
     ),
     'sort' => array(
