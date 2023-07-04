@@ -6,4 +6,4 @@ configure = admin/config/services/quant/seed
 
 dependencies[] = quant
 dependencies[] = quant_api
-dependencies[] = file
+dependencies[] = file_entity
