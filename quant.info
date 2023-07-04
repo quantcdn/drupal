@@ -8,3 +8,4 @@ dependencies[] = views
 dependencies[] = views_data_export
 
 files[] = views/quant.views.inc
+files[] = views/views_handler_field_quant_static_url.inc

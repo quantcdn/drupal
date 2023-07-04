@@ -54,6 +54,15 @@ function quant_views_data() {
     ),
   );
 
+  // Log item static url.
+  $data['quant_log']['static_url'] = array(
+    'title' => t('Static URL'),
+    'help' => t('The static url of the seed item, e.g. "http://www.example.com/node/123".'),
+    'field' => array(
+      'handler' => 'views_handler_field_quant_static_url',
+    ),
+  );
+
   // Log item type.
   $data['quant_log']['type'] = array(
     'title' => t('Type'),
