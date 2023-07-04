@@ -257,6 +257,16 @@ function quant_forbidden() {
 }
 
 /**
+ * Implements hook_views_api().
+ */
+function quant_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'quant') . '/views',
+  );
+}
+
+/**
  * Implements hook_init().
  *
  * Perform token validation at the beginning of the request. This allows us to
@@ -493,7 +503,6 @@ function quant_seed($url, array $context = array()) {
     'status' => $response->code,
     'updated' => time(),
     'hash' => $options['headers']['quant-token'],
-    'log' => 'Successful.'
   );
 
   // Ensure file entities have their underlying asset seeded.
@@ -553,7 +562,7 @@ function quant_seed($url, array $context = array()) {
 
       if (isset($context['type']) && $context['type'] == 'file') {
         // File asset already handled.
-        quant_log_seed_status($seed_status, 'File asset already handled.');
+        quant_seed_log($seed_status, 'File asset already handled.');
         return;
       }
       else {
@@ -562,14 +571,14 @@ function quant_seed($url, array $context = array()) {
     }
 
     // Redirect created, internal redirect followed + seeded.
-    quant_log_seed_status($seed_status, 'Redirect created.');
+    quant_seed_log($seed_status, 'Redirect created.');
     return;
   }
 
   if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
-    quant_log_seed_status($seed_status, 'Unpublish route in Quant.');
+    quant_seed_log($seed_status, 'Unpublish route in Quant.');
     return FALSE;
   }
 
@@ -580,7 +589,7 @@ function quant_seed($url, array $context = array()) {
       '%request' => json_encode($response),
     ));
     quant_log($error, WATCHDOG_ERROR);
-    quant_log_seed_status($seed_status, $error);
+    quant_seed_log($seed_status, $error);
     return FALSE;
   }
 
@@ -590,7 +599,7 @@ function quant_seed($url, array $context = array()) {
       '%status_code' => $response->code,
     ));
     quant_log($error, WATCHDOG_WARNING);
-    quant_log_seed_status($seed_status, $error);
+    quant_seed_log($seed_status, $error);
     return FALSE;
   }
 
@@ -667,7 +676,7 @@ function quant_seed($url, array $context = array()) {
   // @todo handle failure in hook_quant_seed.
   module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
 
-  quant_log_seed_status($seed_status);
+  quant_seed_log($seed_status);
 }
 
 /**
@@ -707,12 +716,12 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
 }
 
 /**
- * Log seed status to database.
+ * Log seed data to database.
  */
-function quant_log_seed_status($seed_status, $log = NULL) {
+function quant_seed_log($log_data, $message = 'Successful.') {
   // @fixme log to database
-  $seed_status['log'] = $log ?: 'Successful.';
-  watchdog('quant_seed_status', 'quant_seed_status = <pre>' . print_r($seed_status, TRUE) . '</pre>');
+  $log_data['message'] = $message;
+  watchdog('quant_seed_log', 'quant_seed_log = <pre>' . print_r($log_data, TRUE) . '</pre>');
 }
 
 /**

@@ -56,21 +56,21 @@ function quant_schema() {
     ),
   );
 
-  $schema['quant_seed_status'] = array(
-    'description' => 'Keeps track of seed status.',
+  $schema['quant_seed_log'] = array(
+    'description' => 'Log of seed data.',
     'fields' => array(
       'id' => array(
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'description' => 'Primary Key: Unique item ID.',
+        'description' => 'The unique ID of the seed item.',
       ),
       'url' => array(
         'type' => 'varchar',
-        'length' => 255,
+        'length' => 2048,
         'not null' => TRUE,
         'default' => '',
-        'description' => 'The url of the seed item.',
+        'description' => 'The URL of the seed item.',
       ),
       'type' => array(
         'type' => 'varchar',
@@ -98,11 +98,11 @@ function quant_schema() {
         'not null' => TRUE,
         'description' => 'The hash of the seed item.',
       ),
-      'log' => array(
+      'message' => array(
         'type' => 'text',
         'not null' => TRUE,
         'size' => 'big',
-        'description' => 'The log for the seed item.',
+        'description' => 'The log message for the seed item.',
       ),
     ),
     'primary key' => array('id'),
@@ -110,9 +110,13 @@ function quant_schema() {
       'hash' => array('hash'),
     ),
     'indexes' => array(
-      'url_updated' => array('url', 'updated'),
       'status' => array('status'),
+      'type' => array('type'),
       'type_status' => array('type', 'status'),
+      'updated' => array('updated'),
+      // Work around length constraint by limiting to 255.
+      'url' => array(array('url', 255)),
+      'url_updated' => array(array('url', 255), 'updated'),
     ),
   );
 
@@ -208,8 +212,8 @@ function quant_update_7002() {
 }
 
 /**
- * Add the `quant_seed_status` table.
+ * Add the `quant_seed_log` table.
  */
 function quant_update_7003() {
-  db_create_table('quant_seed_status', drupal_get_schema_unprocessed('quant', 'quant_seed_status'));
+  db_create_table('quant_seed_log', drupal_get_schema_unprocessed('quant', 'quant_seed_log'));
 }

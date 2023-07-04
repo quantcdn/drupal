@@ -12,6 +12,8 @@
  */
 function quant_config() {
 
+  drupal_set_title(t('Quant Configuration'));
+
   // Link off to the most relevant documentation.
   $form['docs'] = array(
     '#type' => 'markup',
@@ -225,6 +227,9 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
  * @ingroup forms
  */
 function quant_seed_settings() {
+
+  drupal_set_title(t('Quant Seed'));
+
   $form = array();
   _quant_get_seed_warnings($form);
 
@@ -413,6 +418,9 @@ function quant_form_quant_seed_validate($form = array(), &$form_state = array())
  * Present items that are queued for Quant sending.
  */
 function quant_queue_page() {
+
+  drupal_set_title(t('Quant Queue'));
+
   $items = quant_get_queue(TRUE);
   $rows = [];
 
@@ -498,6 +506,8 @@ function quant_queue_page() {
  * Quant token settings form.
  */
 function quant_token_settings() {
+
+  drupal_set_title(t('Quant Token'));
 
   $form = array();
 

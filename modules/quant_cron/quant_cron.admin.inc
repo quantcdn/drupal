@@ -12,6 +12,8 @@
  */
 function quant_cron_settings() {
 
+  drupal_set_title(t('Quant Cron'));
+
   $form = array();
 
   _quant_get_seed_warnings($form);
