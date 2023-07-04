@@ -30,7 +30,6 @@ $handler->display->display_options['style_plugin'] = 'table';
 $handler->display->display_options['style_options']['columns'] = array(
   'id' => 'id',
   'hash' => 'hash',
-  'id_1' => 'id_1',
   'message' => 'message',
   'status' => 'status',
   'type' => 'type',
@@ -48,13 +47,6 @@ $handler->display->display_options['style_options']['info'] = array(
     'empty_column' => 0,
   ),
   'hash' => array(
-    'sortable' => 1,
-    'default_sort_order' => 'asc',
-    'align' => '',
-    'separator' => '',
-    'empty_column' => 0,
-  ),
-  'id_1' => array(
     'sortable' => 1,
     'default_sort_order' => 'asc',
     'align' => '',
@@ -97,50 +89,43 @@ $handler->display->display_options['style_options']['info'] = array(
     'empty_column' => 0,
   ),
 );
-/* Field: Quant Log: Log Item ID */
+/* Field: Quant Log: ID */
 $handler->display->display_options['fields']['id']['id'] = 'id';
 $handler->display->display_options['fields']['id']['table'] = 'quant_log';
 $handler->display->display_options['fields']['id']['field'] = 'id';
-$handler->display->display_options['fields']['id']['label'] = 'ID';
-/* Field: Quant Log: Log Item URL */
+/* Field: Quant Log: URL */
 $handler->display->display_options['fields']['url']['id'] = 'url';
 $handler->display->display_options['fields']['url']['table'] = 'quant_log';
 $handler->display->display_options['fields']['url']['field'] = 'url';
-$handler->display->display_options['fields']['url']['label'] = 'URL';
-/* Field: Quant Log: Log Item Type */
+/* Field: Quant Log: Type */
 $handler->display->display_options['fields']['type']['id'] = 'type';
 $handler->display->display_options['fields']['type']['table'] = 'quant_log';
 $handler->display->display_options['fields']['type']['field'] = 'type';
-$handler->display->display_options['fields']['type']['label'] = 'Type';
-/* Field: Quant Log: Log Item Status */
+/* Field: Quant Log: Status */
 $handler->display->display_options['fields']['status']['id'] = 'status';
 $handler->display->display_options['fields']['status']['table'] = 'quant_log';
 $handler->display->display_options['fields']['status']['field'] = 'status';
-$handler->display->display_options['fields']['status']['label'] = 'Status';
-/* Field: Quant Log: Log Item Hash */
+/* Field: Quant Log: Hash */
 $handler->display->display_options['fields']['hash']['id'] = 'hash';
 $handler->display->display_options['fields']['hash']['table'] = 'quant_log';
 $handler->display->display_options['fields']['hash']['field'] = 'hash';
-$handler->display->display_options['fields']['hash']['label'] = 'Hash';
-/* Field: Quant Log: Log Item Updated */
+/* Field: Quant Log: Updated */
 $handler->display->display_options['fields']['updated']['id'] = 'updated';
 $handler->display->display_options['fields']['updated']['table'] = 'quant_log';
 $handler->display->display_options['fields']['updated']['field'] = 'updated';
-$handler->display->display_options['fields']['updated']['label'] = 'Updated';
 $handler->display->display_options['fields']['updated']['date_format'] = 'custom';
 $handler->display->display_options['fields']['updated']['custom_date_format'] = 'j M Y, G:i:s T';
 $handler->display->display_options['fields']['updated']['second_date_format'] = 'long';
-/* Field: Quant Log: Log Item Log Message */
+/* Field: Quant Log: Log Message */
 $handler->display->display_options['fields']['message']['id'] = 'message';
 $handler->display->display_options['fields']['message']['table'] = 'quant_log';
 $handler->display->display_options['fields']['message']['field'] = 'message';
-$handler->display->display_options['fields']['message']['label'] = 'Log Message';
-/* Sort criterion: Quant Log: Log Item ID */
+/* Sort criterion: Quant Log: ID */
 $handler->display->display_options['sorts']['id']['id'] = 'id';
 $handler->display->display_options['sorts']['id']['table'] = 'quant_log';
 $handler->display->display_options['sorts']['id']['field'] = 'id';
-$handler->display->display_options['sorts']['id']['expose']['label'] = 'Log Item ID';
-/* Filter criterion: Quant Log: Log Item URL */
+$handler->display->display_options['sorts']['id']['expose']['label'] = 'ID';
+/* Filter criterion: Quant Log: URL */
 $handler->display->display_options['filters']['url']['id'] = 'url';
 $handler->display->display_options['filters']['url']['table'] = 'quant_log';
 $handler->display->display_options['filters']['url']['field'] = 'url';
@@ -154,7 +139,7 @@ $handler->display->display_options['filters']['url']['expose']['identifier'] = '
 $handler->display->display_options['filters']['url']['expose']['remember_roles'] = array(
   2 => '2',
 );
-/* Filter criterion: Quant Log: Log Item Type */
+/* Filter criterion: Quant Log: Type */
 $handler->display->display_options['filters']['type']['id'] = 'type';
 $handler->display->display_options['filters']['type']['table'] = 'quant_log';
 $handler->display->display_options['filters']['type']['field'] = 'type';
@@ -168,7 +153,7 @@ $handler->display->display_options['filters']['type']['expose']['identifier'] = 
 $handler->display->display_options['filters']['type']['expose']['remember_roles'] = array(
   2 => '2',
 );
-/* Filter criterion: Quant Log: Log Item Status */
+/* Filter criterion: Quant Log: Status */
 $handler->display->display_options['filters']['status']['id'] = 'status';
 $handler->display->display_options['filters']['status']['table'] = 'quant_log';
 $handler->display->display_options['filters']['status']['field'] = 'status';
@@ -182,7 +167,7 @@ $handler->display->display_options['filters']['status']['expose']['identifier'] 
 $handler->display->display_options['filters']['status']['expose']['remember_roles'] = array(
   2 => '2',
 );
-/* Filter criterion: Quant Log: Log Item Log Message */
+/* Filter criterion: Quant Log: Log Message */
 $handler->display->display_options['filters']['message']['id'] = 'message';
 $handler->display->display_options['filters']['message']['table'] = 'quant_log';
 $handler->display->display_options['filters']['message']['field'] = 'message';
@@ -197,8 +182,8 @@ $handler->display->display_options['filters']['message']['expose']['remember_rol
   2 => '2',
 );
 
-/* Display: Page */
-$handler = $view->new_display('page', 'Page', 'page');
+/* Display: Quant Log Page */
+$handler = $view->new_display('page', 'Quant Log Page', 'page');
 $handler->display->display_options['path'] = 'admin/config/services/quant/log';
 $handler->display->display_options['menu']['type'] = 'tab';
 $handler->display->display_options['menu']['title'] = 'Log';
@@ -206,3 +191,15 @@ $handler->display->display_options['menu']['weight'] = '100';
 $handler->display->display_options['menu']['context'] = 0;
 $handler->display->display_options['menu']['context_only_inline'] = 0;
 
+/* Display: Quant Log Export */
+$handler = $view->new_display('views_data_export', 'Quant Log Export', 'views_data_export');
+$handler->display->display_options['pager']['type'] = 'none';
+$handler->display->display_options['pager']['options']['offset'] = '0';
+$handler->display->display_options['style_plugin'] = 'views_data_export_csv';
+$handler->display->display_options['defaults']['filter_groups'] = FALSE;
+$handler->display->display_options['defaults']['filters'] = FALSE;
+$handler->display->display_options['path'] = 'admin/config/services/quant/log/export';
+$handler->display->display_options['displays'] = array(
+  'page' => 'page',
+  'default' => 0,
+);
