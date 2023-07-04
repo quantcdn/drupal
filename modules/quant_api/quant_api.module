@@ -425,9 +425,11 @@ function quant_api_unpublish_route($url) {
       return FALSE;
     }
     $body = json_decode($response->data);
-    quant_log('Error sending request: %error', array(
-      '%error' => $body->errorMsg,
-    ), WATCHDOG_ERROR);
+    if ($body->errorMsg != 'Resource is already unpublished.') {
+      quant_log('Error sending request: %error', array(
+        '%error' => $body->errorMsg,
+      ), WATCHDOG_ERROR);
+    }
     return FALSE;
   }
 

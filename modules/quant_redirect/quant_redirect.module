@@ -160,6 +160,7 @@ function quant_redirect_quant_seed_queue() {
 
     $item = array(
       'quant_redirect_request',
+      // @todo Add 'type' => 'redirect' to context?
       array($redirect['source'], $redirect['redirect'], $status_code),
     );
 
