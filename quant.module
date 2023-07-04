@@ -588,7 +588,7 @@ function quant_seed($url, array $context = array()) {
       '%error' => $response->error,
       '%request' => json_encode($response),
     ));
-    quant_log($error, WATCHDOG_ERROR);
+    quant_log($error, NULL, WATCHDOG_ERROR);
     quant_save_log($log_data, $error);
     return FALSE;
   }
@@ -598,7 +598,7 @@ function quant_seed($url, array $context = array()) {
       '%url' => $url,
       '%status_code' => $response->code,
     ));
-    quant_log($error, WATCHDOG_WARNING);
+    quant_log($error, NULL, WATCHDOG_WARNING);
     quant_save_log($log_data, $error);
     return FALSE;
   }
@@ -719,9 +719,25 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
  * Log seed data to database.
  */
 function quant_save_log($log_data, $message = 'Successful.') {
-  // @fixme log to database
-  $log_data['message'] = $message;
-  watchdog('quant_save_log', 'quant_save_log = <pre>' . print_r($log_data, TRUE) . '</pre>');
+
+  $query = db_merge('quant_log')
+    ->key(array('url' => $log_data['url']))
+    ->fields(array(
+      'url' => $log_data['url'],
+      'type' => $log_data['type'],
+      'status' => $log_data['status'],
+      'updated' => $log_data['updated'],
+      'hash' => $log_data['hash'],
+      'message' => $message
+    ));
+
+  try {
+    return (bool) $query->execute();
+  }
+  catch (\PDOException $error) {
+    quant_log($error, NULL, WATCHDOG_ERROR);
+    return FALSE;
+  }
 }
 
 /**

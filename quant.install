@@ -93,8 +93,8 @@ function quant_schema() {
         'description' => 'The timestamp when the seed item was updated.',
       ),
       'hash' => array(
-        'type' => 'char',
-        'length' => variable_get('quant_queue_hash_length', 48),
+        'type' => 'varchar',
+        'length' => 255,
         'not null' => TRUE,
         'description' => 'The hash of the seed item.',
       ),
