@@ -56,7 +56,7 @@ function quant_schema() {
     ),
   );
 
-  $schema['quant_seed_log'] = array(
+  $schema['quant_log'] = array(
     'description' => 'Log of seed data.',
     'fields' => array(
       'id' => array(
@@ -212,8 +212,8 @@ function quant_update_7002() {
 }
 
 /**
- * Add the `quant_seed_log` table.
+ * Add the `quant_log` table.
  */
 function quant_update_7003() {
-  db_create_table('quant_seed_log', drupal_get_schema_unprocessed('quant', 'quant_seed_log'));
+  db_create_table('quant_log', drupal_get_schema_unprocessed('quant', 'quant_log'));
 }
