@@ -55,6 +55,67 @@ function quant_schema() {
       'expire' => array('expire'),
     ),
   );
+
+  $schema['quant_seed_status'] = array(
+    'description' => 'Keeps track of seed status.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique item ID.',
+      ),
+      'url' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The url of the seed item.',
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The type of the seed item.',
+      ),
+      'status' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The status of the seed item.',
+      ),
+      'updated' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The timestamp when the seed item was updated.',
+      ),
+      'hash' => array(
+        'type' => 'char',
+        'length' => variable_get('quant_queue_hash_length', 48),
+        'not null' => TRUE,
+        'description' => 'The hash of the seed item.',
+      ),
+      'log' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'size' => 'big',
+        'description' => 'The log for the seed item.',
+      ),
+    ),
+    'primary key' => array('id'),
+    'unique keys' => array(
+      'hash' => array('hash'),
+    ),
+    'indexes' => array(
+      'url_updated' => array('url', 'updated'),
+      'status' => array('status'),
+      'type_status' => array('type', 'status'),
+    ),
+  );
+
   return $schema;
 }
 
@@ -144,4 +205,11 @@ function quant_update_7002() {
   variable_set('quant_queue_hash_length', 48);
   variable_set('quant_queue_hash_method', 'sha256');
   db_create_table('quant_queue', drupal_get_schema_unprocessed('quant', 'quant_queue'));
+}
+
+/**
+ * Add the `quant_seed_status` table.
+ */
+function quant_update_7003() {
+  db_create_table('quant_seed_status', drupal_get_schema_unprocessed('quant', 'quant_seed_status'));
 }
