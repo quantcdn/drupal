@@ -506,7 +506,6 @@ function quant_seed($url, array $context = array()) {
 
   // Save data for logging.
   $context['status'] = $response->code;
-  $context['updated'] = time();
 
   // Ensure file entities have their underlying asset seeded.
   if (isset($context['type']) && $context['type'] == 'file') {
@@ -676,21 +675,9 @@ function quant_seed($url, array $context = array()) {
   }
 
   drupal_alter('quant_meta', $meta, $context);
-  $results = module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
+  $seed_results = module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
 
-  $message = 'Successful.';
-  // Any error should be logged, so get check for it.
-  foreach ($results as $result) {
-    if ($result === FALSE) {
-      // Get the last watchdog message.
-      $watchdog_log = db_query('SELECT message, variables FROM {watchdog} ORDER BY wid DESC LIMIT 1')->fetchObject();
-      $variables = unserialize($watchdog_log->variables);
-      $message = strip_tags(format_string($watchdog_log->message, $variables));
-      break;
-    }
-  }
-
-  quant_save_log($context, $message);
+  quant_save_log($context, quant_log_get_message($seed_results));
 }
 
 /**
@@ -698,12 +685,17 @@ function quant_seed($url, array $context = array()) {
  */
 function quant_seed_file($url, $context = array()) {
 
+  // @todo Get status and md5.
+  $context['url'] = $url;
+
   quant_log('Quant: Sending file !url', array('!url' => urldecode($url)));
 
   // @TODO: Files need different meta?
   $meta = array();
   drupal_alter('quant_file_meta', $meta, $context);
-  module_invoke_all('quant_seed_file', $url, $context);
+  $seed_results = module_invoke_all('quant_seed_file', $url, $context);
+
+  quant_save_log($context, quant_log_get_message($seed_results));
 }
 
 /**
@@ -733,15 +725,19 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
  * Log seed data to database.
  */
 function quant_save_log($context, $message = 'Successful.') {
+  if (!isset($context['url'])) {
+    quant_log('No URL provided for quant_save_log.', [], WATCHDOG_ERROR);
+    return;
+  }
 
   $query = db_merge('quant_log')
     ->key(array('url' => $context['url']))
     ->fields(array(
       'entity_id' => isset($context['id']) ? $context['id'] : 0,
       'url' => $context['url'],
-      'type' => isset($context['type']) ? $context['type'] : 'unknown type',
-      'status' => $context['status'],
-      'updated' => $context['updated'],
+      'type' => isset($context['type']) ? $context['type'] : 'unknown',
+      'status' => isset($context['status']) ? $context['status'] : 'unknown',
+      'updated' => time(),
       'hash' => isset($context['hash']) ? $context['hash'] : 0, // @todo
       'md5' => isset($context['md5']) ? $context['md5'] : 0, // @todo
       'message' => $message
@@ -751,9 +747,29 @@ function quant_save_log($context, $message = 'Successful.') {
     return (bool) $query->execute();
   }
   catch (\PDOException $error) {
-    quant_log($error, NULL, WATCHDOG_ERROR);
+    quant_log($error, [], WATCHDOG_ERROR);
     return FALSE;
   }
+}
+
+/**
+ * Get the seed log message based on seed results.
+ */
+function quant_log_get_message($seed_results) {
+
+  $message = 'Successful.';
+  // Any error should be logged, so get check for it.
+  foreach ($seed_results as $seed_result) {
+    if ($seed_result === FALSE) {
+      // Get the last watchdog message.
+      $watchdog_log = db_query('SELECT message, variables FROM {watchdog} ORDER BY wid DESC LIMIT 1')->fetchObject();
+      $variables = unserialize($watchdog_log->variables);
+      $message = strip_tags(format_string($watchdog_log->message, $variables));
+      break;
+    }
+  }
+
+  return $message;
 }
 
 /**
