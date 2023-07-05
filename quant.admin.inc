@@ -87,6 +87,13 @@ function quant_config() {
     '#default_value' => variable_get('disable_content_drafts', TRUE),
   );
 
+  $form['quant_seed_check_log'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Check logs before seeding'),
+    '#description' => t('Check the logs to see if content has already been seeded and, if so, skip seeding that content. If you need to reseed everything, disable this option or truncate the `quant_log` table. Enabling this option can speed up the seeding process.'),
+    '#default_value' => variable_get('quant_seed_check_log', FALSE),
+  );
+
   $form['quant_rewrite_relative'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable relative paths'),

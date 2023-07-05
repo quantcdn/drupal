@@ -462,16 +462,17 @@ function quant_seed($url, array $context = array()) {
 
   // Skip based on log data.
   if (quant_log_skip($context)) {
-    quant_log('Skip: !url was already processed', array('!url' => $url));
+    quant_log('Quant: Skipping !type !url based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the {quant_log} database table.', array('!type' => $context['type'], '!url' => $url));
     return;
   }
 
+  // Don't seed admin pages.
   if (path_is_admin($path)) {
-    quant_log('Skip: !path is an admin path', array('!path' => $path));
+    quant_log('Quant: Skipping admin page !path', array('!path' => $path));
     return;
   }
 
-  quant_log('Sending content: !url', array('!url' => $url));
+  quant_log('Quant: Sending !type !url', array('!type' => $context['type'], '!url' => $url));
 
   $quant_hostname = variable_get('quant_hostname');
   if (empty($quant_hostname)) {
@@ -697,7 +698,7 @@ function quant_seed($url, array $context = array()) {
  */
 function quant_seed_file($url, $context = array()) {
 
-  quant_log('Sending file: !url', array('!url' => urldecode($url)));
+  quant_log('Quant: Sending file !url', array('!url' => urldecode($url)));
 
   // @TODO: Files need different meta?
   $meta = array();
@@ -759,6 +760,11 @@ function quant_save_log($context, $message = 'Successful.') {
  * Check if seed item should skip based on log.
  */
 function quant_log_skip($context) {
+  // Only skip if configured for this option.
+  if (!variable_get('quant_seed_check_log', FALSE)) {
+    return FALSE;
+  }
+
   // @todo check other data like the hash/md5?
   // For now, only check if it's an entity.
   if (isset($context['id']) && isset($context['type'])) {
@@ -769,6 +775,7 @@ function quant_log_skip($context) {
       return TRUE;
     }
     $entity = reset($entities);
+    $changed = isset($entity->changed) ? $entity->changed : (isset($entity->created) ? $entity->created : (isset($entity->timestamp) ? $entity->timestamp : 0));
 
     // Check the quant_log data for this entity.
     $logs = db_query('SELECT * FROM {quant_log} WHERE entity_id = :entity_id AND type = :type', array(':entity_id' => $context['id'], ':type' => $context['type']));
@@ -778,7 +785,7 @@ function quant_log_skip($context) {
         return FALSE;
       }
       // Check the log date against the entity.
-      if ($entity->changed < $log->updated) {
+      if ($changed != 0 && $changed < $log->updated) {
         return TRUE;
       }
     }
@@ -961,6 +968,7 @@ function _quant_queue_nodes(array $bundles = array()) {
   $nids = $query->execute()->fetchCol();
   asort($nids);
 
+  quant_log('Quant: Adding home to the list.');
   $item = array('quant_seed', array("$base/", array('type' => 'home')));
   $queue->createItem($item);
 
@@ -993,7 +1001,7 @@ function _quant_queue_taxonomy() {
   asort($tids);
 
   foreach ($tids as $tid) {
-    quant_log('Quant: Adding term [!tid] to the list.', array('!tid' => $tid));
+    quant_log('Quant: Adding taxonomy_term [!tid] to the list.', array('!tid' => $tid));
     $item = array(
       'quant_seed_taxonomy_batch',
       array($tid, array('type' => 'taxonomy_term')),
@@ -1068,6 +1076,7 @@ function _quant_queue_page_manager() {
   $pages = db_query('SELECT p.path FROM {page_manager_pages} p')->fetchAll();
 
   foreach ($pages as $page) {
+    quant_log('Quant: Adding page_manager page [!path] to the list.', array('!path' => $page->path));
     $url = "$base/" . $page->path;
 
     $context['find_pager'] = TRUE;
@@ -1099,6 +1108,18 @@ function _quant_queue_views() {
   foreach ($menus as $path => $context) {
     $url = "$base/$path";
 
+    // Don't seed admin pages.
+    if (path_is_admin($path)) {
+      // Only log non-Quant admin views.
+      $quant_view_path = 'admin/config/services/quant';
+      if (!substr($path, 0, strlen($quant_view_path)) === $quant_view_path) {
+        quant_log('Quant: Skipping admin view !path', array('!path' => $path));
+      }
+      continue;
+    }
+
+    quant_log('Quant: Adding view [!path] to the list.', array('!path' => $path));
+
     $context['find_pager'] = TRUE;
     $context['type'] = 'view';
 
@@ -1127,6 +1148,7 @@ function _quant_queue_routes($routes) {
   $queue = quant_get_queue();
 
   foreach ($routes as $route) {
+    quant_log('Quant: Adding route [!route] to the list.', array('!route' => $route));
     if (strpos((trim($route)), '/') !== 0) {
       continue;
     }

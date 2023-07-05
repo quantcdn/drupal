@@ -85,6 +85,7 @@ function quant_file_quant_seed_queue() {
         WATCHDOG_WARNING);
       continue;
     }
+    quant_log('Quant: Adding file page [!url] to the list.', array('!url' => $url));
     $item = array(
       'quant_seed',
       array($url, $context),

@@ -102,7 +102,7 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
     ));
   }
 
-  quant_log('Sending redirect: !from => !to',
+  quant_log('Quant: Sending redirect !from => !to',
     array(
       '!from' => $from,
       '!to' => $to,
@@ -158,6 +158,7 @@ function quant_redirect_quant_seed_queue() {
       );
     }
 
+    quant_log('Quant: Adding redirect [!source] to the list.', array('!source' => $redirect['source']));
     $item = array(
       'quant_redirect_request',
       // @todo Add 'type' => 'redirect' to context?

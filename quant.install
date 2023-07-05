@@ -163,6 +163,7 @@ function quant_uninstall() {
   variable_del('quant_xpath_selectors');
   // @todo Rename to add quant namespace.
   variable_del('disable_content_drafts');
+  variable_del('quant_seed_check_log');
   variable_del('quant_rewrite_relative');
   variable_del('quant_proxy_override');
   variable_del('quant_verbose_logging');
