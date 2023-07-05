@@ -35,6 +35,22 @@ function quant_views_data() {
     ),
   );
 
+  // Log item entity id.
+  $data['quant_log']['entity_id'] = array(
+    'title' => t('Entity ID'),
+    'help' => t('The entity id of the log item, if applicable.'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+  );
+
   // Log item url.
   $data['quant_log']['url'] = array(
     'title' => t('URL'),
@@ -123,7 +139,26 @@ function quant_views_data() {
   // Log item hash.
   $data['quant_log']['hash'] = array(
     'title' => t('Hash'),
-    'help' => t('The unique hash of the seed item.'),
+    'help' => t('The hash of the seed item.'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+  );
+
+  // Log item md5.
+  $data['quant_log']['md5'] = array(
+    'title' => t('MD5'),
+    'help' => t('The md5 of the seed item.'),
     'field' => array(
       'handler' => 'views_handler_field',
       'click sortable' => TRUE,

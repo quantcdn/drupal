@@ -29,12 +29,13 @@ $handler->display->display_options['pager']['options']['quantity'] = '9';
 $handler->display->display_options['style_plugin'] = 'table';
 $handler->display->display_options['style_options']['columns'] = array(
   'id' => 'id',
-  'hash' => 'hash',
-  'message' => 'message',
-  'status' => 'status',
-  'type' => 'type',
-  'updated' => 'updated',
+  'entity_id' => 'entity_id',
   'url' => 'url',
+  'static_url' => 'static_url',
+  'type' => 'type',
+  'status' => 'status',
+  'updated' => 'updated',
+  'message' => 'message',
 );
 $handler->display->display_options['style_options']['class'] = '';
 $handler->display->display_options['style_options']['default'] = '-1';
@@ -46,35 +47,7 @@ $handler->display->display_options['style_options']['info'] = array(
     'separator' => '',
     'empty_column' => 0,
   ),
-  'hash' => array(
-    'sortable' => 1,
-    'default_sort_order' => 'asc',
-    'align' => '',
-    'separator' => '',
-    'empty_column' => 0,
-  ),
-  'message' => array(
-    'sortable' => 1,
-    'default_sort_order' => 'asc',
-    'align' => '',
-    'separator' => '',
-    'empty_column' => 0,
-  ),
-  'status' => array(
-    'sortable' => 1,
-    'default_sort_order' => 'asc',
-    'align' => '',
-    'separator' => '',
-    'empty_column' => 0,
-  ),
-  'type' => array(
-    'sortable' => 1,
-    'default_sort_order' => 'asc',
-    'align' => '',
-    'separator' => '',
-    'empty_column' => 0,
-  ),
-  'updated' => array(
+  'entity_id' => array(
     'sortable' => 1,
     'default_sort_order' => 'asc',
     'align' => '',
@@ -88,11 +61,56 @@ $handler->display->display_options['style_options']['info'] = array(
     'separator' => '',
     'empty_column' => 0,
   ),
+  'static_url' => array(
+    'align' => '',
+    'separator' => '',
+    'empty_column' => 0,
+  ),
+  'type' => array(
+    'sortable' => 1,
+    'default_sort_order' => 'asc',
+    'align' => '',
+    'separator' => '',
+    'empty_column' => 0,
+  ),
+  'status' => array(
+    'sortable' => 1,
+    'default_sort_order' => 'asc',
+    'align' => '',
+    'separator' => '',
+    'empty_column' => 0,
+  ),
+  'updated' => array(
+    'sortable' => 1,
+    'default_sort_order' => 'asc',
+    'align' => '',
+    'separator' => '',
+    'empty_column' => 0,
+  ),
+  'message' => array(
+    'sortable' => 1,
+    'default_sort_order' => 'asc',
+    'align' => '',
+    'separator' => '',
+    'empty_column' => 0,
+  ),
 );
+$handler->display->display_options['style_options']['empty_table'] = TRUE;
+/* No results behavior: Global: Text area */
+$handler->display->display_options['empty']['area']['id'] = 'area';
+$handler->display->display_options['empty']['area']['table'] = 'views';
+$handler->display->display_options['empty']['area']['field'] = 'area';
+$handler->display->display_options['empty']['area']['empty'] = TRUE;
+$handler->display->display_options['empty']['area']['content'] = 'No log data found. Run a seed through the "Seed" tab or via Drush and the results will be logged and shown here.';
+$handler->display->display_options['empty']['area']['format'] = 'filtered_html';
 /* Field: Quant Log: ID */
 $handler->display->display_options['fields']['id']['id'] = 'id';
 $handler->display->display_options['fields']['id']['table'] = 'quant_log';
 $handler->display->display_options['fields']['id']['field'] = 'id';
+/* Field: Quant Log: Entity ID */
+$handler->display->display_options['fields']['entity_id']['id'] = 'entity_id';
+$handler->display->display_options['fields']['entity_id']['table'] = 'quant_log';
+$handler->display->display_options['fields']['entity_id']['field'] = 'entity_id';
 /* Field: Quant Log: URL */
 $handler->display->display_options['fields']['url']['id'] = 'url';
 $handler->display->display_options['fields']['url']['table'] = 'quant_log';
@@ -110,10 +128,6 @@ $handler->display->display_options['fields']['type']['field'] = 'type';
 $handler->display->display_options['fields']['status']['id'] = 'status';
 $handler->display->display_options['fields']['status']['table'] = 'quant_log';
 $handler->display->display_options['fields']['status']['field'] = 'status';
-/* Field: Quant Log: Hash */
-$handler->display->display_options['fields']['hash']['id'] = 'hash';
-$handler->display->display_options['fields']['hash']['table'] = 'quant_log';
-$handler->display->display_options['fields']['hash']['field'] = 'hash';
 /* Field: Quant Log: Updated */
 $handler->display->display_options['fields']['updated']['id'] = 'updated';
 $handler->display->display_options['fields']['updated']['table'] = 'quant_log';
@@ -130,6 +144,19 @@ $handler->display->display_options['sorts']['id']['id'] = 'id';
 $handler->display->display_options['sorts']['id']['table'] = 'quant_log';
 $handler->display->display_options['sorts']['id']['field'] = 'id';
 $handler->display->display_options['sorts']['id']['expose']['label'] = 'ID';
+/* Filter criterion: Quant Log: Entity ID */
+$handler->display->display_options['filters']['entity_id']['id'] = 'entity_id';
+$handler->display->display_options['filters']['entity_id']['table'] = 'quant_log';
+$handler->display->display_options['filters']['entity_id']['field'] = 'entity_id';
+$handler->display->display_options['filters']['entity_id']['group'] = 1;
+$handler->display->display_options['filters']['entity_id']['exposed'] = TRUE;
+$handler->display->display_options['filters']['entity_id']['expose']['operator_id'] = 'entity_id_op';
+$handler->display->display_options['filters']['entity_id']['expose']['label'] = 'Entity ID';
+$handler->display->display_options['filters']['entity_id']['expose']['operator'] = 'entity_id_op';
+$handler->display->display_options['filters']['entity_id']['expose']['identifier'] = 'entity_id';
+$handler->display->display_options['filters']['entity_id']['expose']['remember_roles'] = array(
+  2 => '2',
+);
 /* Filter criterion: Quant Log: URL */
 $handler->display->display_options['filters']['url']['id'] = 'url';
 $handler->display->display_options['filters']['url']['table'] = 'quant_log';

@@ -65,6 +65,12 @@ function quant_schema() {
         'not null' => TRUE,
         'description' => 'The unique ID of the seed item.',
       ),
+      'entity_id' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+        'description' => 'The entity id of the seed item.',
+      ),
       'url' => array(
         'type' => 'varchar',
         'length' => 2048,
@@ -95,8 +101,14 @@ function quant_schema() {
       'hash' => array(
         'type' => 'varchar',
         'length' => 255,
-        'not null' => TRUE,
+        'not null' => FALSE,
         'description' => 'The hash of the seed item.',
+      ),
+      'md5' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'description' => 'The md5 of the seed item.',
       ),
       'message' => array(
         'type' => 'text',
@@ -110,6 +122,7 @@ function quant_schema() {
       'hash' => array('hash'),
     ),
     'indexes' => array(
+      'entity_id' => array('entity_id'),
       'status' => array('status'),
       'type' => array('type'),
       'type_status' => array('type', 'status'),
