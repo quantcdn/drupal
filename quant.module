@@ -689,7 +689,7 @@ function quant_seed_file($url, $context = array()) {
 
   // @todo Get md5.
   // Data for logging.
-  $context['url'] = $url;
+  $context['url'] = quant_get_base_url() . $url;
 
   quant_log('Quant: Sending file !url', array('!url' => urldecode($url)));
 
