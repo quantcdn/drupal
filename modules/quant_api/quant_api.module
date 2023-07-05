@@ -386,9 +386,6 @@ function quant_api_quant_seed_file($url, $context) {
     return FALSE;
   }
 
-  // Add data for logging.
-  $response->context['status'] = '200';
-
   return $response;
 }
 

@@ -764,21 +764,20 @@ function quant_log_check_seed_results(&$context, $seed_results) {
 
   $message = 'Successful.';
   // Any error should be logged, so get check for it.
+  $has_error = FALSE;
   foreach ($seed_results as $seed_result) {
     if ($seed_result === FALSE) {
       // Get the last watchdog message.
+      $has_error = TRUE;
       $watchdog_log = db_query('SELECT message, variables FROM {watchdog} ORDER BY wid DESC LIMIT 1')->fetchObject();
       $variables = unserialize($watchdog_log->variables);
       $message = strip_tags(format_string($watchdog_log->message, $variables));
       break;
     }
-    elseif (isset($seed_result->context) && is_array($seed_result->context)) {
-      // If context data has been returned, include it.
-      $context = array_merge($context, $seed_result->context);
-    }
   }
 
   $context['message'] = $message;
+  $context['status'] = isset($context['status']) ? $context['status'] : ($has_error ? 'Unknown' : '200');
 }
 
 /**
