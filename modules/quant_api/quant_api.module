@@ -76,6 +76,13 @@ function quant_api_get_request_headers() {
 }
 
 /**
+ * Determine if seeding should use GET vs POST.
+ */
+function quant_api_use_seed_get() {
+  return variable_get('quant_api_seed_get', FALSE);
+}
+
+/**
  * Implements hook_quant_seed().
  */
 function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
