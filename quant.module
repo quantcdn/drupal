@@ -564,7 +564,7 @@ function quant_seed($url, array $context = array()) {
 
       if (isset($context['type']) && $context['type'] == 'file') {
         // File asset already handled.
-        quant_save_log($context, 'File asset already handled.');
+        quant_log_seed($context, 'File asset already handled.');
         return;
       }
       else {
@@ -573,14 +573,14 @@ function quant_seed($url, array $context = array()) {
     }
 
     // Redirect created, internal redirect followed + seeded.
-    quant_save_log($context, 'Redirect created.');
+    quant_log_seed($context, 'Redirect created.');
     return;
   }
 
   if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
-    quant_save_log($context, 'Unpublish route in Quant.');
+    quant_log_seed($context, 'Unpublish route in Quant.');
     return FALSE;
   }
 
@@ -591,7 +591,7 @@ function quant_seed($url, array $context = array()) {
       '%request' => json_encode($response),
     ));
     quant_log($error, NULL, WATCHDOG_ERROR);
-    quant_save_log($context, $error);
+    quant_log_seed($context, $error);
     return FALSE;
   }
 
@@ -601,7 +601,7 @@ function quant_seed($url, array $context = array()) {
       '%status_code' => $response->code,
     ));
     quant_log($error, NULL, WATCHDOG_WARNING);
-    quant_save_log($context, $error);
+    quant_log_seed($context, $error);
     return FALSE;
   }
 
@@ -677,7 +677,9 @@ function quant_seed($url, array $context = array()) {
   drupal_alter('quant_meta', $meta, $context);
   $seed_results = module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
 
-  quant_save_log($context, quant_log_get_message($seed_results));
+  // Update the context and log.
+  quant_log_check_seed_results($context, $seed_results);
+  quant_log_seed($context);
 }
 
 /**
@@ -685,7 +687,8 @@ function quant_seed($url, array $context = array()) {
  */
 function quant_seed_file($url, $context = array()) {
 
-  // @todo Get status and md5.
+  // @todo Get md5.
+  // Data for logging.
   $context['url'] = $url;
 
   quant_log('Quant: Sending file !url', array('!url' => urldecode($url)));
@@ -695,7 +698,9 @@ function quant_seed_file($url, $context = array()) {
   drupal_alter('quant_file_meta', $meta, $context);
   $seed_results = module_invoke_all('quant_seed_file', $url, $context);
 
-  quant_save_log($context, quant_log_get_message($seed_results));
+  // Update the context and log.
+  quant_log_check_seed_results($context, $seed_results);
+  quant_log_seed($context);
 }
 
 /**
@@ -724,9 +729,9 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
 /**
  * Log seed data to database.
  */
-function quant_save_log($context, $message = 'Successful.') {
+function quant_log_seed($context, $message = 'Successful.') {
   if (!isset($context['url'])) {
-    quant_log('No URL provided for quant_save_log.', [], WATCHDOG_ERROR);
+    quant_log('No URL provided for quant_log_seed.', [], WATCHDOG_ERROR);
     return;
   }
 
@@ -740,7 +745,7 @@ function quant_save_log($context, $message = 'Successful.') {
       'updated' => time(),
       'hash' => isset($context['hash']) ? $context['hash'] : 0, // @todo
       'md5' => isset($context['md5']) ? $context['md5'] : 0, // @todo
-      'message' => $message
+      'message' => isset($context['message']) ? $context['message'] : $message
     ));
 
   try {
@@ -753,9 +758,9 @@ function quant_save_log($context, $message = 'Successful.') {
 }
 
 /**
- * Get the seed log message based on seed results.
+ * Check seed results and adjust the context.
  */
-function quant_log_get_message($seed_results) {
+function quant_log_check_seed_results(&$context, $seed_results) {
 
   $message = 'Successful.';
   // Any error should be logged, so get check for it.
@@ -767,9 +772,13 @@ function quant_log_get_message($seed_results) {
       $message = strip_tags(format_string($watchdog_log->message, $variables));
       break;
     }
+    elseif (isset($seed_result->context) && is_array($seed_result->context)) {
+      // If context data has been returned, include it.
+      $context = array_merge($context, $seed_result->context);
+    }
   }
 
-  return $message;
+  $context['message'] = $message;
 }
 
 /**
