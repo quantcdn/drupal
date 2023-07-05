@@ -79,7 +79,6 @@ function quant_api_get_request_headers() {
  * Implements hook_quant_seed().
  */
 function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
-
   global $base_url;
 
   $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';

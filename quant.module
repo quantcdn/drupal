@@ -586,7 +586,7 @@ function quant_seed($url, array $context = array()) {
   }
 
   if (!property_exists($response, 'data') || $response->code > 404) {
-    $error = sprintf('Unable to seed %url %error %request', array(
+    $error = format_string('Unable to seed %url %error %request', array(
       '%url' => $url,
       '%error' => $response->error,
       '%request' => json_encode($response),
@@ -597,7 +597,7 @@ function quant_seed($url, array $context = array()) {
   }
 
   if ($response->code != 200) {
-    $error = sprintf('Non-200 response code for %url %status_code', array(
+    $error = format_string('Non-200 response code for %url %status_code', array(
       '%url' => $url,
       '%status_code' => $response->code,
     ));
