@@ -79,13 +79,14 @@ function quant_api_get_request_headers() {
  * Implements hook_quant_seed().
  */
 function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
+
   global $base_url;
 
   $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
 
   if (empty($api)) {
-    quant_log('API endpoint is not configured.');
-    return;
+    quant_log('API endpoint is not configured.', [], WATCHDOG_ERROR);
+    return FALSE;
   }
 
   // Ensure we have a leading forward-slash.
@@ -136,20 +137,21 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     if (empty($response->data)) {
       // This is a connection error between the Drupal server and Quant.
       quant_log('Connection error', [], WATCHDOG_ERROR);
-      return;
+      return FALSE;
     }
     $body = json_decode($response->data);
     quant_log('Error sending request: %error %response', array(
       '%error' => $body->errorMsg,
       '%response' => json_encode($response),
     ), WATCHDOG_ERROR);
-    return;
+    return FALSE;
   }
 
   $data = json_decode($response->data, TRUE);
   $media = array_merge($data['attachments']['js'], $data['attachments']['css'], $data['attachments']['media']['images'], $data['attachments']['media']['documents'], $data['attachments']['media']['video'], $data['attachments']['media']['audio']);
 
   if (!is_array($media)) {
+    // Nothing to process. Don't return FALSE since there was nothing wrong.
     return;
   }
 
@@ -262,12 +264,12 @@ function quant_api_quant_seed_file($url, $context) {
 
   if (empty($api)) {
     quant_log('API endpoint is not configured.', [], 'info');
-    return;
+    return FALSE;
   }
 
   if (empty($context['location'])) {
     quant_log('Unable to upload %u, location not specified', ['%u' => $url]);
-    return;
+    return FALSE;
   }
 
   // Skip file exists and is accessible checks for external files.
@@ -278,7 +280,7 @@ function quant_api_quant_seed_file($url, $context) {
 
     if (!file_exists($context['location'])) {
       quant_log('Unable to upload %u, file does not exist', ['%u' => $context['location']]);
-      return;
+      return FALSE;
     }
 
     // Issue a HEAD request to the file path.
@@ -318,7 +320,7 @@ function quant_api_quant_seed_file($url, $context) {
         '%url' => $url,
         '%code' => $file_head->code,
       ), WATCHDOG_ERROR);
-      return;
+      return FALSE;
     }
 
     // Support file specific additional headers.

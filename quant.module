@@ -670,10 +670,21 @@ function quant_seed($url, array $context = array()) {
   }
 
   drupal_alter('quant_meta', $meta, $context);
-  // @todo handle failure in hook_quant_seed.
-  module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
+  $results = module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
 
-  quant_save_log($context);
+  $message = 'Successful.';
+  // Any error should be logged, so get check for it.
+  foreach ($results as $result) {
+    if ($result === FALSE) {
+      // Get the last watchdog message.
+      $watchdog_log = db_query('SELECT message, variables FROM {watchdog} ORDER BY wid DESC LIMIT 1')->fetchObject();
+      $variables = unserialize($watchdog_log->variables);
+      $message = strip_tags(format_string($watchdog_log->message, $variables));
+      break;
+    }
+  }
+
+  quant_save_log($context, $message);
 }
 
 /**
@@ -720,7 +731,7 @@ function quant_save_log($context, $message = 'Successful.') {
   $query = db_merge('quant_log')
     ->key(array('url' => $context['url']))
     ->fields(array(
-      'entity_id' => $context['id'] ?: 0,
+      'entity_id' => isset($context['id']) ? $context['id'] : 0,
       'url' => $context['url'],
       'type' => isset($context['type']) ? $context['type'] : 'unknown type',
       'status' => $context['status'],
