@@ -458,7 +458,13 @@ function quant_seed($url, array $context = array()) {
   $path = ltrim($path, '/');
 
   // Ensure URL is processed to account for special character encoding.
-  $url = _rebuild_url($url);
+  $url = $context['url'] = _rebuild_url($url);
+
+  // Skip based on log data.
+  if (quant_log_skip($context)) {
+    quant_log('Skip: !url was already processed', array('!url' => $url));
+    return;
+  }
 
   if (path_is_admin($path)) {
     quant_log('Skip: !path is an admin path', array('!path' => $path));
@@ -498,7 +504,6 @@ function quant_seed($url, array $context = array()) {
   $response = drupal_http_request($url, $options);
 
   // Save data for logging.
-  $context['url'] = $url;
   $context['status'] = $response->code;
   $context['updated'] = time();
 
@@ -748,6 +753,38 @@ function quant_save_log($context, $message = 'Successful.') {
     quant_log($error, NULL, WATCHDOG_ERROR);
     return FALSE;
   }
+}
+
+/**
+ * Check if seed item should skip based on log.
+ */
+function quant_log_skip($context) {
+  // @todo check other data like the hash/md5?
+  // For now, only check if it's an entity.
+  if (isset($context['id']) && isset($context['type'])) {
+    $entities = entity_load($context['type'], [$context['id']]);
+    if (empty($entities)) {
+      // Something is wrong with the type or id.
+      quant_log(t('Could not load entity %type (%id)', ['%type' => $context['type'], '%id' => $context['id']]));
+      return TRUE;
+    }
+    $entity = reset($entities);
+
+    // Check the quant_log data for this entity.
+    $logs = db_query('SELECT * FROM {quant_log} WHERE entity_id = :entity_id AND type = :type', array(':entity_id' => $context['id'], ':type' => $context['type']));
+    foreach ($logs as $log) {
+      // Reprocess if status or log message aren't as expected.
+      if ($log->status != '200' || $log->message != 'Successful.') {
+        return FALSE;
+      }
+      // Check the log date against the entity.
+      if ($entity->changed < $log->updated) {
+        return TRUE;
+      }
+    }
+  }
+
+  return FALSE;
 }
 
 /**
