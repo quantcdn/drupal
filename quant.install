@@ -118,9 +118,6 @@ function quant_schema() {
       ),
     ),
     'primary key' => array('id'),
-    'unique keys' => array(
-      'hash' => array('hash'),
-    ),
     'indexes' => array(
       'entity_id' => array('entity_id'),
       'status' => array('status'),
