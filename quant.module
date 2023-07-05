@@ -722,11 +722,11 @@ function quant_save_log($context, $message = 'Successful.') {
     ->fields(array(
       'entity_id' => $context['id'] ?: 0,
       'url' => $context['url'],
-      'type' => $context['type'] ?: 'unknown type',
+      'type' => isset($context['type']) ? $context['type'] : 'unknown type',
       'status' => $context['status'],
       'updated' => $context['updated'],
-      'hash' => $context['hash'] ?: 0, // @todo
-      'md5' => $context['md5'] ?: 0, // @todo
+      'hash' => isset($context['hash']) ? $context['hash'] : 0, // @todo
+      'md5' => isset($context['md5']) ? $context['md5'] : 0, // @todo
       'message' => $message
     ));
 
