@@ -35,6 +35,7 @@ $handler->display->display_options['style_options']['columns'] = array(
   'type' => 'type',
   'status' => 'status',
   'updated' => 'updated',
+  'md5' => 'md5',
   'message' => 'message',
 );
 $handler->display->display_options['style_options']['class'] = '';
@@ -81,6 +82,13 @@ $handler->display->display_options['style_options']['info'] = array(
     'empty_column' => 0,
   ),
   'updated' => array(
+    'sortable' => 1,
+    'default_sort_order' => 'asc',
+    'align' => '',
+    'separator' => '',
+    'empty_column' => 0,
+  ),
+  'md5' => array(
     'sortable' => 1,
     'default_sort_order' => 'asc',
     'align' => '',
@@ -135,6 +143,10 @@ $handler->display->display_options['fields']['updated']['field'] = 'updated';
 $handler->display->display_options['fields']['updated']['date_format'] = 'custom';
 $handler->display->display_options['fields']['updated']['custom_date_format'] = 'j M Y, G:i:s T';
 $handler->display->display_options['fields']['updated']['second_date_format'] = 'long';
+/* Field: Quant Log: MD5 */
+$handler->display->display_options['fields']['md5']['id'] = 'md5';
+$handler->display->display_options['fields']['md5']['table'] = 'quant_log';
+$handler->display->display_options['fields']['md5']['field'] = 'md5';
 /* Field: Quant Log: Log Message */
 $handler->display->display_options['fields']['message']['id'] = 'message';
 $handler->display->display_options['fields']['message']['table'] = 'quant_log';
