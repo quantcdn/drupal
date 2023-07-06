@@ -538,6 +538,7 @@ function quant_seed($url, array $context = array()) {
           'location' => $context['entity']->uri,
           'request' => $public_path,
           'type' => 'file',
+          'url' => $context['entity']->uri,
         );
 
         quant_seed_file("{$base}{$public_path}", $fileCtx);
@@ -688,7 +689,9 @@ function quant_seed($url, array $context = array()) {
 function quant_seed_file($url, $context = array()) {
 
   // Data for logging.
-  $context['url'] = quant_get_base_url() . $url;
+  if (strpos($url, "http://") !== 0) {
+    $context['url'] = quant_get_base_url() . $url;
+  }
 
   quant_log('Quant: Sending file !url', array('!url' => urldecode($url)));
 
