@@ -687,7 +687,6 @@ function quant_seed($url, array $context = array()) {
  */
 function quant_seed_file($url, $context = array()) {
 
-  // @todo Get md5.
   // Data for logging.
   $context['url'] = quant_get_base_url() . $url;
 
@@ -1075,7 +1074,7 @@ function _quant_queue_theme_assets($theme_machine_name = NULL) {
     $context = array(
       'location' => $file->uri,
       'request' => $file_on_disk,
-      'type' => 'file',
+      'type' => 'theme',
     );
 
     quant_log('Quant: Adding file [!path] to the list.', array('!path' => $file_on_disk));

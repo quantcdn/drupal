@@ -219,7 +219,8 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       continue;
     }
 
-    if (isset($item['existing_md5']) && md5_file($loc) == $item['existing_md5']) {
+    $item_md5 = md5_file($loc);
+    if (isset($item['existing_md5']) && $item_md5 == $item['existing_md5']) {
       // This file hasn't changed since the last export.
       // Remove any temporary files and continue.
       if ($external_url || variable_get('quant_alternate_file_handler', FALSE)) {
@@ -236,10 +237,13 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
     if (!empty($item['full_path'])) {
       $file = $item['full_path'];
     }
+
     quant_seed_file($file, [
       'location' => $loc,
       'request' => $on_disk,
       'external' => $external_url,
+      'md5' => $item_md5,
+      'type' => 'file_attachment',
     ]);
 
     // Remove temporary files where alternate file handler is enabled
