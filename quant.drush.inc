@@ -44,6 +44,16 @@ function quant_drush_command() {
     'aliases' => array('qc'),
   );
 
+  $items['quant-log-export'] = array(
+    'callback' => 'drush_quant_log_export',
+    'description' => 'Export the seed logs to a file',
+    'arguments' => array(),
+    'options' => array(
+      'dir' => 'The file location to write the export to.',
+    ),
+    'aliases' => array('qle'),
+  );
+
   return $items;
 }
 
@@ -113,6 +123,44 @@ function drush_quant_seed() {
   _validate_quant_config();
   drush_log('Quant: Populating seed queue.', 'ok');
   _quant_seed_prepare();
+}
+
+/**
+ * Callback to export the seed log data.
+ */
+function drush_quant_log_export() {
+  drush_print('Preparing to export log entries.');
+  $dir = drush_get_option('dir');
+  if (empty($dir)) {
+    $dir = file_directory_temp();
+  }
+  $loc = "$dir/quant-seed-log-" . date('Y-m-d') . '.csv';
+
+  if (!file_exists($loc)) {
+    // Make sure the file is ready for writing.
+    touch($loc);
+  }
+
+  $file = fopen($loc, "a");
+
+  if ($file === FALSE) {
+    drush_log("Unable to open [$loc].");
+    return FALSE;
+  }
+
+  $query = db_select('quant_log', 'ql');
+  $query->fields('ql');
+  $results = $query->execute();
+
+  // Add the headers to the CSV.
+  $schema = drupal_get_schema('quant_log');
+  fwrite($file, implode(',', array_keys($schema['fields'])) . PHP_EOL);
+
+  while ($row = $results->fetchAssoc()) {
+    fwrite($file, implode(',', array_values($row)) . PHP_EOL);
+  }
+
+  drush_print("Successfully exported log entries to [$loc]");
 }
 
 /**
