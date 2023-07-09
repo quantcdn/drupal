@@ -461,12 +461,10 @@ function quant_seed($url, array $context = array()) {
   $url = $context['url'] = _rebuild_url($url);
 
   // Skip based on log data.
-/*
   if (quant_log_skip_seed($url, $context)) {
     quant_log('Quant: Skipping !type !url based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the {quant_log} database table.', array('!type' => $context['type'], '!url' => $url));
     return;
   }
-*/
 
   // Don't seed admin pages.
   if (path_is_admin($path)) {
@@ -833,13 +831,10 @@ function quant_log_skip_seed($url, $context) {
     }
     elseif ($context['type'] === 'file') {
       // Check the log md5 against the context md5.
-quant_log('seed file context = <pre>' . print_r($context, TRUE) . '</pre>');
       if (isset($context['location']) && isset($context['md5'])) {
         $log_md5 = db_query('SELECT md5 FROM {quant_log} WHERE url = :url AND type = :type', array(':url' => $url, ':type' => 'file'))->fetchField();
-quant_log("LOG MD5 = $log_md5");
         if ($log_md5) {
           $file_md5 = md5_file($context['location']);
-quant_log("FILE MD5 = $file_md5");
           return $file_md5 == $log_md5;
         }
       }
