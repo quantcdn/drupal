@@ -150,7 +150,7 @@ function quant_config() {
  * Validate the configuration form to ensure that the settings are valid.
  */
 function quant_form_quant_config_validate($form = array(), &$form_state = array()) {
-  $base = quant_get_base_url();
+  $base = $form_state['values']['quant_base_url'];
 
   // Check hostname is a valid domain.
   $quant_hostname = trim($form_state['values']['quant_hostname']);
