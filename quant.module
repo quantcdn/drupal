@@ -461,10 +461,12 @@ function quant_seed($url, array $context = array()) {
   $url = $context['url'] = _rebuild_url($url);
 
   // Skip based on log data.
-  if (quant_log_skip($context)) {
+/*
+  if (quant_log_skip_seed($url, $context)) {
     quant_log('Quant: Skipping !type !url based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the {quant_log} database table.', array('!type' => $context['type'], '!url' => $url));
     return;
   }
+*/
 
   // Don't seed admin pages.
   if (path_is_admin($path)) {
@@ -688,6 +690,12 @@ function quant_seed($url, array $context = array()) {
  */
 function quant_seed_file($url, $context = array()) {
 
+  // Skip based on log data.
+  if (quant_log_skip_seed($url, $context)) {
+    quant_log('Quant: Skipping file !url based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the {quant_log} database table.', array('!type' => $context['type'], '!url' => $url));
+    return;
+  }
+
   // Data for logging.
   if (strpos($url, "http://") !== 0) {
     $context['url'] = quant_get_base_url() . $url;
@@ -737,6 +745,11 @@ function quant_log_seed($context, $message = 'Successful.') {
     return;
   }
 
+  $md5 = 0;
+  if (isset($context['type']) && isset($context['location']) && $context['type'] == 'file') {
+    $md5 = isset($context['md5']) ? $context['md5'] : md5_file($context['location']);
+  }
+
   $query = db_merge('quant_log')
     ->key(array('url' => $context['url']))
     ->fields(array(
@@ -746,7 +759,7 @@ function quant_log_seed($context, $message = 'Successful.') {
       'status' => isset($context['status']) ? $context['status'] : 'unknown',
       'updated' => time(),
       'hash' => isset($context['hash']) ? $context['hash'] : 0, // @todo
-      'md5' => isset($context['md5']) ? $context['md5'] : 0, // @todo
+      'md5' => $md5,
       'message' => isset($context['message']) ? $context['message'] : $message
     ));
 
@@ -785,34 +798,50 @@ function quant_log_check_seed_results(&$context, $seed_results) {
 /**
  * Check if seed item should skip based on log.
  */
-function quant_log_skip($context) {
+function quant_log_skip_seed($url, $context) {
   // Only skip if configured for this option.
   if (!variable_get('quant_seed_check_log', FALSE)) {
     return FALSE;
   }
 
-  // @todo check other data like the hash/md5?
-  // For now, only check if it's an entity.
-  if (isset($context['id']) && isset($context['type'])) {
-    $entities = entity_load($context['type'], [$context['id']]);
-    if (empty($entities)) {
-      // Something is wrong with the type or id.
-      quant_log(t('Could not load entity %type (%id)', ['%type' => $context['type'], '%id' => $context['id']]));
-      return TRUE;
-    }
-    $entity = reset($entities);
-    $changed = isset($entity->changed) ? $entity->changed : (isset($entity->created) ? $entity->created : (isset($entity->timestamp) ? $entity->timestamp : 0));
 
-    // Check the quant_log data for this entity.
-    $logs = db_query('SELECT * FROM {quant_log} WHERE entity_id = :entity_id AND type = :type', array(':entity_id' => $context['id'], ':type' => $context['type']));
-    foreach ($logs as $log) {
-      // Reprocess if status or log message aren't as expected.
-      if ($log->status != '200' || $log->message != 'Successful.') {
-        return FALSE;
-      }
-      // Check the log date against the entity.
-      if ($changed != 0 && $changed < $log->updated) {
+  // @todo check other data like the hash?
+  if (isset($context['type'])) {
+    // Handle entities.
+    if (isset($context['id'])) {
+      $entities = entity_load($context['type'], [$context['id']]);
+      if (empty($entities)) {
+        // Something is wrong with the type or id.
+        quant_log(t('Could not load entity %type (%id)', ['%type' => $context['type'], '%id' => $context['id']]));
         return TRUE;
+      }
+      $entity = reset($entities);
+      $changed = isset($entity->changed) ? $entity->changed : (isset($entity->created) ? $entity->created : (isset($entity->timestamp) ? $entity->timestamp : 0));
+
+      // Check the quant_log data for this entity.
+      $logs = db_query('SELECT * FROM {quant_log} WHERE entity_id = :entity_id AND type = :type', array(':entity_id' => $context['id'], ':type' => $context['type']));
+      foreach ($logs as $log) {
+        // Reprocess if status or log message aren't as expected.
+        if ($log->status != '200' || $log->message != 'Successful.') {
+          return FALSE;
+        }
+        // Check the log date against the entity.
+        if ($changed != 0 && $changed < $log->updated) {
+          return TRUE;
+        }
+      }
+    }
+    elseif ($context['type'] === 'file') {
+      // Check the log md5 against the context md5.
+quant_log('seed file context = <pre>' . print_r($context, TRUE) . '</pre>');
+      if (isset($context['location']) && isset($context['md5'])) {
+        $log_md5 = db_query('SELECT md5 FROM {quant_log} WHERE url = :url AND type = :type', array(':url' => $url, ':type' => 'file'))->fetchField();
+quant_log("LOG MD5 = $log_md5");
+        if ($log_md5) {
+          $file_md5 = md5_file($context['location']);
+quant_log("FILE MD5 = $file_md5");
+          return $file_md5 == $log_md5;
+        }
       }
     }
   }
