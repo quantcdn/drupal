@@ -15,4 +15,5 @@ function quant_api_uninstall() {
   variable_del('quant_api_project');
   variable_del('quant_api_token');
   variable_del('quant_api_ssl_verify');
+  variable_del('quant_api_seed_get');
 }
