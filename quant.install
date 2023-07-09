@@ -227,4 +227,5 @@ function quant_update_7002() {
  */
 function quant_update_7003() {
   db_create_table('quant_log', drupal_get_schema_unprocessed('quant', 'quant_log'));
+  module_enable(array('views'));
 }
