@@ -717,6 +717,11 @@ function quant_seed_file($url, $context = array()) {
 function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
   $vvv = variable_get('quant_verbose_logging', FALSE);
 
+  if (empty($replacements)) {
+    // Prevent errors if $replacements is `null`.
+    $replacements = array();
+  }
+
   if ($level == QUANT_VERBOSE && !$vvv) {
     return;
   }
