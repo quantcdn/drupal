@@ -130,7 +130,7 @@ function quant_config() {
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
-    '#description' => t('Provide the FQDN that internal requests may route to, e.g. <code>http://localhost</code>, <code>http://nginx:8080</code>, <code>http://127.0.0.1</code>'),
+    '#description' => t('Provide the fully-qualified domain name that internal requests may route to, e.g. <code>http://localhost</code>, <code>http://nginx:8080</code>, <code>http://127.0.0.1</code>'),
     '#default_value' => variable_get('quant_base_url', 'http://localhost'),
   );
 
