@@ -120,6 +120,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_alternate_file_handler', FALSE),
   );
 
+  $form['quant_api_seed_get'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use GET for seeding'),
+    '#description' => t("By default, seeding uses POST to bypass Drupal's caching and ensure the freshest content. For faster seeding that leverages Drupal's caching, you can enable this option and it will use GET rather than POST. This can be helpful during initial seeding for large sites."),
+    '#default_value' => variable_get('quant_api_seed_get', FALSE),
+  );
+
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
@@ -133,6 +140,13 @@ function quant_config() {
     '#description' => t('Optionally, provide the expected hostname for content served via Quant. This ensures absolute links in content point to the correct domain, e.g. <code>www.example.com</code>'),
     '#default_value' => variable_get('quant_hostname', ''),
   );
+
+  $form['quant_allowed_external_domains'] = [
+    '#type' => 'textarea',
+    '#title' => t('Allowed external domains'),
+    '#description' => t('Optionally provide external domains embedded static assets should be retrieved from.'),
+    '#default_value' => variable_get('quant_allowed_external_domains', FALSE),
+  ];
 
   $form['#validate'][] = 'quant_form_quant_config_validate';
 
@@ -152,7 +166,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
     $quant_base_url = $base_url;
     if (empty($quant_base_url)) {
       // Shouldn't happen, but check anyway.
-      form_set_error('quant_base_url', 'Your Drupal base URL, @base, is not configured correctly. Check your settings.php file.', array('@base' => $base));
+      form_set_error('quant_base_url', 'Your Drupal base URL, @base, is not configured correctly. Check your settings.php file.', array('@base' => $quant_base_url));
       return;
     }
     else {
@@ -193,7 +207,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
     $quant_hostname = parse_url($quant_base_url, PHP_URL_HOST);
     if (empty($quant_hostname)) {
       // Shouldn't happen, but check anyway.
-      form_set_error('quant_hostname', 'Your Drupal base URL, @base, is not configured correctly. Check your settings.php file.', array('@base' => $base));
+      form_set_error('quant_hostname', 'Your Drupal base URL, @base, is not configured correctly. Check your settings.php file.', array('@base' => $quant_base_url));
       return;
     }
     else {
@@ -297,6 +311,34 @@ function quant_seed_settings() {
     ),
   );
 
+  $form['quant_seed_menu_paths_enabled'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Menu paths'),
+    '#description' => t('Exports routes as defined in a menu structure.'),
+    '#default_value' => variable_get('quant_seed_menu_paths_enabled', FALSE),
+  ];
+
+  // Filter by menu.
+  $menus = menu_get_menus();
+
+  $options = array();
+  foreach ($menus as $menu_name => $menu) {
+    $options[$menu_name] = $menu;
+  }
+
+  $form['quant_seed_menu_paths_bundles'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Enabled menus for paths'),
+    '#description' => t('Optionally, restrict to these menus.'),
+    '#default_value' => variable_get('quant_seed_menu_paths_bundles', []),
+    '#options' => $options,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="quant_seed_menu_paths_enabled"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
   $form['quant_seed_entity_taxonomy'] = array(
     '#type' => 'checkbox',
     '#title' => t('Export taxonomy terms'),
@@ -305,8 +347,27 @@ function quant_seed_settings() {
 
   $form['quant_seed_theme_assets'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Export theme assets'),
+    '#title' => t('Export default theme assets'),
     '#default_value' => variable_get('quant_seed_theme_assets', FALSE),
+  );
+
+  $form['quant_seed_additional_theme_assets_enabled'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Additional theme assets'),
+    '#description' => t('Exports CSS/JS/static assets from non-default themes.'),
+    '#default_value' => variable_get('quant_seed_additional_theme_assets_enabled', FALSE),
+  ];
+
+  $form['quant_seed_additional_theme_assets'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Export additional theme assets'),
+    '#default_value' => variable_get('quant_seed_additional_theme_assets', ''),
+    '#description' => t('Provide additional theme machine names (separated by newline)'),
+    '#states' => [
+      'visible' => [
+        ':input[name="quant_seed_additional_theme_assets_enabled"]' => ['checked' => TRUE],
+      ],
+    ],
   );
 
   if (module_exists('views')) {
@@ -314,6 +375,14 @@ function quant_seed_settings() {
       '#type' => 'checkbox',
       '#title' => t('Export Views'),
       '#default_value' => variable_get('quant_seed_views', FALSE),
+    );
+  }
+
+  if (module_exists('page_manager')) {
+    $form['quant_seed_page_manager'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Export page manager pages'),
+      '#default_value' => variable_get('quant_seed_page_manager', FALSE),
     );
   }
 
