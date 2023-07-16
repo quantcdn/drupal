@@ -1557,6 +1557,7 @@ function _quant_get_request_header($header) {
 function quant_get_base_url() {
   global $base_url;
   $base = variable_get('quant_base_url');
+  // Set explicitly in case `quant_base_url` was set to an empty string.
   if (empty($base)) {
     $base = $base_url;
   }

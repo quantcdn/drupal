@@ -166,7 +166,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
     $quant_base_url = $base_url;
     if (empty($quant_base_url)) {
       // Shouldn't happen, but check anyway.
-      form_set_error('quant_base_url', 'Your Drupal base URL, @base, is not configured correctly. Check your settings.php file.', array('@base' => $quant_base_url));
+      form_set_error('quant_base_url', 'Your Drupal base URL, @quant_base_url, is not configured correctly. Check your settings.php file.', array('@quant_base_url' => $quant_base_url));
       return;
     }
     else {
@@ -207,7 +207,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
     $quant_hostname = parse_url($quant_base_url, PHP_URL_HOST);
     if (empty($quant_hostname)) {
       // Shouldn't happen, but check anyway.
-      form_set_error('quant_hostname', 'Your Drupal base URL, @base, is not configured correctly. Check your settings.php file.', array('@base' => $quant_base_url));
+      form_set_error('quant_hostname', 'Your Drupal base URL, @quant_base_url, is not configured correctly. Check your settings.php file.', array('@quant_base_url' => $quant_base_url));
       return;
     }
     else {
