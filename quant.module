@@ -459,6 +459,7 @@ function quant_seed($url, array $context = array()) {
 
   $quant_hostname = variable_get('quant_hostname');
   if (empty($quant_hostname)) {
+    // @todo Should this be `$base`?
     $quant_hostname = parse_url($base_url, PHP_URL_HOST);
   }
 
