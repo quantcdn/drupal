@@ -688,6 +688,11 @@ function quant_seed($url, array $context = array()) {
  */
 function quant_seed_file($url, $context = array()) {
 
+  // Ensure we have an md5 value for the local file if it exists.
+  if (isset($context['location']) && file_exists($context['location']) && empty($context['md5'])) {
+    $context['md5'] = md5_file($context['location']);
+  }
+
   // Skip based on log data.
   if (quant_log_skip_seed($url, $context)) {
     quant_log('Quant: Skipping file !url based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the {quant_log} database table.', array('!type' => $context['type'], '!url' => $url));
@@ -749,9 +754,16 @@ function quant_log_seed($context, $message = 'Successful.') {
   }
 
   $md5 = 0;
-  if (isset($context['type']) && isset($context['location']) && $context['type'] == 'file') {
-    $md5 = isset($context['md5']) ? $context['md5'] : md5_file($context['location']);
-  }
+
+  if (isset($context['type']) && isset($context['location']) && file_exists($context['location'])) {
+    switch ($context['type']) {
+      case 'file':
+      case 'file_attachment':
+      case 'theme':
+        $md5 = isset($context['md5']) ? $context['md5'] : md5_file($context['location']);
+        break;
+    }
+  } 
 
   $query = db_merge('quant_log')
     ->key(array('url' => $context['url']))
@@ -807,43 +819,51 @@ function quant_log_skip_seed($url, $context) {
     return FALSE;
   }
 
+  if (empty($context['type'])) {
+    return;
+  }
 
-  // @todo check other data like the hash?
-  if (isset($context['type'])) {
-    // Handle entities.
-    if (isset($context['id'])) {
-      $entities = entity_load($context['type'], [$context['id']]);
-      if (empty($entities)) {
-        // Something is wrong with the type or id.
-        quant_log(t('Could not load entity %type (%id)', ['%type' => $context['type'], '%id' => $context['id']]));
+  // Handle entities.
+  if (isset($context['id'])) {
+    $entities = entity_load($context['type'], [$context['id']]);
+    if (empty($entities)) {
+      // Something is wrong with the type or id.
+      quant_log(t('Could not load entity %type (%id)', ['%type' => $context['type'], '%id' => $context['id']]));
+      return TRUE;
+    }
+    $entity = reset($entities);
+    $changed = isset($entity->changed) ? $entity->changed : (isset($entity->created) ? $entity->created : (isset($entity->timestamp) ? $entity->timestamp : 0));
+
+    // Check the quant_log data for this entity.
+    $logs = db_query('SELECT * FROM {quant_log} WHERE entity_id = :entity_id AND type = :type', array(':entity_id' => $context['id'], ':type' => $context['type']));
+    foreach ($logs as $log) {
+      // Reprocess if status or log message aren't as expected.
+      if ($log->status != '200' || $log->message != 'Successful.') {
+        return FALSE;
+      }
+      // Check the log date against the entity.
+      if ($changed != 0 && $changed < $log->updated) {
         return TRUE;
       }
-      $entity = reset($entities);
-      $changed = isset($entity->changed) ? $entity->changed : (isset($entity->created) ? $entity->created : (isset($entity->timestamp) ? $entity->timestamp : 0));
-
-      // Check the quant_log data for this entity.
-      $logs = db_query('SELECT * FROM {quant_log} WHERE entity_id = :entity_id AND type = :type', array(':entity_id' => $context['id'], ':type' => $context['type']));
-      foreach ($logs as $log) {
-        // Reprocess if status or log message aren't as expected.
-        if ($log->status != '200' || $log->message != 'Successful.') {
-          return FALSE;
-        }
-        // Check the log date against the entity.
-        if ($changed != 0 && $changed < $log->updated) {
-          return TRUE;
-        }
-      }
     }
-    elseif ($context['type'] === 'file') {
+  }
+
+  switch ($context['type']) {
+    case 'file':
+    case 'file_attachment':
+    case 'theme':
       // Check the log md5 against the context md5.
       if (isset($context['location']) && isset($context['md5'])) {
-        $log_md5 = db_query('SELECT md5 FROM {quant_log} WHERE url = :url AND type = :type', array(':url' => $url, ':type' => 'file'))->fetchField();
+        $log_md5 = db_query('SELECT md5 FROM {quant_log} WHERE url like :url AND type = :type', array(
+          ':url' => '%' . db_like($url),
+          ':type' => $context['type'],
+        ))->fetchField();
         if ($log_md5) {
           $file_md5 = md5_file($context['location']);
           return $file_md5 == $log_md5;
         }
       }
-    }
+      break;
   }
 
   return FALSE;
