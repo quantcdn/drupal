@@ -129,6 +129,13 @@ function quant_config() {
     '#default_value' => variable_get('quant_alternate_file_handler', FALSE),
   );
 
+  $form['quant_api_seed_get'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use GET for seeding'),
+    '#description' => t("By default, seeding uses POST to bypass Drupal's caching and ensure the freshest content. For faster seeding that leverages Drupal's caching, you can enable this option and it will use GET rather than POST. This can be helpful during initial seeding for large sites."),
+    '#default_value' => variable_get('quant_api_seed_get', FALSE),
+  );
+
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
@@ -159,7 +166,7 @@ function quant_config() {
  * Validate the configuration form to ensure that the settings are valid.
  */
 function quant_form_quant_config_validate($form = array(), &$form_state = array()) {
-  $base = quant_get_base_url();
+  $base = $form_state['values']['quant_base_url'];
 
   // Check hostname is a valid domain.
   $quant_hostname = trim($form_state['values']['quant_hostname']);
