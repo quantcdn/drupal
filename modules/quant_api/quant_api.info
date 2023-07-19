@@ -3,3 +3,4 @@ description = Quant API exporter
 package = Quant
 core = 7.x
 configure = admin/config/services/quant/api
+; Do not add quant:quant as a dependency here. See quant_api_enable().

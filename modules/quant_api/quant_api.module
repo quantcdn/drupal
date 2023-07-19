@@ -13,12 +13,29 @@
 define('QUANT_API_ENDPOINT_DEFAULT', 'https://api.quantcdn.io');
 
 /**
+ * Implements hook_enable().
+ */
+function quant_api_enable() {
+  // To avoid a circular dependency which will prevent uninstalling, enable the
+  // Quant module here instead of adding it as a dependency in the info file.
+  $success = module_enable(array('quant'));
+  $message = $success ? 'QuantAPI: The quant module was enabled successfully.' : 'QuantAPI: The quant module could not be enabled. Try enabling it manually.';
+  if (drupal_is_cli()) {
+    // phpcs:ignore
+    drush_log(t($message));
+  }
+  else {
+    drupal_set_message(t($message));
+  }
+}
+
+/**
  * Implements hook_help().
  */
 function quant_api_help($section) {
   switch ($section) {
     case 'admin/help#quant_api':
-      return quant_help('admin/help#quant');
+      return function_exists('quant_help') ? quant_help('admin/help#quant') : '<p>Install the Quant module for help text.</p>';
   }
 }
 
