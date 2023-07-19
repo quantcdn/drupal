@@ -462,13 +462,13 @@ function quant_seed($url, array $context = array()) {
 
   // Skip based on log data.
   if (quant_log_skip_seed($url, $context)) {
-    quant_log('Quant: Skipping !type !url based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the {quant_log} database table.', array('!type' => $context['type'], '!url' => $url));
+    quant_log('Quant: Skipping !type !path based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the quant_log database table.', array('!type' => $context['type'], '!path' => '/' . $path));
     return;
   }
 
   // Don't seed admin pages.
   if (path_is_admin($path)) {
-    quant_log('Quant: Skipping admin page !path', array('!path' => $path));
+    quant_log('Quant: Skipping admin page !path', array('!path' => '/' . $path));
     return;
   }
 
@@ -699,7 +699,8 @@ function quant_seed_file($url, $context = array()) {
 
   // Skip based on log data.
   if (quant_log_skip_seed($url, $context)) {
-    quant_log('Quant: Skipping file !url based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the {quant_log} database table.', array('!type' => $context['type'], '!url' => $url));
+    $path = parse_url($url, PHP_URL_PATH);
+    quant_log('Quant: Skipping !type !path based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the quant_log database table.', array('!type' => $context['type'], '!path' => $path));
     return;
   }
 
