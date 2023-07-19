@@ -130,7 +130,7 @@ function quant_config() {
   $form['quant_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Webserver URL'),
-    '#description' => t('Provide the FQDN that internal requests may route to, e.g. <code>http://localhost</code>, <code>http://nginx:8080</code>, <code>http:127.0.0.1</code>'),
+    '#description' => t('Provide the fully-qualified domain name that internal requests may route to, e.g. <code>http://localhost</code>, <code>http://nginx:8080</code>, <code>http://127.0.0.1</code>'),
     '#default_value' => variable_get('quant_base_url', 'http://localhost'),
   );
 
@@ -157,16 +157,57 @@ function quant_config() {
  * Validate the configuration form to ensure that the settings are valid.
  */
 function quant_form_quant_config_validate($form = array(), &$form_state = array()) {
-  $base = $form_state['values']['quant_base_url'];
+  global $base_url;
+
+  // Check webserver URL is valid.
+  $quant_base_url = trim($form_state['values']['quant_base_url']);
+  if (empty($quant_base_url)) {
+    // Use the base URL by default.
+    $quant_base_url = $base_url;
+    if (empty($quant_base_url)) {
+      // Shouldn't happen, but check anyway.
+      form_set_error('quant_base_url', 'Your Drupal base URL, @quant_base_url, is not configured correctly. Check your settings.php file.', array('@quant_base_url' => $quant_base_url));
+      return;
+    }
+    else {
+      drupal_set_message(t('Since the Webserver URL field has been left empty, the base URL in your site will be used instead: <code>@quant_base_url</code>', array('@quant_base_url' => $quant_base_url)));
+    }
+  }
+  else {
+    $error = 'Your Webserver URL is set incorrectly. It should be a fully-qualified domain name, e.g. <code>http://localhost</code>.';
+    if (filter_var($quant_base_url, FILTER_VALIDATE_URL) === FALSE) {
+      form_set_error('quant_base_url', $error);
+      return;
+    }
+
+    // Basic check for stray characters. The final check is below when using it.
+    $quant_base_url_scheme = parse_url($quant_base_url, PHP_URL_SCHEME);
+    $quant_base_url_user = parse_url($quant_base_url, PHP_URL_USER);
+    $quant_base_url_pass = parse_url($quant_base_url, PHP_URL_PASS);
+    $quant_base_url_host = parse_url($quant_base_url, PHP_URL_HOST);
+    $quant_base_url_port = parse_url($quant_base_url, PHP_URL_PORT);
+    $quant_base_url_check = $quant_base_url_scheme . '://';
+    if ($quant_base_url_user || $quant_base_url_pass) {
+      $quant_base_url_check .= $quant_base_url_user . '@' . $quant_base_url_pass;
+    }
+    $quant_base_url_check .= $quant_base_url_host;
+    if ($quant_base_url_port) {
+      $quant_base_url_check .= ':' . $quant_base_url_port;
+    }
+    if ($quant_base_url_check != $quant_base_url) {
+      form_set_error('quant_base_url', $error);
+      return;
+    }
+  }
 
   // Check hostname is a valid domain.
   $quant_hostname = trim($form_state['values']['quant_hostname']);
   if (empty($quant_hostname)) {
     // Use the base URL by default.
-    $quant_hostname = parse_url($base, PHP_URL_HOST);
+    $quant_hostname = parse_url($quant_base_url, PHP_URL_HOST);
     if (empty($quant_hostname)) {
       // Shouldn't happen, but check anyway.
-      form_set_error('quant_hostname', 'Your Drupal base URL is not configured correctly. Check your settings.php file.');
+      form_set_error('quant_hostname', 'Your Drupal base URL, @quant_base_url, is not configured correctly. Check your settings.php file.', array('@quant_base_url' => $quant_base_url));
       return;
     }
     else {
@@ -206,13 +247,13 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
     ));
   }
 
-  $url = "$base/_quant/validate";
+  $url = "$quant_base_url/_quant/validate";
   $options['headers']['quant-token'] = quant_token_create($url);
   $response = drupal_http_request($url, $options);
 
   $data = @json_decode($response->data, TRUE);
   // Most likely there is something wrong with the hostname.
-  $error = 'Invalid Quant configuration. Check your hostname is set correctly, e.g. <code>www.example.com</code>.';
+  $error = 'Invalid Quant configuration. Check your Webserver URL and Hostname are set correctly, e.g. <code>http://localhost</code> and <code>www.example.com</code>.';
   if (json_last_error() != JSON_ERROR_NONE) {
     form_set_error('quant_hostname', $error);
     return;

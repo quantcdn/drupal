@@ -459,6 +459,7 @@ function quant_seed($url, array $context = array()) {
 
   $quant_hostname = variable_get('quant_hostname');
   if (empty($quant_hostname)) {
+    // @todo Should this be `$base`?
     $quant_hostname = parse_url($base_url, PHP_URL_HOST);
   }
 
@@ -1555,7 +1556,11 @@ function _quant_get_request_header($header) {
  */
 function quant_get_base_url() {
   global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = variable_get('quant_base_url');
+  // Set explicitly in case `quant_base_url` was set to an empty string.
+  if (empty($base)) {
+    $base = $base_url;
+  }
   return $base;
 }
 
