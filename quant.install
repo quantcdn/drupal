@@ -188,6 +188,10 @@ function quant_uninstall() {
   variable_del('quant_token_timeout');
   variable_del('quant_token_strict');
   variable_del('quant_token_secret_regenerate');
+
+  // Drop tables.
+  db_drop_table('quant_queue');
+  db_drop_table('quant_log');
 }
 
 /**
@@ -219,13 +223,17 @@ function quant_update_7002() {
   variable_set('queue_class_quant_seed', 'QuantQueue');
   variable_set('quant_queue_hash_length', 48);
   variable_set('quant_queue_hash_method', 'sha256');
-  db_create_table('quant_queue', drupal_get_schema_unprocessed('quant', 'quant_queue'));
+  if (!db_table_exists('quant_queue')) {
+    db_create_table('quant_queue', drupal_get_schema_unprocessed('quant', 'quant_queue'));
+  }
 }
 
 /**
  * Add the `quant_log` table.
  */
 function quant_update_7003() {
-  db_create_table('quant_log', drupal_get_schema_unprocessed('quant', 'quant_log'));
+  if (!db_table_exists('quant_log')) {
+    db_create_table('quant_log', drupal_get_schema_unprocessed('quant', 'quant_log'));
+  }
   module_enable(array('views'));
 }
