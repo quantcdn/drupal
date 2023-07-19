@@ -73,7 +73,7 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
   $request = array(
     'headers' => quant_api_get_request_headers() + array(
       'content-type' => 'application/json',
-      'User-Agent' => 'Quant (+http://quant.io)',
+      'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
     'method' => 'POST',
     'data' => $data,
@@ -86,7 +86,7 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
     $request = array(
       'headers' => quant_api_get_request_headers() + array(
         'content-type' => 'application/json',
-        'User-Agent' => 'Quant (+http://quant.io)',
+        'User-Agent' => 'Quant (+http://quantcdn.io)',
         'Quant-Url' => '/' . ltrim($from, '/'),
       ),
       'method' => 'PATCH',
