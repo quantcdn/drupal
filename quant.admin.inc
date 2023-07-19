@@ -12,6 +12,8 @@
  */
 function quant_config() {
 
+  drupal_set_title(t('Quant Configuration'));
+
   // Link off to the most relevant documentation.
   $form['docs'] = array(
     '#type' => 'markup',
@@ -83,6 +85,13 @@ function quant_config() {
     '#title' => t('Disable content drafts'),
     '#description' => t('Prevent draft content from being sent to Quant.'),
     '#default_value' => variable_get('disable_content_drafts', TRUE),
+  );
+
+  $form['quant_seed_check_log'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Check logs before seeding'),
+    '#description' => t('Check the logs to see if content has already been seeded and, if so, skip seeding that content. If you need to reseed everything, disable this option or truncate the `quant_log` table. Enabling this option can speed up the seeding process.'),
+    '#default_value' => variable_get('quant_seed_check_log', FALSE),
   );
 
   $form['quant_rewrite_relative'] = array(
@@ -211,6 +220,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
       return;
     }
     else {
+      $form_state['values']['quant_hostname'] = $quant_hostname;
       drupal_set_message(t('Since the Hostname field has been left empty, the base URL in your site will be used instead: <code>@quant_hostname</code>', array('@quant_hostname' => $quant_hostname)));
     }
   }
@@ -273,6 +283,9 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
  * @ingroup forms
  */
 function quant_seed_settings() {
+
+  drupal_set_title(t('Quant Seed'));
+
   $form = array();
   _quant_get_seed_warnings($form);
 
@@ -461,6 +474,9 @@ function quant_form_quant_seed_validate($form = array(), &$form_state = array())
  * Present items that are queued for Quant sending.
  */
 function quant_queue_page() {
+
+  drupal_set_title(t('Quant Queue'));
+
   $items = quant_get_queue(TRUE);
   $rows = [];
 
@@ -546,6 +562,8 @@ function quant_queue_page() {
  * Quant token settings form.
  */
 function quant_token_settings() {
+
+  drupal_set_title(t('Quant Token'));
 
   $form = array();
 

@@ -11,6 +11,9 @@
  * @ingroup forms
  */
 function quant_api_settings() {
+
+  drupal_set_title(t('Quant API'));
+
   if (!variable_get('quant_api_ssl_verify', TRUE)) {
     $form['warning'] = array(
       '#type' => 'markup',

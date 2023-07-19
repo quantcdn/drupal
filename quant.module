@@ -257,6 +257,16 @@ function quant_forbidden() {
 }
 
 /**
+ * Implements hook_views_api().
+ */
+function quant_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'quant') . '/views',
+  );
+}
+
+/**
  * Implements hook_init().
  *
  * Perform token validation at the beginning of the request. This allows us to
@@ -448,14 +458,21 @@ function quant_seed($url, array $context = array()) {
   $path = ltrim($path, '/');
 
   // Ensure URL is processed to account for special character encoding.
-  $url = _rebuild_url($url);
+  $url = $context['url'] = _rebuild_url($url);
 
-  if (path_is_admin($path)) {
-    quant_log('Skip: !path is an admin path', array('!path' => $path));
+  // Skip based on log data.
+  if (quant_log_skip_seed($url, $context)) {
+    quant_log('Quant: Skipping !type !url based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the {quant_log} database table.', array('!type' => $context['type'], '!url' => $url));
     return;
   }
 
-  quant_log('Sending content: !url', array('!url' => $url));
+  // Don't seed admin pages.
+  if (path_is_admin($path)) {
+    quant_log('Quant: Skipping admin page !path', array('!path' => $path));
+    return;
+  }
+
+  quant_log('Quant: Sending !type !url', array('!type' => $context['type'], '!url' => $url));
 
   $quant_hostname = variable_get('quant_hostname');
   if (empty($quant_hostname)) {
@@ -491,6 +508,9 @@ function quant_seed($url, array $context = array()) {
 
   $response = drupal_http_request($url, $options);
 
+  // Save data for logging.
+  $context['status'] = $response->code;
+
   // Ensure file entities have their underlying asset seeded.
   if (isset($context['type']) && $context['type'] == 'file') {
 
@@ -521,6 +541,8 @@ function quant_seed($url, array $context = array()) {
         $fileCtx = array(
           'location' => $context['entity']->uri,
           'request' => $public_path,
+          'type' => 'file',
+          'url' => $context['entity']->uri,
         );
 
         quant_seed_file("{$base}{$public_path}", $fileCtx);
@@ -547,6 +569,7 @@ function quant_seed($url, array $context = array()) {
 
       if (isset($context['type']) && $context['type'] == 'file') {
         // File asset already handled.
+        quant_log_seed($context, 'File asset already handled.');
         return;
       }
       else {
@@ -555,29 +578,35 @@ function quant_seed($url, array $context = array()) {
     }
 
     // Redirect created, internal redirect followed + seeded.
+    quant_log_seed($context, 'Redirect created.');
     return;
   }
 
   if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
+    quant_log_seed($context, 'Unpublish route in Quant.');
     return FALSE;
   }
 
   if (!property_exists($response, 'data') || $response->code > 404) {
-    quant_log('Unable to seed %url %error %request', array(
+    $error = format_string('Unable to seed %url %error %request', array(
       '%url' => $url,
       '%error' => $response->error,
       '%request' => json_encode($response),
-    ), WATCHDOG_ERROR);
+    ));
+    quant_log($error, NULL, WATCHDOG_ERROR);
+    quant_log_seed($context, $error);
     return FALSE;
   }
 
   if ($response->code != 200) {
-    quant_log('Non-200 response code for %url %status_code', array(
+    $error = format_string('Non-200 response code for %url %status_code', array(
       '%url' => $url,
       '%status_code' => $response->code,
-    ), WATCHDOG_WARNING);
+    ));
+    quant_log($error, NULL, WATCHDOG_WARNING);
+    quant_log_seed($context, $error);
     return FALSE;
   }
 
@@ -616,7 +645,7 @@ function quant_seed($url, array $context = array()) {
       $xpath_urls[] = $xpath_url;
       $next_context = array(
         'find_pager' => TRUE,
-        'type' => 'view',
+        'type' => 'view', // @todo type='xpath'?
         'xpath_urls' => $xpath_urls,
       );
       $item = array('quant_seed', array($xpath_url, $next_context));
@@ -651,7 +680,11 @@ function quant_seed($url, array $context = array()) {
   }
 
   drupal_alter('quant_meta', $meta, $context);
-  module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
+  $seed_results = module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
+
+  // Update the context and log.
+  quant_log_check_seed_results($context, $seed_results);
+  quant_log_seed($context);
 }
 
 /**
@@ -659,12 +692,32 @@ function quant_seed($url, array $context = array()) {
  */
 function quant_seed_file($url, $context = array()) {
 
-  quant_log('Sending file: !url', array('!url' => urldecode($url)));
+  // Ensure we have an md5 value for the local file if it exists.
+  if (isset($context['location']) && file_exists($context['location']) && empty($context['md5'])) {
+    $context['md5'] = md5_file($context['location']);
+  }
+
+  // Skip based on log data.
+  if (quant_log_skip_seed($url, $context)) {
+    quant_log('Quant: Skipping file !url based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the {quant_log} database table.', array('!type' => $context['type'], '!url' => $url));
+    return;
+  }
+
+  // Data for logging.
+  if (strpos($url, "http://") !== 0) {
+    $context['url'] = quant_get_base_url() . $url;
+  }
+
+  quant_log('Quant: Sending file !url', array('!url' => urldecode($url)));
 
   // @TODO: Files need different meta?
   $meta = array();
   drupal_alter('quant_file_meta', $meta, $context);
-  module_invoke_all('quant_seed_file', $url, $context);
+  $seed_results = module_invoke_all('quant_seed_file', $url, $context);
+
+  // Update the context and log.
+  quant_log_check_seed_results($context, $seed_results);
+  quant_log_seed($context);
 }
 
 /**
@@ -672,6 +725,11 @@ function quant_seed_file($url, $context = array()) {
  */
 function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
   $vvv = variable_get('quant_verbose_logging', FALSE);
+
+  if (empty($replacements)) {
+    // Prevent errors if $replacements is `null`.
+    $replacements = array();
+  }
 
   if ($level == QUANT_VERBOSE && !$vvv) {
     return;
@@ -688,6 +746,131 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
   }
 
   watchdog('quant', $message, $replacements, $level);
+}
+
+/**
+ * Log seed data to database.
+ */
+function quant_log_seed($context, $message = 'Successful.') {
+  if (!isset($context['url'])) {
+    quant_log('No URL provided for quant_log_seed.', [], WATCHDOG_ERROR);
+    return;
+  }
+
+  $md5 = 0;
+
+  if (isset($context['type']) && isset($context['location']) && file_exists($context['location'])) {
+    switch ($context['type']) {
+      case 'file':
+      case 'file_attachment':
+      case 'theme':
+        $md5 = isset($context['md5']) ? $context['md5'] : md5_file($context['location']);
+        break;
+    }
+  }
+
+  $query = db_merge('quant_log')
+    ->key(array('url' => $context['url']))
+    ->fields(array(
+      'entity_id' => isset($context['id']) ? $context['id'] : 0,
+      'url' => $context['url'],
+      'type' => isset($context['type']) ? $context['type'] : 'unknown',
+      'status' => isset($context['status']) ? $context['status'] : 'unknown',
+      'updated' => time(),
+      'hash' => isset($context['hash']) ? $context['hash'] : 0, // @todo
+      'md5' => $md5,
+      'message' => isset($context['message']) ? $context['message'] : $message
+    ));
+
+  try {
+    return (bool) $query->execute();
+  }
+  catch (\PDOException $error) {
+    quant_log($error, [], WATCHDOG_ERROR);
+    return FALSE;
+  }
+}
+
+/**
+ * Check seed results and adjust the context.
+ */
+function quant_log_check_seed_results(&$context, $seed_results) {
+
+  $message = 'Successful.';
+  // Any error should be logged, so get check for it.
+  $has_error = FALSE;
+  foreach ($seed_results as $seed_result) {
+    if ($seed_result === FALSE) {
+      // Get the last watchdog message.
+      $has_error = TRUE;
+      $watchdog_log = db_query('SELECT message, variables FROM {watchdog} ORDER BY wid DESC LIMIT 1')->fetchObject();
+      $variables = unserialize($watchdog_log->variables);
+      $message = strip_tags(format_string($watchdog_log->message, $variables));
+      break;
+    }
+  }
+
+  $context['message'] = $message;
+  $context['status'] = isset($context['status']) ? $context['status'] : ($has_error ? 'Unknown' : '200');
+}
+
+/**
+ * Check if seed item should skip based on log.
+ */
+function quant_log_skip_seed($url, $context) {
+  // Only skip if configured for this option.
+  if (!variable_get('quant_seed_check_log', FALSE)) {
+    return FALSE;
+  }
+
+  if (empty($context['type'])) {
+    return;
+  }
+
+  // Handle entities.
+  if (isset($context['id'])) {
+    $entities = entity_load($context['type'], [$context['id']]);
+    if (empty($entities)) {
+      // Something is wrong with the type or id.
+      quant_log(t('Could not load entity %type (%id)', ['%type' => $context['type'], '%id' => $context['id']]));
+      return TRUE;
+    }
+    $entity = reset($entities);
+    $changed = isset($entity->changed) ? $entity->changed : (isset($entity->created) ? $entity->created : (isset($entity->timestamp) ? $entity->timestamp : 0));
+
+    // Check the quant_log data for this entity.
+    $logs = db_query('SELECT * FROM {quant_log} WHERE entity_id = :entity_id AND type = :type', array(':entity_id' => $context['id'], ':type' => $context['type']));
+    foreach ($logs as $log) {
+      // Reprocess if status or log message aren't as expected.
+      if ($log->status != '200' || $log->message != 'Successful.') {
+        return FALSE;
+      }
+      // Check the log date against the entity.
+      if ($changed != 0 && $changed < $log->updated) {
+        return TRUE;
+      }
+    }
+  }
+
+  switch ($context['type']) {
+    case 'file':
+    case 'file_attachment':
+    case 'theme':
+      // Check the log md5 against the context md5.
+      if (isset($context['location']) && isset($context['md5'])) {
+        $log_md5 = db_query('SELECT md5 FROM {quant_log} WHERE url like :url AND type = :type', array(
+          ':url' => '%' . db_like($url),
+          ':type' => $context['type'],
+        ))->fetchField();
+        if ($log_md5) {
+          $file_md5 = md5_file($context['location']);
+          return $file_md5 == $log_md5;
+        }
+      }
+      break;
+  }
+
+  return FALSE;
 }
 
 /**
@@ -831,7 +1014,7 @@ function _quant_queue_menu_paths(array $menus_filter = array()) {
 
       $item = array(
         'quant_seed',
-        array(trim($url)),
+        array(trim($url), array('type' => 'menu')),
       );
       $queue->createItem($item);
 
@@ -864,14 +1047,15 @@ function _quant_queue_nodes(array $bundles = array()) {
   $nids = $query->execute()->fetchCol();
   asort($nids);
 
-  $item = array('quant_seed', array("$base/"));
+  quant_log('Quant: Adding home to the list.');
+  $item = array('quant_seed', array("$base/", array('type' => 'home')));
   $queue->createItem($item);
 
   foreach ($nids as $nid) {
     quant_log('Quant: Adding node [!nid] to the list.', array('!nid' => $nid));
     $item = array(
       'quant_seed_node_batch',
-      array($nid),
+      array($nid, array('type' => 'node')),
     );
     if (!$queue->createItem($item)) {
       quant_log('...Skipping duplicate entity');
@@ -896,10 +1080,10 @@ function _quant_queue_taxonomy() {
   asort($tids);
 
   foreach ($tids as $tid) {
-    quant_log('Quant: Adding term [!tid] to the list.', array('!tid' => $tid));
+    quant_log('Quant: Adding taxonomy_term [!tid] to the list.', array('!tid' => $tid));
     $item = array(
       'quant_seed_taxonomy_batch',
-      array($tid),
+      array($tid, array('type' => 'taxonomy_term')),
     );
     $queue->createItem($item);
   }
@@ -946,6 +1130,7 @@ function _quant_queue_theme_assets($theme_machine_name = NULL) {
     $context = array(
       'location' => $file->uri,
       'request' => $file_on_disk,
+      'type' => 'theme',
     );
 
     quant_log('Quant: Adding file [!path] to the list.', array('!path' => $file_on_disk));
@@ -966,18 +1151,19 @@ function _quant_queue_page_manager() {
   $base = variable_get('quant_base_url', $base_url);
   $queue = quant_get_queue();
 
-  $config = array();
+  $context = array();
   $pages = db_query('SELECT p.path FROM {page_manager_pages} p')->fetchAll();
 
   foreach ($pages as $page) {
+    quant_log('Quant: Adding page_manager page [!path] to the list.', array('!path' => $page->path));
     $url = "$base/" . $page->path;
 
-    $config['find_pager'] = TRUE;
-    $config['type'] = 'page_manager';
+    $context['find_pager'] = TRUE;
+    $context['type'] = 'page_manager';
 
     $item = array(
       'quant_seed',
-      array(trim($url), $config),
+      array(trim($url), $context),
     );
     $queue->createItem($item);
   }
@@ -998,18 +1184,30 @@ function _quant_queue_views() {
     views_menu_alter($menus);
   }
 
-  foreach ($menus as $path => $config) {
+  foreach ($menus as $path => $context) {
     $url = "$base/$path";
 
-    $config['find_pager'] = TRUE;
-    $config['type'] = 'view';
+    // Don't seed admin pages.
+    if (path_is_admin($path)) {
+      // Only log non-Quant admin views.
+      $quant_view_path = 'admin/config/services/quant';
+      if (!substr($path, 0, strlen($quant_view_path)) === $quant_view_path) {
+        quant_log('Quant: Skipping admin view !path', array('!path' => $path));
+      }
+      continue;
+    }
+
+    quant_log('Quant: Adding view [!path] to the list.', array('!path' => $path));
+
+    $context['find_pager'] = TRUE;
+    $context['type'] = 'view';
 
     // @TODO: We have menu access callbacks so we should
     // validate anonymous has access before we add the operation.
     // Pages will be exported to Quant with 401.
     $item = array(
       'quant_seed',
-      array($url, $config),
+      array($url, $context),
     );
     $queue->createItem($item);
   }
@@ -1029,15 +1227,17 @@ function _quant_queue_routes($routes) {
   $queue = quant_get_queue();
 
   foreach ($routes as $route) {
+    quant_log('Quant: Adding route [!route] to the list.', array('!route' => $route));
     if (strpos((trim($route)), '/') !== 0) {
       continue;
     }
 
     $url = $base . $route;
+    $context = array('type' => 'route');
 
     $item = array(
       'quant_seed',
-      array(trim($url)),
+      array(trim($url), $context),
     );
     $queue->createItem($item);
   }
@@ -1059,7 +1259,6 @@ function quant_seed_taxonomy_batch($tid) {
 
   // Find pagination within taxonomy term pages.
   $context['find_pager'] = TRUE;
-  $context['type'] = 'taxonomy_term';
 
   quant_seed($url, $context);
 }
