@@ -189,9 +189,9 @@ function quant_uninstall() {
   variable_del('quant_token_strict');
   variable_del('quant_token_secret_regenerate');
 
-  // Drop tables.
-  db_drop_table('quant_queue');
-  db_drop_table('quant_log');
+  // Delete tables.
+  db_delete('quant_queue');
+  db_delete('quant_log');
 }
 
 /**
