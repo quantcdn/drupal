@@ -179,6 +179,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
       return;
     }
     else {
+      $form_state['values']['quant_hostname'] = $quant_hostname;
       drupal_set_message(t('Since the Hostname field has been left empty, the base URL in your site will be used instead: <code>@quant_hostname</code>', array('@quant_hostname' => $quant_hostname)));
     }
   }
