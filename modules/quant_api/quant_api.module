@@ -13,6 +13,15 @@
 define('QUANT_API_ENDPOINT_DEFAULT', 'https://api.quantcdn.io');
 
 /**
+ * Implements hook_enable().
+ */
+function quant_api_enable() {
+  // To avoid a circular dependency which will prevent uninstalling, enable the
+  // Quant module here instead of adding it as a dependency in the info file.
+  module_enable(array('quant'));
+}
+
+/**
  * Implements hook_help().
  */
 function quant_api_help($section) {
