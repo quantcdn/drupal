@@ -234,16 +234,3 @@ $handler->display->display_options['menu']['title'] = 'Log';
 $handler->display->display_options['menu']['weight'] = '100';
 $handler->display->display_options['menu']['context'] = 0;
 $handler->display->display_options['menu']['context_only_inline'] = 0;
-
-/* Display: Quant Log Export */
-$handler = $view->new_display('views_data_export', 'Quant Log Export', 'views_data_export');
-$handler->display->display_options['pager']['type'] = 'none';
-$handler->display->display_options['pager']['options']['offset'] = '0';
-$handler->display->display_options['style_plugin'] = 'views_data_export_csv';
-$handler->display->display_options['defaults']['filter_groups'] = FALSE;
-$handler->display->display_options['defaults']['filters'] = FALSE;
-$handler->display->display_options['path'] = 'admin/config/services/quant/log/export';
-$handler->display->display_options['displays'] = array(
-  'page' => 'page',
-  'default' => 0,
-);
