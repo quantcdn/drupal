@@ -458,7 +458,7 @@ function quant_seed($url, array $context = array()) {
   $path = ltrim($path, '/');
 
   // Ensure URL is processed to account for special character encoding.
-  $url = $context['url'] = _rebuild_url($url);
+  $url = _rebuild_url($url);
 
   // Skip based on log data.
   if (quant_log_skip_seed($url, $context)) {
@@ -569,7 +569,7 @@ function quant_seed($url, array $context = array()) {
 
       if (isset($context['type']) && $context['type'] == 'file') {
         // File asset already handled.
-        quant_log_seed($context, 'File asset already handled.');
+        quant_log_seed($url, $context, 'File asset already handled.');
         return;
       }
       else {
@@ -578,14 +578,14 @@ function quant_seed($url, array $context = array()) {
     }
 
     // Redirect created, internal redirect followed + seeded.
-    quant_log_seed($context, 'Redirect created.');
+    quant_log_seed($url, $context, 'Redirect created.');
     return;
   }
 
   if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
-    quant_log_seed($context, 'Unpublish route in Quant.');
+    quant_log_seed($url, $context, 'Unpublish route in Quant.');
     return FALSE;
   }
 
@@ -596,7 +596,7 @@ function quant_seed($url, array $context = array()) {
       '%request' => json_encode($response),
     ));
     quant_log($error, NULL, WATCHDOG_ERROR);
-    quant_log_seed($context, $error);
+    quant_log_seed($url, $context, $error);
     return FALSE;
   }
 
@@ -606,7 +606,7 @@ function quant_seed($url, array $context = array()) {
       '%status_code' => $response->code,
     ));
     quant_log($error, NULL, WATCHDOG_WARNING);
-    quant_log_seed($context, $error);
+    quant_log_seed($url, $context, $error);
     return FALSE;
   }
 
@@ -684,7 +684,7 @@ function quant_seed($url, array $context = array()) {
 
   // Update the context and log.
   quant_log_check_seed_results($context, $seed_results);
-  quant_log_seed($context);
+  quant_log_seed($url, $context);
 }
 
 /**
@@ -703,11 +703,6 @@ function quant_seed_file($url, $context = array()) {
     return;
   }
 
-  // Data for logging.
-  if (strpos($url, "http://") !== 0) {
-    $context['url'] = quant_get_base_url() . $url;
-  }
-
   quant_log('Quant: Sending file !url', array('!url' => urldecode($url)));
 
   // @TODO: Files need different meta?
@@ -717,7 +712,7 @@ function quant_seed_file($url, $context = array()) {
 
   // Update the context and log.
   quant_log_check_seed_results($context, $seed_results);
-  quant_log_seed($context);
+  quant_log_seed($url, $context);
 }
 
 /**
@@ -751,8 +746,10 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
 /**
  * Log seed data to database.
  */
-function quant_log_seed($context, $message = 'Successful.') {
-  if (!isset($context['url'])) {
+function quant_log_seed($url, $context, $message = 'Successful.') {
+  // Just keep the URI.
+  $url = parse_url($url, PHP_URL_PATH);
+  if (empty($url)) {
     quant_log('No URL provided for quant_log_seed.', [], WATCHDOG_ERROR);
     return;
   }
@@ -770,10 +767,10 @@ function quant_log_seed($context, $message = 'Successful.') {
   }
 
   $query = db_merge('quant_log')
-    ->key(array('url' => $context['url']))
+    ->key(array('url' => $url))
     ->fields(array(
       'entity_id' => isset($context['id']) ? $context['id'] : 0,
-      'url' => $context['url'],
+      'url' => $url,
       'type' => isset($context['type']) ? $context['type'] : 'unknown',
       'status' => isset($context['status']) ? $context['status'] : 'unknown',
       'updated' => time(),
