@@ -767,7 +767,7 @@ function quant_log_seed($context, $message = 'Successful.') {
         $md5 = isset($context['md5']) ? $context['md5'] : md5_file($context['location']);
         break;
     }
-  } 
+  }
 
   $query = db_merge('quant_log')
     ->key(array('url' => $context['url']))

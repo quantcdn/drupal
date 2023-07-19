@@ -316,7 +316,7 @@ function quant_api_quant_seed_file($url, $context) {
     );
 
     // Ensure url is absolute for internal HEAD request.
-    if(strpos($url, "http") !== 0) {
+    if (strpos($url, "http") !== 0) {
       // Ensure url path starts with a slash.
       if (substr($url, 0, 1) !== '/') {
         $url = '/' . $url;
