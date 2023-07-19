@@ -174,7 +174,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
     }
   }
   else {
-    $error = 'Your webserver URL is set incorrectly. It should be a fully-qualified domain name, e.g. <code>http://localhost</code>.';
+    $error = 'Your Webserver URL is set incorrectly. It should be a fully-qualified domain name, e.g. <code>http://localhost</code>.';
     if (filter_var($quant_base_url, FILTER_VALIDATE_URL) === FALSE) {
       form_set_error('quant_base_url', $error);
       return;
@@ -253,7 +253,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
 
   $data = @json_decode($response->data, TRUE);
   // Most likely there is something wrong with the hostname.
-  $error = 'Invalid Quant configuration. Check your hostname is set correctly, e.g. <code>www.example.com</code>.';
+  $error = 'Invalid Quant configuration. Check your Webserver URL and Hostname are set correctly, e.g. <code>http://localhost</code> and <code>www.example.com</code>.';
   if (json_last_error() != JSON_ERROR_NONE) {
     form_set_error('quant_hostname', $error);
     return;
