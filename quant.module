@@ -504,7 +504,7 @@ function quant_seed($url, array $context = array()) {
   }
 
   // Set the internal request method.
-  $options['method'] = variable_get('quant_api_seed_get', FALSE) ? 'GET' : 'POST';
+  $options['method'] = variable_get('quant_seed_get', TRUE) ? 'GET' : 'POST';
 
   $response = drupal_http_request($url, $options);
 

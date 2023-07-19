@@ -169,6 +169,7 @@ function quant_uninstall() {
   variable_del('quant_verbose_logging');
   variable_del('quant_verify_ssl');
   variable_del('quant_alternate_file_handler');
+  variable_del('quant_seed_get');
   variable_del('quant_base_url');
   variable_del('quant_hostname');
 
@@ -236,4 +237,11 @@ function quant_update_7003() {
     db_create_table('quant_log', drupal_get_schema_unprocessed('quant', 'quant_log'));
   }
   module_enable(array('views'));
+}
+
+/**
+ * Set the `quant_seed_get` variable.
+ */
+function quant_update_7004() {
+  variable_set('quant_seed_get', TRUE);
 }
