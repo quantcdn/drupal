@@ -14,6 +14,7 @@ use Drupal\quant\QuantStaticTrait;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * Contains a form for initializing a static build.
@@ -366,7 +367,7 @@ class SeedForm extends FormBase {
       }
     }
 
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
     $queue->deleteQueue();
 

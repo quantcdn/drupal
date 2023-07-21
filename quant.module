@@ -14,6 +14,7 @@ use Drupal\Core\Url;
 use Drupal\quant\Exception\TokenValidationDisabledException;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Seed;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * Implements hook_menu_local_tasks_alter().
@@ -299,7 +300,7 @@ function quant_node_translation_delete($entity) {
  *   The batch context.
  */
 function quant_process_queue(array &$context) {
-  $factory = \Drupal::service('queue');
+  $factory = QuantQueueFactory::getInstance();
   $manager = \Drupal::service('plugin.manager.queue_worker');
 
   $queue = $factory->get('quant_seed_worker');

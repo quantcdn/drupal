@@ -4,6 +4,8 @@ namespace Drupal\quant\Page;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Database\Query\PagerSelectExtender;
+use Drupal\quant\QuantQueue;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * Page controller for the queue info page.
@@ -18,7 +20,7 @@ class QueueInfo extends ControllerBase {
    */
   public function build() {
     $db = \Drupal::database();
-    $query = $db->select('queue', 'q')
+    $query = $db->select(QuantQueue::getTableName(), 'q')
       ->condition('name', 'quant_seed_worker')
       ->fields('q', ['item_id', 'name', 'data', 'expire', 'created']);
     $pager = $query->extend(PagerSelectExtender::class)->limit(10);
@@ -30,7 +32,7 @@ class QueueInfo extends ControllerBase {
       $this->t('Content/Data'),
     ];
 
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
 
     if ($queue->numberOfItems() > 0) {

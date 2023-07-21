@@ -13,6 +13,7 @@ use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Seed;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * Integrate with the QuantAPI to store static assets.
@@ -146,7 +147,7 @@ class QuantApi implements EventSubscriberInterface {
 
     $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents'], $res['attachments']['media']['video']);
 
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
 
     foreach ($media as $item) {

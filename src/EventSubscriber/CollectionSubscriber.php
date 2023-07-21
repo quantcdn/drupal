@@ -17,6 +17,7 @@ use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Seed;
 use Drupal\redirect\Entity\Redirect;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * Event subscribers for the quant collection events.
@@ -262,7 +263,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
           // Generate a redirection QueueItem from canonical path to URL.
           // Use the default language alias in the event of multi-lang setup.
-          $queue_factory = \Drupal::service('queue');
+          $queue_factory = QuantQueueFactory::getInstance();
           $queue = $queue_factory->get('quant_seed_worker');
 
           if ("/taxonomy/term/{$tid}" != $url) {
