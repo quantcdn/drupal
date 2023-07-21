@@ -25,7 +25,7 @@ class QuantQueue extends DatabaseQueue {
   /**
    * The algorithm used to hash the item.
    */
-  public const HASH_METHOD = 'sha2';
+  public const HASH_METHOD = 'sha512';
 
   /**
    * {@inheritdoc}
@@ -44,6 +44,7 @@ class QuantQueue extends DatabaseQueue {
       return $query->execute();
     }
     catch (IntegrityConstraintViolationException $err) {
+      var_dump('skipping cause exists');
       return FALSE;
     }
   }
