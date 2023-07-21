@@ -12,7 +12,7 @@ jobs:
 
   phpunit:
     runs-on: ubuntu-latest
-    container: quantcdn/drupal-ci:9.4.x-dev
+    # container: quantcdn/drupal-ci:9.4.x-dev
 
     services:
       mariadb:
