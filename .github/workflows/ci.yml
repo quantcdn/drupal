@@ -26,9 +26,9 @@ jobs:
           MYSQL_PASSWORD: drupal
         options: >-
           --health-cmd="mysqladmin ping" 
-          --health-interval=30s
+          --health-interval=10s
           --health-timeout=5s
-          --health-retries=10
+          --health-retries=30
 
     steps:
       - name: Install Drupal
