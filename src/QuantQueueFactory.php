@@ -11,7 +11,7 @@ use Drupal\Core\Site\Settings;
 class QuantQueueFactory extends QueueDatabaseFactory {
 
   /**
-   * Get an instance of the facotry.
+   * Get an instance of the factory.
    *
    * @return \Drupal\Core\Queue\QueueDatabaseFactory|QuantQueueFactory
    *   The queue factory based on site configuration.
