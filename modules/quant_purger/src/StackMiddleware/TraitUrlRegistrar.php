@@ -20,7 +20,7 @@ trait TraitUrlRegistrar {
     // possible - we don't want to add a huge performance burden to
     // begin tracking pages to cachetags.
     if (!$request->headers->has('quant-token')) {
-      return TRUE;
+      return FALSE;
     }
 
     // Allow paths to be excluded from the traffic repository.
