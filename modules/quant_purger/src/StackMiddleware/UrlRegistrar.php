@@ -70,7 +70,8 @@ if (empty($method->getReturnType())) {
 
   }
 
-} else {
+}
+else {
   /**
    * Collects URLs that Quant has requested.
    */
@@ -111,7 +112,7 @@ if (empty($method->getReturnType())) {
     /**
      * {@inheritdoc}
      */
-    public function handle(Request $request, int $type = self::MAIN_REQUEST, bool $catch = true): Response  {
+    public function handle(Request $request, int $type = self::MAIN_REQUEST, bool $catch = TRUE): Response {
       $response = $this->httpKernel->handle($request, $type, $catch);
       var_dump('d10');
       if ($this->determine($request, $response)) {

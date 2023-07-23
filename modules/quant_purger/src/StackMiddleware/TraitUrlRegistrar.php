@@ -6,6 +6,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Drupal\Core\Cache\CacheableResponseInterface;
 
+/**
+ * Methods for the URL registrar classes.
+ */
 trait TraitUrlRegistrar {
 
   /**
