@@ -12,5 +12,6 @@ tag_blocklist:
   - 'paragraph_view'
   - 'config:*'
   - 'user:*'
+  - 'local_task'
 path_blocklist:
   - '/admin/*'
