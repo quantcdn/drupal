@@ -114,7 +114,6 @@ else {
      */
     public function handle(Request $request, int $type = self::MAIN_REQUEST, bool $catch = TRUE): Response {
       $response = $this->httpKernel->handle($request, $type, $catch);
-      var_dump('d10');
       if ($this->determine($request, $response)) {
         $this->registry->add(
           $this->generateUrl($request),
