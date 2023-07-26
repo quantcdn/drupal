@@ -10,6 +10,7 @@ use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * A drush command file.
@@ -72,7 +73,6 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:run-queue --threads=5
    */
   public function message($options = ['threads' => 5]) {
-
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
     $cmd = $drushPath . ' queue:run quant_seed_worker';
@@ -103,7 +103,7 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:clear-queue
    */
   public function clear($options = []) {
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
     $queue->deleteQueue();
     $this->output()->writeln("Removed all items from Quant queue.");
@@ -123,7 +123,7 @@ class QuantDrushCommands extends DrushCommands {
 
     $config = \Drupal::configFactory()->getEditable('quant.settings');
 
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
 
     $dispatcher = \Drupal::service('event_dispatcher');

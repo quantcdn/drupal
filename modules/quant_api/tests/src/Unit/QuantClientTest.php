@@ -112,6 +112,7 @@ class QuantClientTest extends UnitTestCase {
     $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
     $config = $this->getConfigStub();
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $http->get('http://test/ping', [
       'http_errors' => FALSE,
       'headers' => [
@@ -134,6 +135,7 @@ class QuantClientTest extends UnitTestCase {
     $config = $this->getConfigStub();
     $res = $this->getProjectResponse();
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $http->get('http://test/ping', [
       'http_errors' => FALSE,
       'headers' => [
@@ -158,6 +160,7 @@ class QuantClientTest extends UnitTestCase {
     $config = $this->getConfigStub();
     $res = $this->getInvalidResponse();
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $http->get('http://test/ping', [
       'http_errors' => FALSE,
       'headers' => [
@@ -181,6 +184,7 @@ class QuantClientTest extends UnitTestCase {
     $config = $this->getConfigStub();
     $res = $this->getProjectResponse();
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $http->post('http://test', [
       RequestOptions::JSON => [],
       'headers' => [
@@ -204,6 +208,7 @@ class QuantClientTest extends UnitTestCase {
     $config = $this->getConfigStub();
     $res = $this->getInvalidResponse();
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $http->post('http://test', [
       RequestOptions::JSON => [],
       'headers' => [
@@ -225,6 +230,7 @@ class QuantClientTest extends UnitTestCase {
     $config = $this->getConfigStub();
     $res = $this->getRedirectResponse();
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $http->post('http://test/redirect', [
       RequestOptions::JSON => [],
       'headers' => [
@@ -257,6 +263,7 @@ class QuantClientTest extends UnitTestCase {
     $config = $this->getConfigStub();
     $res = $this->getInvalidResponse();
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $http->post('http://test/redirect', [
       RequestOptions::JSON => [],
       'headers' => [
@@ -308,6 +315,7 @@ class QuantClientTest extends UnitTestCase {
     $config = $this->getConfigStub();
     $res = $this->getProjectResponse();
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $http->post('http://test', [
       'headers' => [
         'Quant-File-Url' => '/url',

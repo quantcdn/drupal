@@ -80,6 +80,7 @@ class QuantClient implements QuantClientInterface {
   public function ping() {
 
     try {
+      // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
       $response = $this->client->get($this->endpoint . "/ping", [
         'http_errors' => FALSE,
         'headers' => [
@@ -119,6 +120,7 @@ class QuantClient implements QuantClientInterface {
   public function project() {
 
     try {
+      // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
       $response = $this->client->get($this->endpoint . "/ping", [
         'http_errors' => FALSE,
         'headers' => [
@@ -157,6 +159,7 @@ class QuantClient implements QuantClientInterface {
   public function search() {
 
     try {
+      // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
       $response = $this->client->get($this->endpoint . "/search", [
         'http_errors' => FALSE,
         'headers' => [
@@ -193,6 +196,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function send(array $data) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint, [
       RequestOptions::JSON => $data,
       'headers' => [
@@ -210,6 +214,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function sendRedirect(array $data) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/redirect', [
       RequestOptions::JSON => $data,
       'headers' => [
@@ -237,6 +242,7 @@ class QuantClient implements QuantClientInterface {
     $resource = fopen($file, 'r');
     $stream = Utils::streamFor($resource);
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $headers = [
       'Quant-File-Url' => $url,
       'Quant-Customer' => $this->username,
@@ -274,6 +280,7 @@ class QuantClient implements QuantClientInterface {
    *   The API response.
    */
   public function unpublish(string $url) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->patch($this->endpoint . '/unpublish', [
       'headers' => [
         'Quant-Url' => $url,
@@ -291,6 +298,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function sendSearchRecords(array $records) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/search', [
       RequestOptions::JSON => $records,
       'headers' => [
@@ -308,6 +316,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function clearSearchIndex() : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->delete($this->endpoint . '/search/all', [
       'headers' => [
         'Quant-Customer' => $this->username,
@@ -324,6 +333,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function addFacets(array $facets) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/search/facet', [
       RequestOptions::JSON => $facets,
       'headers' => [
