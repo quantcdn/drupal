@@ -149,10 +149,15 @@ class ConfigurationForm extends QueuerConfigFormBase {
 
     if (!$form_state->getErrors()) {
       \Drupal::service('quant_purger.registry')->clear();
+      $status = 'status';
+      $message = $this->t('Succesfully cleared the traffic registry.');
+    }
+    else {
+      $status = 'error';
+      $message = $this->t('Unable to clear the traffic registry due to form errors.');
     }
 
-    $message = $this->t('Succesfully cleared the traffic registry');
-    $response->addCommand(new PrependCommand('#purgedialogform', '<div class="messages messages--status" style="margin-top: 1rem"><div class="message__content">' . $message . '</div></div>'));
+    $response->addCommand(new PrependCommand('#purgedialogform', '<div class="messages messages--' . $status . '" style="margin-top: 1rem"><div class="message__content">' . $message . '</div></div>'));
 
     return $response;
   }
