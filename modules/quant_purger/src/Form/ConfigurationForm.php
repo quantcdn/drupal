@@ -80,9 +80,9 @@ class ConfigurationForm extends QueuerConfigFormBase {
       ];
     }
 
-    $form['path_blocklist_fieldset']['#description'] = $this->t('The Quant purge querer collects HTTP requests that the Quant module makes to generate static representations of content. It requires that the request has a valid token to limit the performance impact of gathering traffic information in such a manner. This is a user managed list of paths and query strings that will be excluded from traffic gathering.');
+    $form['path_blocklist_fieldset']['#description'] = $this->t('The Quant purge queuer collects HTTP requests that the Quant module makes to generate static representations of content. It requires that the request has a valid token to limit the performance impact of gathering traffic information in such a manner. This is a user managed list of paths and query strings that will be excluded from traffic gathering.');
 
-    $form['tag_blocklist_fieldset']['#description'] = $this->t('By default all cache tag invalidations will trigger a queue entry. Some of these invalidations can have widespread effects on the site and require a full content seed. This allows you to exclude certain tags from triggering a content re-index.');
+    $form['tag_blocklist_fieldset']['#description'] = $this->t('By default all cache tag invalidations will trigger a queue entry. Some of these invalidations can have widespread effects on the site and require a full content seed. This allows you to exclude certain tags from triggering a content re-seed.');
 
     $form['actions']['clear'] = [
       '#type' => 'submit',

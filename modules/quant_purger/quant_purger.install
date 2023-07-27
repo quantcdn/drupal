@@ -38,7 +38,7 @@ function quant_purger_schema() {
 /**
  * Update configuration for module settings.
  */
-function quant_purger_update_0001(&$sandbox) {
+function quant_purger_update_9101(&$sandbox) {
   $config = \Drupal::configFactory()->getEditable('quant_purger.settings');
   $config->set('tag_blocklist', [
     'rendered',
@@ -46,10 +46,15 @@ function quant_purger_update_0001(&$sandbox) {
     '4xx-response',
     'block_view',
     'block_view_content',
-    'config:*',
     'node_view',
     'node_list',
     'media_view',
+    'block_content_view',
+    'marketo_form_view',
+    'paragraph_view',
+    'config:*',
+    'user:*',
+    'local_task',
   ]);
   $config->set('path_blocklist', ['/admin/*']);
   $config->save();
