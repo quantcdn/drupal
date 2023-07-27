@@ -74,7 +74,8 @@ class TrafficRegistry implements TrafficRegistryInterface {
         ->fields('q', ['url'])
         ->condition($or)
         ->execute();
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
       // During install and uninstall the purge_queue_quant table may not
       // be available which can result in a race condition with this query,
       // return an empty URL list if the query fails.
