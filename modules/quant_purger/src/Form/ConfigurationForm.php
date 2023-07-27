@@ -154,7 +154,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
     }
     else {
       $status = 'error';
-      $message = $this->t('Unable to clear the traffic registry due to form errors:<br/><br/>' . implode('<br/>', $form_state->getErrors()));
+      $message = $this->t('Unable to clear the traffic registry due to form errors:<br/><br/>%errors', ['%errors' => implode('<br/>', $form_state->getErrors())]);
     }
 
     $response->addCommand(new PrependCommand('#purgedialogform', '<div class="messages messages--' . $status . '" style="margin-top: 1rem"><div class="message__content">' . $message . '</div></div>'));
