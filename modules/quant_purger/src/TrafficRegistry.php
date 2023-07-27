@@ -69,10 +69,17 @@ class TrafficRegistry implements TrafficRegistryInterface {
       $or->condition('tags', $condition, 'LIKE');
     }
 
-    $results = $this->connection->select('purge_queuer_quant', 'q')
-      ->fields('q', ['url'])
-      ->condition($or)
-      ->execute();
+    try {
+      $results = $this->connection->select('purge_queuer_quant', 'q')
+        ->fields('q', ['url'])
+        ->condition($or)
+        ->execute();
+    } catch (\Exception $e) {
+      // During install and uninstall the purge_queue_quant table may not
+      // be available which can result in a race condition with this query,
+      // return an empty URL list if the query fails.
+      return $urls;
+    }
 
     foreach ($results as $result) {
       $urls[] = $result->url;

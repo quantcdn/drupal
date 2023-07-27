@@ -36,6 +36,13 @@ function quant_purger_schema() {
 }
 
 /**
+ * Implements hook_uninstall().
+ */
+function quant_purger_uninstall() {
+  \Drupal::configFactorY()->getEditable('quant_purger.settings')->delete();
+}
+
+/**
  * Update configuration for module settings.
  */
 function quant_purger_update_9101(&$sandbox) {
