@@ -4,11 +4,14 @@ namespace Drupal\quant_purger;
 
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Database\Query\Condition;
+use Drupal\quant_purger\StackMiddleware\TraitUrlRegistrar;
 
 /**
  * The quant traffic registry.
  */
 class TrafficRegistry implements TrafficRegistryInterface {
+
+  use TraitUrlRegistrar;
 
   /**
    * The active database connection.
@@ -62,7 +65,7 @@ class TrafficRegistry implements TrafficRegistryInterface {
    */
   public function getPaths(array $tags) {
     $urls = [];
-
+    $tags = $this->getAcceptedCacheTags($tags);
     $or = new Condition('OR');
     foreach ($tags as $tag) {
       $condition = '%;' . $this->connection->escapeLike($tag) . ';%';
