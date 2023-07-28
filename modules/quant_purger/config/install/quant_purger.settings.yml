@@ -6,6 +6,7 @@ tag_blocklist:
   - 'block_view_content'
   - 'node_view'
   - 'node_list'
+  - 'taxonomy_term_list'
   - 'media_view'
   - 'block_content_view'
   - 'marketo_form_view'
