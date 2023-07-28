@@ -54,7 +54,7 @@ class TrafficRegistry implements TrafficRegistryInterface {
    * {@inheritdoc}
    */
   public function clear() {
-    $this->connection->delete('purge_queuer_quant');
+    $this->connection->delete('purge_queuer_quant')->execute();
   }
 
   /**
