@@ -30,7 +30,7 @@ trait TraitUrlRegistrar {
     $blocklist = $this->config->get('path_blocklist');
     if (is_array($blocklist)) {
       $path = $this->generateUrl($request);
-      foreach ($blocklist as $needle) {
+      foreach (array_filter($blocklist) as $needle) {
         $pattern = preg_quote($needle, '/');
         $pattern = str_replace('\*', '.*', $pattern);
         preg_match('/^(' . $pattern . ')/', $path, $is_match);
@@ -78,7 +78,7 @@ trait TraitUrlRegistrar {
    */
   protected function getAcceptedCacheTags(array $tag_list) {
     $blocklist = $this->config->get('tag_blocklist');
-    $blocklist = is_array($blocklist) ? $blocklist : [];
+    $blocklist = is_array($blocklist) ? array_filter($blocklist) : [];
     $tags = preg_grep('/^(' . implode('|', $blocklist) . ')/', $tag_list, PREG_GREP_INVERT);
     return array_filter($tags);
   }
