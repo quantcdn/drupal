@@ -21,6 +21,13 @@ class TrafficRegistry implements TrafficRegistryInterface {
   protected $connection;
 
   /**
+   * The configuration object for quant purger.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
+  protected $config;
+
+  /**
    * Constructs a quant traffic registry event.
    *
    * @param \Drupal\Core\Database\Connection $connection
@@ -28,6 +35,7 @@ class TrafficRegistry implements TrafficRegistryInterface {
    */
   public function __construct(Connection $connection) {
     $this->connection = $connection;
+    $this->config = \Drupal::configFactory()->get('quant_purger.settings');
   }
 
   /**
