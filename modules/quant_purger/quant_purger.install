@@ -40,7 +40,7 @@ function quant_purger_schema() {
  */
 function quant_purger_install() {
   // @todo get the URLs programatically.
-  // Note, markup is not being rendered properly during install so not adding HTML.
+  // Markup is not being rendered properly during install so not adding HTML.
   if (\Drupal::moduleHandler()->moduleExists('purge_ui')) {
     \Drupal::messenger()->addStatus(t('Quant Purger: You can add or remove cache tags and URLs via the Purge UI: :url', [':url' => '/admin/config/development/performance/purge']));
   }
