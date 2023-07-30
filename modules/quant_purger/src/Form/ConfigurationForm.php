@@ -94,7 +94,12 @@ class ConfigurationForm extends QueuerConfigFormBase {
       ],
     ];
 
-    return parent::buildForm($form, $form_state);
+    $form = parent::buildForm($form, $form_state);
+
+    // Remove cancel button since it doesn't work and the popup can be closed.
+    unset($form['actions']['cancel']);
+
+    return $form;
   }
 
   /**
