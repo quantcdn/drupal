@@ -1,0 +1,10 @@
+name: 'Quant Tome'
+description: 'Deploy Tome static output to Quant.'
+package: Quant
+
+type: module
+core_version_requirement: ^9.3 || ^10
+
+dependencies:
+- tome:tome_static
+- quant:quant_api

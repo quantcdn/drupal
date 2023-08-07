@@ -11,6 +11,7 @@ use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\Plugin\QueueItem\NodeItem;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * A drush command file.
@@ -78,6 +79,7 @@ class QuantDrushCommands extends DrushCommands {
 
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
+    $lockFilePath = sys_get_temp_dir() . '/quant_seed_worker.lock';
     $cmd = $drushPath . ' queue:run quant_seed_worker';
 
     if ($options['items-limit'] > 0) {
@@ -85,6 +87,15 @@ class QuantDrushCommands extends DrushCommands {
     }
 
     $this->output()->writeln("<comment>Using drush binary at $drushPath. Override with \$DRUSH_PATH if required.</comment>");
+
+    // Bail if another run is in progress.
+    if (file_exists($lockFilePath)) {
+      $this->output()->writeln("<info>Seeding bailed. Another seed run is in progress.</info>");
+      return;
+    } else {
+      // No lock currently present. Create new lock file.
+      file_put_contents($lockFilePath, null);
+    }
 
     for ($i = 0; $i < $options['threads']; $i++) {
       $this->runningProcs[] = proc_open($cmd, [], $pipes, NULL, NULL, ['bypass_shell' => TRUE]);
@@ -99,8 +110,25 @@ class QuantDrushCommands extends DrushCommands {
       }
     }
 
+    // Remove lock file.
+    unlink($lockFilePath);
+
     $this->output()->writeln("<info>Seeding complete.</info>");
 
+  }
+
+  /**
+   * Unlock quant queue.
+   *
+   * @command quant:unlock-queue
+   * @aliases quant-queue-unlock
+   * @usage quant:unlock-queue
+   */
+  public function unlock($options = []) {
+    $lockFilePath = sys_get_temp_dir() . '/quant_seed_worker.lock';
+    unlink($lockFilePath);
+
+    $this->output()->writeln("Unlocked Quant queue.");
   }
 
   /**
@@ -111,7 +139,7 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:clear-queue
    */
   public function clear($options = []) {
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
     $queue->deleteQueue();
     $this->output()->writeln("Removed all items from Quant queue.");
@@ -131,7 +159,7 @@ class QuantDrushCommands extends DrushCommands {
 
     $config = \Drupal::configFactory()->getEditable('quant.settings');
 
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
 
     $dispatcher = \Drupal::service('event_dispatcher');
@@ -156,6 +184,8 @@ class QuantDrushCommands extends DrushCommands {
       'redirects',
       'routes',
       'routes_textarea',
+      'file_paths',
+      'file_paths_textarea',
       'robots',
       'lunr',
     ];
@@ -181,23 +211,23 @@ class QuantDrushCommands extends DrushCommands {
     if ($form_state->getValue('redirects')) {
       // Collect the redirects for the seed.
       $event = new CollectRedirectsEvent($form_state);
-      $dispatcher->dispatch(QuantCollectionEvents::REDIRECTS, $event);
+      $dispatcher->dispatch($event, QuantCollectionEvents::REDIRECTS);
     }
 
     if ($form_state->getValue('entity_node') || $form_state->getValue('entity_node_revisions')) {
       $event = new CollectEntitiesEvent($form_state);
-      $dispatcher->dispatch(QuantCollectionEvents::ENTITIES, $event);
+      $dispatcher->dispatch($event, QuantCollectionEvents::ENTITIES);
     }
 
     $event = new CollectRoutesEvent($form_state);
-    $dispatcher->dispatch(QuantCollectionEvents::ROUTES, $event);
+    $dispatcher->dispatch($event, QuantCollectionEvents::ROUTES);
 
     foreach ($routes as $route) {
       $event->queueItem($route);
     }
 
     $event = new CollectFilesEvent($form_state);
-    $dispatcher->dispatch(QuantCollectionEvents::FILES, $event);
+    $dispatcher->dispatch($event, QuantCollectionEvents::FILES);
 
     foreach ($assets as $asset) {
       $event->queueItem($asset);

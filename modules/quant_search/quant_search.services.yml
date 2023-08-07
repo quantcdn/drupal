@@ -1,0 +1,12 @@
+services:
+  quant_search.search_page_repository:
+    class: Drupal\quant_search\SearchPageRepository
+    arguments: ['@config.factory', '@entity_type.manager']
+
+  quant_search.output.api:
+    class: Drupal\quant_search\EventSubscriber\SearchEventSubscriber
+    arguments:
+      - '@logger.factory'
+      - '@event_dispatcher'
+    tags:
+      - { name: 'event_subscriber' }

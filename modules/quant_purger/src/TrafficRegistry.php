@@ -4,11 +4,14 @@ namespace Drupal\quant_purger;
 
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Database\Query\Condition;
+use Drupal\quant_purger\StackMiddleware\TraitUrlRegistrar;
 
 /**
  * The quant traffic registry.
  */
 class TrafficRegistry implements TrafficRegistryInterface {
+
+  use TraitUrlRegistrar;
 
   /**
    * The active database connection.
@@ -18,6 +21,13 @@ class TrafficRegistry implements TrafficRegistryInterface {
   protected $connection;
 
   /**
+   * The configuration object for quant purger.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
+  protected $config;
+
+  /**
    * Constructs a quant traffic registry event.
    *
    * @param \Drupal\Core\Database\Connection $connection
@@ -25,6 +35,7 @@ class TrafficRegistry implements TrafficRegistryInterface {
    */
   public function __construct(Connection $connection) {
     $this->connection = $connection;
+    $this->config = \Drupal::configFactory()->get('quant_purger.settings');
   }
 
   /**
@@ -54,7 +65,7 @@ class TrafficRegistry implements TrafficRegistryInterface {
    * {@inheritdoc}
    */
   public function clear() {
-    $this->connection->delete('purge_queuer_quant');
+    $this->connection->delete('purge_queuer_quant')->execute();
   }
 
   /**
@@ -62,17 +73,25 @@ class TrafficRegistry implements TrafficRegistryInterface {
    */
   public function getPaths(array $tags) {
     $urls = [];
-
+    $tags = $this->getAcceptedCacheTags($tags);
     $or = new Condition('OR');
     foreach ($tags as $tag) {
       $condition = '%;' . $this->connection->escapeLike($tag) . ';%';
       $or->condition('tags', $condition, 'LIKE');
     }
 
-    $results = $this->connection->select('purge_queuer_quant', 'q')
-      ->fields('q', ['url'])
-      ->condition($or)
-      ->execute();
+    try {
+      $results = $this->connection->select('purge_queuer_quant', 'q')
+        ->fields('q', ['url'])
+        ->condition($or)
+        ->execute();
+    }
+    catch (\Exception $e) {
+      // During install and uninstall the purge_queue_quant table may not
+      // be available which can result in a race condition with this query,
+      // return an empty URL list if the query fails.
+      return $urls;
+    }
 
     foreach ($results as $result) {
       $urls[] = $result->url;

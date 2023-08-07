@@ -1,0 +1,6 @@
+administer quant search:
+  title: 'Administer Quant Search'
+use quant search:
+  title: 'Use Quant Search'
+clear quant search index:
+  title: 'Clear Quant Search Index'

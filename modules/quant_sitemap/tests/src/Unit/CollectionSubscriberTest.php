@@ -36,7 +36,7 @@ class CollectionSubscriberTest extends UnitTestCase {
     $storage->loadMultiple()->willReturn($entities);
     $stub->getEntityTypeManager()->willReturn($storage);
 
-    $this->assertArrayEquals([
+    $this->assertEquals([
       '/en/sitemap.xml',
       '/es/sitemap.xml',
     ], $stub->getXmlsitemapItems());
@@ -56,7 +56,7 @@ class CollectionSubscriberTest extends UnitTestCase {
     $stub = $this->prophesize(CollectionSubscriber::class);
     $stub->getSitemapManager()->willReturn($sitemap_manager);
 
-    $this->assertArrayEquals([
+    $this->assertEquals([
       '/sitemap.xml',
       '/default/sitemap.xml',
       '/sample/sitemap.xml',

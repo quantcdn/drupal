@@ -1,0 +1,25 @@
+<h2>Quant Search status</h2>
+
+<h4>Index status</h4>
+<table>
+    <thead>
+        <tr>
+            <th>Records</th>
+            <th>Data size</th>
+            <th>File size</th>
+            <th>Pending tasks</th>
+            <th>Index name</th>
+            <th>Last updated</th>
+        </tr>
+    <thead>
+    <tbody>
+        <tr>
+            <td>{{ index.entries }}</td>
+            <td>{{ index.dataSize }}</td>
+            <td>{{ index.fileSize }}</td>
+            <td>{{ index.numberOfPendingTasks }}</td>
+            <td>{{ index.name }}</td>
+            <td>{{ index.updatedAt }}</td>
+        </tr>
+    </tbody>
+</table>

@@ -1,0 +1,103 @@
+<?php
+
+/**
+ * @file
+ * Quant Search module.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\Entity\Node;
+use Drupal\quant\Event\QuantEvent;
+use Drupal\quant_search\Controller\Search;
+
+/**
+ * Implements hook_theme().
+ */
+function quant_search_theme($existing, $type, $theme, $path) {
+  return [
+    'search_page_status' => [
+      'variables' => [
+        'index' => NULL,
+        'settings' => NULL,
+        'pages' => NULL,
+      ],
+    ],
+    'search_page' => [
+      'variables' => [
+        'index' => NULL,
+        'page' => NULL,
+        'facets' => NULL,
+      ],
+    ],
+    'autocomplete_block' => [
+      'variables' => [
+        'page' => NULL,
+      ],
+      'template' => 'autocomplete-block',
+    ],
+  ];
+}
+
+/**
+ * Process the queue.
+ *
+ * @param array $context
+ *   The batch context.
+ */
+function quant_search_run_index($nids, $languages, array &$context) {
+
+  $client = \Drupal::service('quant_api.client');
+  $config = \Drupal::config('quant_search.entities.settings');
+
+  // Add the latest node to the batch.
+  if (empty($context['sandbox'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['current_number'] = 0;
+    $context['sandbox']['total'] = count($nids);
+  }
+
+  $records = [];
+  foreach ($nids as $idx => $nid) {
+    $node = Node::load($nid);
+
+    // Multilingual support.
+    $filter = [];
+
+    if (!empty($languages)) {
+      $filter = array_filter($languages);
+    }
+
+    foreach ($node->getTranslationLanguages() as $langcode => $language) {
+      if (!empty($filter) && !in_array($langcode, $filter)) {
+        continue;
+      }
+
+      $node = $node->getTranslation($langcode);
+      if ($node->isPublished()) {
+        $records[] = Search::generateSearchRecord($node, $langcode);
+      }
+
+    }
+    $context['sandbox']['progress']++;
+  }
+
+  $client->sendSearchRecords($records);
+
+  $context['message'] = t('Processed @i of @t', [
+    '@i' => $context['sandbox']['progress'],
+    '@t' => $context['sandbox']['total'],
+  ]);
+
+  if ($context['sandbox']['progress'] != $context['sandbox']['total']) {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'];
+  }
+
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete().
+ */
+function quant_search_quant_search_page_delete(EntityInterface $entity) {
+  $route = $entity->get('route');
+  \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $route, [], NULL), QuantEvent::UNPUBLISH);
+}

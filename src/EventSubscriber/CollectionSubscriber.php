@@ -15,7 +15,9 @@ use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
+use Drupal\quant\Seed;
 use Drupal\redirect\Entity\Redirect;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * Event subscribers for the quant collection events.
@@ -74,7 +76,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
 
-    $entities = $query->execute();
+    $entities = $query->accessCheck(TRUE)->execute();
     $includeLatest = $event->includeLatest();
     $includeRevisions = $event->includeRevisions();
 
@@ -120,26 +122,35 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
     foreach ($ids as $id) {
       $redirect = Redirect::load($id);
-
-      $source = $redirect->getSourcePathWithQuery();
-      $destination = $redirect->getRedirectUrl()->toString();
-      $status_code = $redirect->getStatusCode();
-
-      $event->queueItem([
-        'source' => $source,
-        'destination' => $destination,
-        'status_code' => $status_code,
-      ]);
+      $redirects = Seed::getRedirectLocationsFromRedirect($redirect);
+      foreach ($redirects as $r) {
+        $event->queueItem([
+          'source' => $r['source'],
+          'destination' => $r['destination'],
+          'status_code' => $r['status_code'],
+        ]);
+      }
     }
   }
 
   /**
-   * Collect files for quant seeding.
+   * Collect files based on provided paths on disk.
    */
-  public function collectFiles(CollectFilesEvent $event) {
-    if (!$event->getFormState()->getValue('theme_assets')) {
-      return;
+  private function collectFilesOnDisk($paths, $event) {
+    foreach ($paths as $path) {
+      foreach (glob(trim($path)) as $filename) {
+        if (is_file($filename)) {
+          $path = str_replace(DRUPAL_ROOT, '', $filename);
+          $event->queueItem(['file' => $path]);
+        }
+      }
     }
+  }
+
+  /**
+   * Collect files based on provided paths on disk.
+   */
+  private function collectThemeFiles($event) {
 
     // @todo Support multiple themes (e.g site may have multiple themes changing by route).
     $config = $this->configFactory->get('system.theme');
@@ -160,6 +171,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
     $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.ico|.js|.css)$/i', \RecursiveRegexIterator::GET_MATCH);
 
     foreach ($regex as $name => $r) {
+      // Skip node_modules.
+      if (preg_match('/node_modules/i', $name)) {
+        continue;
+      }
+
       $path = str_replace(DRUPAL_ROOT, '', $name);
       $event->queueItem(['file' => $path]);
     }
@@ -181,6 +197,27 @@ class CollectionSubscriber implements EventSubscriberInterface {
       $path = str_replace(DRUPAL_ROOT, '', $fileInfo->getPathname());
       $event->queueItem(['file' => $path]);
     }
+
+  }
+
+  /**
+   * Collect files for quant seeding.
+   */
+  public function collectFiles(CollectFilesEvent $event) {
+
+    if ($event->getFormState()->getValue('file_paths')) {
+      $paths = [];
+      foreach (explode(PHP_EOL, $event->getFormState()->getValue('file_paths_textarea')) as $path) {
+        // Paths must be relative to the drupal web root.
+        $paths[] = DRUPAL_ROOT . "/" . ltrim($path, '/');
+      }
+      $this->collectFilesOnDisk($paths, $event);
+    }
+
+    if ($event->getFormState()->getValue('theme_assets')) {
+      $this->collectThemeFiles($event);
+    }
+
   }
 
   /**
@@ -226,7 +263,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
           // Generate a redirection QueueItem from canonical path to URL.
           // Use the default language alias in the event of multi-lang setup.
-          $queue_factory = \Drupal::service('queue');
+          $queue_factory = QuantQueueFactory::getInstance();
           $queue = $queue_factory->get('quant_seed_worker');
 
           if ("/taxonomy/term/{$tid}" != $url) {
@@ -267,10 +304,11 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
         $paths = [];
 
-        $displays = array_keys($view->storage->get('display'));
-        foreach ($displays as $display) {
-          $view->setDisplay($display);
-          if ($view->access($display, $anon) && $path = $view->getPath()) {
+        $display_ids = array_keys($view->storage->get('display'));
+        foreach ($display_ids as $display_id) {
+          $view->setDisplay($display_id);
+          if ($display_id != 'default' && $view->display_handler->isEnabled() && $view->access($display_id, $anon) && $path = $view->getPath()) {
+
             // Exclude contextual filters for now.
             if (strpos($path, '%') !== FALSE) {
               continue;
@@ -286,7 +324,8 @@ class CollectionSubscriber implements EventSubscriberInterface {
             }
 
             $paths[] = $path;
-            $event->queueItem(['route' => "/{$path}"]);
+            $base = \Drupal::request()->getBaseUrl();
+            $event->queueItem(['route' => $base . "/{$path}"]);
 
             // Languge negotiation may also provide path prefixes.
             if ($prefixes = \Drupal::config('language.negotiation')->get('url.prefixes')) {

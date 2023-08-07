@@ -79,7 +79,7 @@ class CronSettingsForm extends FormBase {
             ':input[name="entity_node"]' => ['checked' => TRUE],
           ],
         ],
-        '#default_value' => $config->get('entity_node_languages'),
+        '#default_value' => $config->get('entity_node_languages') ?? [],
       ];
     }
 
@@ -103,7 +103,7 @@ class CronSettingsForm extends FormBase {
           ':input[name="entity_node"]' => ['checked' => TRUE],
         ],
       ],
-      '#default_value' => $config->get('entity_node_bundles'),
+      '#default_value' => $config->get('entity_node_bundles') ?? [],
     ];
 
     $form['entity_taxonomy_term'] = [
@@ -144,6 +144,25 @@ class CronSettingsForm extends FormBase {
         ],
       ],
       '#default_value' => $config->get('routes_export'),
+    ];
+
+    $form['file_paths'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('File paths'),
+      '#description' => $this->t('Exports files with support for wildcards.'),
+      '#default_value' => $config->get('file_paths'),
+    ];
+
+    $form['file_paths_textarea'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Local files'),
+      '#description' => $this->t('Add paths to local files on disk. Must be relative to the Drupal webroot. Wildcards are accepted.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="file_paths"]' => ['checked' => TRUE],
+        ],
+      ],
+      '#default_value' => $config->get('file_paths_textarea'),
     ];
 
     $form['robots'] = [
@@ -187,6 +206,8 @@ class CronSettingsForm extends FormBase {
     $config = $this->configFactory->getEditable('quant_cron.settings');
     $config->set('routes', $form_state->getValue('routes'))->save();
     $config->set('routes_export', $form_state->getValue('routes_textarea'))->save();
+    $config->set('file_paths', $form_state->getValue('file_paths'))->save();
+    $config->set('file_paths_textarea', $form_state->getValue('file_paths_textarea'))->save();
     $config->set('entity_node', $form_state->getValue('entity_node'))->save();
     $config->set('entity_node_languages', $form_state->getValue('entity_node_languages'))->save();
     $config->set('entity_node_bundles', $form_state->getValue('entity_node_bundles'))->save();

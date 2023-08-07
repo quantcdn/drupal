@@ -3,14 +3,14 @@
 namespace Drupal\quant_api\Client;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
-use GuzzleHttp\Client;
-use GuzzleHttp\RequestOptions;
-use GuzzleHttp\Exception\RequestException;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
-use GuzzleHttp\Psr7;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\MultipartStream;
+use GuzzleHttp\Psr7\Utils;
+use GuzzleHttp\RequestOptions;
 
 /**
  * Quant API client.
@@ -53,6 +53,13 @@ class QuantClient implements QuantClientInterface {
   protected $endpoint;
 
   /**
+   * TLS disable boolean.
+   *
+   * @var bool
+   */
+  protected $tlsDisabled = FALSE;
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(Client $client, ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory) {
@@ -64,6 +71,7 @@ class QuantClient implements QuantClientInterface {
     $this->token = $config->get('api_token');
     $this->project = $config->get('api_project');
     $this->endpoint = $config->get('api_endpoint') . '/v1';
+    $this->tlsDisabled = $config->get('api_tls_disabled');
   }
 
   /**
@@ -72,6 +80,7 @@ class QuantClient implements QuantClientInterface {
   public function ping() {
 
     try {
+      // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
       $response = $this->client->get($this->endpoint . "/ping", [
         'http_errors' => FALSE,
         'headers' => [
@@ -80,6 +89,7 @@ class QuantClient implements QuantClientInterface {
           'Quant-Token'    => $this->token,
         ],
         'exceptions' => FALSE,
+        'verify' => $this->tlsDisabled ? FALSE : TRUE,
       ]);
     }
     catch (RequestException $e) {
@@ -107,7 +117,86 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
+  public function project() {
+
+    try {
+      // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
+      $response = $this->client->get($this->endpoint . "/ping", [
+        'http_errors' => FALSE,
+        'headers' => [
+          'Quant-Customer' => $this->username,
+          'Quant-Project'  => $this->project,
+          'Quant-Token'    => $this->token,
+        ],
+        'exceptions' => FALSE,
+      ]);
+    }
+    catch (RequestException $e) {
+      \Drupal::messenger()->addError($e->getMessage());
+      return FALSE;
+    }
+
+    if ($response->getStatusCode() == 200) {
+      return json_decode($response->getBody());
+    }
+
+    if ($response->getStatusCode() == 402) {
+      // Emit a subscription invalid warning.
+      \Drupal::messenger()->addError(t('Your Quant subscription is invalid. Please check the dashboard.'));
+    }
+
+    if ($response->getStatusCode() == 410) {
+      // Emit a deleted project warning.
+      \Drupal::messenger()->addError(t('Project is deleted. Please check the dashboard for restoration options.'));
+    }
+
+    return FALSE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function search() {
+
+    try {
+      // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
+      $response = $this->client->get($this->endpoint . "/search", [
+        'http_errors' => FALSE,
+        'headers' => [
+          'Quant-Customer' => $this->username,
+          'Quant-Project'  => $this->project,
+          'Quant-Token'    => $this->token,
+        ],
+        'exceptions' => FALSE,
+      ]);
+    }
+    catch (RequestException $e) {
+      \Drupal::messenger()->addError($e->getMessage());
+      return FALSE;
+    }
+
+    if ($response->getStatusCode() == 200) {
+      return json_decode($response->getBody());
+    }
+
+    if ($response->getStatusCode() == 402) {
+      // Emit a subscription invalid warning.
+      \Drupal::messenger()->addError(t('Your Quant subscription is invalid. Please check the dashboard.'));
+    }
+
+    if ($response->getStatusCode() == 410) {
+      // Emit a deleted project warning.
+      \Drupal::messenger()->addError(t('Project is deleted. Please check the dashboard for restoration options.'));
+    }
+
+    return FALSE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function send(array $data) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint, [
       RequestOptions::JSON => $data,
       'headers' => [
@@ -115,6 +204,7 @@ class QuantClient implements QuantClientInterface {
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
       ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
     ]);
 
     return json_decode($response->getBody(), TRUE);
@@ -124,6 +214,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function sendRedirect(array $data) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/redirect', [
       RequestOptions::JSON => $data,
       'headers' => [
@@ -131,6 +222,7 @@ class QuantClient implements QuantClientInterface {
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
       ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
     ]);
 
     return json_decode($response->getBody(), TRUE);
@@ -148,8 +240,9 @@ class QuantClient implements QuantClientInterface {
 
     // Prepare a stream.
     $resource = fopen($file, 'r');
-    $stream = Psr7\stream_for($resource);
+    $stream = Utils::streamFor($resource);
 
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $headers = [
       'Quant-File-Url' => $url,
       'Quant-Customer' => $this->username,
@@ -170,7 +263,9 @@ class QuantClient implements QuantClientInterface {
       ])
     );
 
-    $response = $this->client->send($request);
+    $response = $this->client->send($request, [
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
 
     return json_decode($response->getBody(), TRUE);
   }
@@ -185,6 +280,7 @@ class QuantClient implements QuantClientInterface {
    *   The API response.
    */
   public function unpublish(string $url) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->patch($this->endpoint . '/unpublish', [
       'headers' => [
         'Quant-Url' => $url,
@@ -192,6 +288,60 @@ class QuantClient implements QuantClientInterface {
         'Quant-Project'  => $this->project,
         'Quant-Token'    => $this->token,
       ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function sendSearchRecords(array $records) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
+    $response = $this->client->post($this->endpoint . '/search', [
+      RequestOptions::JSON => $records,
+      'headers' => [
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+      ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function clearSearchIndex() : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
+    $response = $this->client->delete($this->endpoint . '/search/all', [
+      'headers' => [
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+      ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addFacets(array $facets) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
+    $response = $this->client->post($this->endpoint . '/search/facet', [
+      RequestOptions::JSON => $facets,
+      'headers' => [
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+      ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
     ]);
 
     return json_decode($response->getBody(), TRUE);

@@ -1,0 +1,20 @@
+quant_search.main:
+  title: 'Quant Search'
+  route_name: quant_search.main
+  description: 'Manage Quant Search'
+  parent: quant
+  weight: 2
+
+entity.quant_search_page.collection:
+  title: 'Quant Search Pages'
+  route_name: entity.quant_search_page.collection
+  description: 'Manage Quant Search Pages'
+  parent: quant_search.main
+  weight: 3
+
+quant_search.main.entities:
+  title: 'Quant Search Entities'
+  route_name: quant_search.main.entities
+  description: 'Manage Quant Search Entities'
+  parent: quant_search.main
+  weight: 4

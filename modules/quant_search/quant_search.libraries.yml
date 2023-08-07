@@ -1,0 +1,46 @@
+drupal.quant_search.admin:
+  css:
+    theme:
+      css/quant_search.admin.css: {}
+
+algolia-page:
+  css:
+    theme:
+      https://cdn.jsdelivr.net/npm/instantsearch.css@7/themes/algolia-min.css: { type: external, minified: true }
+      css/quant_search.algolia.css: {}
+  js:
+    https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js: { type: external, minified: true }
+    https://cdn.jsdelivr.net/npm/instantsearch.js@4: { type: external, minified: true }
+
+algolia-autocomplete:
+  css:
+    theme:
+      https://cdn.jsdelivr.net/npm/@algolia/autocomplete-theme-classic: { type: external, minified: true }
+      css/quant_search.algolia.css: {}
+  js:
+    https://cdn.jsdelivr.net/algoliasearch/3/algoliasearch.min.js: { type: external, minified: true }
+    https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js: { type: external, minified: true }
+
+search-page:
+  css:
+    theme:
+      css/quant_search.algolia.css: {}
+  js:
+    js/quant-search.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/jquery.once
+    - core/once
+
+autocomplete-block:
+  css:
+    theme:
+      css/quant_search.autocomplete.css: {}
+  js:
+    js/quant-autocomplete.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/jquery.once
+    - core/once

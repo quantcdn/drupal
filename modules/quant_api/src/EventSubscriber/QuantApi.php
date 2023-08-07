@@ -13,6 +13,7 @@ use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Seed;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * Integrate with the QuantAPI to store static assets.
@@ -41,7 +42,7 @@ class QuantApi implements EventSubscriberInterface {
   protected $eventDispatcher;
 
   /**
-   * QuantAPI event subcsriber.
+   * QuantAPI event subscriber.
    *
    * Listens to Quant events and triggers requests to the configured
    * API endpoint for different operations.
@@ -63,10 +64,10 @@ class QuantApi implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   public static function getSubscribedEvents() {
-    $events[QuantEvent::OUTPUT][] = ['onOutput'];
-    $events[QuantFileEvent::OUTPUT][] = ['onMedia'];
-    $events[QuantRedirectEvent::UPDATE][] = ['onRedirect'];
-    $events[QuantEvent::UNPUBLISH][] = ['onUnpublish'];
+    $events[QuantEvent::OUTPUT] = ['onOutput', -999];
+    $events[QuantFileEvent::OUTPUT] = ['onMedia', -999];
+    $events[QuantRedirectEvent::UPDATE] = ['onRedirect', -999];
+    $events[QuantEvent::UNPUBLISH] = ['onUnpublish', -999];
     return $events;
   }
 
@@ -93,6 +94,7 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (\Exception $error) {
       $this->logger->error($error->getMessage());
+      return;
     }
 
     return $res;
@@ -145,7 +147,7 @@ class QuantApi implements EventSubscriberInterface {
 
     $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents'], $res['attachments']['media']['video']);
 
-    $queue_factory = \Drupal::service('queue');
+    $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
 
     foreach ($media as $item) {
@@ -184,7 +186,7 @@ class QuantApi implements EventSubscriberInterface {
       // If the file exists we send it directly to quant otherwise we add it
       // to the queue to generate assets on the next run.
       if (file_exists($fileOnDisk)) {
-        $this->eventDispatcher->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent($fileOnDisk, $item['full_path'] ?? $file));
+        $this->eventDispatcher->dispatch(new QuantFileEvent($fileOnDisk, $item['full_path'] ?? $file), QuantFileEvent::OUTPUT);
       }
       else {
         $file_item = new FileItem([
@@ -201,12 +203,14 @@ class QuantApi implements EventSubscriberInterface {
     @$document->loadHTML($content);
     $xpath = new \DOMXPath($document);
 
-    $pager_xpath = [
-      '//li[contains(@class,"pager__item--next")]/a[contains(@href,"page=")]',
-      '//li[contains(@class,"pager__item--first")]/a[starts-with(@href, "/")]',
-    ];
+    $xpath_selectors = [];
+    $links_config = \Drupal::config('quant.settings')->get('xpath_selectors');
 
-    foreach ($pager_xpath as $xpath_query) {
+    foreach (explode(PHP_EOL, $links_config) as $links_line) {
+      $xpath_selectors[] = trim($links_line);
+    }
+
+    foreach ($xpath_selectors as $xpath_query) {
       /** @var \DOMElement $node */
       foreach ($xpath->query($xpath_query) as $node) {
         $original_href = $new_href = $node->getAttribute('href');
@@ -216,6 +220,16 @@ class QuantApi implements EventSubscriberInterface {
 
         $queue->createItem(new RouteItem(['route' => $new_href]));
       }
+    }
+
+    // Media oEmbed support.
+    // Core media may be embedded via iFrame not included by the seed process.
+    // This content can be detected and included on the fly.
+    /** @var \DOMElement $node */
+    foreach ($xpath->query('//iframe[contains(@src, "/media/oembed")]') as $node) {
+      $oembed_url = $new_href = $node->getAttribute('src');
+      $oembed_item = new RouteItem(['route' => $oembed_url]);
+      $oembed_item->send();
     }
 
     // @todo Report on forms that need proxying (attachments.forms).
@@ -264,12 +278,12 @@ class QuantApi implements EventSubscriberInterface {
    */
   public function onUnpublish(QuantEvent $event) {
     $url = $event->getLocation();
-
     try {
       $res = $this->client->unpublish($url);
     }
     catch (\Exception $error) {
       $this->logger->error($error->getMessage());
+      return;
     }
 
     return $res;

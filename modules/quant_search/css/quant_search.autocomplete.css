@@ -1,0 +1,12 @@
+.autocomplete-hit-name {
+  font-weight: bold;
+}
+
+.aa-Panel {
+  z-index: 9999;
+}
+
+.quant-search-autocomplete button {
+  background-color: transparent;
+  border: none;
+}

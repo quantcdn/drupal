@@ -1,0 +1,158 @@
+.quant-search .flex-grid {
+  display: flex;
+}
+
+.quant-search .col.content {
+  flex-grow: 1;
+}
+
+.quant-search .col.facets {
+  min-width: 20%;
+  margin-right: 2em;
+}
+
+@media (max-width: 600px) {
+  .quant-search .flex-grid {
+    display: block;
+  }
+  .quant-search {
+    margin: 1em;
+  }
+}
+
+.quant-search .facet-container {
+  margin-bottom: 40px;
+}
+
+.quant-search .facet-heading {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #e9edf2;
+  text-transform: uppercase;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+.quant-search img {
+  max-width: 100%;
+  height: auto;
+}
+
+.quant-search .ais-ClearRefinements {
+  margin: 1em 0;
+}
+
+.quant-search .ais-SearchBox {
+  margin: 1em 0;
+}
+
+.quant-search .ais-Pagination {
+  margin: 2em 0;
+}
+
+.quant-search .ais-Pagination-link {
+  border-radius: 0;
+}
+
+.quant-search .ais-InstantSearch {
+  max-width: 960px;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.quant-search .ais-Hits-item {
+  margin-bottom: 1em;
+  width: calc(50% - 1rem);
+  border: none;
+  box-shadow: 0 2px 5px 0 #e3e5ec;
+  background: #fff;
+}
+
+.quant-search .ais-Highlight-highlighted,
+.ais-Snippet-highlighted {
+  background-color: #e7eefa;
+}
+
+.quant-search .ais-SearchBox-input {
+  height: 50px;
+  font-size: 1.2em;
+  border-radius: 0;
+  padding: 0.3rem 4rem;
+}
+
+.quant-search .ais-SearchBox-submitIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.quant-search .ais-SearchBox-submit {
+  left: 1rem;
+}
+
+.quant-search .ais-Hits-item img {
+  margin-right: 1em;
+}
+
+.quant-search .ais-Hits-item a {
+  font-size: 1.1em;
+  font-weight: 500;
+  text-decoration: none;
+  color: #5878f9;
+  margin-top: 1em;
+}
+
+.quant-search .hit-name {
+  margin: 1em 0;
+}
+
+.quant-search .hit-description {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 0.5em;
+}
+
+.quant-search .hit-tag {
+  background-color: #dcdcdc;
+  color: #5a5a5a;
+  text-transform: uppercase;
+  font-size: 0.75em;
+  font-weight: 600;
+  padding: 5px 10px;
+  margin-right: 10px;
+  border-radius: 3px;
+}
+
+.quant-search .hit-tags {
+  clear: both;
+  margin-top: 20px;
+}
+
+.quant-search .ais-Hits-item {
+  margin-bottom: 1em;
+  width: 100%;
+  border: none;
+  box-shadow: none;
+  background: none;
+}
+
+.quant-search .ais-Hits-item:hover {
+  box-shadow: 0 2px 5px 0 #e3e5ec;
+  background: #fff;
+}
+
+.quant-search .ais-Hits-item img {
+  max-width: 100px;
+  float: left;
+}
+
+.quant-search .hit-name {
+  margin-top: 0;
+}
+
+.quant-search [class^=ais-] {
+  font-size: inherit;
+}
+
+.quant-search button {
+  background-color: transparent;
+  border: none;
+}

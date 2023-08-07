@@ -1,0 +1,66 @@
+<?php
+
+/**
+ * @file
+ * Contains install and update functions for Quant Search.
+ */
+
+/**
+ * Group search page facet_type configuration.
+ */
+function quant_search_update_8101() {
+  // Get all search pages.
+  $storage = \Drupal::entityTypeManager()->getStorage('quant_search_page');
+  $ids = \Drupal::entityQuery('quant_search_page')->execute();
+  $pages = $storage->loadMultiple($ids);
+
+  // Combine facet_type configuration fields for better tabledrag UX.
+  foreach ($pages as $page) {
+    $facets = $page->get('facets');
+    $fields = ['facet_type', 'custom_key', 'taxonomy_vocabulary'];
+    foreach ($facets as $i => $facet) {
+      foreach ($fields as $field) {
+        if (isset($facet[$field])) {
+          $facets[$i]['facet_type_config'][$field] = $facet[$field];
+          unset($facets[$i][$field]);
+        }
+      }
+      $page->set('facets', $facets);
+    }
+    $page->save();
+  }
+
+}
+
+/**
+ * Install the token module.
+ */
+function quant_search_update_8102() {
+  if (!\Drupal::service('module_handler')->moduleExists('token')) {
+    \Drupal::service('module_installer')->install(['token']);
+    return t('The token module has been installed.');
+  }
+  return t('The token module is already installed.');
+}
+
+/**
+ * Add search page facet_limit configuration.
+ */
+function quant_search_update_8103() {
+  // Get all search pages.
+  $storage = \Drupal::entityTypeManager()->getStorage('quant_search_page');
+  $ids = \Drupal::entityQuery('quant_search_page')->execute();
+  $pages = $storage->loadMultiple($ids);
+
+  // Add default value for each facet, if not set.
+  foreach ($pages as $page) {
+    $facets = $page->get('facets');
+    foreach ($facets as $i => $facet) {
+      if (!isset($facet['facet_limit'])) {
+        $facets[$i]['facet_limit'] = 10;
+      }
+      $page->set('facets', $facets);
+    }
+    $page->save();
+  }
+}

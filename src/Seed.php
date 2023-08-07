@@ -2,10 +2,13 @@
 
 namespace Drupal\quant;
 
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Url;
+use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
+use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Url;
 use GuzzleHttp\Exception\ConnectException;
 
 /**
@@ -59,8 +62,8 @@ class Seed {
       $files[] = str_replace(DRUPAL_ROOT, '', $filename->getPathname());
     }
 
-    $files[] = '/' . drupal_get_path('module', 'lunr') . '/js/search.worker.js';
-    $files[] = '/' . drupal_get_path('module', 'lunr') . '/js/vendor/lunr/lunr.min.js';
+    $files[] = '/' . \Drupal::service('extension.list.module')->getPath('lunr') . '/js/search.worker.js';
+    $files[] = '/' . \Drupal::service('extension.list.module')->getPath('lunr') . '/js/vendor/lunr/lunr.min.js';
 
     return $files;
   }
@@ -83,26 +86,143 @@ class Seed {
 
   /**
    * Add/update redirect via API request.
+   *
+   * @todo Unpublish redirects when content is deleted?
    */
   public static function seedRedirect($redirect) {
+
+    // If the source path has changed, unpublish the old path as the redirect
+    // from that path no longer works in Drupal.
+    if (!$redirect->isNew()) {
+      $originalSource = $redirect->original->getSourcePathWithQuery();
+      if ($originalSource && $originalSource != $redirect->getSourcePathWithQuery()) {
+        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $originalSource, [], NULL), QuantEvent::UNPUBLISH);
+      }
+    }
+
+    $redirects = self::getRedirectLocationsFromRedirect($redirect);
+    foreach ($redirects as $r) {
+      $event = new QuantRedirectEvent($r['source'], $r['destination'], $r['status_code']);
+      \Drupal::service('event_dispatcher')->dispatch($event, QuantRedirectEvent::UPDATE);
+    }
+  }
+
+  /**
+   * Determine if URL path prefix language negotiation is being used.
+   */
+  protected static function usesLanguagePathPrefixes() {
+    // Only works if there is more than one language.
+    $langcodes = \Drupal::languageManager()->getLanguages();
+    if (count($langcodes) === 1) {
+      return FALSE;
+    }
+
+    $usesPrefixes = FALSE;
+    $languageInterfaceEnabled = \Drupal::config('language.types')->get('negotiation.language_interface.enabled') ?: [];
+    if (isset($languageInterfaceEnabled['language-url'])) {
+      $languageUrl = \Drupal::config('language.negotiation')->get('url');
+      $usesPrefixes = $languageUrl && $languageUrl['source'] === LanguageNegotiationUrl::CONFIG_PATH_PREFIX;
+    }
+    return $usesPrefixes;
+  }
+
+  /**
+   * Get all redirects from a redirect entity.
+   *
+   * For multilingual sites using path prefixes for language negotiation, the
+   * language's path prefix needs to be handled and, in some cases, there need
+   * to be multiple redirects, one for each language.
+   *
+   * @return array
+   *   The list of redirects.
+   */
+  public static function getRedirectLocationsFromRedirect($redirect) {
+    $redirects = [];
+
     $source = $redirect->getSourcePathWithQuery();
     $destination = $redirect->getRedirectUrl()->toString();
     $statusCode = $redirect->getStatusCode();
 
-    if (!(bool) $statusCode && !$redirect->isNew()) {
-      \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $source, [], NULL));
-      return;
+    // If site does not use prefixes, return single redirect item.
+    if (!self::usesLanguagePathPrefixes()) {
+      $redirects[] = [
+        'source' => $source,
+        'destination' => $destination,
+        'status_code' => $statusCode,
+      ];
+      return $redirects;
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($source, $destination, $statusCode));
+    // Get language and prefix configuration.
+    $langcode = $redirect->language()->getId();
+    $siteDefaultLangcode = \Drupal::service('language.default')->get()->getId();
+    $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
+
+    // Multilingual redirects can be configured for a specific language or
+    // for all languages. If the redirect is configured for all languages,
+    // create a redirect for each language.
+    $langcodes = [$langcode];
+    if ($langcode === LanguageInterface::LANGCODE_NOT_SPECIFIED) {
+      $langcodes = array_keys(\Drupal::languageManager()->getLanguages());
+    }
+
+    // Check if a node or term for this path exists.
+    $node = NULL;
+    $term = NULL;
+    $aliasWithoutLangcode = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', '/', $destination);
+    $path = \Drupal::service('path_alias.manager')->getPathByAlias($aliasWithoutLangcode);
+    if (preg_match('/node\/(\d+)/', $path, $matches)) {
+      $node = Node::load($matches[1]);
+    }
+    elseif (preg_match('/taxonomy\/term\/(\d+)/', $path, $matches)) {
+      $term = Taxonomy::load($matches[1]);
+    }
+
+    // Create multilingual redirects.
+    foreach ($langcodes as $langcode) {
+      // Path prefix might not be the same as the langcode. For the default
+      // language, the path prefix might not be set.
+      $pathPrefix = $pathPrefixes[$langcode] ? '/' . $pathPrefixes[$langcode] : '';
+      $updatedSource = $pathPrefix . $source;
+
+      // For nodes and terms, get alias associated with the langcode, if any.
+      if ($node || $term) {
+        $path = $node ? '/node/' . $node->id() : '/taxonomy/term/' . $term->id();
+        $alias = \Drupal::service('path_alias.manager')->getAliasByPath($path, $langcode);
+        if ($alias == $path) {
+          // No alias exists. Note there is currently a Drupal core bug #1125428
+          // that prevents getting the alias in some cases.
+          // @todo Work around the core bug.
+          $updatedDestination = $destination;
+        }
+        else {
+          // Add the prefix to the correct alias.
+          $updatedDestination = $pathPrefix . $alias;
+        }
+      }
+      // @todo Test use case where page is not a node or term.
+      else {
+        $updatedDestination = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', $pathPrefix . '/', $destination);
+      }
+      $redirects[] = [
+        'source' => $updatedSource,
+        'destination' => $updatedDestination,
+        'status_code' => $statusCode,
+      ];
+    }
+    return $redirects;
   }
 
   /**
    * Delete existing redirects via API request.
    */
   public static function deleteRedirect($redirect) {
-    $source = $redirect->getSourcePathWithQuery();
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $source, [], NULL));
+    $redirects = self::getRedirectLocationsFromRedirect($redirect);
+    foreach ($redirects as $r) {
+      // QuantEvent can be used to unpublish any resource. Note, the source must
+      // be given here and not the destination.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $r['source'], [], NULL), QuantEvent::UNPUBLISH);
+    }
   }
 
   /**
@@ -125,7 +245,7 @@ class Seed {
     }
 
     $meta = [];
-    list($markup, $content_type) = $response;
+    [$markup, $content_type] = $response;
 
     if (!empty($content_type)) {
       $meta['content_type'] = $content_type;
@@ -144,10 +264,10 @@ class Seed {
       // Use the default language alias in the event of multi-lang setup.
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
-      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta));
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
   }
 
   /**
@@ -180,7 +300,7 @@ class Seed {
     if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
       if ($entity->isPublished() && $entity->isDefaultRevision()) {
         // Trigger redirect event from alias to home.
-        \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($url, "/", 301));
+        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($url, "/", 301), QuantRedirectEvent::UPDATE);
       }
       $url = "/";
     }
@@ -192,7 +312,7 @@ class Seed {
       return;
     }
 
-    list($markup, $content_type) = $response;
+    [$markup, $content_type] = $response;
 
     if (!empty($content_type)) {
       $meta['content_type'] = $content_type;
@@ -202,7 +322,7 @@ class Seed {
     foreach ($metaManager->getDefinitions() as $pid => $def) {
       $plugin = $metaManager->createInstance($pid);
       if ($plugin->applies($entity)) {
-        $meta = array_merge($meta, $plugin->build($entity));
+        $meta = array_merge($meta, $plugin->build($entity, $langcode));
       }
     }
 
@@ -219,32 +339,78 @@ class Seed {
       }
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::OUTPUT, new QuantEvent($markup, $url, $meta, $rid));
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
 
     // Create canonical redirects from node/123 to the published revision route.
     if ("/node/{$nid}" != $url && $entity->isPublished() && $entity->isDefaultRevision()) {
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $defaultUrl = Url::fromRoute('entity.node.canonical', ['node' => $nid], ['language' => $defaultLanguage])->toString();
-      \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent("/node/{$nid}", $defaultUrl, 301));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/node/{$nid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
     }
   }
 
   /**
-   * Unpublish the path from Quant.
+   * Unpublish the node path from Quant.
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
-   *   The entity.
+   *   The node entity.
    */
-  public static function unpublishRoute(EntityInterface $entity) {
-    // @todo This should be a quant service.
-    $url = $entity->toUrl()->toString();
-    $site_config = \Drupal::config('system.site');
-    $front = $site_config->get('page.front');
-    if ((strpos($front, '/node/') === 0) && $entity->get('nid')->value == substr($front, 6)) {
-      $url = "/";
+  public static function unpublishNode(EntityInterface $entity) {
+
+    $langcode = $entity->language()->getId();
+    $nid = $entity->get('nid')->value;
+
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(QuantEvent::UNPUBLISH, new QuantEvent('', $url, [], NULL));
+    $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
+
+    $site_config = \Drupal::config('system.site');
+    $front = $site_config->get('page.front');
+    if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
+    }
+
+    // Unpublish canonical redirect from node/123.
+    if ("/node/{$nid}" != $url) {
+      // QuantEvent can be used to unpublish any resource. Note, the source must
+      // be given here and not the destination.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/node/{$nid}", [], NULL), QuantEvent::UNPUBLISH);
+    }
+
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+  }
+
+  /**
+   * Unpublish the term path from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The term entity.
+   */
+  public static function unpublishTaxonomyTerm(EntityInterface $entity) {
+
+    $langcode = $entity->language()->getId();
+    $tid = $entity->get('tid')->value;
+
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+
+    // Unpublish canonical redirect from taxonomy/term/123.
+    if ("/taxonomy/term/{$tid}" != $url) {
+      // QuantEvent can be used to unpublish any resource. Note, the source must
+      // be given here and not the destination.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/taxonomy/term/{$tid}", [], NULL), QuantEvent::UNPUBLISH);
+    }
+
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }
 
   /**
@@ -310,8 +476,11 @@ class Seed {
    */
   public static function markupFromRoute($route, array $headers = []) {
 
-    // Cleanse route.
-    $route = str_replace('//', '/', $route);
+    // Clean double slashes from routes.
+    // The exception is oEmbed routes which passes a full URL as query param.
+    if (!preg_match('/\/media\/oembed\?url=/', $route)) {
+      $route = str_replace('//', '/', $route);
+    }
 
     // Build internal request.
     $config = \Drupal::config('quant.settings');
@@ -358,7 +527,7 @@ class Seed {
         $destination = reset($location_header);
         // Ensure relative for internal redirect.
         $destination = self::rewriteRelative($destination);
-        \Drupal::service('event_dispatcher')->dispatch(QuantRedirectEvent::UPDATE, new QuantRedirectEvent($route, $destination, $response->getStatusCode()));
+        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($route, $destination, $response->getStatusCode()), QuantRedirectEvent::UPDATE);
         return FALSE;
 
       case 200:
@@ -391,10 +560,25 @@ class Seed {
    * @return string
    *   Sanitised markup string.
    */
-  private static function rewriteRelative($markup) {
+  public static function rewriteRelative($markup) {
     $config = \Drupal::config('quant.settings');
+
+    // Do not strip host domain unless configured.
+    $strip = $config->get('host_domain_strip') ?: FALSE;
+    if (!$strip) {
+      return $markup;
+    }
+
+    // Strip the host domain from everywhere in the content including header
+    // metadata such as canonical links.
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-    return preg_replace("/(https?:\/\/)?{$hostname}/i", '', $markup);
+    $port = $_SERVER['SERVER_PORT'];
+    $markup = preg_replace("/(https?:\/\/)?{$hostname}(\:{$port})?/i", '', $markup);
+
+    // Edge case: Replace http://default when run via drush without base_url.
+    $markup = preg_replace("/http:\/\/default/i", '', $markup);
+
+    return $markup;
   }
 
 }

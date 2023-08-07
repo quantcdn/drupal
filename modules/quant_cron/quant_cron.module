@@ -8,6 +8,7 @@
 use Drupal\quant\Seed;
 use Drupal\Core\Form\FormState;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\node\Entity\Node;
 use Drupal\user\Entity\User;
 use Drupal\views\Views;
@@ -39,6 +40,7 @@ function quant_cron_cron() {
   ];
 
   $routes = [];
+  $files = [];
 
   // Add nodes.
   if ($form_state->getValue('entity_node')) {
@@ -53,7 +55,7 @@ function quant_cron_cron() {
       }
     }
 
-    $entities = $query->execute();
+    $entities = $query->accessCheck(TRUE)->execute();
 
     foreach ($entities as $vid => $nid) {
       $entity = Node::load($nid);
@@ -93,22 +95,34 @@ function quant_cron_cron() {
 
   // Add file routes.
   if ($form_state->getValue('robots')) {
-    $routes[] = '/robots.txt';
+    $files[] = '/robots.txt';
   }
 
   // Add theme file routes.
   if ($form_state->getValue('theme_assets')) {
-    $routes = array_merge($routes, get_theme_routes());
+    $files = array_merge($files, quant_cron_get_theme_routes());
+  }
+
+  // Add local files.
+  if ($form_state->getValue('file_paths')) {
+    $files = array_merge($files, quant_cron_get_files_from_paths($form_state->getValue('file_paths_textarea')));
   }
 
   // Add views routes.
   if ($form_state->getValue('views_pages')) {
-    $routes = array_merge($routes, get_views_routes());
+    $routes = array_merge($routes, quant_cron_get_views_routes());
   }
 
   // Add taxonomy term routes.
   if ($form_state->getValue('entity_taxonomy_term')) {
-    $routes = array_merge($routes, get_taxonomy_routes());
+    $routes = array_merge($routes, quant_cron_get_taxonomy_routes());
+  }
+
+  // Send files.
+  foreach ($files as $file) {
+    \Drupal::logger('quant_cron')->notice("quant_cron sending file: @route", ['@route' => $file]);
+    $file_item = new FileItem(['file' => $file]);
+    $file_item->send();
   }
 
   // Send any added routes.
@@ -123,7 +137,7 @@ function quant_cron_cron() {
 /**
  * Helper: Get taxonomy routes.
  */
-function get_taxonomy_routes() {
+function quant_cron_get_taxonomy_routes() {
 
   $paths = [];
   $taxonomy_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
@@ -152,7 +166,7 @@ function get_taxonomy_routes() {
 /**
  * Helper: Get theme assets.
  */
-function get_theme_routes() {
+function quant_cron_get_theme_routes() {
 
   $paths = [];
 
@@ -175,6 +189,10 @@ function get_theme_routes() {
   $regex = new \RegexIterator($iterator, '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.ico|.js|.css)$/i', \RecursiveRegexIterator::GET_MATCH);
 
   foreach ($regex as $name => $r) {
+    // Skip node_modules.
+    if (preg_match('/node_modules/i', $name)) {
+      continue;
+    }
     $path = str_replace(DRUPAL_ROOT, '', $name);
     $paths[] = $path;
   }
@@ -201,9 +219,33 @@ function get_theme_routes() {
 }
 
 /**
+ * Helper: Get custom file paths.
+ */
+function quant_cron_get_files_from_paths($files_textarea) {
+  $paths = [];
+  $files = [];
+
+  foreach (explode(PHP_EOL, $files_textarea) as $path) {
+    // Paths must be relative to the drupal web root.
+    $paths[] = DRUPAL_ROOT . "/" . ltrim($path, '/');
+  }
+
+  foreach ($paths as $path) {
+    foreach (glob(trim($path)) as $filename) {
+      if (is_file($filename)) {
+        $path = str_replace(DRUPAL_ROOT, '', $filename);
+        $files[] = $path;
+      }
+    }
+  }
+
+  return $files;
+}
+
+/**
  * Helper: Get views routes.
  */
-function get_views_routes() {
+function quant_cron_get_views_routes() {
 
   $views_storage = \Drupal::entityTypeManager()->getStorage('view');
   $anon = User::getAnonymousUser();

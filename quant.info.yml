@@ -3,8 +3,7 @@ description: Quant content export
 package: Quant
 
 type: module
-core_version_requirement: ^8 || ^9
-core: 8.x
-
+core_version_requirement: ^9.3 || ^10
+configure: quant.config
 dependencies:
   - quant:quant_api

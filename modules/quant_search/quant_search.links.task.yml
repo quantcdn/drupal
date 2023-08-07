@@ -1,0 +1,24 @@
+quant_search.main:
+  route_name: quant_search.main
+  title: 'Search'
+  base_route: quant.config
+
+quant_search.main.overview:
+  route_name: quant_search.main
+  title: 'Overview'
+  parent_id: quant_search.main
+
+entity.quant_search_page.collection:
+  route_name: entity.quant_search_page.collection
+  title: 'Pages'
+  parent_id: quant_search.main
+
+quant_search.main.index:
+  route_name: quant_search.main.index
+  title: 'Index'
+  parent_id: quant_search.main
+
+quant_search.main.entities:
+  route_name: quant_search.main.entities
+  title: 'Entity configuration'
+  parent_id: quant_search.main

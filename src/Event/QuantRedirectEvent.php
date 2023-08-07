@@ -2,7 +2,7 @@
 
 namespace Drupal\quant\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use Drupal\Component\EventDispatcher\Event;
 
 /**
  * The transport event (redirects).
@@ -48,8 +48,8 @@ final class QuantRedirectEvent extends Event {
    * {@inheritdoc}
    */
   public function __construct($source, $destination, $statusCode = 301) {
-    $this->source = $source;
-    $this->destination = $destination;
+    $this->source = strtolower($source);
+    $this->destination = strtolower($destination);
     $this->statusCode = $statusCode;
   }
 

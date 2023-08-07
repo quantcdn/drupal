@@ -23,8 +23,8 @@ class FileItem implements QuantQueueItemInterface {
    */
   public function __construct(array $data = []) {
     $this->file = $data['file'];
-    $this->url = isset($data['url']) ? $data['url'] : NULL;
-    $this->fullPath = isset($data['full_path']) ? $data['full_path'] : NULL;
+    $this->url = $data['url'] ?? NULL;
+    $this->fullPath = $data['full_path'] ?? NULL;
   }
 
   /**
@@ -53,8 +53,11 @@ class FileItem implements QuantQueueItemInterface {
       ]);
     }
 
+    // Ensure DRUPAL_ROOT prefix has not already been added.
+    $this->file = preg_replace('#^' . DRUPAL_ROOT . '#', '', $this->file);
+
     if (file_exists(DRUPAL_ROOT . $this->file)) {
-      \Drupal::service('event_dispatcher')->dispatch(QuantFileEvent::OUTPUT, new QuantFileEvent(DRUPAL_ROOT . $this->file, $this->file));
+      \Drupal::service('event_dispatcher')->dispatch(new QuantFileEvent(DRUPAL_ROOT . $this->file, $this->file), QuantFileEvent::OUTPUT);
     }
   }
 

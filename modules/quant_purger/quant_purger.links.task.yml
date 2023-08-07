@@ -1,0 +1,4 @@
+quant_purger.config:
+  route_name: quant_purger.config
+  title: 'Purger'
+  base_route: quant.config

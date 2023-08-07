@@ -1,0 +1,6 @@
+quant_search_entity_node: 1
+quant_search_title_token: '[node:title]'
+quant_search_summary_token: '[node:summary]'
+quant_search_content_viewmode: full
+quant_search_image_token: '[node:field_image:thumbnail:url]'
+quant_search_entity_taxonomy_term: 1
