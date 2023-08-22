@@ -83,9 +83,10 @@ class QuantDrushCommands extends DrushCommands {
     if (file_exists($lockFilePath)) {
       $this->output()->writeln("<info>Seeding bailed. Another seed run is in progress.</info>");
       return;
-    } else {
+    }
+    else {
       // No lock currently present. Create new lock file.
-      file_put_contents($lockFilePath, null);
+      file_put_contents($lockFilePath, NULL);
     }
 
     for ($i = 0; $i < $options['threads']; $i++) {
