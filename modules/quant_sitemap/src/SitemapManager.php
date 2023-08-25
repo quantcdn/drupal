@@ -92,7 +92,7 @@ class SitemapManager {
       if (!empty($module) && version_compare($module->info['version'], self::SIMPLE_SITEMAP_MINIMUM_VERSION, '>=')) {
         return [
           TRUE,
-          $this->t('simple_sitemap is a supported version (@ver)', [
+          $this->t('simple_sitemap is installed at a supported version (@ver)', [
             '@ver' => $module->info['version'],
           ]),
         ];
@@ -109,7 +109,7 @@ class SitemapManager {
       if (!empty($module) && version_compare($module->info['version'], self::XMLSITEMAP_MINIMUM_VERSION, '>=')) {
         return [
           TRUE,
-          $this->t('xmlsitemap is a supported version (@ver)', [
+          $this->t('xmlsitemap is installed at a supported version (@ver)', [
             '@ver' => $module->info['version'],
           ]),
         ];
