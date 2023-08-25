@@ -12,11 +12,18 @@ use Drupal\quant\Form\SeedForm;
  * Implements hook_form_FORM_ID_alter().
  */
 function quant_sitemap_form_quant_seed_form_alter(&$form, FormStateInterface $form_state) {
+  [$available, $reason] = \Drupal::service('quant_sitemap.sitemap_manager')->isAvailable();
+
+  if (!$available) {
+    \Drupal::messenger()->addError($reason);
+  }
+
   $form['export_sitemap'] = [
     '#type' => 'checkbox',
     '#title' => t('Sitemaps'),
-    '#description' => t('Export all sitemap variants to quant'),
+    '#description' => t('Export all sitemap variants to Quant'),
     '#default_value' => \Drupal::config(SeedForm::SETTINGS)->get('export_sitemap'),
+    '#disabled' => !$available,
   ];
 
   $form['#submit'][] = 'quant_sitemap_settings_submit';
