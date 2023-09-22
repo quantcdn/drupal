@@ -118,7 +118,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    */
   public function collectRedirects(CollectRedirectsEvent $event) {
     $query = $this->entityTypeManager->getStorage('redirect')->getQuery();
-    $ids = $query->execute();
+    $ids = $query->accessCheck(TRUE)->execute();
 
     foreach ($ids as $id) {
       $redirect = Redirect::load($id);
