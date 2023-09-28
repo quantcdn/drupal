@@ -57,7 +57,7 @@ if (empty($method->getReturnType())) {
     /**
      * {@inheritdoc}
      */
-    public function handle(Request $request, $type = self::MASTER_REQUEST, $catch = TRUE) {
+    public function handle(Request $request, $type = self::MAIN_REQUEST, $catch = TRUE) {
       $response = $this->httpKernel->handle($request, $type, $catch);
       if ($this->determine($request, $response)) {
         $this->registry->add(
