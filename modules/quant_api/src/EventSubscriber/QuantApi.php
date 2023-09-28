@@ -108,6 +108,7 @@ class QuantApi implements EventSubscriberInterface {
    */
   public function onOutput(QuantEvent $event) {
 
+    $config = \Drupal::config('quant.settings');
     $path = $event->getLocation();
     $content = $event->getContents();
     $meta = $event->getMetadata();
@@ -177,14 +178,46 @@ class QuantApi implements EventSubscriberInterface {
         $fileOnDisk = str_replace('/system/files', $privatePath, $file);
       }
 
+      // Check if the file has changed.
       if (isset($item['existing_md5'])) {
         if (file_exists($fileOnDisk) && md5_file($fileOnDisk) == $item['existing_md5']) {
           continue;
         }
       }
 
-      // If the file exists we send it directly to quant otherwise we add it
-      // to the queue to generate assets on the next run.
+      // In Drupal 10.1, work around CSS/JS aggregation issues.
+      // Only process internal CSS/JS files.
+      $check_file = preg_match('/\.(css|js)$/', $file) && (strpos($item['original_path'], "http") !== 0);
+      if (!file_exists($fileOnDisk) && $check_file) {
+
+        // Do an HTTP request for the full file path to generate the file.
+        // The `original_path` has the necessary query parameters.
+        $local_server = $config->get('local_server') ?: 'http://localhost';
+        $url = $local_server . $item['original_path'];
+
+        // Set headers.
+        $headers['Host'] = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
+
+        // Handle basic authentication. Note, this will not work via Drush/CLI.
+        $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
+          $_SERVER['PHP_AUTH_USER'],
+          $_SERVER['PHP_AUTH_PW'],
+        ] : [];
+
+        $response = \Drupal::httpClient()->get($url, [
+          'http_errors' => FALSE,
+          'headers' => $headers,
+          'auth' => $auth,
+          'allow_redirects' => FALSE,
+          'verify' => boolval($config->get('ssl_cert_verify')),
+        ]);
+        if ($response->getStatusCode() != 200) {
+          $this->logger->error("Error retrieving file for route: $url");
+        }
+      }
+
+      // If the file exists, send it directly to Quant; otherwise, add it to the
+      // queue to generate assets on the next run.
       if (file_exists($fileOnDisk)) {
         $this->eventDispatcher->dispatch(new QuantFileEvent($fileOnDisk, $item['full_path'] ?? $file), QuantFileEvent::OUTPUT);
       }
@@ -204,7 +237,7 @@ class QuantApi implements EventSubscriberInterface {
     $xpath = new \DOMXPath($document);
 
     $xpath_selectors = [];
-    $links_config = \Drupal::config('quant.settings')->get('xpath_selectors');
+    $links_config = $config->get('xpath_selectors');
 
     foreach (explode(PHP_EOL, $links_config) as $links_line) {
       $xpath_selectors[] = trim($links_line);
