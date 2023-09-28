@@ -195,19 +195,13 @@ class QuantApi implements EventSubscriberInterface {
         $local_server = $config->get('local_server') ?: 'http://localhost';
         $url = $local_server . $item['original_path'];
 
-        // Set headers.
+        // Set the headers.
         $headers['Host'] = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
 
-        // Handle basic authentication. Note, this will not work via Drush/CLI.
-        $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
-          $_SERVER['PHP_AUTH_USER'],
-          $_SERVER['PHP_AUTH_PW'],
-        ] : [];
-
+        // If using basic auth, the credentials must already be in the host.
         $response = \Drupal::httpClient()->get($url, [
           'http_errors' => FALSE,
           'headers' => $headers,
-          'auth' => $auth,
           'allow_redirects' => FALSE,
           'verify' => boolval($config->get('ssl_cert_verify')),
         ]);
