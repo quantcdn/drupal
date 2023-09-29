@@ -187,7 +187,7 @@ class QuantApi implements EventSubscriberInterface {
 
       // In Drupal 10.1, work around CSS/JS aggregation issues.
       // Only process internal CSS/JS files.
-      $check_file = (str_ends_with($file, 'css') || str_ends_with($file, 'js')) && str_starts_with($item['original_path'], 'http');
+      $check_file = (str_ends_with($file, 'css') || str_ends_with($file, 'js')) && !str_starts_with($item['original_path'], 'http');
       if (!file_exists($fileOnDisk) && $check_file) {
 
         // Do an HTTP request for the full file path to generate the file.
