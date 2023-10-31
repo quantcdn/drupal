@@ -354,3 +354,37 @@ function quant_special_pages() {
     $item->send();
   }
 }
+
+/**
+ * Implements hook_modules_installed().
+ */
+function quant_modules_installed($modules) {
+  if (in_array('workbench_moderation', $modules)) {
+    $config = \Drupal::configFactory()->getEditable('quant.settings');
+    $disabled = $config->get('disable_content_drafts');
+    // Only disable if not already disabled.
+    if (!$disabled) {
+      $config->set('disable_content_drafts', 1);
+      $config->save();
+      $message = 'Quant draft content handling has been disabled because the Workbench Moderation module has been installed.';
+      \Drupal::messenger()->addMessage(t($message));
+      \Drupal::logger('quant')->notice($message);
+    }
+  }
+}
+
+/**
+ * Implements hook_modules_uninstalled().
+ */
+function quant_modules_uninstalled($modules) {
+  if (in_array('workbench_moderation', $modules)) {
+    $config = \Drupal::configFactory()->getEditable('quant.settings');
+    $disabled = $config->get('disable_content_drafts');
+    // Only show message if disabled.
+    if ($disabled) {
+      $message = 'Quant draft content handling can be enabled now that the Workbench Moderation module has been uninstalled.';
+      \Drupal::messenger()->addMessage(t($message));
+      \Drupal::logger('quant')->notice($message);
+    }
+  }
+}

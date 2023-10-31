@@ -88,7 +88,7 @@ function quant_update_9004(&$sandbox) {
 }
 
 /**
- * Disables draft revisions if workbench moderation is in use.
+ * Disables draft content handling if Workbench Moderation is installed.
  */
 function quant_update_9005(&$sandbox) {
   if (\Drupal::moduleHandler()->moduleExists('workbench_moderation')) {
