@@ -86,3 +86,14 @@ function quant_update_9004(&$sandbox) {
   $config->set('xpath_selectors', implode(PHP_EOL, $xpaths));
   $config->save();
 }
+
+/**
+ * Disables draft revisions if workbench moderation is in use.
+ */
+function quant_update_9005(&$sandbox) {
+  if (\Drupal::moduleHandler()->moduleExists('workbench_moderation')) {
+    $config = \Drupal::configFactory()->getEditable('quant.settings');
+    $config->set('disable_content_drafts', 1);
+    $config->save();
+  }
+}
