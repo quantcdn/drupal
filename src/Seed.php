@@ -434,8 +434,8 @@ class Seed {
 
     $headers['Host'] = $hostname;
 
-    // Generate a signed token and use it in the request.
-    // This only applies when drafts are enabled, as we return neutral access otherwise.
+    // Generate a signed token and use it in the request. This only applies when
+    // drafts are enabled, as we return neutral access otherwise.
     $disable_drafts = $config->get('disable_content_drafts');
     if (!$disable_drafts) {
       $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
@@ -494,8 +494,8 @@ class Seed {
 
     $headers['Host'] = $hostname;
 
-    // Generate a signed token and use it in the request.
-    // This only applies when drafts are enabled, as we return neutral access otherwise.
+    // Generate a signed token and use it in the request. This only applies when
+    // drafts are enabled, as we return neutral access otherwise.
     $disable_drafts = $config->get('disable_content_drafts');
     if (!$disable_drafts) {
       $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);

@@ -157,9 +157,9 @@ class TokenManager {
     }
 
     if ($this->quantSettings->get('disable_content_drafts')) {
-      // When content drafts are disabled the token is irrelevant.
-      // It may not even be included in the internal HTTP request.
-      // Bypass validation altogether, as the token is only required for draft access.
+      // When content drafts are disabled the token is irrelevant. It may not
+      // even be included in the internal HTTP request. Bypass validation
+      // altogether, as the token is only required for draft access.
       throw new TokenValidationDisabledException();
     }
 
