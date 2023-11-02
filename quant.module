@@ -172,7 +172,8 @@ function quant_shutdown(array $context = []) {
 function quant_node_access(NodeInterface $node, $op, AccountInterface $account) {
   $request = \Drupal::request();
 
-  if (!$request->headers->has('quant-revision') && !$request->headers->has('quant-token')) {
+  // Both revision & token headers need to be present to alter access.
+  if (!$request->headers->has('quant-revision') || !$request->headers->has('quant-token')) {
     return AccessResult::neutral();
   }
 
@@ -352,5 +353,37 @@ function quant_special_pages() {
   foreach ($system_pages as $route) {
     $item = new RouteItem(['route' => $route]);
     $item->send();
+  }
+}
+
+/**
+ * Implements hook_modules_installed().
+ */
+function quant_modules_installed($modules) {
+  if (in_array('workbench_moderation', $modules)) {
+    $config = \Drupal::configFactory()->getEditable('quant.settings');
+    $disabled = $config->get('disable_content_drafts');
+    // Only disable if not already disabled.
+    if (!$disabled) {
+      $config->set('disable_content_drafts', 1);
+      $config->save();
+      \Drupal::messenger()->addMessage(t('Quant draft content handling has been disabled because the Workbench Moderation module has been installed.'));
+      \Drupal::logger('quant')->notice('Quant draft content handling has been disabled because the Workbench Moderation module has been installed.');
+    }
+  }
+}
+
+/**
+ * Implements hook_modules_uninstalled().
+ */
+function quant_modules_uninstalled($modules) {
+  if (in_array('workbench_moderation', $modules)) {
+    $config = \Drupal::configFactory()->getEditable('quant.settings');
+    $disabled = $config->get('disable_content_drafts');
+    // Only show message if disabled.
+    if ($disabled) {
+      \Drupal::messenger()->addMessage(t('Quant draft content handling can be enabled now that the Workbench Moderation module has been uninstalled.'));
+      \Drupal::logger('quant')->notice('Quant draft content handling can be enabled now that the Workbench Moderation module has been uninstalled.');
+    }
   }
 }
