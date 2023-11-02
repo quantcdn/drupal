@@ -15,6 +15,7 @@ class QuantPurgerController extends ControllerBase {
   public function content() {
     // Check if database table is empty.
     $count = \Drupal::database()->select('purge_queuer_quant')->countQuery()->execute()->fetchField();
+    $text = '';
     if ($count) {
       $text = $this->t('The Quant Purger registry database table has :count entries.<br/><br/>', [':count' => $count]);
     }
@@ -24,10 +25,10 @@ class QuantPurgerController extends ControllerBase {
     }
 
     if (\Drupal::moduleHandler()->moduleExists('purge_ui')) {
-      $text = $this->t('You can add and update the Quant Purger settings via the <a href=":url">Purge UI</a>.<br/><br/>', [':url' => '/admin/config/development/performance/purge']);
+      $text .= $this->t('You can add and update the Quant Purger settings via the <a href=":url">Purge UI</a>.<br/><br/>', [':url' => '/admin/config/development/performance/purge']);
     }
     else {
-      $text = $this->t('Enabling the <a href=":url">Purge UI module</a> will allow you to configure the Quant Purger module through the UI.<br/><br/>', [':url' => 'https://www.drupal.org/project/purge']);
+      $text .= $this->t('Enabling the <a href=":url">Purge UI module</a> will allow you to configure the Quant Purger module through the UI.<br/><br/>', [':url' => 'https://www.drupal.org/project/purge']);
     }
     $text .= $this->t('For more information about the Quant Purger module, refer to the <a href=":url">documentation</a>.', [':url' => 'https://docs.quantcdn.io/docs/integrations/drupal/purger']);
     $build = [
