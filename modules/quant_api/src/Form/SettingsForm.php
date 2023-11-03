@@ -85,7 +85,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_project'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Project'),
-      '#description' => $this->t('The API project. This is the <code>"API name"</code> shown on the <code>Projects</code> page and the <code>"Project"<code> shown on the <code>Integrations</code> page. Note, this value may be different than the human-readable project name.'),
+      '#description' => $this->t('The API project. This is the <code>"API name"</code> shown on the <code>Projects</code> page and the <code>"Project"</code> shown on the <code>Integrations</code> page. Note, this value may be different than the human-readable project name.'),
       '#default_value' => $config->get('api_project'),
       '#required' => TRUE,
     ];
