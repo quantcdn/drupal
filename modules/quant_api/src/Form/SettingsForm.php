@@ -67,7 +67,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_endpoint'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Endpoint'),
-      '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code>. Update via drush or settings.php if necessary.'),
+      '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code>, shown on the <code>Integrations</code> page. Update via drush or settings.php if necessary.'),
       '#default_value' => $config->get('api_endpoint', 'https://api.quantcdn.io'),
       '#required' => TRUE,
       '#disabled' => TRUE,
@@ -85,7 +85,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_project'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Project'),
-      '#description' => $this->t('The API project. This is the <code>API name</code> shown on the <code>Projects</code> and <code>Integrations</code> pages.'),
+      '#description' => $this->t('The API project. This is the <code>"API name"</code> shown on the <code>Projects</code> page and the <code>"Project"<code> shown on the <code>Integrations</code> page. Note, this value may be different than the human-readable project name.'),
       '#default_value' => $config->get('api_project'),
       '#required' => TRUE,
     ];
@@ -93,7 +93,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_token'] = [
       '#type' => 'password',
       '#title' => $this->t('API Token'),
-      '#description' => $this->t('The API token. Use the clipboard icon in the dashboard to copy the token. Be careful with this information. It should be treated like any system password.'),
+      '#description' => $this->t('The API token. Use the clipboard icon in the dashboard to copy the token from the <code>Projects</code> or <code>Integrations</code> page. Be careful with this information. It should be treated like any system password.'),
       '#default_value' => $config->get('api_token'),
       '#required' => TRUE,
     ];
@@ -102,7 +102,6 @@ class SettingsForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Disable TLS verification'),
       '#description' => $this->t('You can optionally disable SSL verification for all Quant API requests. This is <strong>not recommended</strong>, but may be necessary in some configurations. For example, old web servers may have issues validating modern SSL certificates.'),
-
       '#default_value' => $config->get('api_tls_disabled', FALSE),
     ];
 
