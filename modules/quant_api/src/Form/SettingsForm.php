@@ -67,9 +67,10 @@ class SettingsForm extends ConfigFormBase {
     $form['api_endpoint'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Endpoint'),
-      '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code>'),
-      '#default_value' => $config->get('api_endpoint'),
+      '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code>. Update via drush or settings.php if necessary.'),
+      '#default_value' => $config->get('api_endpoint', 'https://api.quantcdn.io'),
       '#required' => TRUE,
+      '#disabled' => TRUE,
     ];
 
     // @todo Switch from 'api_account' to 'api_organization'.
