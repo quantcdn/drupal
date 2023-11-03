@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for quant_sitemap.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function quant_sitemap_requirements($phase) {
+  $requirements = [];
+  if ($phase != 'runtime') {
+    return $requirements;
+  }
+
+  [$available, $reason] = \Drupal::service('quant_sitemap.sitemap_manager')->isAvailable();
+
+  $requirements['quant_sitemap'] = [
+    'title' => t('Quant Sitemap'),
+    'severity' => $available ? REQUIREMENT_OK : REQUIREMENT_WARNING,
+    'description' => $reason,
+  ];
+
+  return $requirements;
+}

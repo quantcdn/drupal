@@ -34,3 +34,58 @@ function quant_purger_schema() {
   ];
   return $schema;
 }
+
+/**
+ * Implements hook_install().
+ */
+function quant_purger_install() {
+  // @todo get the URLs programatically.
+  // Markup is not being rendered properly during install so not adding HTML.
+  if (\Drupal::moduleHandler()->moduleExists('purge_ui')) {
+    \Drupal::messenger()->addStatus(t('Quant Purger: You can add or remove cache tags and URLs via the Purge UI: :url', [':url' => '/admin/config/development/performance/purge']));
+  }
+  else {
+    \Drupal::messenger()->addStatus(t('Quant Purger: Enabling the Purge UI module will allow you to configure the Quant Purger module through the UI.'));
+  }
+  \Drupal::messenger()->addStatus(t('Quant Purger: For more information about the Quant Purger module, refer to the documentation: :url', [':url' => 'https://docs.quantcdn.io/docs/integrations/drupal/purger']));
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_purger_uninstall() {
+  \Drupal::configFactory()->getEditable('quant_purger.settings')->delete();
+
+  if (\Drupal::moduleHandler()->moduleExists('purge_ui')) {
+    \Drupal::messenger()->addStatus(t('Quant Purger: You may want to uninstall the Purge and Purge UI modules if they are no longer needed.'));
+  }
+  else {
+    \Drupal::messenger()->addStatus(t('Quant Purger: You may want to uninstall the Purge module if it is no longer needed.'));
+  }
+}
+
+/**
+ * Update configuration for module settings.
+ */
+function quant_purger_update_9101(&$sandbox) {
+  $config = \Drupal::configFactory()->getEditable('quant_purger.settings');
+  $config->set('tag_blocklist', [
+    'rendered',
+    'http_response',
+    '4xx-response',
+    'block_view',
+    'block_view_content',
+    'node_view',
+    'node_list',
+    'taxonomy_term_list',
+    'media_view',
+    'block_content_view',
+    'marketo_form_view',
+    'paragraph_view',
+    'config:*',
+    'user:*',
+    'local_task',
+  ]);
+  $config->set('path_blocklist', ['/admin/*']);
+  $config->save();
+}

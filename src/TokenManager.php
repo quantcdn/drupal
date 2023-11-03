@@ -39,6 +39,13 @@ class TokenManager {
   protected $settings;
 
   /**
+   * Global Quant configuration.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
+  protected $quantSettings;
+
+  /**
    * Construct a TokenManager instance.
    *
    * @param \Drupal\Core\Database\Connection $connection
@@ -52,6 +59,7 @@ class TokenManager {
     $this->connection = $connection;
     $this->request = $request;
     $this->settings = $config_factory->get('quant.token_settings');
+    $this->quantSettings = $config_factory->get('quant.settings');
   }
 
   /**
@@ -145,6 +153,13 @@ class TokenManager {
       // Allow administrators to completely bypass the token verification
       // process. This can be done to test server configuration and is
       // not recommended in production.
+      throw new TokenValidationDisabledException();
+    }
+
+    if ($this->quantSettings->get('disable_content_drafts')) {
+      // When content drafts are disabled the token is irrelevant. It may not
+      // even be included in the internal HTTP request. Bypass validation
+      // altogether, as the token is only required for draft access.
       throw new TokenValidationDisabledException();
     }
 

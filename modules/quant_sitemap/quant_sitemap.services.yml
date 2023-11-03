@@ -1,9 +1,15 @@
 services:
 
-  quant_sitemap.collection_subscriber:
-    class: Drupal\quant_sitemap\EventSubscriber\CollectionSubscriber
+  quant_sitemap.sitemap_manager:
+    class: Drupal\quant_sitemap\SitemapManager
     arguments:
       - '@module_handler'
       - '@entity_type.manager'
+      - '@extension.list.module'
+
+  quant_sitemap.collection_subscriber:
+    class: Drupal\quant_sitemap\EventSubscriber\CollectionSubscriber
+    arguments:
+      - '@quant_sitemap.sitemap_manager'
     tags:
       - { name: 'event_subscriber' }

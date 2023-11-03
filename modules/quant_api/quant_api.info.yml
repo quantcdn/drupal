@@ -4,6 +4,6 @@ package: Quant
 
 type: module
 core_version_requirement: ^9.3 || ^10
-
+configure: quant_api.settings_form
 dependencies:
   - drupal:quant

@@ -4,6 +4,8 @@ namespace Drupal\quant_purger\Form;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\purge_ui\Form\QueuerConfigFormBase;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\PrependCommand;
 
 /**
  * Configuration form for the Quant queuer.
@@ -78,9 +80,9 @@ class ConfigurationForm extends QueuerConfigFormBase {
       ];
     }
 
-    $form['path_blocklist_fieldset']['#description'] = $this->t('The Quant purge querer collects HTTP requests that the Quant module makes to generate static representations of content. It requires that the request has a valid token to limit the performance impact of gathering traffic information in such a manner. This is a user managed list of paths and query strings that will be excluded from traffic gathering.');
+    $form['path_blocklist_fieldset']['#description'] = $this->t('The Quant purge queuer collects HTTP requests that the Quant module makes to generate static representations of content. It requires that the request has a valid token to limit the performance impact of gathering traffic information in such a manner. This is a user-managed list of paths and query strings that will be excluded from traffic gathering.');
 
-    $form['tag_blocklist_fieldset']['#description'] = $this->t('By default all cache tag invalidations will trigger a queue entry. Some of these invalidations can have widespread effects on the site and require a full content seed. This allows you to exclude certain tags from triggering a content re-index.');
+    $form['tag_blocklist_fieldset']['#description'] = $this->t('If this list is empty, all cache tag invalidations will trigger a queue entry. Some of these invalidations can have widespread effects on the site and require a full content seed. This setting allows you to exclude certain tags from triggering a content re-seed.');
 
     $form['actions']['clear'] = [
       '#type' => 'submit',
@@ -92,7 +94,12 @@ class ConfigurationForm extends QueuerConfigFormBase {
       ],
     ];
 
-    return parent::buildForm($form, $form_state);
+    $form = parent::buildForm($form, $form_state);
+
+    // Remove cancel button since it doesn't work and the popup can be closed.
+    unset($form['actions']['cancel']);
+
+    return $form;
   }
 
   /**
@@ -127,13 +134,11 @@ class ConfigurationForm extends QueuerConfigFormBase {
   /**
    * {@inheritdoc}
    */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
+  public function submitFormSuccess(array &$form, FormStateInterface $form_state) {
     $this->config('quant_purger.settings')
       ->set('tag_blocklist', $form_state->getValue('tag_blocklist'))
       ->set('path_blocklist', $form_state->getValue('path_blocklist'))
       ->save();
-
-    return parent::submitForm($form, $form_state);
   }
 
   /**
@@ -145,9 +150,28 @@ class ConfigurationForm extends QueuerConfigFormBase {
    *   The form state object.
    */
   public function submitFormClear(array &$form, FormStateInterface $form_state) {
+    $response = new AjaxResponse();
+
     if (!$form_state->getErrors()) {
       \Drupal::service('quant_purger.registry')->clear();
+      $status = 'status';
+      $message = $this->t('Succesfully cleared the traffic registry.');
     }
+    else {
+      $status = 'error';
+      $message = $this->t('Unable to clear the traffic registry due to form errors:<br/><br/>%errors', ['%errors' => implode('<br/>', $form_state->getErrors())]);
+    }
+
+    $response->addCommand(new PrependCommand('#purgedialogform', '<div class="messages messages--' . $status . '" style="margin-top: 1rem"><div class="message__content">' . $message . '</div></div>'));
+
+    return $response;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    // @todo Add validation for path_blocklist and tag_blocklist.
   }
 
 }

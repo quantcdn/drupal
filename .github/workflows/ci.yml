@@ -16,13 +16,19 @@ jobs:
 
     services:
       mariadb:
-        image: mariadb
+        image: mariadb:10.11
         ports:
-          - 3306
+          - 3306:3306
         env:
           MYSQL_DATABASE: drupal9
           MYSQL_ROOT_PASSWORD: drupal
-        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+          MYSQL_USER: drupal
+          MYSQL_PASSWORD: drupal
+        options: >-
+          --health-cmd="mysqladmin ping" 
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=30
 
     steps:
       - name: Install Drupal
