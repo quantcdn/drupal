@@ -25,7 +25,7 @@ function quant_preprocess_page(&$variables) {
   // Add warning on Quant admin pages if queue factory is not set.
   $current_path = \Drupal::requestStack()->getCurrentRequest()->getPathInfo();
   if ((strpos($current_path, '/admin/config/quant') === 0) && Settings::get('queue_service_quant_seed_worker') != "quant.queue_factory") {
-    \Drupal::messenger()->addWarning(t("For the best performance, it is highly recommended you update <em>queue_service_quant_seed_worker</em> in your settings. See the <a href=\"https://docs.quantcdn.io/docs/integrations/drupal">Drupal docs</a> for setup information."));
+    \Drupal::messenger()->addWarning(t("For the best performance, it is highly recommended you update <em>queue_service_quant_seed_worker</em> in your settings. See the <a href=\"https://docs.quantcdn.io/docs/integrations/drupal\">Drupal docs</a> for setup information."));
   }
 }
 
