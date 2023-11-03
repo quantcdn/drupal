@@ -5,6 +5,7 @@ namespace Drupal\quant\Event;
 use Drupal\Component\EventDispatcher\Event;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * Configuration form event.
@@ -54,7 +55,7 @@ class ConfigFormEventBase extends Event implements ConfigFormEventInterface {
    */
   public function getQueue() {
     if (empty($this->queue)) {
-      $queue_factory = \Drupal::service('queue');
+      $queue_factory = QuantQueueFactory::getInstance();
       $this->queue = $queue_factory->get('quant_seed_worker');
     }
     return $this->queue;

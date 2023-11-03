@@ -1,3 +1,18 @@
 tag_blocklist:
-  - 'render'
-path_blocklist: []
+  - 'rendered'
+  - 'http_response'
+  - '4xx-response'
+  - 'block_view'
+  - 'block_view_content'
+  - 'node_view'
+  - 'node_list'
+  - 'taxonomy_term_list'
+  - 'media_view'
+  - 'block_content_view'
+  - 'marketo_form_view'
+  - 'paragraph_view'
+  - 'config:*'
+  - 'user:*'
+  - 'local_task'
+path_blocklist:
+  - '/admin/*'

@@ -83,14 +83,8 @@ class QuantPurger implements CacheTagsInvalidatorInterface, ContainerAwareInterf
       return;
     }
 
-    $config = \Drupal::config('quant_purger.settings');
-
-    $blocklist = is_array($config->get('tag_blocklist')) ? $config->get('tag_blocklist') : [];
-
     // Clean up the tags that we care about for this run.
     $tags = array_diff($tags, $this->invalidatedTags);
-    $tags = array_diff($tags, $blocklist);
-    $tags = array_filter($tags);
 
     if (empty($tags)) {
       // We've purged all the tags during runtime.

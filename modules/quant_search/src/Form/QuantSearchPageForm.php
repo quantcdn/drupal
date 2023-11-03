@@ -536,6 +536,7 @@ class QuantSearchPageForm extends EntityForm {
   public function exist($id) {
     $entity = $this->entityTypeManager->getStorage('quant_search_page')->getQuery()
       ->condition('id', $id)
+      ->accessCheck(TRUE)
       ->execute();
     return (bool) $entity;
   }

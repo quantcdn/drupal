@@ -1,0 +1,7 @@
+quant_purger.config:
+  path: '/admin/config/quant/purger'
+  defaults:
+    _controller: 'Drupal\quant_purger\Controller\QuantPurgerController::content'
+    _title: 'Quant Purger'
+  requirements:
+    _permission: 'configure quant'

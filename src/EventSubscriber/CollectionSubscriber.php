@@ -15,7 +15,9 @@ use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
+use Drupal\quant\Seed;
 use Drupal\redirect\Entity\Redirect;
+use Drupal\quant\QuantQueueFactory;
 
 /**
  * Event subscribers for the quant collection events.
@@ -116,20 +118,18 @@ class CollectionSubscriber implements EventSubscriberInterface {
    */
   public function collectRedirects(CollectRedirectsEvent $event) {
     $query = $this->entityTypeManager->getStorage('redirect')->getQuery();
-    $ids = $query->execute();
+    $ids = $query->accessCheck(TRUE)->execute();
 
     foreach ($ids as $id) {
       $redirect = Redirect::load($id);
-
-      $source = $redirect->getSourcePathWithQuery();
-      $destination = $redirect->getRedirectUrl()->toString();
-      $status_code = $redirect->getStatusCode();
-
-      $event->queueItem([
-        'source' => $source,
-        'destination' => $destination,
-        'status_code' => $status_code,
-      ]);
+      $redirects = Seed::getRedirectLocationsFromRedirect($redirect);
+      foreach ($redirects as $r) {
+        $event->queueItem([
+          'source' => $r['source'],
+          'destination' => $r['destination'],
+          'status_code' => $r['status_code'],
+        ]);
+      }
     }
   }
 
@@ -263,7 +263,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
 
           // Generate a redirection QueueItem from canonical path to URL.
           // Use the default language alias in the event of multi-lang setup.
-          $queue_factory = \Drupal::service('queue');
+          $queue_factory = QuantQueueFactory::getInstance();
           $queue = $queue_factory->get('quant_seed_worker');
 
           if ("/taxonomy/term/{$tid}" != $url) {

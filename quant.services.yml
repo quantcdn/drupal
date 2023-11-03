@@ -37,3 +37,7 @@ services:
       - '@config.factory'
     tags:
       - { name: 'event_subscriber' }
+
+  quant.queue_factory:
+    class: Drupal\quant\QuantQueueFactory
+    parent: queue.database

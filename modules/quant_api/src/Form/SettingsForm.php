@@ -72,9 +72,10 @@ class SettingsForm extends ConfigFormBase {
       '#required' => TRUE,
     ];
 
+    // @todo Switch from 'api_account' to 'api_organization'.
     $form['api_account'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('API Account'),
+      '#title' => $this->t('API Organization'),
       '#default_value' => $config->get('api_account'),
       '#required' => TRUE,
     ];
@@ -109,6 +110,7 @@ class SettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
     // Retrieve the configuration.
+    // @todo Switch from 'api_account' to 'api_organization'.
     $this->configFactory->getEditable(self::SETTINGS)
       ->set('api_endpoint', $form_state->getValue('api_endpoint'))
       ->set('api_token', $form_state->getValue('api_token'))
