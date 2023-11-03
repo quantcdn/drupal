@@ -111,6 +111,13 @@ class ConfigForm extends ConfigFormBase {
       '#default_value' => $config->get('disable_content_drafts'),
     ];
 
+    // Ensure content drafts are disabled when workbench_moderation is in use.
+    if (\Drupal::moduleHandler()->moduleExists('workbench_moderation')) {
+      \Drupal::messenger()->addWarning(t('Workbench Moderation is in use. Drafts are currently not supported.'));
+      $form['disable_content_drafts']['#default_value'] = 1;
+      $form['disable_content_drafts']['#attributes'] = ['disabled' => 'disabled'];
+    }
+
     $form['proxy_override'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Override existing proxies'),
