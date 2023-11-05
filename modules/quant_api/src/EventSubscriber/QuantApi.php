@@ -154,7 +154,6 @@ class QuantApi implements EventSubscriberInterface {
     foreach ($media as $item) {
       // @todo Configurable to disallow remote files.
       // @todo Strip base domain.
-
       // Do not include external items.
       $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
       $check_url = parse_url($item['original_path']);
