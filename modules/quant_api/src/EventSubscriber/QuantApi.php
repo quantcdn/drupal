@@ -152,9 +152,16 @@ class QuantApi implements EventSubscriberInterface {
     $queue = $queue_factory->get('quant_seed_worker');
 
     foreach ($media as $item) {
-      // @todo Determine local vs. remote.
       // @todo Configurable to disallow remote files.
       // @todo Strip base domain.
+
+      // Do not include external items.
+      $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
+      $check_url = parse_url($item['original_path']);
+      if (isset($check_url['host']) && $check_url['host'] !== $hostname) {
+        continue;
+      }
+
       $url = urldecode($item['path']);
 
       if ($url == '/css') {
@@ -196,7 +203,7 @@ class QuantApi implements EventSubscriberInterface {
         $url = $local_server . $item['original_path'];
 
         // Set the headers.
-        $headers['Host'] = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
+        $headers['Host'] = $hostname;
 
         // If using basic auth, the credentials must already be in the host.
         $response = \Drupal::httpClient()->get($url, [
