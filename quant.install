@@ -103,7 +103,7 @@ function quant_update_9005(&$sandbox) {
  */
 function quant_update_9006(&$sandbox) {
   $new_xpath = [
-    '//li[contains(@class,"page-item")]/a[contains(@href,"page=")]'
+    '//li[contains(@class,"page-item")]/a[contains(@href,"page=")]',
   ];
 
   // Add new xpath to existing xpaths.
