@@ -183,7 +183,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       continue;
     }
 
-    // @todo Add and use `$base`?
+    // @fixme Should this be quant_get_base_url() instead of $base_url?
     if (!empty($domain) && stripos($base_url, $domain) == -1) {
       // @todo: Determine local vs. remote.
       continue;
@@ -279,9 +279,10 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
  * Implements hook_quant_seed_file().
  */
 function quant_api_quant_seed_file($url, $context) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
-  $host = variable_get('quant_hostname', parse_url($base, PHP_URL_HOST));
+
+  // Rebuild the file URL used for the local HEAD request.
+  $url = _rebuild_file_url($url);
+
   $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
 
   if (empty($api)) {
@@ -305,15 +306,15 @@ function quant_api_quant_seed_file($url, $context) {
       return FALSE;
     }
 
-    // Issue a HEAD request to the file path.
-    $options = array(
-      'max_redirects' => 0,
-      'headers' => array(
-        'Host' => $host,
-        'User-Agent' => 'Quant (+http://quantcdn.io)',
-      ),
-      'method' => 'HEAD',
-    );
+  // Issue a HEAD request to the file path.
+  $options = array(
+    'max_redirects' => 0,
+    'headers' => array(
+      'Host' => quant_get_hostname(),
+      'User-Agent' => 'Quant (+http://quantcdn.io)',
+    ),
+    'method' => 'HEAD',
+  );
 
     // Ensure url is absolute for internal HEAD request.
     if (strpos($url, "http") !== 0) {
@@ -321,7 +322,7 @@ function quant_api_quant_seed_file($url, $context) {
       if (substr($url, 0, 1) !== '/') {
         $url = '/' . $url;
       }
-      $url = "{$base}{$url}";
+      $url = quant_get_base_url() . $url;
     }
 
     if (!variable_get('quant_verify_ssl', TRUE)) {
@@ -512,10 +513,7 @@ function _rebuild_file_url($url) {
  *   The absolute local path on disk to the temporary file.
  */
 function _retrieve_file($url, $external_url=FALSE, $redirected=FALSE) {
-
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
-  $host = variable_get('quant_hostname', parse_url($base, PHP_URL_HOST));
+  $host = quant_get_hostname();
   $path = $url;
 
   if ($external_url) {
@@ -537,11 +535,10 @@ function _retrieve_file($url, $external_url=FALSE, $redirected=FALSE) {
 
   // Ensure url is absolute for internal GET request.
   if(strpos($url, "http") !== 0) {
-    // Ensure url path starts with a slash.
     if (substr($url, 0, 1) !== '/') {
       $url = '/' . $url;
     }
-    $url = "{$base}{$url}";
+    $url = quant_get_base_url() . $url;
   }
 
   if (!variable_get('quant_verify_ssl', TRUE)) {
