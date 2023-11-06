@@ -2,18 +2,19 @@
 
 namespace Drupal\quant_api\EventSubscriber;
 
+use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
-use Drupal\quant_api\Client\QuantClientInterface;
-use Drupal\Core\Logger\LoggerChannelFactoryInterface;
-use Drupal\quant_api\Exception\InvalidPayload;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
-use Drupal\quant\Seed;
 use Drupal\quant\QuantQueueFactory;
+use Drupal\quant\Seed;
+use Drupal\quant\Utility;
+use Drupal\quant_api\Client\QuantClientInterface;
+use Drupal\quant_api\Exception\InvalidPayload;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Integrate with the QuantAPI to store static assets.
@@ -155,9 +156,7 @@ class QuantApi implements EventSubscriberInterface {
       // @todo Configurable to disallow remote files.
       // @todo Strip base domain.
       // Do not include external items.
-      $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-      $check_url = parse_url($item['original_path']);
-      if (isset($check_url['host']) && $check_url['host'] !== $hostname) {
+      if (Utility::isExternalURL($item['original_path'])) {
         continue;
       }
 
@@ -202,7 +201,7 @@ class QuantApi implements EventSubscriberInterface {
         $url = $local_server . $item['original_path'];
 
         // Set the headers.
-        $headers['Host'] = $hostname;
+        $headers['Host'] = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
 
         // If using basic auth, the credentials must already be in the host.
         $response = \Drupal::httpClient()->get($url, [
