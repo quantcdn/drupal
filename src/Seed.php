@@ -553,6 +553,7 @@ class Seed {
       default:
         $messenger = \Drupal::messenger();
         $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
+        \Drupal::logger('quant_seed')->notice("Non-200 response for {$route}: " . $response->getStatusCode());
         return FALSE;
     }
 
