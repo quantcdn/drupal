@@ -156,7 +156,7 @@ class QuantApi implements EventSubscriberInterface {
       // @todo Configurable to disallow remote files.
       // @todo Strip base domain.
       // Do not include external items.
-      if (Utility::isExternalURL($item['original_path'])) {
+      if (Utility::isExternalUrl($item['original_path'])) {
         continue;
       }
 

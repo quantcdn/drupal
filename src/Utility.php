@@ -13,10 +13,10 @@ class Utility {
    * @param string $url
    *   The URL.
    *
-   * @return boolean
+   * @return bool
    *   TRUE if external and FALSE otherwise.
    */
-  public static function isExternalURL($url) {
+  public static function isExternalUrl($url) {
     $config = \Drupal::config('quant.settings');
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
     $check_url = parse_url($url);
