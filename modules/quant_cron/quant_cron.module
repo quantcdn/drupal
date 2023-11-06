@@ -96,8 +96,7 @@ function _quant_cron_seed_prepare() {
  *   The batch array.
  */
 function _quant_batch_nodes(&$batch, $bundles = array()) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
 
   $query = db_select('node', 'n')
     ->fields('n', array('nid'))
@@ -132,9 +131,6 @@ function _quant_batch_nodes(&$batch, $bundles = array()) {
  *   The batch array.
  */
 function _quant_batch_taxonomy(&$batch) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
-
   // @todo: Support select vocabs.
   $tids = db_select('taxonomy_term_data', 't')
     ->fields('t', array('tid'))
@@ -199,8 +195,7 @@ function _quant_batch_images(&$batch) {
  *   The batch array.
  */
 function _quant_batch_views(&$batch) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
 
   $menus = array();
   if (module_exists('views')) {
@@ -232,8 +227,7 @@ function _quant_batch_views(&$batch) {
  *   Textarea entered routes.
  */
 function _quant_batch_routes(&$batch, $routes) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
   $routes = is_array($routes) ? $routes : explode(PHP_EOL, $routes);
 
   foreach ($routes as $route) {
