@@ -1153,7 +1153,6 @@ function _quant_queue_page_manager() {
   }
 }
 
-
 /**
  * Get a list of views paths.
  */
