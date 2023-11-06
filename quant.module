@@ -471,7 +471,7 @@ function quant_seed($url, array $context = array()) {
     return;
   }
 
-  quant_log('Quant: Sending !type !url', array('!type' => $context['type'], '!url' => $url));
+  quant_log('Quant: Sending !type !url', array('!type' => @$context['type'], '!url' => $url));
 
   $options = array(
     'headers' => array(
