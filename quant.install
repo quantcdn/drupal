@@ -97,3 +97,19 @@ function quant_update_9005(&$sandbox) {
     $config->save();
   }
 }
+
+/**
+ * Add xpath selector to support new pager markup.
+ */
+function quant_update_9006(&$sandbox) {
+  $new_xpath = [
+    '//li[contains(@class,"page-item")]/a[contains(@href,"page=")]',
+  ];
+
+  // Add new xpath to existing xpaths.
+  $config = \Drupal::configFactory()->getEditable('quant.settings');
+  $xpaths = explode(PHP_EOL, $config->get('xpath_selectors'));
+  $xpaths = array_merge($xpaths, $new_xpath);
+  $config->set('xpath_selectors', implode(PHP_EOL, $xpaths));
+  $config->save();
+}
