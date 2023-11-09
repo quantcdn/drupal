@@ -267,7 +267,19 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
+    // Handle case where translation is unpublished.
+    $published = $entity->isPublished();
+    if ($entity->hasTranslation($langcode)) {
+      $translation = $entity->getTranslation($langcode);
+      $published = $translation->isPublished();
+    }
+
+    if ($published) {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
+    }
+    else {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    }
   }
 
   /**
@@ -339,7 +351,19 @@ class Seed {
       }
     }
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
+    // Handle case where translation is unpublished.
+    $published = $entity->isPublished();
+    if ($entity->hasTranslation($langcode)) {
+      $translation = $entity->getTranslation($langcode);
+      $published = $translation->isPublished();
+    }
+
+    if ($published) {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
+    }
+    else {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    }
 
     // Create canonical redirects from node/123 to the published revision route.
     if ("/node/{$nid}" != $url && $entity->isPublished() && $entity->isDefaultRevision()) {
@@ -437,8 +461,8 @@ class Seed {
     // @todo: Add a configurable to support additional internal headers.
     $headers['X-Forwarded-Proto'] = 'https';
 
-    // Generate a signed token and use it in the request.
-    // This only applies when drafts are enabled, as we return neutral access otherwise.
+    // Generate a signed token and use it in the request. This only applies when
+    // drafts are enabled, as we return neutral access otherwise.
     $disable_drafts = $config->get('disable_content_drafts');
     if (!$disable_drafts) {
       $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
@@ -500,8 +524,8 @@ class Seed {
     // @todo: Add a configurable to support additional internal headers.
     $headers['X-Forwarded-Proto'] = 'https';
 
-    // Generate a signed token and use it in the request.
-    // This only applies when drafts are enabled, as we return neutral access otherwise.
+    // Generate a signed token and use it in the request. This only applies when
+    // drafts are enabled, as we return neutral access otherwise.
     $disable_drafts = $config->get('disable_content_drafts');
     if (!$disable_drafts) {
       $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
@@ -559,6 +583,7 @@ class Seed {
       default:
         $messenger = \Drupal::messenger();
         $messenger->addMessage("Non-200 response for {$route}: " . $response->getStatusCode(), $messenger::TYPE_WARNING);
+        \Drupal::logger('quant_seed')->notice("Non-200 response for {$route}: " . $response->getStatusCode());
         return FALSE;
     }
 

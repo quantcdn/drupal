@@ -367,9 +367,8 @@ function quant_modules_installed($modules) {
     if (!$disabled) {
       $config->set('disable_content_drafts', 1);
       $config->save();
-      $message = 'Quant draft content handling has been disabled because the Workbench Moderation module has been installed.';
-      \Drupal::messenger()->addMessage(t($message));
-      \Drupal::logger('quant')->notice($message);
+      \Drupal::messenger()->addMessage(t('Quant draft content handling has been disabled because the Workbench Moderation module has been installed.'));
+      \Drupal::logger('quant')->notice('Quant draft content handling has been disabled because the Workbench Moderation module has been installed.');
     }
   }
 }
@@ -383,9 +382,8 @@ function quant_modules_uninstalled($modules) {
     $disabled = $config->get('disable_content_drafts');
     // Only show message if disabled.
     if ($disabled) {
-      $message = 'Quant draft content handling can be enabled now that the Workbench Moderation module has been uninstalled.';
-      \Drupal::messenger()->addMessage(t($message));
-      \Drupal::logger('quant')->notice($message);
+      \Drupal::messenger()->addMessage(t('Quant draft content handling can be enabled now that the Workbench Moderation module has been uninstalled.'));
+      \Drupal::logger('quant')->notice('Quant draft content handling can be enabled now that the Workbench Moderation module has been uninstalled.');
     }
   }
 }

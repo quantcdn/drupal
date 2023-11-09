@@ -15,6 +15,7 @@ class QuantPurgerController extends ControllerBase {
   public function content() {
     // Check if database table is empty.
     $count = \Drupal::database()->select('purge_queuer_quant')->countQuery()->execute()->fetchField();
+    $text = '';
     if ($count) {
       $text = $this->t('The Quant Purger registry database table has :count entries.<br/><br/>', [':count' => $count]);
     }
