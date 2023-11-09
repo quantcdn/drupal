@@ -198,6 +198,9 @@ class QuantApi implements EventSubscriberInterface {
         // Set the headers.
         $headers['Host'] = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
 
+        // @todo: Add a configurable to support additional internal headers.
+        $headers['X-Forwarded-Proto'] = 'https';
+
         // If using basic auth, the credentials must already be in the host.
         $response = \Drupal::httpClient()->get($url, [
           'http_errors' => FALSE,

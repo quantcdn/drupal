@@ -39,6 +39,10 @@ class FileItem implements QuantQueueItemInterface {
       $image_style_url = $local_host . $this->fullPath;
 
       $headers['Host'] = $hostname;
+
+      // @todo: Add a configurable to support additional internal headers.
+      $headers['X-Forwarded-Proto'] = 'https';
+
       $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
         $_SERVER['PHP_AUTH_USER'],
         $_SERVER['PHP_AUTH_PW'],

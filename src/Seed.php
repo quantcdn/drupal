@@ -434,6 +434,9 @@ class Seed {
 
     $headers['Host'] = $hostname;
 
+    // @todo: Add a configurable to support additional internal headers.
+    $headers['X-Forwarded-Proto'] = 'https';
+
     // Generate a signed token and use it in the request.
     // This only applies when drafts are enabled, as we return neutral access otherwise.
     $disable_drafts = $config->get('disable_content_drafts');
@@ -493,6 +496,9 @@ class Seed {
     $url = $local_host . $route;
 
     $headers['Host'] = $hostname;
+
+    // @todo: Add a configurable to support additional internal headers.
+    $headers['X-Forwarded-Proto'] = 'https';
 
     // Generate a signed token and use it in the request.
     // This only applies when drafts are enabled, as we return neutral access otherwise.
