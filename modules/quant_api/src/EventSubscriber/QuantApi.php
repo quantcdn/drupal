@@ -2,18 +2,18 @@
 
 namespace Drupal\quant_api\EventSubscriber;
 
+use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
-use Drupal\quant_api\Client\QuantClientInterface;
-use Drupal\Core\Logger\LoggerChannelFactoryInterface;
-use Drupal\quant_api\Exception\InvalidPayload;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
-use Drupal\quant\Seed;
 use Drupal\quant\QuantQueueFactory;
+use Drupal\quant\Seed;
+use Drupal\quant_api\Client\QuantClientInterface;
+use Drupal\quant_api\Exception\InvalidPayload;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Integrate with the QuantAPI to store static assets.
@@ -310,7 +310,7 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (\Exception $error) {
       // Don't log it if it's a 404, since the content is unpublished.
-      if (strpos($error, '404 Not Found') === false) {
+      if (strpos($error->getMessage(), '404 Not Found') === false) {
         $this->logger->error($error->getMessage());
       }
       return;
