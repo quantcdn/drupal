@@ -6,15 +6,15 @@
  */
 
 use Drupal\Core\Access\AccessResult;
-use Drupal\Core\Session\AccountInterface;
-use Drupal\node\NodeInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
+use Drupal\node\NodeInterface;
 use Drupal\quant\Exception\TokenValidationDisabledException;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
-use Drupal\quant\Seed;
 use Drupal\quant\QuantQueueFactory;
+use Drupal\quant\Seed;
 
 /**
  * Implements hook_menu_local_tasks_alter().
@@ -273,6 +273,10 @@ function _quant_entity_delete_op(EntityInterface $entity) {
       Seed::unpublishNode($entity);
       break;
 
+    case 'path_alias':
+      Seed::unpublishPathAlias($entity);
+      break;
+
     case 'taxonomy_term':
       Seed::unpublishTaxonomyTerm($entity);
       break;
@@ -385,5 +389,28 @@ function quant_modules_uninstalled($modules) {
       \Drupal::messenger()->addMessage(t('Quant draft content handling can be enabled now that the Workbench Moderation module has been uninstalled.'));
       \Drupal::logger('quant')->notice('Quant draft content handling can be enabled now that the Workbench Moderation module has been uninstalled.');
     }
+  }
+}
+
+/**
+ * Unpublish old alias if it changes.
+ *
+ * @param Drupal\Core\Entity\EntityInterface $pathAlias
+ *   The path alias.
+ */
+function quant_path_alias_presave(EntityInterface $pathAlias) {
+  // Original path alias.
+  $original_path = $pathAlias->original->get('path')->value;
+  $original_alias = $pathAlias->original->get('alias')->value;
+  $original_langcode = $pathAlias->original->get('langcode')->value;
+
+  // Current path alias.
+  $path = $pathAlias->get('path')->value;
+  $alias = $pathAlias->get('alias')->value;
+  $langcode = $pathAlias->get('langcode')->value;
+
+  // Unpublish original alias if it changed.
+  if ($original_path == $path && $langcode == $original_langcode && $original_alias != $alias) {
+    Seed::unpublishPathAlias($pathAlias->original);
   }
 }

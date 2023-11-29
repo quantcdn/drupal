@@ -438,6 +438,22 @@ class Seed {
   }
 
   /**
+   * Unpublish path alias via API request.
+   */
+  public static function unpublishPathAlias($pathAlias) {
+
+    $alias = $pathAlias->get('alias')->value;
+
+    // Handle multilingual paths.
+    if (self::usesLanguagePathPrefixes()) {
+      $langcode = $pathAlias->get('langcode')->value;
+      $alias = $langcode . '/' . $alias;
+    }
+
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $alias, [], NULL), QuantEvent::UNPUBLISH);
+  }
+
+  /**
    * Attempts a HTTP HEAD request to a given route.
    *
    * @param string $route
