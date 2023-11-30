@@ -5,7 +5,6 @@ namespace Drupal\quant;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
-use Drupal\quant_api\Client\QuantClientInterface;
 
 /**
  * Quant utility class for helper functions.
@@ -14,8 +13,11 @@ class Utility {
 
   /**
    * Determine if URL path prefix language negotiation is being used.
+   *
+   * @return bool
+   *   TRUE if language path prefixes are configured and FALSE otherwise.
    */
-  public static function usesLanguagePathPrefixes() {
+  public static function usesLanguagePathPrefixes() : bool {
     // Only works if there is more than one language.
     $langcodes = \Drupal::languageManager()->getLanguages();
     if (count($langcodes) === 1) {
@@ -34,10 +36,15 @@ class Utility {
   /**
    * Get URL based on site settings.
    *
-   * @return
+   * @param string $url
+   *   The URL.
+   * @param string $langcode
+   *   The language code for the URL.
+   *
+   * @return string
    *   The URL adjusted for multilingual settings. Defaults to current url.
    */
-  public static function getUrl($url = NULL, $langcode = NULL) {
+  public static function getUrl(string $url = NULL, string $langcode = NULL) : string {
 
     // Default to current URL.
     if (!$url) {
@@ -75,7 +82,7 @@ class Utility {
    * @return bool
    *   TRUE if external and FALSE otherwise.
    */
-  public static function isExternalUrl($url) {
+  public static function isExternalUrl(string $url) : bool {
     $config = \Drupal::config('quant.settings');
     $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
     $check_url = parse_url($url);
@@ -94,7 +101,7 @@ class Utility {
    * @return string
    *   The markup with the page info.
    */
-  public static function getPageInfo($urls = NULL) {
+  public static function getPageInfo(array $urls = NULL) : string {
     if (!$urls) {
       // Default to the current page.
       $urls = [self::getUrl()];
