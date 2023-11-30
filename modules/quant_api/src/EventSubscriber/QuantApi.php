@@ -11,6 +11,7 @@ use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\QuantQueueFactory;
 use Drupal\quant\Seed;
+use Drupal\quant\Utility;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -152,9 +153,13 @@ class QuantApi implements EventSubscriberInterface {
     $queue = $queue_factory->get('quant_seed_worker');
 
     foreach ($media as $item) {
-      // @todo Determine local vs. remote.
       // @todo Configurable to disallow remote files.
       // @todo Strip base domain.
+      // Do not include external items.
+      if (Utility::isExternalUrl($item['original_path'])) {
+        continue;
+      }
+
       $url = urldecode($item['path']);
 
       if ($url == '/css') {
