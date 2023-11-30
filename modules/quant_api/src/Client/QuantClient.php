@@ -295,6 +295,30 @@ class QuantClient implements QuantClientInterface {
   }
 
   /**
+   * Gets global metadata for the given URLs.
+   *
+   * @param array $urls
+   *   The urls to get metadata for.
+   *
+   * @return array
+   *   The API response.
+   */
+  public function getUrlMeta(array $urls) : array {
+    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
+    $response = $this->client->post($this->endpoint . '/url-meta', [
+      RequestOptions::JSON => $urls,
+      'headers' => [
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+      ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function sendSearchRecords(array $records) : array {

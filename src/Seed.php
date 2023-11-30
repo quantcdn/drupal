@@ -5,7 +5,6 @@ namespace Drupal\quant;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Url;
-use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
@@ -108,25 +107,6 @@ class Seed {
   }
 
   /**
-   * Determine if URL path prefix language negotiation is being used.
-   */
-  protected static function usesLanguagePathPrefixes() {
-    // Only works if there is more than one language.
-    $langcodes = \Drupal::languageManager()->getLanguages();
-    if (count($langcodes) === 1) {
-      return FALSE;
-    }
-
-    $usesPrefixes = FALSE;
-    $languageInterfaceEnabled = \Drupal::config('language.types')->get('negotiation.language_interface.enabled') ?: [];
-    if (isset($languageInterfaceEnabled['language-url'])) {
-      $languageUrl = \Drupal::config('language.negotiation')->get('url');
-      $usesPrefixes = $languageUrl && $languageUrl['source'] === LanguageNegotiationUrl::CONFIG_PATH_PREFIX;
-    }
-    return $usesPrefixes;
-  }
-
-  /**
    * Get all redirects from a redirect entity.
    *
    * For multilingual sites using path prefixes for language negotiation, the
@@ -144,7 +124,7 @@ class Seed {
     $statusCode = $redirect->getStatusCode();
 
     // If site does not use prefixes, return single redirect item.
-    if (!self::usesLanguagePathPrefixes()) {
+    if (!Utility::usesLanguagePathPrefixes()) {
       $redirects[] = [
         'source' => $source,
         'destination' => $destination,
@@ -442,13 +422,7 @@ class Seed {
    */
   public static function unpublishPathAlias($pathAlias) {
 
-    $alias = $pathAlias->get('alias')->value;
-
-    // Handle multilingual paths.
-    if (self::usesLanguagePathPrefixes()) {
-      $langcode = $pathAlias->get('langcode')->value;
-      $alias = $langcode . '/' . $alias;
-    }
+    $alias = Utility::getUrl($pathAlias->get('alias')->value, $pathAlias->get('langcode')->value);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $alias, [], NULL), QuantEvent::UNPUBLISH);
   }

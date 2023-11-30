@@ -113,3 +113,12 @@ function quant_update_9006(&$sandbox) {
   $config->set('xpath_selectors', implode(PHP_EOL, $xpaths));
   $config->save();
 }
+
+/**
+ * Enables Quant setting to show page info block.
+ */
+function quant_update_9007(&$sandbox) {
+  $config = \Drupal::configFactory()->getEditable('quant.settings');
+  $config->set('quant_show_page_info_block', 1);
+  $config->save();
+}

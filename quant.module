@@ -5,6 +5,7 @@
  * Hook implementations for Quant.
  */
 
+use Drupal\block\Entity\Block;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -15,6 +16,7 @@ use Drupal\quant\Exception\TokenValidationDisabledException;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\QuantQueueFactory;
 use Drupal\quant\Seed;
+use Drupal\quant\Utility;
 
 /**
  * Implements hook_menu_local_tasks_alter().
@@ -412,5 +414,18 @@ function quant_path_alias_presave(EntityInterface $pathAlias) {
   // Unpublish original alias if it changed.
   if ($original_path == $path && $langcode == $original_langcode && $original_alias != $alias) {
     Seed::unpublishPathAlias($pathAlias->original);
+  }
+}
+
+/**
+ * Implements hook_preprocess_page().
+ */
+function quant_preprocess_page(&$variables) {
+  // Show the Quant page info block for non-admin pages if enabled.
+  $config = \Drupal::configFactory()->getEditable('quant.settings');
+  $enabled = $config->get('quant_show_page_info_block');
+
+  if ($enabled && !\Drupal::service('router.admin_context')->isAdminRoute()) {
+    $variables['page']['content']['#prefix'] = Utility::getPageInfo() . ($variables['page']['content']['#prefix'] ?? '');
   }
 }
