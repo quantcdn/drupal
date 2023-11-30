@@ -113,11 +113,11 @@ class Utility {
     if (isset($response['global_meta']['records'])) {
       // Show meta information for the pages in Quant.
       $found_urls = [];
-      $output = '<div class="quant-page-info">';
+      $output = '<div class="quant-page-info messages messages--warning">';
       $output .= '<h2>' . t('Quant Page Info') . '</h2>';
       foreach ($response['global_meta']['records'] as $record) {
         $found_urls[] = $url = $record['meta']['url'];
-        $output .= '<div class="quant-page-info messages messages--warning">';
+        $output .= '<div class="quant-page-info">';
         $output .= '<strong>Page info for ' . $url . '</strong>';
         $output .= '<ul>';
         $output .= '<li><strong>Published</strong>: ' . ($record['meta']['published'] ? t('Yes') : t('No')) . '</li>';
