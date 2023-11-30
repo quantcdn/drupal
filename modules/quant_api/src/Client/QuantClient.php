@@ -304,6 +304,12 @@ class QuantClient implements QuantClientInterface {
    *   The API response.
    */
   public function getUrlMeta(array $urls) : array {
+    // Format array if it's not already.
+    if (!array_key_exists('Quant-Url', $urls)) {
+      $urls = [
+        'Quant-Url' => $urls,
+      ];
+    }
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/url-meta', [
       RequestOptions::JSON => $urls,

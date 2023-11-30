@@ -102,16 +102,13 @@ class Utility {
    *   The markup with the page info.
    */
   public static function getPageInfo(array $urls = NULL) : string {
+    // Default to the current page.
     if (!$urls) {
-      // Default to the current page.
       $urls = [self::getUrl()];
     }
-    $data = [
-      'Quant-Url' => $urls,
-    ];
 
     $client = \Drupal::service('quant_api.client');
-    $response = $client->getUrlMeta($data);
+    $response = $client->getUrlMeta($urls);
 
     if (isset($response['global_meta']['records'])) {
       // Show meta information for the pages in Quant.
