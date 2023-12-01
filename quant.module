@@ -428,3 +428,31 @@ function quant_preprocess_page(&$variables) {
     $variables['page']['content']['#prefix'] = Utility::getPageInfo() . ($variables['page']['content']['#prefix'] ?? '');
   }
 }
+
+/**
+ * Implements hook_views_data_alter().
+ */
+function quant_views_data_alter(array &$data) {
+  $field = [
+    'title' => t('Quant Metadata'),
+    'field' => [
+      'title' => t('Quant Metadata'),
+      'id' => 'quant_metadata',
+    ],
+  ];
+
+  // Add the metadata field to all relevant views types.
+  $types = [
+    'file_managed',
+    'node_field_data',
+    'node_revision',
+    'redirect',
+    'taxonomy_term_field_data',
+    'taxonomy_term_revision',
+  ];
+  foreach ($types as $type) {
+    if (isset($data[$type])) {
+      $data[$type]['quant_metadata'] = $field;
+    }
+  }
+}
