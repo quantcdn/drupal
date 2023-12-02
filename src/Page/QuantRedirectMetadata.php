@@ -45,7 +45,6 @@ class QuantRedirectMetadata extends ControllerBase {
     }
 
     // Render the view display.
-    //$output = views_embed_view('quant_metadata_redirect', 'quant_metadata_redirect_page');
     $view->setDisplay('quant_metadata_redirect_page');
     $view->preExecute();
     $view->execute();
