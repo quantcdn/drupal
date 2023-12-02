@@ -18,7 +18,7 @@ quant.metadata:
   path: '/admin/config/quant/metadata'
   defaults:
     _form: 'Drupal\quant\Form\MetadataConfigForm'
-    _title: 'Metadata configuration'
+    _title: 'Metadata'
   requirements:
     _permission: 'configure quant'
 
