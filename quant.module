@@ -466,8 +466,8 @@ function quant_preprocess_views_view_table(&$variables) {
     $rows = $variables['rows'];
     foreach ($rows as $id => $row) {
       // @fixme Show warning class when published status does not match.
-      //$variables['rows'][$id]['attributes']->addClass('messages');
-      //$variables['rows'][$id]['attributes']->addClass('messages--warning');
+      // $variables['rows'][$id]['attributes']->addClass('messages');
+      // $variables['rows'][$id]['attributes']->addClass('messages--warning');
     }
   }
 }

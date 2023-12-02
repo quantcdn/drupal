@@ -4,7 +4,11 @@ namespace Drupal\quant\Plugin\views\field;
 
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\file\FileInterface;
 use Drupal\image\Entity\ImageStyle;
+use Drupal\node\NodeInterface;
+use Drupal\redirect\Entity\Redirect;
+use Drupal\taxonomy\TermInterface;
 use Drupal\views\Plugin\views\field\FieldPluginBase;
 use Drupal\views\ResultRow;
 use Drupal\quant\Utility;
@@ -54,7 +58,14 @@ class QuantMetadata extends FieldPluginBase {
     $options = parent::defineOptions();
 
     // @todo Remove `redirect_http_code` and `redirect_url` when view is not for redirects.
-    $options['quant_metadata'] = ['default' => ['url', 'published', 'content_timestamp', 'date_timestamp']];
+    $options['quant_metadata'] = [
+      'default' => [
+        'url',
+        'published',
+        'content_timestamp',
+        'date_timestamp'
+      ]
+    ];
 
     return $options;
   }
@@ -101,11 +112,11 @@ class QuantMetadata extends FieldPluginBase {
       // Handle URLs based on entity type.
       $url = '';
       // Nodes and terms will have the langcode in their URLs.
-      if ($entity instanceof \Drupal\node\NodeInterface || $entity instanceof \Drupal\taxonomy\TermInterface) {
+      if ($entity instanceof NodeInterface || $entity instanceof TermInterface) {
         $url = $entity->toUrl()->toString();
       }
       // Add the langcode for redirects when using multilingual prefixes.
-      elseif ($entity instanceof \Drupal\redirect\Entity\Redirect) {
+      elseif ($entity instanceof Redirect) {
         $url = $entity->getSourceUrl();
         if (Utility::usesLanguagePathPrefixes()) {
           $url = '/' . $entity->language()->getId() . $url;
@@ -113,7 +124,7 @@ class QuantMetadata extends FieldPluginBase {
       }
       // Image files may have any number of image styles. Don't need to handle
       // media entities as the underlying image files are covered here.
-      elseif ($entity instanceof \Drupal\file\FileInterface) {
+      elseif ($entity instanceof FileInterface) {
         $url = $entity->createFileUrl();
         // For images, add image styles.
         foreach ($imageStyles as $style) {
@@ -209,7 +220,7 @@ class QuantMetadata extends FieldPluginBase {
 
     // Gather the metadata for each URL.
     $build = [];
-    $numUrls = count($this->metadata[$entity->id()]); 
+    $numUrls = count($this->metadata[$entity->id()]);
     foreach ($this->metadata[$entity->id()] as $url => $data) {
 
       $items = [];
@@ -231,14 +242,14 @@ class QuantMetadata extends FieldPluginBase {
           elseif ($metadataTypes[$optionKey] === 'boolean') {
             $metadataValue = $metadataValue ? $this->t('Yes') : $this->t('No');
           }
-          $items[] = ['#markup' => '<strong>' . $this->t($this->metadataOptions[$optionKey]) . ':</strong> ' . $metadataValue];
+          $items[] = ['#markup' => '<strong>' . $this->metadataOptions[$optionKey] . ':</strong> ' . $metadataValue];
         }
       }
 
       // File entities can have multiple URLs so format these differently.
       $data = [];
       if ($numUrls > 1) {
-        $data['url'] = ['#markup' => '<strong>' . $this->t('URL') . ':</strong> ' . $url];
+        $data['url'] = ['#markup' => $this->t('<strong>URL:</strong> :url', [':url' => $url])];
       }
       $data['metadata'] = [
         '#theme' => 'item_list',
