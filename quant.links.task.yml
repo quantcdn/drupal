@@ -42,7 +42,7 @@ quant.metadata_file:
   weight: 30
 
 quant.metadata_redirect:
-  route_name: view.quant_metadata_redirect.quant_metadata_redirect_page
+  route_name: quant.metadata_redirect
   title: 'Redirect Metadata'
   parent_id: quant.metadata
   weight: 40
