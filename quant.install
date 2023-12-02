@@ -153,5 +153,5 @@ function quant_update_9008() {
   if (empty($saved)) {
     return 'No views saved.';
   }
-  return 'Saved views: ' . implode(',', $saved);
+  return 'Saved views: ' . implode(', ', $saved);
 }
