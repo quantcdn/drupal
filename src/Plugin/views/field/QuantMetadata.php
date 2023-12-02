@@ -63,8 +63,8 @@ class QuantMetadata extends FieldPluginBase {
         'url',
         'published',
         'content_timestamp',
-        'date_timestamp'
-      ]
+        'date_timestamp',
+      ],
     ];
 
     return $options;
