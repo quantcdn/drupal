@@ -163,7 +163,7 @@ function quant_update_9008() {
 
   // Create message showing status.
   $unsaved = [];
-  foreach $names as $name => $path) {
+  foreach ($names as $name => $path) {
     if (!in_array($name, $saved)) {
       $unsaved[] = $name;
     }
