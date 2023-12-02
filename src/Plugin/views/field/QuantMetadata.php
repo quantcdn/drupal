@@ -54,7 +54,7 @@ class QuantMetadata extends FieldPluginBase {
     $options = parent::defineOptions();
 
     // @todo Remove `redirect_http_code` and `redirect_url` when view is not for redirects.
-    $options['quant_metadata'] = ['default' => ['url', 'type', 'published', 'content_timestamp', 'date_timestamp']];
+    $options['quant_metadata'] = ['default' => ['url', 'published', 'content_timestamp', 'date_timestamp']];
 
     return $options;
   }
@@ -183,7 +183,12 @@ class QuantMetadata extends FieldPluginBase {
     // Don't process if there is no entity or metadata. This can happen if the
     // data hasn't made it into Quant due to being unpublished or not seeded.
     if (!$entity || !$this->metadata || !isset($this->metadata[$entity->id()])) {
-      return $this->t('No metadata found.');
+      return [
+        '#theme' => 'item_list',
+        '#list_type' => 'ul',
+        '#items' => [$this->t('No metadata found.')],
+        '#attributes' => ['class' => ['quant-metadata-list']],
+      ];
     }
 
     // Handle special formatting.
@@ -224,6 +229,12 @@ class QuantMetadata extends FieldPluginBase {
             $metadataValue = DrupalDateTime::createFromTimestamp($metadataValue)->format('Y-m-d H:i:s');
           }
           elseif ($metadataTypes[$optionKey] === 'boolean') {
+
+            // If published data in Quant and Drupal don't match, add CSS classes.
+            if ($optionKey === 'published' && $metadataValue != $entity->isPublished()) {
+              // @todo Add these to the row classes.
+              $values->_quant_warning_classes = ['messages', 'messages--warning'];
+            }
             $metadataValue = $metadataValue ? $this->t('Yes') : $this->t('No');
           }
           $items[] = ['#markup' => '<strong>' . $this->t($this->metadataOptions[$optionKey]) . ':</strong> ' . $metadataValue];
@@ -242,18 +253,6 @@ class QuantMetadata extends FieldPluginBase {
         '#attributes' => ['class' => ['quant-metadata-list']],
       ];
       $build[] = $data;
-
-      /*
-      $build[] = [
-        'url' => ['#markup' => '<strong>' . $this->t('URL') . ':</strong> ' . $url],
-        'metadata' => [
-          '#theme' => 'item_list',
-          '#list_type' => 'ul',
-          '#items' => $items,
-          '#attributes' => ['class' => ['quant-metadata-list']],
-        ],
-      ];
-       */
     }
 
     return $build;

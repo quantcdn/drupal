@@ -456,3 +456,18 @@ function quant_views_data_alter(array &$data) {
     }
   }
 }
+
+/**
+ * Implements theme_preprocess_views_view_table().
+ */
+function quant_preprocess_views_view_table(&$variables) {
+  $view = $variables["view"];
+  if (str_starts_with($view->id(), 'quant_metadata_')) {
+    $rows = $variables['rows'];
+    foreach ($rows as $id => $row) {
+      // @fixme Show warning class when published status does not match.
+      //$variables['rows'][$id]['attributes']->addClass('messages');
+      //$variables['rows'][$id]['attributes']->addClass('messages--warning');
+    }
+  }
+}
