@@ -211,6 +211,8 @@ class QuantMetadata extends FieldPluginBase {
       'md5' => 'string',
       'published' => 'boolean',
       'published_revision' => 'integer',
+      'redirect_http_code' => 'integer',
+      'redirect_url' => 'string',
       'revision_count' => 'integer',
       'revision_number' => 'integer',
       'seq_num' => 'integer',
