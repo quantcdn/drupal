@@ -142,7 +142,7 @@ function quant_update_9008() {
   $names = [
     'quant_metadata_file' => $installPath,
     'quant_metadata_node' => $installPath,
-    'quant_metadata_redirect' => $optionalPath, // Requires redirect module.
+    'quant_metadata_redirect' => $optionalPath,
     'quant_metadata_taxonomy' => $installPath,
   ];
   foreach ($names as $name => $path) {
