@@ -229,12 +229,6 @@ class QuantMetadata extends FieldPluginBase {
             $metadataValue = DrupalDateTime::createFromTimestamp($metadataValue)->format('Y-m-d H:i:s');
           }
           elseif ($metadataTypes[$optionKey] === 'boolean') {
-
-            // If published data in Quant and Drupal don't match, add CSS classes.
-            if ($optionKey === 'published' && $metadataValue != $entity->isPublished()) {
-              // @todo Add these to the row classes.
-              $values->_quant_warning_classes = ['messages', 'messages--warning'];
-            }
             $metadataValue = $metadataValue ? $this->t('Yes') : $this->t('No');
           }
           $items[] = ['#markup' => '<strong>' . $this->t($this->metadataOptions[$optionKey]) . ':</strong> ' . $metadataValue];
