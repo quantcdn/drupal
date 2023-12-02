@@ -10,7 +10,7 @@ dependencies:
 id: quant_metadata_redirect
 label: 'Quant Redirect Metadata'
 module: views
-description: ''
+description: 'Shows Quant metadata for redirects.'
 tag: ''
 base_table: redirect
 base_field: rid

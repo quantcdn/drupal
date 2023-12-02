@@ -9,7 +9,7 @@ dependencies:
 id: quant_metadata_taxonomy
 label: 'Quant Taxonomy Metadata'
 module: views
-description: ''
+description: 'Shows Quant metadata for taxonomy terms.'
 tag: ''
 base_table: taxonomy_term_field_data
 base_field: tid

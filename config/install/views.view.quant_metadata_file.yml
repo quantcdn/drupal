@@ -9,7 +9,7 @@ dependencies:
 id: quant_metadata_file
 label: 'Quant File Metadata'
 module: views
-description: ''
+description: 'Shows Quant metadata for files.'
 tag: ''
 base_table: file_managed
 base_field: fid

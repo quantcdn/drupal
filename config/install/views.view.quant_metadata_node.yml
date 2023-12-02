@@ -11,7 +11,7 @@ _core:
 id: quant_metadata_node
 label: 'Quant Node Metadata'
 module: node
-description: 'Show Quant node metadata'
+description: 'Shows Quant metadata for nodes.'
 tag: default
 base_table: node_field_data
 base_field: nid
