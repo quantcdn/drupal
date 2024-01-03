@@ -2,9 +2,10 @@
 
 namespace Drupal\quant_purger\StackMiddleware;
 
+use Drupal\Core\Cache\CacheableResponseInterface;
+use Drupal\quant\Utility;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Drupal\Core\Cache\CacheableResponseInterface;
 
 /**
  * Methods for the URL registrar classes.
@@ -76,16 +77,22 @@ trait TraitUrlRegistrar {
    */
   protected function getAcceptedCacheTags(array $tag_list) {
     // Remove tags from blocklist.
+    $tags1 = [];
     $blocklist = $this->config->get('tag_blocklist');
     $blocklist = is_array($blocklist) ? array_filter($blocklist) : [];
-    $tags1 = preg_grep('/^(' . implode('|', $blocklist) . ')/', $tag_list, PREG_GREP_INVERT);
+    if (!empty($blocklist)) {
+      $tags1 = preg_grep('/^(' . implode('|', $blocklist) . ')/', $tag_list, PREG_GREP_INVERT);
+    }
 
-    // Add tags from allowlist.
+    // Add tags from allowlist. This must be done after the blocklist.
+    $tags2 = [];
     $allowlist = $this->config->get('tag_allowlist');
     $allowlist = is_array($allowlist) ? array_filter($allowlist) : [];
-    $tags2 = preg_grep('/^(' . implode('|', $allowlist) . ')/', $tag_list);
+    if (!empty($allowlist)) {
+      $tags2 = preg_grep('/^(' . implode('|', $allowlist) . ')/', $tag_list);
+    }
 
-    $tags = array_merge($tags1, $tags2);
+    $tags = array_unique(array_merge($tags1, $tags2));
 
     return array_filter($tags);
   }

@@ -2,10 +2,10 @@
 
 namespace Drupal\quant_purger\Form;
 
-use Drupal\Core\Form\FormStateInterface;
-use Drupal\purge_ui\Form\QueuerConfigFormBase;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\PrependCommand;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\purge_ui\Form\QueuerConfigFormBase;
 
 /**
  * Configuration form for the Quant queuer.
