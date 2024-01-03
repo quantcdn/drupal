@@ -27,16 +27,14 @@ trait TraitUrlRegistrar {
     }
 
     // Allow paths to be excluded from the traffic repository.
+    $path = $this->generateUrl($request);
     $blocklist = $this->config->get('path_blocklist');
-    if (is_array($blocklist)) {
-      $path = $this->generateUrl($request);
-      foreach (array_filter($blocklist) as $needle) {
-        $pattern = preg_quote($needle, '/');
-        $pattern = str_replace('\*', '.*', $pattern);
-        preg_match('/^(' . $pattern . ')/', $path, $is_match);
-        if (!empty($is_match)) {
-          return FALSE;
-        }
+    $blocked = Utility::inList($path, $blocklist);
+    if ($blocked) {
+      $allowlist = $this->config->get('path_allowlist');
+      $allowed = Utility::inList($path, $allowlist);
+      if (!$allowed) {
+        return FALSE;
       }
     }
 
@@ -77,9 +75,18 @@ trait TraitUrlRegistrar {
    *   A list of cache tags for the URL.
    */
   protected function getAcceptedCacheTags(array $tag_list) {
+    // Remove tags from blocklist.
     $blocklist = $this->config->get('tag_blocklist');
     $blocklist = is_array($blocklist) ? array_filter($blocklist) : [];
-    $tags = preg_grep('/^(' . implode('|', $blocklist) . ')/', $tag_list, PREG_GREP_INVERT);
+    $tags1 = preg_grep('/^(' . implode('|', $blocklist) . ')/', $tag_list, PREG_GREP_INVERT);
+
+    // Add tags from allowlist.
+    $allowlist = $this->config->get('tag_allowlist');
+    $allowlist = is_array($allowlist) ? array_filter($allowlist) : [];
+    $tags2 = preg_grep('/^(' . implode('|', $allowlist) . ')/', $tag_list);
+
+    $tags = array_merge($tags1, $tags2);
+
     return array_filter($tags);
   }
 
