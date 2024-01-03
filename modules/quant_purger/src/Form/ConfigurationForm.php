@@ -33,6 +33,11 @@ class ConfigurationForm extends QueuerConfigFormBase {
     $config = $this->config('quant_purger.settings');
     $settings = ['path_blocklist', 'tag_blocklist'];
 
+    $form['info'] = [
+      '#markup' => $this->t('<p class="messages messages--warning">After making changes to the Quant Purger configuration, all content must be re-seeded so the database reflects the changes.<p>'),
+      '#weight' => -10,
+    ];
+
     foreach ($settings as $key) {
       $form["{$key}_fieldset"] = [
         '#type' => 'fieldset',
@@ -139,6 +144,8 @@ class ConfigurationForm extends QueuerConfigFormBase {
       ->set('tag_blocklist', $form_state->getValue('tag_blocklist'))
       ->set('path_blocklist', $form_state->getValue('path_blocklist'))
       ->save();
+
+    \Drupal::messenger()->addMessage($this->t('Succesfully saved the Quant Purger configuration. All content must be re-seeded so the database reflects the changes.'));
   }
 
   /**
@@ -155,7 +162,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
     if (!$form_state->getErrors()) {
       \Drupal::service('quant_purger.registry')->clear();
       $status = 'status';
-      $message = $this->t('Succesfully cleared the traffic registry.');
+      $message = $this->t('Succesfully cleared the traffic registry. All content must be re-seeded so the database reflects the configuration.');
     }
     else {
       $status = 'error';
@@ -171,7 +178,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    // @todo Add validation for path_blocklist and tag_blocklist.
+    // @todo Add validation.
   }
 
 }
