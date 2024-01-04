@@ -117,7 +117,7 @@ class Utility {
     return $found;
   }
 
-  /*
+  /**
    * Get Quant page info for the given URLs.
    *
    * @param array $urls
