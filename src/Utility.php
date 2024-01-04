@@ -39,14 +39,12 @@ class Utility {
    */
   public static function inList($item, array $list) {
     $found = FALSE;
-    if (is_array($list)) {
-      foreach (array_filter($list) as $needle) {
-        $pattern = preg_quote($needle, '/');
-        $pattern = str_replace('\*', '.*', $pattern);
-        preg_match('/^(' . $pattern . ')/', $item, $is_match);
-        if (!empty($is_match)) {
-          $found = TRUE;
-        }
+    foreach (array_filter($list) as $needle) {
+      $pattern = preg_quote($needle, '/');
+      $pattern = str_replace('\*', '.*', $pattern);
+      preg_match('/^(' . $pattern . ')/', $item, $is_match);
+      if (!empty($is_match)) {
+        $found = TRUE;
       }
     }
 
