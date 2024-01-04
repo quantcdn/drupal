@@ -235,12 +235,14 @@ class Seed {
     foreach ($metaManager->getDefinitions() as $pid => $def) {
       $plugin = $metaManager->createInstance($pid);
       if ($plugin->applies($entity)) {
-        $meta = array_merge($meta, $plugin->build($entity));
+        $meta = array_merge($meta, $plugin->build($entity, $langcode));
       }
     }
 
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
+
     // Create canonical redirects from taxonomy/term/172 to the aliased route.
-    if ("/taxonomy/term/{$tid}" != $url) {
+    if ("/taxonomy/term/{$tid}" != $url && $entity->isPublished()) {
       // Use the default language alias in the event of multi-lang setup.
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();

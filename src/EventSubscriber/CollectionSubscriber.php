@@ -65,6 +65,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    */
   public function collectEntities(CollectEntitiesEvent $event) {
     $query = $this->entityTypeManager->getStorage('node')->getQuery();
+    // @todo Skip unpublished content if disable_content_drafts is enabled.
     $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
 
     $bundles = $event->getFormState()->getValue('entity_node_bundles');
@@ -224,6 +225,9 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * Collect the standard routes.
    */
   public function collectRoutes(CollectRoutesEvent $event) {
+    // Handle unpublished content based on settings.
+    $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
+
     // Collect the site configured routes.
     $system = $this->configFactory->get('system.site');
     $system_pages = ['page.front', 'page.404', 'page.403'];
@@ -235,17 +239,21 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
 
-    // Quant pages.
+    // Add special Quant pages.
     $quant_pages = ['/', '/_quant404', '/_quant403'];
 
     foreach ($quant_pages as $page) {
       $event->queueItem(['route' => $page]);
     }
 
+    // Add taxonomy term pages.
     if ($event->getFormState()->getValue('entity_taxonomy_term')) {
       $taxonomy_storage = $this->entityTypeManager->getStorage('taxonomy_term');
 
       foreach ($taxonomy_storage->loadMultiple() as $term) {
+        if ($disable_drafts && !$term->isPublished()) {
+          continue;
+        }
         foreach ($term->getTranslationLanguages() as $langcode => $language) {
           // Retrieve the translated version.
           $term = $term->getTranslation($langcode);
@@ -282,6 +290,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
 
+    // Add custom routes.
     if ($event->getFormState()->getValue('routes')) {
       foreach (explode(PHP_EOL, $event->getFormState()->getValue('routes_textarea')) as $route) {
         if (strpos((trim($route)), '/') !== 0) {
@@ -291,10 +300,13 @@ class CollectionSubscriber implements EventSubscriberInterface {
       }
     }
 
+    // Add robots.txt file.
     if ($event->getFormState()->getValue('robots')) {
       $event->queueItem(['route' => '/robots.txt']);
     }
 
+    // Add views pages.
+    // @todo Allow disabled views pages if disable_content_drafts is false?
     if ($event->getFormState()->getValue('views_pages')) {
       $views_storage = $this->entityTypeManager->getStorage('view');
       $anon = User::getAnonymousUser();
