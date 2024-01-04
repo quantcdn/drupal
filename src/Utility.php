@@ -93,6 +93,31 @@ class Utility {
   }
 
   /**
+   * Checks if an item is in a list which may use regular expressions.
+   *
+   * @param string $item
+   *   The item to check for.
+   * @param array $list
+   *   The list to check. Items in the list can use regex.
+   *
+   * @return bool
+   *   TRUE if the item is in the list and FALSE otherwise.
+   */
+  public static function inList($item, array $list) {
+    $found = FALSE;
+    foreach (array_filter($list) as $needle) {
+      $pattern = preg_quote($needle, '/');
+      $pattern = str_replace('\*', '.*', $pattern);
+      preg_match('/^(' . $pattern . ')/', $item, $is_match);
+      if (!empty($is_match)) {
+        $found = TRUE;
+      }
+    }
+
+    return $found;
+  }
+
+  /**
    * Get Quant page info for the given URLs.
    *
    * @param array $urls

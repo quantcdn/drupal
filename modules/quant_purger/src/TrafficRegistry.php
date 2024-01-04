@@ -42,7 +42,7 @@ class TrafficRegistry implements TrafficRegistryInterface {
    * {@inheritdoc}
    */
   public function add($url, array $tags) {
-    $tags = ';' . implode(';', $tags);
+    $tags = ';' . implode(';', $tags) . ';';
     $fields = ['url' => $url, 'tags' => $tags];
 
     $this->connection->merge('purge_queuer_quant')

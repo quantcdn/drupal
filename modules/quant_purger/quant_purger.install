@@ -89,3 +89,13 @@ function quant_purger_update_9101(&$sandbox) {
   $config->set('path_blocklist', ['/admin/*']);
   $config->save();
 }
+
+/**
+ * Update configuration for module settings.
+ */
+function quant_purger_update_9102(&$sandbox) {
+  $config = \Drupal::configFactory()->getEditable('quant_purger.settings');
+  $config->set('tag_allowlist', ['']);
+  $config->set('path_allowlist', ['']);
+  $config->save();
+}
