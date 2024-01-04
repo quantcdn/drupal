@@ -37,7 +37,7 @@ class Utility {
    * @return bool
    *   TRUE if the item is in the list and FALSE otherwise.
    */
-  public static function inList($item, $list) {
+  public static function inList($item, array $list) {
     $found = FALSE;
     if (is_array($list)) {
       foreach (array_filter($list) as $needle) {
