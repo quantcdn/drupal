@@ -5,7 +5,6 @@ namespace Drupal\quant;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Url;
-use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
@@ -108,25 +107,6 @@ class Seed {
   }
 
   /**
-   * Determine if URL path prefix language negotiation is being used.
-   */
-  protected static function usesLanguagePathPrefixes() {
-    // Only works if there is more than one language.
-    $langcodes = \Drupal::languageManager()->getLanguages();
-    if (count($langcodes) === 1) {
-      return FALSE;
-    }
-
-    $usesPrefixes = FALSE;
-    $languageInterfaceEnabled = \Drupal::config('language.types')->get('negotiation.language_interface.enabled') ?: [];
-    if (isset($languageInterfaceEnabled['language-url'])) {
-      $languageUrl = \Drupal::config('language.negotiation')->get('url');
-      $usesPrefixes = $languageUrl && $languageUrl['source'] === LanguageNegotiationUrl::CONFIG_PATH_PREFIX;
-    }
-    return $usesPrefixes;
-  }
-
-  /**
    * Get all redirects from a redirect entity.
    *
    * For multilingual sites using path prefixes for language negotiation, the
@@ -144,7 +124,7 @@ class Seed {
     $statusCode = $redirect->getStatusCode();
 
     // If site does not use prefixes, return single redirect item.
-    if (!self::usesLanguagePathPrefixes()) {
+    if (!Utility::usesLanguagePathPrefixes()) {
       $redirects[] = [
         'source' => $source,
         'destination' => $destination,
@@ -255,12 +235,14 @@ class Seed {
     foreach ($metaManager->getDefinitions() as $pid => $def) {
       $plugin = $metaManager->createInstance($pid);
       if ($plugin->applies($entity)) {
-        $meta = array_merge($meta, $plugin->build($entity));
+        $meta = array_merge($meta, $plugin->build($entity, $langcode));
       }
     }
 
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
+
     // Create canonical redirects from taxonomy/term/172 to the aliased route.
-    if ("/taxonomy/term/{$tid}" != $url) {
+    if ("/taxonomy/term/{$tid}" != $url && $entity->isPublished()) {
       // Use the default language alias in the event of multi-lang setup.
       $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
       $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
@@ -442,13 +424,7 @@ class Seed {
    */
   public static function unpublishPathAlias($pathAlias) {
 
-    $alias = $pathAlias->get('alias')->value;
-
-    // Handle multilingual paths.
-    if (self::usesLanguagePathPrefixes()) {
-      $langcode = $pathAlias->get('langcode')->value;
-      $alias = $langcode . '/' . $alias;
-    }
+    $alias = Utility::getUrl($pathAlias->get('alias')->value, $pathAlias->get('langcode')->value);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $alias, [], NULL), QuantEvent::UNPUBLISH);
   }
