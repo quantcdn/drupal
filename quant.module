@@ -15,6 +15,7 @@ use Drupal\quant\Exception\TokenValidationDisabledException;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\QuantQueueFactory;
 use Drupal\quant\Seed;
+use Drupal\quant\Utility;
 
 /**
  * Implements hook_menu_local_tasks_alter().
@@ -412,5 +413,61 @@ function quant_path_alias_presave(EntityInterface $pathAlias) {
   // Unpublish original alias if it changed.
   if ($original_path == $path && $langcode == $original_langcode && $original_alias != $alias) {
     Seed::unpublishPathAlias($pathAlias->original);
+  }
+}
+
+/**
+ * Implements hook_preprocess_page().
+ */
+function quant_preprocess_page(&$variables) {
+  // Show the Quant page info block for non-admin pages if enabled.
+  $config = \Drupal::configFactory()->getEditable('quant.settings');
+  $enabled = $config->get('quant_show_page_info_block');
+
+  if ($enabled && !\Drupal::service('router.admin_context')->isAdminRoute()) {
+    $variables['page']['content']['#prefix'] = Utility::getPageInfo() . ($variables['page']['content']['#prefix'] ?? '');
+  }
+}
+
+/**
+ * Implements hook_views_data_alter().
+ */
+function quant_views_data_alter(array &$data) {
+  $field = [
+    'title' => t('Quant Metadata'),
+    'field' => [
+      'title' => t('Quant Metadata'),
+      'id' => 'quant_metadata',
+    ],
+  ];
+
+  // Add the metadata field to all relevant views types.
+  $types = [
+    'file_managed',
+    'node_field_data',
+    'node_revision',
+    'redirect',
+    'taxonomy_term_field_data',
+    'taxonomy_term_revision',
+  ];
+  foreach ($types as $type) {
+    if (isset($data[$type])) {
+      $data[$type]['quant_metadata'] = $field;
+    }
+  }
+}
+
+/**
+ * Implements theme_preprocess_views_view_table().
+ */
+function quant_preprocess_views_view_table(&$variables) {
+  $view = $variables["view"];
+  if (str_starts_with($view->id(), 'quant_metadata_')) {
+    $rows = $variables['rows'];
+    foreach ($rows as $id => $row) {
+      // @fixme Show warning class when published status does not match.
+      // $variables['rows'][$id]['attributes']->addClass('messages');
+      // $variables['rows'][$id]['attributes']->addClass('messages--warning');
+    }
   }
 }
