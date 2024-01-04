@@ -25,6 +25,12 @@ class FileItem implements QuantQueueItemInterface {
     $this->file = $data['file'];
     $this->url = $data['url'] ?? NULL;
     $this->fullPath = $data['full_path'] ?? NULL;
+
+    // Handle responsive images by removing extraneous data like ` 1x`.
+    if ($this->fullPath) {
+      $tmp = explode(' ', $this->fullPath, 2);
+      $this->fullPath = $tmp[0];
+    }
   }
 
   /**
