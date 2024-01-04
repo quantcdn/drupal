@@ -11,3 +11,15 @@ Development, issues and feature roadmap occurs in the [Github repository](https:
 ## Installation and usage
 
 Latest Drupal documentation is maintained on the [Quant Docs](https://docs.quantcdn.io/docs/integrations/drupal) site.
+
+## Submodules
+
+Quant comes with a number of submodules:
+
+- Quant API (quant_api) [docs](https://docs.quantcdn.io/docs/integrations/drupal)
+- Quant Cron (quant_cron) [docs](https://docs.quantcdn.io/docs/integrations/drupal/drupal-cron)
+- Quant Purger (quant_purger) [docs](https://docs.quantcdn.io/docs/integrations/drupal/purger)
+- Quant Search (quant_search) [docs](https://docs.quantcdn.io/docs/integrations/drupal/drupal-search)
+- Quant Sitemap (quant_sitemap)
+- Quant Tome (quant_tome)
+- Quant Webform (quant_webform) [docs](https://docs.quantcdn.io/docs/dashboard/forms)

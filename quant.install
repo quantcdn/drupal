@@ -6,6 +6,8 @@
  */
 
 use Drupal\Core\Database\Database;
+use Drupal\views\Entity\View;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Perform setup tasks for Quant.
@@ -85,4 +87,93 @@ function quant_update_9004(&$sandbox) {
   $config = \Drupal::configFactory()->getEditable('quant.settings');
   $config->set('xpath_selectors', implode(PHP_EOL, $xpaths));
   $config->save();
+}
+
+/**
+ * Disables draft content handling if Workbench Moderation is installed.
+ */
+function quant_update_9005(&$sandbox) {
+  if (\Drupal::moduleHandler()->moduleExists('workbench_moderation')) {
+    $config = \Drupal::configFactory()->getEditable('quant.settings');
+    $config->set('disable_content_drafts', 1);
+    $config->save();
+  }
+}
+
+/**
+ * Add xpath selector to support new pager markup.
+ */
+function quant_update_9006(&$sandbox) {
+  $new_xpath = [
+    '//li[contains(@class,"page-item")]/a[contains(@href,"page=")]',
+  ];
+
+  // Add new xpath to existing xpaths.
+  $config = \Drupal::configFactory()->getEditable('quant.settings');
+  $xpaths = explode(PHP_EOL, $config->get('xpath_selectors'));
+  $xpaths = array_merge($xpaths, $new_xpath);
+  $config->set('xpath_selectors', implode(PHP_EOL, $xpaths));
+  $config->save();
+}
+
+/**
+ * Enables Quant setting to show page info block.
+ */
+function quant_update_9007(&$sandbox) {
+  $config = \Drupal::configFactory()->getEditable('quant.settings');
+  $config->set('quant_show_page_info_block', 1);
+  $config->save();
+}
+
+/**
+ * Adds Quant metadata views.
+ */
+function quant_update_9008() {
+
+  // Enable views if not already.
+  if (!\Drupal::moduleHandler()->moduleExists('views')) {
+    \Drupal::moduleHandler()->install('views');
+  }
+
+  // Keep track of what gets saved.
+  $saved = [];
+  $installPath = \Drupal::service('extension.list.module')->getPath('quant') . '/config/install/';
+  $optionalPath = \Drupal::service('extension.list.module')->getPath('quant') . '/config/optional/';
+  $names = [
+    'quant_metadata_file' => $installPath,
+    'quant_metadata_node' => $installPath,
+    'quant_metadata_redirect' => $optionalPath,
+    'quant_metadata_taxonomy' => $installPath,
+  ];
+  foreach ($names as $name => $path) {
+    // Only create if the view doesn't exist.
+    if (!View::load($name)) {
+      $view = 'views.view.' . $name;
+      $configPath = $path . '/' . $view . '.yml';
+      $data = Yaml::parse(file_get_contents($configPath));
+      try {
+        \Drupal::configFactory()->getEditable($view)->setData($data)->save(TRUE);
+        $saved[] = $name;
+      }
+      catch (\Exception $e) {
+        // Can happen if dependencies are not met.
+      }
+    }
+  }
+
+  // Create message showing status.
+  $unsaved = [];
+  foreach ($names as $name => $path) {
+    if (!in_array($name, $saved)) {
+      $unsaved[] = $name;
+    }
+  }
+  $message = [];
+  if (!empty($unsaved)) {
+    $message[] = 'Unsaved views: ' . implode(', ', $unsaved);
+  }
+  if (!empty($saved)) {
+    $message[] = 'Saved views: ' . implode(', ', $saved);
+  }
+  return implode('\n\n', $message);
 }

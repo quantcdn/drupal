@@ -5,4 +5,6 @@ quant_enabled_views: 1
 quant_enabled_redirects: 1
 quant_routes_export:
 ssl_cert_verify: 1
-xpath_selectors: "//li[contains(@class,\"pager__item--next\")]/a[contains(@href,\"page=\")]\r\n//li[contains(@class,\"pager__item--first\")]/a[starts-with(@href, \"/\")]"
+disable_content_drafts: 1
+quant_show_page_info_block: 1
+xpath_selectors: "//li[contains(@class,\"pager__item--next\")]/a[contains(@href,\"page=\")]\r\n//li[contains(@class,\"pager__item--first\")]/a[starts-with(@href, \"/\")]\r\n//li[contains(@class,\"page-item\")]/a[contains(@href,\"page=\")]"

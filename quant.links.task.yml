@@ -15,10 +15,39 @@ quant.token:
 
 quant.metadata:
   route_name: quant.metadata
-  title: Metadata
+  title: 'Metadata'
   base_route: quant.config
+
+quant.metadata_form:
+  route_name: quant.metadata
+  title: 'Metadata Configuration'
+  parent_id: quant.metadata
+
+quant.metadata_node:
+  route_name: view.quant_metadata_node.quant_metadata_node_page
+  title: 'Node Metadata'
+  parent_id: quant.metadata
+  weight: 10
+
+quant.metadata_taxonomy:
+  route_name: view.quant_metadata_taxonomy.quant_metadata_taxonomy_page
+  title: 'Taxonomy Metadata'
+  parent_id: quant.metadata
+  weight: 20
+
+quant.metadata_file:
+  route_name: view.quant_metadata_file.quant_metadata_file_page
+  title: 'File Metadata'
+  parent_id: quant.metadata
+  weight: 30
+
+quant.metadata_redirect:
+  route_name: quant.metadata_redirect
+  title: 'Redirect Metadata'
+  parent_id: quant.metadata
+  weight: 40
 
 quant.queue:
   route_name: quant.queue
-  title: Queue Info
+  title: 'Queue Info'
   base_route: quant.config

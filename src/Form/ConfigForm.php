@@ -111,6 +111,20 @@ class ConfigForm extends ConfigFormBase {
       '#default_value' => $config->get('disable_content_drafts'),
     ];
 
+    $form['quant_show_page_info_block'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Show page information block'),
+      '#description' => $this->t('Adds Quant page info at the top of all non-admin pages. To place this information in a block region, disable this setting and use the <a href="/admin/structure/block">core block layout UI</a> to place the <em>Quant Page Info</em> block.'),
+      '#default_value' => $config->get('quant_show_page_info_block'),
+    ];
+
+    // Ensure content drafts are disabled when workbench_moderation is in use.
+    if (\Drupal::moduleHandler()->moduleExists('workbench_moderation')) {
+      \Drupal::messenger()->addWarning(t('Workbench Moderation is in use. Drafts are currently not supported.'));
+      $form['disable_content_drafts']['#default_value'] = 1;
+      $form['disable_content_drafts']['#attributes'] = ['disabled' => 'disabled'];
+    }
+
     $form['proxy_override'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Override existing proxies'),
@@ -166,6 +180,7 @@ class ConfigForm extends ConfigFormBase {
       ->set('host_domain', $form_state->getValue('host_domain'))
       ->set('host_domain_strip', $form_state->getValue('host_domain_strip'))
       ->set('disable_content_drafts', $form_state->getValue('disable_content_drafts'))
+      ->set('quant_show_page_info_block', $form_state->getValue('quant_show_page_info_block'))
       ->set('ssl_cert_verify', $form_state->getValue('ssl_cert_verify'))
       ->set('xpath_selectors', $form_state->getValue('xpath_selectors'))
       ->save();
