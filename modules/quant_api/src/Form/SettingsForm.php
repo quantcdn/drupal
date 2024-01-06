@@ -113,7 +113,11 @@ class SettingsForm extends ConfigFormBase {
         $message = $this->t('QuantAPI override: <code>api_token</code> has been overridden in the settings file.');
       }
       else {
-        $message = $this->t('QuantAPI override: <em>@key</em> has been overridden in the settings file with <em>@value</em>.', ['@key' => $key, '@value' => $value]);
+        $message = $this->t('QuantAPI override: <em>@key</em> has been overridden in the settings file with <em>@value</em>.',
+          [
+            '@key' => $key,
+            '@value' => $value,
+          ]);
       }
 
       \Drupal::messenger()->addWarning($message);
