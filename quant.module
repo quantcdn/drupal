@@ -795,8 +795,16 @@ function quant_log_check_seed_results(&$context, $seed_results) {
       // Get the last watchdog message.
       $has_error = TRUE;
       $watchdog_log = db_query('SELECT message, variables FROM {watchdog} ORDER BY wid DESC LIMIT 1')->fetchObject();
-      $variables = unserialize($watchdog_log->variables);
-      $message = strip_tags(format_string($watchdog_log->message, $variables));
+      if (!empty($watchdog_log) && !empty($watchdog_log->message)) {
+        $variables = unserialize($watchdog_log->variables);
+        if (!is_array($variables)) {
+          $variables = [];
+        }
+        $message = strip_tags(format_string($watchdog_log->message, $variables));
+      }
+      else {
+        $message = 'Cannot find watchdog error.';
+      }
       break;
     }
   }
