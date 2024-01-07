@@ -127,55 +127,62 @@ class Utility {
    *   The markup with the page info.
    */
   public static function getPageInfo(array $urls = NULL) : string {
-    // Default to the current page.
-    if (!$urls) {
-      $urls = [self::getUrl()];
-    }
+    try {
+      // Default to the current page.
+      if (!$urls) {
+        $urls = [self::getUrl()];
+      }
 
-    $client = \Drupal::service('quant_api.client');
-    $response = $client->getUrlMeta($urls);
+      $client = \Drupal::service('quant_api.client');
+      $response = $client->getUrlMeta($urls);
 
-    if (isset($response['global_meta']['records'])) {
-      // Show meta information for the pages in Quant.
-      $found_urls = [];
-      $output = '<div class="quant-page-info messages messages--warning">';
-      $output .= '<h2>' . t('Quant Page Info') . '</h2>';
-      foreach ($response['global_meta']['records'] as $record) {
-        $found_urls[] = $url = $record['meta']['url'];
-        $output .= '<div class="quant-page-info">';
-        $output .= '<strong>Page info for ' . $url . '</strong>';
-        $output .= '<ul>';
-        $output .= '<li><strong>Published</strong>: ' . ($record['meta']['published'] ? t('Yes') : t('No')) . '</li>';
-        $output .= '<li><strong>Revisions</strong>: ' . $record['meta']['revision_count'] . '</li>';
-        $date = DrupalDateTime::createFromTimestamp($record['meta']['content_timestamp'])->format('Y-m-d H:i:s');
-        $output .= '<li><strong>Updated</strong>: ' . $date . '</li>';
-        $date = DrupalDateTime::createFromTimestamp($record['meta']['date_timestamp'])->format('Y-m-d H:i:s');
-        $output .= '<li><strong>Synced</strong>: ' . $date . '</li>';
-        $output .= '</ul>';
+      if (isset($response['global_meta']['records'])) {
+        // Show meta information for the pages in Quant.
+        $found_urls = [];
+        $output = '<div class="quant-page-info messages messages--warning">';
+        $output .= '<h2>' . t('Quant Page Info') . '</h2>';
+        foreach ($response['global_meta']['records'] as $record) {
+          $found_urls[] = $url = ($record['meta']['url'] ?? 'Url unknown');
+          $output .= '<div class="quant-page-info">';
+          $output .= '<strong>Page info for ' . $url . '</strong>';
+          $output .= '<ul>';
+          $output .= '<li><strong>Published</strong>: ' . (($record['meta']['published'] ?? FALSE) ? t('Yes') : t('No')) . '</li>';
+          $output .= '<li><strong>Revisions</strong>: ' . ($record['meta']['revision_count'] ?? 0). '</li>';
+          $date = DrupalDateTime::createFromTimestamp($record['meta']['content_timestamp'] ?? 0)->format('Y-m-d H:i:s');
+          $output .= '<li><strong>Updated</strong>: ' . $date . '</li>';
+          $date = DrupalDateTime::createFromTimestamp($record['meta']['date_timestamp'] ?? 0)->format('Y-m-d H:i:s');
+          $output .= '<li><strong>Synced</strong>: ' . $date . '</li>';
+          $output .= '</ul>';
+          $output .= '</div>';
+        }
+
+        // Note any URLs that were not in Quant.
+        if (count($urls) != count($found_urls)) {
+          if (count($urls) === 1) {
+            $output .= '<strong>' . t('Page info could not be found for this URL:') . '</strong>';
+          }
+          else {
+            $output .= '<strong>' . t('Page info could not be found for the following URLs:') . '</strong>';
+          }
+          $output .= '<ul>';
+        }
+        foreach ($urls as $url) {
+          if (!in_array($url, $found_urls)) {
+            $output .= '<li>' . $url . '</li>';
+          }
+          $output .= '</ul>';
+        }
+
         $output .= '</div>';
       }
 
-      // Note any URLs that were not in Quant.
-      if (count($urls) != count($found_urls)) {
-        if (count($urls) === 1) {
-          $output .= '<strong>' . t('Page info could not be found for this URL:') . '</strong>';
-        }
-        else {
-          $output .= '<strong>' . t('Page info could not be found for the following URLs:') . '</strong>';
-        }
-        $output .= '<ul>';
-      }
-      foreach ($urls as $url) {
-        if (!in_array($url, $found_urls)) {
-          $output .= '<li>' . $url . '</li>';
-        }
-        $output .= '</ul>';
-      }
-
-      $output .= '</div>';
+      return $output;
+    }
+    catch (\Exception $e) {
+      \Drupal::logger('quant')->error($e->getMessage());
+      return '';
     }
 
-    return $output;
   }
 
 }
