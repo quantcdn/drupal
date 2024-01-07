@@ -10,11 +10,6 @@ jobs:
       - name: Lint
         run: phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,yml .
 
-  php:
-    depends_on:
-      db:
-        condition: service_healthy
-
   phpunit:
     runs-on: ubuntu-latest
     container: quantcdn/drupal-ci:9.4.x-dev
@@ -42,6 +37,10 @@ jobs:
           interval: 1m
           timeout: 5s
           retries: 3
+      other_service:
+        depends_on:
+          mariadb:
+            condition: service_healthy
 
     steps:
       - name: Install Drupal
