@@ -146,6 +146,7 @@ class Utility {
           $output .= '<div class="quant-page-info">';
           $output .= '<strong>Page info for ' . $url . '</strong>';
           $output .= '<ul>';
+          // @todo Fix underlying data per issue #3412934.
           $output .= '<li><strong>Published</strong>: ' . (($record['meta']['published'] ?? FALSE) ? t('Yes') : t('No')) . '</li>';
           $output .= '<li><strong>Revisions</strong>: ' . ($record['meta']['revision_count'] ?? 0). '</li>';
           $date = DrupalDateTime::createFromTimestamp($record['meta']['content_timestamp'] ?? 0)->format('Y-m-d H:i:s');
