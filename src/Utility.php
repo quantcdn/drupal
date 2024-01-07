@@ -158,10 +158,10 @@ class Utility {
       // Note any URLs that were not in Quant.
       if (count($urls) != count($found_urls)) {
         if (count($urls) === 1) {
-          $output .= '<strong>' . t('Page info could not be found for this URL:') . '</strong>';
+          $output .= '<strong>' . t('Page info could not be found for this URL. If this content has been synced, try clearing the cache.') . '</strong>';
         }
         else {
-          $output .= '<strong>' . t('Page info could not be found for the following URLs:') . '</strong>';
+          $output .= '<strong>' . t('Page info could not be found for the following URLs. If this content has been synced, try clearing the cache.') . '</strong>';
         }
         $output .= '<ul>';
       }
