@@ -256,7 +256,6 @@ function quant_redirect_delete($redirect) {
 function _quant_entity_update_op(EntityInterface $entity) {
 
   $langcode = $entity->language()->getId();
-
   switch ($entity->getEntityTypeId()) {
     case 'node':
       Seed::seedNode($entity, $langcode);
