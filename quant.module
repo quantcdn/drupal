@@ -412,6 +412,10 @@ function quant_modules_uninstalled($modules) {
  *   The path alias.
  */
 function quant_path_alias_presave(EntityInterface $pathAlias) {
+  if (!$pathAlias || !$pathAlias->original) {
+    return;
+  }
+
   // Original path alias.
   $original_path = $pathAlias->original->get('path')->value;
   $original_alias = $pathAlias->original->get('alias')->value;
