@@ -101,7 +101,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_tls_disabled'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Disable TLS verification'),
-      '#description' => $this->t('You can optionally disable SSL verification for all Quant API requests. This is <strong>not recommended</strong>, but may be necessary in some configurations. For example, old web servers may have issues validating modern SSL certificates.'),
+      '#description' => $this->t('You can optionally disable TLS verification for all Quant API requests. This is <strong>not recommended</strong>, but may be necessary in some configurations. For example, old web servers may have issues validating modern TSL/SSL certificates.'),
       '#default_value' => $config->get('api_tls_disabled', FALSE),
     ];
 
@@ -120,9 +120,14 @@ class SettingsForm extends ConfigFormBase {
           ]);
       }
 
+      // Show warning and add to description.
       \Drupal::messenger()->addWarning($message);
-
       $form[$key]['#description'] = $form[$key]['#description'] . ' <strong>' . $message . '</strong>';
+    }
+
+    // Show error if not using TSL verification.
+    if ((isset($overrides['api_tls_disabled']) && !$overrides['api_tls_disabled']) || !$config->get('api_tls_disabled')) {
+      \Drupal::messenger()->addError($this->t('<strong>DANGER ZONE:</strong> TLS verification is disabled for Quant API connections. It is <strong>highly recommended</strong> that you update your server configuration to handle TLS rather than disabling TLS verification.'));
     }
 
     return parent::buildForm($form, $form_state);
