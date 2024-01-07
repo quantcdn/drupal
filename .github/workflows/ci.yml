@@ -13,10 +13,9 @@ jobs:
   phpunit:
     runs-on: ubuntu-latest
     container: quantcdn/drupal-ci:9.4.x-dev
-
     services:
       mariadb:
-        image: mariadb:10.11
+        image: mariadb:latest
         ports:
           - 3306:3306
         env:
@@ -24,11 +23,20 @@ jobs:
           MYSQL_ROOT_PASSWORD: drupal
           MYSQL_USER: drupal
           MYSQL_PASSWORD: drupal
+          MARIADB_MYSQL_LOCALHOST_USER: 1
+          MARIADB_MYSQL_LOCALHOST_GRANTS: USAGE
         options: >-
           --health-cmd="mysqladmin ping" 
           --health-interval=10s
           --health-timeout=5s
           --health-retries=30
+        healthcheck:
+          test: [ "CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized" ]
+          start_period: 1m
+          start_interval: 10s
+          interval: 1m
+          timeout: 5s
+          retries: 3
 
     steps:
       - name: Install Drupal
