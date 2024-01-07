@@ -16,3 +16,7 @@ tag_blocklist:
   - 'local_task'
 path_blocklist:
   - '/admin/*'
+tag_allowlist:
+  - ''
+path_allowlist:
+  - ''

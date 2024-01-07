@@ -56,26 +56,28 @@ class SettingsForm extends ConfigFormBase {
 
     if ($config->get('api_token')) {
       if ($project = $this->client->ping()) {
-        $message = t('Successfully connected to @api', ['@api' => $config->get('api_project')]);
+        $message = $this->t('QuantAPI status: Successfully connected to project <code>@project</code>', ['@project' => $config->get('api_project')]);
         \Drupal::messenger()->addMessage($message);
       }
       else {
-        \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
+        \Drupal::messenger()->addError($this->t('QuantAPI error: Unable to connect to the Quant API please check the endpoint on the <code>Integrations</code> page in the Quant dashboard.'));
       }
     }
 
     $form['api_endpoint'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Endpoint'),
-      '#description' => $this->t('e.g: https://api.quantcdn.io'),
-      '#default_value' => $config->get('api_endpoint'),
+      '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code>, shown on the <code>Integrations</code> page. Update via drush or settings.php if necessary.'),
+      '#default_value' => $config->get('api_endpoint', 'https://api.quantcdn.io'),
       '#required' => TRUE,
+      '#disabled' => TRUE,
     ];
 
     // @todo Switch from 'api_account' to 'api_organization'.
     $form['api_account'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Organization'),
+      '#description' => $this->t('The API organization. This is shown on the <code>Integrations</code> page and with the account information.'),
       '#default_value' => $config->get('api_account'),
       '#required' => TRUE,
     ];
@@ -83,6 +85,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_project'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Project'),
+      '#description' => $this->t('The API project. This is the <code>"API name"</code> shown on the <code>Projects</code> page and the <code>"Project"</code> shown on the <code>Integrations</code> page. Note, this value may be different than the human-readable project name.'),
       '#default_value' => $config->get('api_project'),
       '#required' => TRUE,
     ];
@@ -90,6 +93,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_token'] = [
       '#type' => 'password',
       '#title' => $this->t('API Token'),
+      '#description' => $this->t('The API token. Use the clipboard icon in the dashboard to copy the token from the <code>Projects</code> or <code>Integrations</code> page. Be careful with this information. It should be treated like any system password.'),
       '#default_value' => $config->get('api_token'),
       '#required' => TRUE,
     ];
@@ -97,7 +101,7 @@ class SettingsForm extends ConfigFormBase {
     $form['api_tls_disabled'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Disable TLS verification'),
-      '#description' => $this->t('Old webservers may have issues validating modern certificates. Only disable if absolutely necessary.'),
+      '#description' => $this->t('You can optionally disable SSL verification for all Quant API requests. This is <strong>not recommended</strong>, but may be necessary in some configurations. For example, old web servers may have issues validating modern SSL certificates.'),
       '#default_value' => $config->get('api_tls_disabled', FALSE),
     ];
 
