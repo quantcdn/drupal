@@ -27,6 +27,7 @@ class FileItem implements QuantQueueItemInterface {
     $this->fullPath = $data['full_path'] ?? NULL;
 
     // Handle responsive images by removing extraneous data like ` 1x`.
+    // @todo Fix this in the Quant infrastructure.
     if ($this->fullPath) {
       $tmp = explode(' ', $this->fullPath, 2);
       $this->fullPath = $tmp[0];
