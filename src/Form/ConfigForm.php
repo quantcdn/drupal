@@ -50,6 +50,7 @@ class ConfigForm extends ConfigFormBase {
 
     $this->checkValidationRoute();
 
+    // @todo Rename this key to something more clear.
     $form['quant_enabled'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Track content change'),
@@ -107,7 +108,7 @@ class ConfigForm extends ConfigFormBase {
     $form['disable_content_drafts'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Disable content drafts'),
-      '#description' => $this->t('Prevent draft content from being sent to Quant.'),
+      '#description' => $this->t('Prevent draft content from being sent to Quant. <strong>Drafts will always been processed when content tracking is disabled to prevent issues with unpublished content.</strong>'),
       '#default_value' => $config->get('disable_content_drafts'),
     ];
 

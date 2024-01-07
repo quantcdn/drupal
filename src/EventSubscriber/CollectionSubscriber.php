@@ -2,22 +2,23 @@
 
 namespace Drupal\quant\EventSubscriber;
 
+use Drupal\Core\Config\ConfigFactory;
+use Drupal\Core\Entity\EntityTypeManager;
+use Drupal\Core\Url;
+use Drupal\node\Entity\Node;
 use Drupal\quant\Event\CollectEntitiesEvent;
 use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\Plugin\QueueItem\RedirectItem;
+use Drupal\quant\QuantQueueFactory;
+use Drupal\quant\Seed;
+use Drupal\quant\Utility;
+use Drupal\redirect\Entity\Redirect;
 use Drupal\user\Entity\User;
 use Drupal\views\Views;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Drupal\Core\Config\ConfigFactory;
-use Drupal\Core\Entity\EntityTypeManager;
-use Drupal\Core\Url;
-use Drupal\node\Entity\Node;
-use Drupal\quant\Seed;
-use Drupal\redirect\Entity\Redirect;
-use Drupal\quant\QuantQueueFactory;
 
 /**
  * Event subscribers for the quant collection events.
@@ -65,8 +66,8 @@ class CollectionSubscriber implements EventSubscriberInterface {
    */
   public function collectEntities(CollectEntitiesEvent $event) {
     $query = $this->entityTypeManager->getStorage('node')->getQuery();
-    // @todo Skip unpublished content if disable_content_drafts is enabled.
-    $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
+    // @todo Skip unpublished content if configured.
+    $disable_drafts = !Utility::processDrafts();
 
     $bundles = $event->getFormState()->getValue('entity_node_bundles');
 
@@ -226,7 +227,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    */
   public function collectRoutes(CollectRoutesEvent $event) {
     // Handle unpublished content based on settings.
-    $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
+    $disable_drafts = !Utility::processDrafts();
 
     // Collect the site configured routes.
     $system = $this->configFactory->get('system.site');

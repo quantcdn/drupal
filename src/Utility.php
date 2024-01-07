@@ -118,6 +118,21 @@ class Utility {
   }
 
   /**
+   * Determine if drafts should be processed.
+   *
+   * @return bool
+   *   TRUE if drafts should be processed and FALSE otherwise.
+   */
+  public static function processDrafts() {
+    $config = \Drupal::config('quant.settings');
+    $disable_drafts = $config->get('disable_content_drafts');
+    $track_content = $config->get('quant_enabled');
+    // Drafts must always be processed when content tracking is disabled in
+    // case content is unpublished or it may stay published in Quant.
+    return !$track_content || !$disable_drafts;
+  }
+
+  /**
    * Get Quant page info for the given URLs.
    *
    * @param array $urls

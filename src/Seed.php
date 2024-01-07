@@ -8,6 +8,7 @@ use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
+use Drupal\quant\Utility;
 use GuzzleHttp\Exception\ConnectException;
 
 /**
@@ -249,13 +250,8 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
     }
 
-    // Handle case where translation is unpublished.
+    // Unpublish if necessary.
     $published = $entity->isPublished();
-    if ($entity->hasTranslation($langcode)) {
-      $translation = $entity->getTranslation($langcode);
-      $published = $translation->isPublished();
-    }
-
     if ($published) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
     }
@@ -333,13 +329,8 @@ class Seed {
       }
     }
 
-    // Handle case where translation is unpublished.
+    // Unpublish if necessary.
     $published = $entity->isPublished();
-    if ($entity->hasTranslation($langcode)) {
-      $translation = $entity->getTranslation($langcode);
-      $published = $translation->isPublished();
-    }
-
     if ($published) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
     }
@@ -452,8 +443,7 @@ class Seed {
 
     // Generate a signed token and use it in the request. This only applies when
     // drafts are enabled, as we return neutral access otherwise.
-    $disable_drafts = $config->get('disable_content_drafts');
-    if (!$disable_drafts) {
+    if (Utility::processDrafts()) {
       $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
     }
 
@@ -512,8 +502,7 @@ class Seed {
 
     // Generate a signed token and use it in the request. This only applies when
     // drafts are enabled, as we return neutral access otherwise.
-    $disable_drafts = $config->get('disable_content_drafts');
-    if (!$disable_drafts) {
+    if (Utility::processDrafts()) {
       $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
     }
 
