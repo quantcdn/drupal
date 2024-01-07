@@ -19,18 +19,6 @@ use Drupal\quant\Seed;
 use Drupal\quant\Utility;
 
 /**
- * Implements hook_preprocess_page().
- */
-function quant_preprocess_page(&$variables) {
-
-  // Add warning on Quant admin pages if queue factory is not set.
-  $current_path = \Drupal::requestStack()->getCurrentRequest()->getPathInfo();
-  if ((strpos($current_path, '/admin/config/quant') === 0) && Settings::get('queue_service_quant_seed_worker') != "quant.queue_factory") {
-    \Drupal::messenger()->addWarning(t('For the best performance, it is highly recommended you update <em>queue_service_quant_seed_worker</em> in your settings. See the <a href="https://docs.quantcdn.io/docs/integrations/drupal">Drupal docs</a> for setup information.'));
-  }
-}
-
-/**
  * Implements hook_menu_local_tasks_alter().
  */
 function quant_menu_local_tasks_alter(&$data, $route_name) {
@@ -448,9 +436,14 @@ function quant_preprocess_page(&$variables) {
   // Show the Quant page info block for non-admin pages if enabled.
   $config = \Drupal::configFactory()->getEditable('quant.settings');
   $enabled = $config->get('quant_show_page_info_block');
-
   if ($enabled && !\Drupal::service('router.admin_context')->isAdminRoute()) {
     $variables['page']['content']['#prefix'] = Utility::getPageInfo() . ($variables['page']['content']['#prefix'] ?? '');
+  }
+
+  // Add warning on Quant admin pages if queue factory is not set.
+  $current_path = \Drupal::requestStack()->getCurrentRequest()->getPathInfo();
+  if ((strpos($current_path, '/admin/config/quant') === 0) && Settings::get('queue_service_quant_seed_worker') != "quant.queue_factory") {
+    \Drupal::messenger()->addWarning(t('For the best performance, it is highly recommended you update <em>queue_service_quant_seed_worker</em> in your settings. See the <a href="https://docs.quantcdn.io/docs/integrations/drupal">Drupal docs</a> for setup information.'));
   }
 }
 
