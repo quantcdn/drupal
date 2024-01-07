@@ -148,7 +148,7 @@ class Utility {
           $output .= '<ul>';
           // @todo Fix underlying data per issue #3412934.
           $output .= '<li><strong>Published</strong>: ' . (($record['meta']['published'] ?? FALSE) ? t('Yes') : t('No')) . '</li>';
-          $output .= '<li><strong>Revisions</strong>: ' . ($record['meta']['revision_count'] ?? 0). '</li>';
+          $output .= '<li><strong>Revisions</strong>: ' . ($record['meta']['revision_count'] ?? 0) . '</li>';
           $date = DrupalDateTime::createFromTimestamp($record['meta']['content_timestamp'] ?? 0)->format('Y-m-d H:i:s');
           $output .= '<li><strong>Updated</strong>: ' . $date . '</li>';
           $date = DrupalDateTime::createFromTimestamp($record['meta']['date_timestamp'] ?? 0)->format('Y-m-d H:i:s');
