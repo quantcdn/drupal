@@ -249,13 +249,8 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
     }
 
-    // Handle case where translation is unpublished.
+    // Unpublish if necessary.
     $published = $entity->isPublished();
-    if ($entity->hasTranslation($langcode)) {
-      $translation = $entity->getTranslation($langcode);
-      $published = $translation->isPublished();
-    }
-
     if ($published) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
     }
@@ -333,13 +328,8 @@ class Seed {
       }
     }
 
-    // Handle case where translation is unpublished.
+    // Unpublish if necessary.
     $published = $entity->isPublished();
-    if ($entity->hasTranslation($langcode)) {
-      $translation = $entity->getTranslation($langcode);
-      $published = $translation->isPublished();
-    }
-
     if ($published) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
     }
