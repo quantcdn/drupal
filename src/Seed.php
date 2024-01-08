@@ -250,12 +250,10 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
     }
 
-    // Unpublish if necessary.
+    // Always add the content in case its new and then unpublish if necessary.
     $published = $entity->isPublished();
-    if ($published) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
-    }
-    else {
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
+    if (!$published) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
     }
   }
@@ -329,12 +327,10 @@ class Seed {
       }
     }
 
-    // Unpublish if necessary.
+    // Always add the content in case its new and then unpublish if necessary.
     $published = $entity->isPublished();
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
     if ($published) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
-    }
-    else {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
     }
 
