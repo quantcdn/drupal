@@ -94,7 +94,7 @@ class QuantApi implements EventSubscriberInterface {
       $res = $this->client->sendRedirect($data);
     }
     catch (\Exception $error) {
-      $this->logger->error($error->getMessage());
+      $this->logger->error('Quant onRedirect: ' . $error->getMessage());
       return;
     }
 
@@ -143,7 +143,7 @@ class QuantApi implements EventSubscriberInterface {
       $res = $this->client->send($data);
     }
     catch (\Exception $error) {
-      $this->logger->error($error->getMessage());
+      $this->logger->error('Quant onOutput: ' . $error->getMessage());
       return FALSE;
     }
 
@@ -297,7 +297,7 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (\Exception $error) {
       if (strpos("MD5 already matches", $error->getMessage()) !== FALSE) {
-        $this->logger->error($error->getMessage());
+        $this->logger->error('Quant onMedia: ' . $error->getMessage());
       }
       return;
     }
@@ -315,8 +315,8 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (\Exception $error) {
       // Don't log it if it's a 404, since the content is unpublished.
-      if (strpos($error->getMessage(), '404 Not Found') === FALSE) {
-        $this->logger->error($error->getMessage());
+      if (!str_contains($error->getMessage(), '404 Not Found') && !str_contains($error->getMessage(), 'Resource is already unpublished')) {
+        $this->logger->error('Quant onUnpublish: ' . $error->getMessage());
       }
       return;
     }
