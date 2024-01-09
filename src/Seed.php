@@ -402,6 +402,15 @@ class Seed {
   /**
    * Handle canonical redirects.
    *
+   * Example redirects:
+   * - en node 123, no alias: /node/123 to /en/node/123.
+   * - es node 123, no alias: /node/123 to /es/node/123.
+   * - en node 123, alias: /node/123 and /en/node/123 to en alias.
+   * - es node 123, alias: /node/123 and /es/node/123 to es alias.
+   * - en node 123, es translation, no alias: /node/123 to /en/node/123.
+   * - en node 123, es translation, alias: /node/123 and /en/node/123 to en
+   *   alias, /es/node/123 to es alias.
+   *
    * @todo Create simpler logic for when multilingual isn't used?
    */
   public static function handleCanonicalRedirects($entity, $langcode, $url) {
