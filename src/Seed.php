@@ -239,7 +239,6 @@ class Seed {
       }
     }
 
-    // Handle case where translation is unpublished.
     $published = $entity->isPublished();
     if ($published) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
@@ -346,7 +345,7 @@ class Seed {
       }
     }
 
-    // Handle case where translation is unpublished.
+    // Unpublish if necessary.
     $published = $entity->isPublished();
     if ($published) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
