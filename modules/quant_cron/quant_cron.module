@@ -10,6 +10,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\node\Entity\Node;
+use Drupal\taxonomy\Entity\Term;
 use Drupal\user\Entity\User;
 use Drupal\views\Views;
 
@@ -240,6 +241,10 @@ function quant_cron_get_views_routes() {
   $paths = [];
 
   foreach ($views_storage->loadMultiple() as $view) {
+    if ($view->get('id') == 'taxonomy_term') {
+      // Taxonomy terms are handled as entities.
+      continue;
+    }
 
     $view = Views::getView($view->get('id'));
 
