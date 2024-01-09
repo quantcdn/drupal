@@ -6,6 +6,7 @@ use Drupal\quant\Event\CollectEntitiesEvent;
 use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
+use Drupal\quant\Event\CollectTaxonomyTermsEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\Plugin\QueueItem\RedirectItem;
 use Drupal\user\Entity\User;
@@ -51,6 +52,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    */
   public static function getSubscribedEvents() {
     $events[QuantCollectionEvents::ENTITIES][] = ['collectEntities'];
+    $events[QuantCollectionEvents::TAXONOMY_TERMS][] = ['collectTaxonomyTerms'];
     $events[QuantCollectionEvents::FILES][] = ['collectFiles'];
     $events[QuantCollectionEvents::REDIRECTS][] = ['collectRedirects'];
     $events[QuantCollectionEvents::ROUTES][] = ['collectRoutes'];
@@ -65,8 +67,6 @@ class CollectionSubscriber implements EventSubscriberInterface {
    */
   public function collectEntities(CollectEntitiesEvent $event) {
     $query = $this->entityTypeManager->getStorage('node')->getQuery();
-    // @todo Skip unpublished content if disable_content_drafts is enabled.
-    $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
 
     $bundles = $event->getFormState()->getValue('entity_node_bundles');
 
@@ -111,6 +111,20 @@ class CollectionSubscriber implements EventSubscriberInterface {
           'lang_filter' => $filter,
         ]);
       }
+    }
+  }
+
+  /**
+   * Collect taxonomy terms.
+   */
+  public function collectTaxonomyTerms(CollectTaxonomyTermsEvent $event) {
+    $query = $this->entityTypeManager->getStorage('taxonomy_term')->getQuery();
+    $terms = $query->accessCheck(TRUE)->execute();
+
+    foreach ($terms as $tid) {
+      $event->queueItem([
+        'tid' => $tid,
+      ]);
     }
   }
 
@@ -246,50 +260,6 @@ class CollectionSubscriber implements EventSubscriberInterface {
       $event->queueItem(['route' => $page]);
     }
 
-    // Add taxonomy term pages.
-    if ($event->getFormState()->getValue('entity_taxonomy_term')) {
-      $taxonomy_storage = $this->entityTypeManager->getStorage('taxonomy_term');
-
-      foreach ($taxonomy_storage->loadMultiple() as $term) {
-        if ($disable_drafts && !$term->isPublished()) {
-          continue;
-        }
-        foreach ($term->getTranslationLanguages() as $langcode => $language) {
-          // Retrieve the translated version.
-          $term = $term->getTranslation($langcode);
-          $tid = $term->id();
-
-          $options = ['absolute' => FALSE];
-
-          if (!empty($langcode)) {
-            $language = \Drupal::languageManager()->getLanguage($langcode);
-            $options['language'] = $language;
-          }
-
-          $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
-          $event->queueItem(['route' => $url]);
-
-          // Generate a redirection QueueItem from canonical path to URL.
-          // Use the default language alias in the event of multi-lang setup.
-          $queue_factory = QuantQueueFactory::getInstance();
-          $queue = $queue_factory->get('quant_seed_worker');
-
-          if ("/taxonomy/term/{$tid}" != $url) {
-            $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
-            $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
-
-            $redirectItem = new RedirectItem([
-              'source' => "/taxonomy/term/{$tid}",
-              'destination' => $defaultUrl,
-              'status_code' => 301,
-            ]);
-
-            $queue->createItem($redirectItem);
-          }
-        }
-      }
-    }
-
     // Add custom routes.
     if ($event->getFormState()->getValue('routes')) {
       foreach (explode(PHP_EOL, $event->getFormState()->getValue('routes_textarea')) as $route) {
@@ -312,6 +282,10 @@ class CollectionSubscriber implements EventSubscriberInterface {
       $anon = User::getAnonymousUser();
 
       foreach ($views_storage->loadMultiple() as $view) {
+        if ($view->get('id') == 'taxonomy_term') {
+          // Taxonomy terms are handled as entities.
+          continue;
+        }
         $view = Views::getView($view->get('id'));
 
         $paths = [];

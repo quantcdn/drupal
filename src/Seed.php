@@ -221,6 +221,9 @@ class Seed {
     $response = self::markupFromRoute($url);
 
     if (empty($response)) {
+      // The markupFromRoute function works differently for unpublished terms
+      // versus nodes. If the response is empty, the term is unpublished.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
       return;
     }
 
