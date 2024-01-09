@@ -8,17 +8,14 @@ use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\CollectTaxonomyTermsEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
-use Drupal\quant\Plugin\QueueItem\RedirectItem;
 use Drupal\user\Entity\User;
 use Drupal\views\Views;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Entity\EntityTypeManager;
-use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Seed;
 use Drupal\redirect\Entity\Redirect;
-use Drupal\quant\QuantQueueFactory;
 
 /**
  * Event subscribers for the quant collection events.
