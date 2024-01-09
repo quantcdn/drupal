@@ -247,33 +247,8 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    // Create canonical redirects from taxonomy/term/172 to the aliased route.
-    if ("/taxonomy/term/{$tid}" != $url) {
-      // If there is default language content, then the canonical redirect can
-      // use the default URL. Otherwise, it should use the current language.
-      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
-      $defaultUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $defaultLanguage])->toString();
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $languageUrl = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], ['language' => $language])->toString();
-      if (!$entity->hasTranslation($defaultLanguage->getId())) {
-        $defaultUrl = $languageUrl;
-      }
-      if ($published) {
-        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/taxonomy/term/{$tid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
-      }
-      else {
-        // @fixme
-        // \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
-      }
-      if (Utility::usesLanguagePathPrefixes()) {
-        if ($published) {
-          \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$langcode}/taxonomy/term/{$tid}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
-        }
-        else {
-          \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$langcode}/taxonomy/term/{$tid}", [], NULL), QuantEvent::UNPUBLISH);
-        }
-      }
-    }
+    // Handle canonical redirects.
+    self::handleCanonicalRedirects($entity, $langcode, $url);
   }
 
   /**
@@ -354,38 +329,12 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    // Create canonical redirects from node/123 to the published revision route.
     // @fixme If unpublished, need to unpublish redirect.
-    if ("/node/{$nid}" != $url && $published && $entity->isDefaultRevision()) {
-      // If there is default language content, then the canonical redirect can
-      // use the default URL. Otherwise, it should use the current language.
-      $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
-      $defaultUrl = Url::fromRoute('entity.node.canonical', ['node' => $nid], ['language' => $defaultLanguage])->toString();
-      $defaultPublished = NULL;
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $languageUrl = Url::fromRoute('entity.node.canonical', ['node' => $nid], ['language' => $language])->toString();
-      if ($entity->hasTranslation($defaultLanguage->getId())) {
-        $defaultPublished = $entity->getTranslation($defaultLanguage->getId())->isPublished();
-      }
-      else {
-        $defaultUrl = $languageUrl;
-        $defaultPublished = $published;
-      }
-      if ($defaultPublished) {
-        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/node/{$nid}", $defaultUrl, 301), QuantRedirectEvent::UPDATE);
-      }
-      else {
-        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/node/{$nid}", [], NULL), QuantEvent::UNPUBLISH);
-      }
-      if (Utility::usesLanguagePathPrefixes()) {
-        if ($published) {
-          \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$langcode}/node/{$nid}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
-        }
-        else {
-          \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$langcode}/node/{$nid}", [], NULL), QuantEvent::UNPUBLISH);
-        }
-      }
-    }
+    // @fixme what about isDefaultRevision()?
+    //if ("/node/{$nid}" != $url && $published && $entity->isDefaultRevision())
+
+    // Handle canonical redirects.
+    self::handleCanonicalRedirects($entity, $langcode, $url);
   }
 
   /**
@@ -413,20 +362,8 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    // Unpublish canonical redirect from node/123.
-    if ("/node/{$nid}" != $url) {
-      // Unpublish default canonical redirect if this content is the default
-      // language or there is no default language content.
-      $defaultLangcode = \Drupal::languageManager()->getDefaultLanguage()->getId();
-      if ($langcode == $defaultLangcode || !$entity->hasTranslation($defaultLangcode)) {
-        // QuantEvent can be used to unpublish any resource. Note, the source
-        // must be given here and not the destination.
-        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/node/{$nid}", [], NULL), QuantEvent::UNPUBLISH);
-      }
-      if (Utility::usesLanguagePathPrefixes()) {
-        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$langcode}/node/{$nid}", [], NULL), QuantEvent::UNPUBLISH);
-      }
-    }
+    // Handle canonical redirects.
+    self::handleCanonicalRedirects($entity, $langcode, $url);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }
@@ -450,20 +387,8 @@ class Seed {
 
     $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
 
-    // Unpublish canonical redirect from taxonomy/term/123.
-    if ("/taxonomy/term/{$tid}" != $url) {
-      // Unpublish default canonical redirect if this content is the default
-      // language or there is no default language content.
-      $defaultLangcode = \Drupal::languageManager()->getDefaultLanguage()->getId();
-      if ($langcode == $defaultLangcode || !$entity->hasTranslation($defaultLangcode)) {
-        // QuantEvent can be used to unpublish any resource. Note, the source
-        // must be given here and not the destination.
-        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/taxonomy/term/{$tid}", [], NULL), QuantEvent::UNPUBLISH);
-      }
-      if (Utility::usesLanguagePathPrefixes()) {
-        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$langcode}/taxonomy/term/{$tid}", [], NULL), QuantEvent::UNPUBLISH);
-      }
-    }
+    // Handle canonical redirects.
+    self::handleCanonicalRedirects($entity, $langcode, $url);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }
@@ -476,6 +401,55 @@ class Seed {
     $alias = Utility::getUrl($pathAlias->get('alias')->value, $pathAlias->get('langcode')->value);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $alias, [], NULL), QuantEvent::UNPUBLISH);
+  }
+
+  /**
+   * Handle canonical redirects.
+   *
+   * @todo Create simpler logic for when multilingual isn't used?
+   */
+  function handleCanonicalRedirects($entity, $langcode, $url) {
+    $type = $entity->getEntityTypeId();
+    if (!in_array($type, ['node', 'taxonomy_term'])) {
+      \Drupal::logger('quant_seed')->error('Quant: handleCanonicalRedirects called with wrong type [@type]', ['@type' => $type]);
+      return;
+    }
+
+    $id = $entity->id();
+    $published = $entity->isPublished();
+    $canonical = ($type == 'node') ? "/node/{$id}" : "/taxonomy/term/{$id}";
+    $usePrefixes = Utility::usesLanguagePathPrefixes();
+
+    // If there is default language content, then the canonical redirect can
+    // use the default URL. Otherwise, it should use the current language.
+    $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
+    $defaultUrl = Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], ['language' => $defaultLanguage])->toString();
+    $defaultTranslation = $entity->getTranslation($defaultLanguage->getId());
+    $defaultPublished = $defaultTranslation ? $defaultTranslation->isPublished() : $published;
+    $language = \Drupal::languageManager()->getLanguage($langcode);
+    $languageUrl = Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], ['language' => $language])->toString();
+    if (!$defaultTranslation) {
+      $defaultUrl = $languageUrl;
+    }
+
+    // Only create redirects if the content has an alias.
+    if ($canonical != $url) {
+      $type = 'entity.' $type . '.canonical';
+      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($canonical, $defaultUrl, 301), QuantRedirectEvent::UPDATE);
+      if ($usePrefixes) {
+        // Handle redirects with path prefix too.
+        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$langcode}($canonical}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
+      }
+    }
+
+    // Unpublish redirects.
+    if (!$defaultPublished) {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $canonical, [], NULL), QuantEvent::UNPUBLISH);
+    }
+    if (!$published && $usePrefixes) {
+      // Handle redirects with path prefix too.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$langcode}{$canonical}", [], NULL), QuantEvent::UNPUBLISH);
+    }
   }
 
   /**
