@@ -17,16 +17,60 @@ define('QUANT_THEME_FILE_MASK', '/^.+(.jpe?g|.png|.svg|.ttf|.woff|.woff2|.otf|.c
  */
 define('QUANT_VERBOSE', 'verbose');
 
+module_load_include('inc', 'quant', 'quant_queue_class');
+
 /**
  * Implements hook_help().
  */
 function quant_help($section) {
-  switch ($section) {
-    case 'quant/config':
-      return '';
 
-    case 'quant/api':
-      return '';
+    $enabled = [];
+    $modules = ['quant', 'quant_api', 'quant_cron', 'quant_file', 'quant_redirect', 'quant_scheduler', 'quant_sitemap'];
+    foreach ($modules as $module) {
+      $enabled[$module] = module_exists($module) ? t('(Enabled)') : t('(Disabled)');
+    }
+
+  // Technically, the help text for each module should be in the module, but we
+  // are using the same text for everything, so this makes it simpler.
+  $help_summary = t('The <a href="https://www.drupal.org/project/quantcdn">Quant module</a> integrates your Drupal site with <a href="https://www.quantcdn.io">QuantCDN</a> to create a static version of your website.');
+  switch ($section) {
+    case 'admin/config/services/quant':
+    case 'admin/config/services/quant/api':
+    case 'admin/config/services/quant/cron':
+    case 'admin/config/services/quant/queue':
+    case 'admin/config/services/quant/seed':
+    case 'admin/config/services/quant/token':
+      return $help_summary . ' <a href="/admin/help/quant">More info</a>' ;
+
+    case 'admin/help#quant':
+      $output = '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . $help_summary . '</p>';
+      $output .= '<p>' . t('You can learn more in the <a href="https://docs.quantcdn.io/docs/integrations/drupal">Quant Drupal integration documentation</a>.') . '</p>';
+      $output .= '<h3>' . t('Quant modules') . '</h3>';
+      $output .= '<ul>';
+      $output .= '<li><strong>Quant</strong> ' . $enabled['quant'] . ' - Main Quant module with general, seed, and token settings.</li>';
+      $output .= '<li><strong>Quant API</strong> ' . $enabled['quant_api'] . ' - API module to connect your Drupal site with your Quant project.</li>';
+      $output .= '<li><strong>Quant Cron</strong> ' . $enabled['quant_cron'] . ' - Cron module for syncing content during cron runs.</li>';
+      $output .= '<li><strong>Quant File*</strong> ' . $enabled['quant_file'] . ' - File module to sync file displays to Quant.</li>';
+      $output .= '<li><strong>Quant Redirect*</strong> ' . $enabled['quant_redirect'] . ' - Redirect module to sync redirects to Quant.</li>';
+      $output .= '<li><strong>Quant Scheduler*</strong> ' . $enabled['quant_scheduler'] . ' - Scheduler module to support scheduler transitions.</li>';
+      $output .= '<li><strong>Quant Sitemap*</strong> ' . $enabled['quant_sitemap'] . ' - Sitemap module to sync XML sitemaps to Quant.</li>';
+      $output .= '<p>Note: * indicates the module has no specific configuration page though there may be settings on other admin pages.</p>';
+      $output .= '</ul>';
+      $output .= '<h3>' . t('Quant menu') . '</h3>';
+      $output .= '<ul>';
+      $output .= '<li><a href="/admin/config/services/quant">Quant Config</a></li>';
+      if (module_exists('quant_api')) {
+        $output .= '<li><a href="/admin/config/services/quant/api">Quant API</a></li>';
+      }
+      if (module_exists('quant_cron')) {
+        $output .= '<li><a href="/admin/config/services/quant/cron">Quant Cron</a></li>';
+      }
+      $output .= '<li><a href="/admin/config/services/quant/queue">Quant Queue</a></li>';
+      $output .= '<li><a href="/admin/config/services/quant/seed">Quant Seed</a></li>';
+      $output .= '<li><a href="/admin/config/services/quant/token">Quant Token</a></li>';
+      $output .= '</ul>';
+      return $output;
   }
 }
 
@@ -45,7 +89,7 @@ function quant_menu() {
   );
 
   $items['admin/config/services/quant/settings'] = array(
-    'title' => 'Config',
+    'title' => 'Configure',
     'description' => 'Configure the Quant static site generator.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('quant_config'),
@@ -63,7 +107,7 @@ function quant_menu() {
     'file' => 'quant.admin.inc',
     'access arguments' => array('bulk quant export'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 1,
+    'weight' => 20,
   );
 
   $items['admin/config/services/quant/queue'] = array(
@@ -73,7 +117,7 @@ function quant_menu() {
     'file' => 'quant.admin.inc',
     'access arguments' => array('configure quant'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 10,
+    'weight' => 30,
   );
 
   $items['admin/config/services/quant/token'] = array(
@@ -84,7 +128,7 @@ function quant_menu() {
     'file' => 'quant.admin.inc',
     'access arguments' => array('configure quant'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 3
+    'weight' => 50
   );
 
   $items['_quant/validate'] = array(
@@ -185,8 +229,10 @@ function quant_node_menu_load($nid) {
     $node = node_load($nid, $revision);
     // Override the status. This prevents Drupal from adding the standard
     // unpublished classes to the node.
-    $node->status = 1;
-    return $node;
+    if (!empty($node)) {
+      $node->status = 1;
+      return $node;
+    }
   }
 
   return node_load($nid);
@@ -211,6 +257,16 @@ function quant_forbidden() {
 }
 
 /**
+ * Implements hook_views_api().
+ */
+function quant_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'quant') . '/views',
+  );
+}
+
+/**
  * Implements hook_init().
  *
  * Perform token validation at the beginning of the request. This allows us to
@@ -226,7 +282,7 @@ function quant_init() {
   }
 
   $path = current_path();
-  $path_alias = drupal_lookup_path('alias', $path);
+  $path_alias = drupal_get_path_alias($path);
   $strict = variable_get('quant_token_strict', true);
 
   if (quant_token_validate($path_alias, $strict)) {
@@ -396,7 +452,6 @@ function _quant_post_entity_op($entity_info) {
  *   The context of the seed, usually includes entity info.
  */
 function quant_seed($url, array $context = array()) {
-  global $base_url;
   $base = quant_get_base_url();
   $path = parse_url($url, PHP_URL_PATH);
   $path = ltrim($path, '/');
@@ -404,16 +459,23 @@ function quant_seed($url, array $context = array()) {
   // Ensure URL is processed to account for special character encoding.
   $url = _rebuild_url($url);
 
-  if (path_is_admin($path)) {
-    quant_log('Skip: !path is an admin path', array('!path' => $path));
+  // Skip based on log data.
+  if (quant_log_skip_seed($url, $context)) {
+    quant_log('Quant: Skipping !type !path based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the quant_log database table.', array('!type' => $context['type'], '!path' => '/' . $path));
     return;
   }
 
-  quant_log('Sending content: !url', array('!url' => $url));
+  // Don't seed admin pages.
+  if (path_is_admin($path)) {
+    quant_log('Quant: Skipping admin page !path', array('!path' => '/' . $path));
+    return;
+  }
+
+  quant_log('Quant: Sending !type !url', array('!type' => @$context['type'], '!url' => $url));
 
   $options = array(
     'headers' => array(
-      'Host' => variable_get('quant_hostname', parse_url($base_url, PHP_URL_HOST)),
+      'Host' => quant_get_hostname(),
       'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
   );
@@ -434,7 +496,13 @@ function quant_seed($url, array $context = array()) {
     ));
   }
 
+  // Set the internal request method.
+  $options['method'] = variable_get('quant_seed_get', TRUE) ? 'GET' : 'POST';
+
   $response = drupal_http_request($url, $options);
+
+  // Save data for logging.
+  $context['status'] = $response->code;
 
   // Ensure file entities have their underlying asset seeded.
   if (isset($context['type']) && $context['type'] == 'file') {
@@ -466,6 +534,8 @@ function quant_seed($url, array $context = array()) {
         $fileCtx = array(
           'location' => $context['entity']->uri,
           'request' => $public_path,
+          'type' => 'file',
+          'url' => $context['entity']->uri,
         );
 
         quant_seed_file("{$base}{$public_path}", $fileCtx);
@@ -492,6 +562,7 @@ function quant_seed($url, array $context = array()) {
 
       if (isset($context['type']) && $context['type'] == 'file') {
         // File asset already handled.
+        quant_log_seed($url, $context, 'File asset already handled.');
         return;
       }
       else {
@@ -500,69 +571,77 @@ function quant_seed($url, array $context = array()) {
     }
 
     // Redirect created, internal redirect followed + seeded.
+    quant_log_seed($url, $context, 'Redirect created.');
     return;
   }
 
   if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
+    quant_log_seed($url, $context, 'Unpublish route in Quant.');
     return FALSE;
   }
 
   if (!property_exists($response, 'data') || $response->code > 404) {
-    quant_log('Unable to seed %url %error %request', array(
+    $error = format_string('Unable to seed %url %error %request', array(
       '%url' => $url,
       '%error' => $response->error,
       '%request' => json_encode($response),
-    ), WATCHDOG_ERROR);
+    ));
+    quant_log($error, NULL, WATCHDOG_ERROR);
+    quant_log_seed($url, $context, $error);
     return FALSE;
   }
 
   if ($response->code != 200) {
-    quant_log('Non-200 response code for %url %status_code', array(
+    $error = format_string('Non-200 response code for %url %status_code', array(
       '%url' => $url,
       '%status_code' => $response->code,
-    ), WATCHDOG_WARNING);
+    ));
+    quant_log($error, NULL, WATCHDOG_WARNING);
+    quant_log_seed($url, $context, $error);
     return FALSE;
   }
 
   $markup = $response->data;
   $queue = quant_get_queue();
 
+  // Pagination support.
   $document = new \DOMDocument();
   @$document->loadHTML($markup);
   $xpath = new \DOMXPath($document);
-  $page_urls = isset($context['page_urls']) ? $context['page_urls'] : [];
+  $xpath_urls = isset($context['xpath_urls']) ? $context['xpath_urls'] : [];
 
-  $pager_xpath = array(
-    '//a[contains(@href,"page=") and contains(text(), "next")]',
-    '//a[starts-with(@href, "/") and contains(text(), "first")]',
+  $xpath_selectors = array();
+  $links_config = variable_get(
+    'quant_xpath_selectors',
+    "//a[contains(@href,\"page=\") and contains(text(), \"next\")]\r\n//a[starts-with(@href, \"/\") and contains(text(), \"first\")]"
   );
 
-  if (variable_get('quant_pager_xpath')) {
-    $pager_xpath = explode(PHP_EOL, variable_get('quant_pager_xpath'));
+  foreach (explode(PHP_EOL, $links_config) as $links_line) {
+    $xpath_selectors[] = trim($links_line);
   }
 
-  foreach ($pager_xpath as $xpath_query) {
+  foreach ($xpath_selectors as $xpath_query) {
     foreach ($xpath->query($xpath_query) as $node) {
       $original_href = $new_href = $node->getAttribute('href');
       if ($original_href[0] === '?') {
         $new_href = strtok($path, '?') . $original_href;
       }
 
-      $pager_url = $base . $new_href;
+      $xpath_url = $base . $new_href;
 
-      if (in_array($pager_url, $page_urls)) {
+      if (in_array($xpath_url, $xpath_urls)) {
         continue;
       }
 
-      $page_urls[] = $pager_url;
+      $xpath_urls[] = $xpath_url;
       $next_context = array(
         'find_pager' => TRUE,
-        'type' => 'view',
-        'page_urls' => $page_urls,
+        'type' => 'view', // @todo type='xpath'?
+        'xpath_urls' => $xpath_urls,
       );
-      $item = array('quant_seed', array($pager_url, $next_context));
+      $item = array('quant_seed', array($xpath_url, $next_context));
       $queue->createItem($item);
     }
   }
@@ -594,17 +673,40 @@ function quant_seed($url, array $context = array()) {
   }
 
   drupal_alter('quant_meta', $meta, $context);
-  module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
+  $seed_results = module_invoke_all('quant_seed', $alias, $markup, $meta, $context);
+
+  // Update the context and log.
+  quant_log_check_seed_results($context, $seed_results);
+  quant_log_seed($url, $context);
 }
 
 /**
  * Prepare a file export.
  */
 function quant_seed_file($url, $context = array()) {
+
+  // Ensure we have an md5 value for the local file if it exists.
+  if (isset($context['location']) && file_exists($context['location']) && empty($context['md5'])) {
+    $context['md5'] = md5_file($context['location']);
+  }
+
+  // Skip based on log data.
+  if (quant_log_skip_seed($url, $context)) {
+    $path = parse_url($url, PHP_URL_PATH);
+    quant_log('Quant: Skipping !type !path based on logs. To force reseeding, disable the "Check logs before seeding" configuration option or truncate the quant_log database table.', array('!type' => $context['type'], '!path' => $path));
+    return;
+  }
+
+  quant_log('Quant: Sending file !url', array('!url' => urldecode($url)));
+
   // @TODO: Files need different meta?
   $meta = array();
   drupal_alter('quant_file_meta', $meta, $context);
-  module_invoke_all('quant_seed_file', $url, $context);
+  $seed_results = module_invoke_all('quant_seed_file', $url, $context);
+
+  // Update the context and log.
+  quant_log_check_seed_results($context, $seed_results);
+  quant_log_seed($url, $context);
 }
 
 /**
@@ -612,6 +714,11 @@ function quant_seed_file($url, $context = array()) {
  */
 function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
   $vvv = variable_get('quant_verbose_logging', FALSE);
+
+  if (empty($replacements)) {
+    // Prevent errors if $replacements is `null`.
+    $replacements = array();
+  }
 
   if ($level == QUANT_VERBOSE && !$vvv) {
     return;
@@ -628,6 +735,133 @@ function quant_log($message, $replacements = array(), $level = WATCHDOG_INFO) {
   }
 
   watchdog('quant', $message, $replacements, $level);
+}
+
+/**
+ * Log seed data to database.
+ */
+function quant_log_seed($url, $context, $message = 'Successful.') {
+  // Just keep the URI.
+  $url = parse_url($url, PHP_URL_PATH);
+  if (empty($url)) {
+    quant_log('No URL provided for quant_log_seed.', [], WATCHDOG_ERROR);
+    return;
+  }
+
+  $md5 = 0;
+
+  if (isset($context['type']) && isset($context['location']) && file_exists($context['location'])) {
+    switch ($context['type']) {
+      case 'file':
+      case 'file_attachment':
+      case 'theme':
+        $md5 = isset($context['md5']) ? $context['md5'] : md5_file($context['location']);
+        break;
+    }
+  }
+
+  $query = db_merge('quant_log')
+    ->key(array('url' => $url))
+    ->fields(array(
+      'entity_id' => isset($context['id']) ? $context['id'] : 0,
+      'url' => $url,
+      'type' => isset($context['type']) ? $context['type'] : 'unknown',
+      'status' => isset($context['status']) ? $context['status'] : 'unknown',
+      'updated' => time(),
+      'hash' => isset($context['hash']) ? $context['hash'] : 0, // @todo
+      'md5' => $md5,
+      'message' => isset($context['message']) ? $context['message'] : $message
+    ));
+
+  try {
+    return (bool) $query->execute();
+  }
+  catch (\PDOException $error) {
+    quant_log($error, [], WATCHDOG_ERROR);
+    return FALSE;
+  }
+}
+
+/**
+ * Check seed results and adjust the context.
+ */
+function quant_log_check_seed_results(&$context, $seed_results) {
+
+  $message = 'Successful.';
+  // Any error should be logged, so get check for it.
+  $has_error = FALSE;
+  foreach ($seed_results as $seed_result) {
+    if ($seed_result === FALSE) {
+      // Get the last watchdog message.
+      $has_error = TRUE;
+      $watchdog_log = db_query('SELECT message, variables FROM {watchdog} ORDER BY wid DESC LIMIT 1')->fetchObject();
+      $variables = unserialize($watchdog_log->variables);
+      $message = strip_tags(format_string($watchdog_log->message, $variables));
+      break;
+    }
+  }
+
+  $context['message'] = $message;
+  $context['status'] = isset($context['status']) ? $context['status'] : ($has_error ? 'Unknown' : '200');
+}
+
+/**
+ * Check if seed item should skip based on log.
+ */
+function quant_log_skip_seed($url, $context) {
+  // Only skip if configured for this option.
+  if (!variable_get('quant_seed_check_log', FALSE)) {
+    return FALSE;
+  }
+
+  if (empty($context['type'])) {
+    return;
+  }
+
+  // Handle entities.
+  if (isset($context['id'])) {
+    $entities = entity_load($context['type'], [$context['id']]);
+    if (empty($entities)) {
+      // Something is wrong with the type or id.
+      quant_log(t('Could not load entity %type (%id)', ['%type' => $context['type'], '%id' => $context['id']]));
+      return TRUE;
+    }
+    $entity = reset($entities);
+    $changed = isset($entity->changed) ? $entity->changed : (isset($entity->created) ? $entity->created : (isset($entity->timestamp) ? $entity->timestamp : 0));
+
+    // Check the quant_log data for this entity.
+    $logs = db_query('SELECT * FROM {quant_log} WHERE entity_id = :entity_id AND type = :type', array(':entity_id' => $context['id'], ':type' => $context['type']));
+    foreach ($logs as $log) {
+      // Reprocess if status or log message aren't as expected.
+      if ($log->status != '200' || $log->message != 'Successful.') {
+        return FALSE;
+      }
+      // Check the log date against the entity.
+      if ($changed != 0 && $changed < $log->updated) {
+        return TRUE;
+      }
+    }
+  }
+
+  switch ($context['type']) {
+    case 'file':
+    case 'file_attachment':
+    case 'theme':
+      // Check the log md5 against the context md5.
+      if (isset($context['location']) && isset($context['md5'])) {
+        $log_md5 = db_query('SELECT md5 FROM {quant_log} WHERE url like :url AND type = :type', array(
+          ':url' => '%' . db_like($url),
+          ':type' => $context['type'],
+        ))->fetchField();
+        if ($log_md5) {
+          $file_md5 = md5_file($context['location']);
+          return $file_md5 == $log_md5;
+        }
+      }
+      break;
+  }
+
+  return FALSE;
 }
 
 /**
@@ -682,8 +916,7 @@ function quant_quant_meta_alter(&$meta, $context) {
  *   The path with context for seeding.
  */
 function _quant_prepare_entity($type, $entity_id) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
   $entity = entity_load($type, [$entity_id]);
 
   if (is_array($entity)) {
@@ -739,15 +972,56 @@ function _quant_prepare_entity($type, $entity_id) {
 }
 
 /**
+ * Prepare a batch process for menu items.
+ *
+ * @param array $menus
+ *   Optionally filter by menu names.
+ */
+function _quant_queue_menu_paths(array $menus_filter = array()) {
+  global $base_url;
+  $base = variable_get('quant_base_url', $base_url);
+  $menus = menu_get_menus();
+
+  $options = array();
+  foreach ($menus as $menu_name => $menu) {
+
+    // Skip if not in a provided menu filter.
+    if (!empty($menus_filter) && !in_array($menu_name, $menus_filter)) {
+      continue;
+    }
+
+    $items = menu_load_links($menu_name);
+    $queue = quant_get_queue();
+
+    foreach ($items as $item) {
+      $alias = drupal_get_path_alias($item['link_path']);
+
+      // Exclude special routes (like '<front>')
+      if (strpos((trim($alias)), '<') === 0) {
+        continue;
+      }
+      $url =  $base . base_path() . $alias;
+
+      $item = array(
+        'quant_seed',
+        array(trim($url), array('type' => 'menu')),
+      );
+      $queue->createItem($item);
+
+    }
+
+  }
+
+}
+
+/**
  * Prepare a batch process for the node entity type.
  *
  * @param array $bundles
  *   Optionally filter by node bundles.
  */
 function _quant_queue_nodes(array $bundles = array()) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
-
+  $base = quant_get_base_url();
   $queue = quant_get_queue();
 
   $query = db_select('node', 'n')
@@ -761,16 +1035,19 @@ function _quant_queue_nodes(array $bundles = array()) {
   $nids = $query->execute()->fetchCol();
   asort($nids);
 
-  $item = array('quant_seed', array("$base/"));
+  quant_log('Quant: Adding home to the list.');
+  $item = array('quant_seed', array("$base/", array('type' => 'home')));
   $queue->createItem($item);
 
   foreach ($nids as $nid) {
     quant_log('Quant: Adding node [!nid] to the list.', array('!nid' => $nid));
     $item = array(
       'quant_seed_node_batch',
-      array($nid),
+      array($nid, array('type' => 'node')),
     );
-    $queue->createItem($item);
+    if (!$queue->createItem($item)) {
+      quant_log('...Skipping duplicate entity');
+    }
   }
 }
 
@@ -778,9 +1055,6 @@ function _quant_queue_nodes(array $bundles = array()) {
  * Prepare a batch process for taxonomy entities.
  */
 function _quant_queue_taxonomy() {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
-
   $queue = quant_get_queue();
 
   // @todo: Support select vocabs.
@@ -791,10 +1065,10 @@ function _quant_queue_taxonomy() {
   asort($tids);
 
   foreach ($tids as $tid) {
-    quant_log('Quant: Adding term [!tid] to the list.', array('!tid' => $tid));
+    quant_log('Quant: Adding taxonomy_term [!tid] to the list.', array('!tid' => $tid));
     $item = array(
       'quant_seed_taxonomy_batch',
-      array($tid),
+      array($tid, array('type' => 'taxonomy_term')),
     );
     $queue->createItem($item);
   }
@@ -802,9 +1076,22 @@ function _quant_queue_taxonomy() {
 
 /**
  * Prepare the images to seed via batch.
+ *
+ * @param string $theme_machine_name
+ *   Optional theme machine name to seed assets for.
  */
-function _quant_queue_theme_assets() {
-  $theme_dir = drupal_get_path('theme', variable_get('theme_default', NULL));
+function _quant_queue_theme_assets($theme_machine_name = NULL) {
+
+  if (empty($theme_machine_name)) {
+    $theme_machine_name = variable_get('theme_default', NULL);
+  }
+
+  $theme_dir = drupal_get_path('theme', $theme_machine_name);
+
+  if (empty($theme_dir)) {
+    return;
+  }
+
   $files = file_scan_directory(DRUPAL_ROOT . "/$theme_dir", QUANT_THEME_FILE_MASK);
   ksort($files);
 
@@ -815,6 +1102,11 @@ function _quant_queue_theme_assets() {
 
   foreach ($files as $file) {
 
+    // Skip node_modules.
+    if (preg_match('/node_modules/i', $file->uri)) {
+      continue;
+    }
+
     $file_on_disk = $file->uri;
     if (substr($file_on_disk, 0, strlen(DRUPAL_ROOT)) == DRUPAL_ROOT) {
       $file_on_disk = substr($file_on_disk, strlen(DRUPAL_ROOT));
@@ -823,6 +1115,7 @@ function _quant_queue_theme_assets() {
     $context = array(
       'location' => $file->uri,
       'request' => $file_on_disk,
+      'type' => 'theme',
     );
 
     quant_log('Quant: Adding file [!path] to the list.', array('!path' => $file_on_disk));
@@ -836,12 +1129,35 @@ function _quant_queue_theme_assets() {
 }
 
 /**
+ * Get a list of page manager paths.
+ */
+function _quant_queue_page_manager() {
+  $base = quant_get_base_url();
+  $queue = quant_get_queue();
+
+  $context = array();
+  $pages = db_query('SELECT p.path FROM {page_manager_pages} p')->fetchAll();
+
+  foreach ($pages as $page) {
+    quant_log('Quant: Adding page_manager page [!path] to the list.', array('!path' => $page->path));
+    $url = "$base/" . $page->path;
+
+    $context['find_pager'] = TRUE;
+    $context['type'] = 'page_manager';
+
+    $item = array(
+      'quant_seed',
+      array(trim($url), $context),
+    );
+    $queue->createItem($item);
+  }
+}
+
+/**
  * Get a list of views paths.
  */
 function _quant_queue_views() {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
-
+  $base = quant_get_base_url();
   $queue = quant_get_queue();
 
   $menus = array();
@@ -850,18 +1166,30 @@ function _quant_queue_views() {
     views_menu_alter($menus);
   }
 
-  foreach ($menus as $path => $config) {
+  foreach ($menus as $path => $context) {
     $url = "$base/$path";
 
-    $config['find_pager'] = TRUE;
-    $config['type'] = 'view';
+    // Don't seed admin pages.
+    if (path_is_admin($path)) {
+      // Only log non-Quant admin views.
+      $quant_view_path = 'admin/config/services/quant';
+      if (!substr($path, 0, strlen($quant_view_path)) === $quant_view_path) {
+        quant_log('Quant: Skipping admin view !path', array('!path' => $path));
+      }
+      continue;
+    }
+
+    quant_log('Quant: Adding view [!path] to the list.', array('!path' => $path));
+
+    $context['find_pager'] = TRUE;
+    $context['type'] = 'view';
 
     // @TODO: We have menu access callbacks so we should
     // validate anonymous has access before we add the operation.
     // Pages will be exported to Quant with 401.
     $item = array(
       'quant_seed',
-      array($url, $config),
+      array($url, $context),
     );
     $queue->createItem($item);
   }
@@ -874,22 +1202,23 @@ function _quant_queue_views() {
  *   Textarea entered routes.
  */
 function _quant_queue_routes($routes) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
   $routes = is_array($routes) ? $routes : explode(PHP_EOL, $routes);
 
   $queue = quant_get_queue();
 
   foreach ($routes as $route) {
+    quant_log('Quant: Adding route [!route] to the list.', array('!route' => $route));
     if (strpos((trim($route)), '/') !== 0) {
       continue;
     }
 
     $url = $base . $route;
+    $context = array('type' => 'route');
 
     $item = array(
       'quant_seed',
-      array(trim($url)),
+      array(trim($url), $context),
     );
     $queue->createItem($item);
   }
@@ -911,7 +1240,6 @@ function quant_seed_taxonomy_batch($tid) {
 
   // Find pagination within taxonomy term pages.
   $context['find_pager'] = TRUE;
-  $context['type'] = 'taxonomy_term';
 
   quant_seed($url, $context);
 }
@@ -928,7 +1256,7 @@ function quant_seed_taxonomy_batch($tid) {
 function quant_get_queue($items = FALSE) {
   if ($items) {
     $items = array();
-    $query = db_select('queue', 'q')->extend('PagerDefault');
+    $query = db_select('quant_queue', 'q')->extend('PagerDefault');
     $query->condition('name', 'quant_seed')
       ->fields('q', array('item_id', 'data', 'expire', 'created'));
     $result = $query->limit(10)->orderBy('q.item_id')->execute();
@@ -986,11 +1314,28 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
     _quant_queue_theme_assets();
   }
 
+  if (variable_get('quant_seed_menu_paths_enabled')) {
+    $menus = array_filter(variable_get('quant_seed_menu_paths_bundles'));
+    _quant_queue_menu_paths($menus);
+  }
+
+  if (variable_get('quant_seed_additional_theme_assets_enabled')) {
+    foreach (explode(PHP_EOL, variable_get('quant_seed_additional_theme_assets')) as $theme) {
+      _quant_queue_theme_assets(trim($theme));
+    }
+  }
+
   if (variable_get('quant_seed_views')) {
     _quant_queue_views();
   }
 
-  $routes = array('/_quant404');
+  if (variable_get('quant_seed_page_manager')) {
+    _quant_queue_page_manager();
+  }
+
+  if (variable_get('site_404', FALSE)) {
+    $routes = array('/_quant404');
+  }
 
   if (variable_get('quant_custom_routes_enabled')) {
     foreach (explode(PHP_EOL, variable_get('quant_custom_routes')) as $route) {
@@ -1014,11 +1359,13 @@ function _quant_seed_prepare(array $form = array(), array $form_state = array())
  * Process the queue inline with a Drupal batch process.
  */
 function _quant_queue_batch() {
+  // Always prepare the queue.
+  _quant_seed_prepare();
+
+  // If it should be triggered via UI, create a batch process.
   if (!variable_get('trigger_quant_seed')) {
     return;
   }
-
-  _quant_seed_prepare();
 
   $batch = array(
     'title' => t('Quant seeding'),
@@ -1033,6 +1380,15 @@ function _quant_queue_batch() {
   $batch['operations'][] = array('quant_batch_process_queue', array('quant_seed'));
 
   batch_set($batch);
+}
+
+/**
+ * Clear the queue.
+ */
+function _quant_queue_clear() {
+  $queue = quant_get_queue();
+  $queue->deleteQueue();
+  drupal_set_message(t('The queue has been cleared.'), 'status');
 }
 
 /**
@@ -1104,8 +1460,7 @@ function _quant_get_seed_warnings(array &$form) {
  * exported.
  */
 function quant_export_drupal_pages() {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
 
   $special_pages = array(
     '/' => variable_get('site_frontpage', 'node'),
@@ -1241,6 +1596,11 @@ function quant_token_validate($route, $strict = TRUE) {
   $expected_route = parse_url(ltrim($route, '/'), PHP_URL_PATH);
   $received_route = parse_url(ltrim($payload['route'], '/'), PHP_URL_PATH);
 
+  // Special case for home page.
+  if ($expected_route == 'node' && $received_route == '') {
+    $expected_route = '';
+  }
+
   if ($strict && $expected_route != $received_route) {
     watchdog('quant_token', 'Strict token mismatch: Expected [@expected] Received [@received]', array(
       '@expected' => $expected_route,
@@ -1256,18 +1616,16 @@ function quant_token_validate($route, $strict = TRUE) {
  * Replaces absolute URLs with relative in markup.
  */
 function _rewrite_relative($markup) {
-  global $base_url;
-  $base = variable_get('quant_hostname', $base_url);
-  return preg_replace("/(https?:\/\/)?{$base}/i", '', $markup);
+  $hostname = quant_get_hostname();
+  return preg_replace("/(https?:\/\/)?{$hostname}/i", '', $markup);
 }
 
 /**
  * Determines whether a URL is internal or external.
  */
 function _is_url_internal($url) {
-  global $base_url;
-  $base = variable_get('quant_hostname', $base_url);
-  if (preg_match("/(https?:\/\/)?{$base}/i", $url)) {
+  $hostname = quant_get_hostname();
+  if (preg_match("/(https?:\/\/)?{$hostname}/i", $url)) {
     return TRUE;
   }
 
@@ -1320,8 +1678,7 @@ function quant_form_system_site_information_settings_alter(&$form, $form_state) 
  * Seed error pages when they're updated.
  */
 function quant_seed_errors() {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
   if (variable_get('site_404', FALSE)) {
     quant_seed("$base/_quant404");
   }
@@ -1366,15 +1723,38 @@ function _quant_get_request_header($header) {
 }
 
 /**
- * Get the quant configured base URL.
+ * Get the configured base URL.
  *
  * @return string
  *   The base URL.
  */
 function quant_get_base_url() {
   global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  // Note that if `quant_base_url` is an empty string, then `variable_get`
+  // won't return the backup value, so we need to be more explicit.
+  $base = variable_get('quant_base_url');
+  if (empty($base)) {
+    $base = $base_url;
+  }
   return $base;
+}
+
+/**
+ * Get the configured hostname.
+ *
+ * @return string
+ *   The hostname.
+ */
+function quant_get_hostname() {
+  // Note that if `quant_hostname` is an empty string, then `variable_get` won't
+  // return the backup value, so we need to be more explicit.
+  $base = quant_get_base_url();
+  $hostname = variable_get('quant_hostname');
+  if (empty($hostname)) {
+    $hostname = parse_url($base, PHP_URL_HOST);
+  }
+
+  return $hostname;
 }
 
 /**

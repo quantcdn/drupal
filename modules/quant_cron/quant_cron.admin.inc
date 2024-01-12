@@ -12,9 +12,19 @@
  */
 function quant_cron_settings() {
 
+  drupal_set_title(t('Quant Cron'));
+
   $form = array();
 
   _quant_get_seed_warnings($form);
+
+  // Link off to the most relevant documentation.
+  $form['docs'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="messages status">',
+    '#suffix' => '</div>',
+    '#markup' => 'Learn more about this feature in the <a href="https://docs.quantcdn.io/docs/integrations/drupal/drupal-cron">Quant cron documentation</a>.'
+  );
 
   $form['quant_cron_entity_node'] = array(
     '#type' => 'checkbox',

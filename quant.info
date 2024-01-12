@@ -4,3 +4,7 @@ package = Quant
 core = 7.x
 configure = admin/config/services/quant
 dependencies[] = quant:quant_api
+dependencies[] = views
+
+files[] = views/quant.views.inc
+files[] = views/views_handler_field_quant_static_url.inc

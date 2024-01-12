@@ -1,0 +1,20 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for quant_cron.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_cron_uninstall() {
+  // Remove variables from cron configuration.
+  variable_del('quant_cron_entity_node');
+  variable_del('quant_cron_entity_node_bundles');
+  variable_del('quant_cron_entity_taxonomy');
+  variable_del('quant_cron_theme_assets');
+  variable_del('quant_cron_views');
+  variable_del('quant_cron_custom_routes_enabled');
+  variable_del('quant_cron_custom_routes');
+}

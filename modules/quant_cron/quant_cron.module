@@ -6,6 +6,16 @@
  */
 
 /**
+ * Implements hook_help().
+ */
+function quant_cron_help($section) {
+  switch ($section) {
+    case 'admin/help#quant_cron':
+      return quant_help('admin/help#quant');
+  }
+}
+
+/**
  * Implements hook_menu().
  */
 function quant_cron_menu() {
@@ -18,7 +28,7 @@ function quant_cron_menu() {
     'file' => 'quant_cron.admin.inc',
     'access arguments' => array('bulk quant export'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 1,
+    'weight' => 40,
   );
 
   return $items;
@@ -86,8 +96,7 @@ function _quant_cron_seed_prepare() {
  *   The batch array.
  */
 function _quant_batch_nodes(&$batch, $bundles = array()) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
 
   $query = db_select('node', 'n')
     ->fields('n', array('nid'))
@@ -122,9 +131,6 @@ function _quant_batch_nodes(&$batch, $bundles = array()) {
  *   The batch array.
  */
 function _quant_batch_taxonomy(&$batch) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
-
   // @todo: Support select vocabs.
   $tids = db_select('taxonomy_term_data', 't')
     ->fields('t', array('tid'))
@@ -158,6 +164,11 @@ function _quant_batch_images(&$batch) {
 
   foreach ($files as $file) {
 
+    // Skip node_modules.
+    if (preg_match('/node_modules/i', $file->uri)) {
+      continue;
+    }
+
     $file_on_disk = $file->uri;
     if (substr($file_on_disk, 0, strlen(DRUPAL_ROOT)) == DRUPAL_ROOT) {
       $file_on_disk = substr($file_on_disk, strlen(DRUPAL_ROOT));
@@ -184,8 +195,7 @@ function _quant_batch_images(&$batch) {
  *   The batch array.
  */
 function _quant_batch_views(&$batch) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
 
   $menus = array();
   if (module_exists('views')) {
@@ -217,8 +227,7 @@ function _quant_batch_views(&$batch) {
  *   Textarea entered routes.
  */
 function _quant_batch_routes(&$batch, $routes) {
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
   $routes = is_array($routes) ? $routes : explode(PHP_EOL, $routes);
 
   foreach ($routes as $route) {

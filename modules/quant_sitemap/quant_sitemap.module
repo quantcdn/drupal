@@ -6,6 +6,16 @@
  */
 
 /**
+ * Implements hook_help().
+ */
+function quant_sitemap_help($section) {
+  switch ($section) {
+    case 'admin/help#quant_sitemap':
+      return quant_help('admin/help#quant');
+  }
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function quant_sitemap_form_quant_seed_settings_alter(&$form, $form_state) {
@@ -24,14 +34,25 @@ function quant_sitemap_quant_seed_queue() {
     return;
   }
 
+  $base_url = quant_get_base_url();
   $queue = quant_get_queue();
   $sitemaps = xmlsitemap_sitemap_load_multiple(FALSE);
+  $context = array('type' => 'sitemap');
 
   foreach ($sitemaps as $sitemap) {
+    quant_log('Quant: Adding sitemap [!path] to the list.', array('!path' => $sitemap->uri['path']));
+    // Switch sitemap base URL to the Quant value.
+    $sitemap->uri['options']['base_url'] = $base_url;
     $item = array(
       'quant_seed',
-      array(url($sitemap->uri['path'], $sitemap->uri['options'])),
+      array(url($sitemap->uri['path'], $sitemap->uri['options']), $context),
     );
     $queue->createItem($item);
+  }
+
+  // Send the xmlsitemap stylesheet if it's enabled.
+  if (variable_get('xmlsitemap_xsl', 1)) {
+    quant_log('Quant: Adding sitemap [!path] to the list.', array('!path' => "$base_url/sitemap.xsl"));
+    $queue->createItem(array('quant_seed', array("$base_url/sitemap.xsl", $context)));
   }
 }

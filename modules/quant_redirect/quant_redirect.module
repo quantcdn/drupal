@@ -6,6 +6,16 @@
  */
 
 /**
+ * Implements hook_help().
+ */
+function quant_redirect_help($section) {
+  switch ($section) {
+    case 'admin/help#quant_redirect':
+      return quant_help('admin/help#quant');
+  }
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function quant_redirect_form_quant_config_alter(&$form, $form_state) {
@@ -56,14 +66,14 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
   $data = json_encode(array(
     'url' => '/' . ltrim($from, '/'),
     'redirect_url' => $to,
-    'redirect_http_code' => $status,
+    'redirect_http_code' => (int) $status,
     'published' => (bool) $published,
   ));
 
   $request = array(
     'headers' => quant_api_get_request_headers() + array(
       'content-type' => 'application/json',
-      'User-Agent' => 'Quant (+http://quant.io)',
+      'User-Agent' => 'Quant (+http://quantcdn.io)',
     ),
     'method' => 'POST',
     'data' => $data,
@@ -76,7 +86,7 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
     $request = array(
       'headers' => quant_api_get_request_headers() + array(
         'content-type' => 'application/json',
-        'User-Agent' => 'Quant (+http://quant.io)',
+        'User-Agent' => 'Quant (+http://quantcdn.io)',
         'Quant-Url' => '/' . ltrim($from, '/'),
       ),
       'method' => 'PATCH',
@@ -92,6 +102,12 @@ function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $i
     ));
   }
 
+  quant_log('Quant: Sending redirect !from => !to',
+    array(
+      '!from' => $from,
+      '!to' => $to,
+    )
+  );
   $response = drupal_http_request($api, $request);
 
   if (!empty($response->error)) {
@@ -142,8 +158,10 @@ function quant_redirect_quant_seed_queue() {
       );
     }
 
+    quant_log('Quant: Adding redirect [!source] to the list.', array('!source' => $redirect['source']));
     $item = array(
       'quant_redirect_request',
+      // @todo Add 'type' => 'redirect' to context?
       array($redirect['source'], $redirect['redirect'], $status_code),
     );
 

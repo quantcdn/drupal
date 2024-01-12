@@ -5,6 +5,134 @@
  * Install operations for Quant.
  */
 
+function quant_schema() {
+  $schema['quant_queue'] = array(
+    'description' => 'Stores items in queues.',
+    'fields' => array(
+      'item_id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique item ID.',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The queue name.',
+      ),
+      'data' => array(
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+        'description' => 'The arbitrary data for the item.',
+      ),
+      'expire' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Timestamp when the claim lease expires on the item.',
+      ),
+      'created' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Timestamp when the item was created.',
+      ),
+      'hash' => array(
+        'type' => 'char',
+        'length' => variable_get('quant_queue_hash_length', 48),
+        'not null' => TRUE,
+        'description' => 'Item uniqueness.'
+      )
+    ),
+    'primary key' => array('item_id'),
+    'unique keys' => array('hash' => array('hash')),
+    'indexes' => array(
+      'name_created' => array('name', 'created'),
+      'expire' => array('expire'),
+    ),
+  );
+
+  $schema['quant_log'] = array(
+    'description' => 'Log of seed data.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The unique ID of the seed item.',
+      ),
+      'entity_id' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+        'description' => 'The entity id of the seed item.',
+      ),
+      'url' => array(
+        'type' => 'varchar',
+        'length' => 2048,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The URL of the seed item.',
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The type of the seed item.',
+      ),
+      'status' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The status of the seed item.',
+      ),
+      'updated' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The timestamp when the seed item was updated.',
+      ),
+      'hash' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'description' => 'The hash of the seed item.',
+      ),
+      'md5' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'description' => 'The md5 of the seed item.',
+      ),
+      'message' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'size' => 'big',
+        'description' => 'The log message for the seed item.',
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'entity_id' => array('entity_id'),
+      'status' => array('status'),
+      'type' => array('type'),
+      'type_status' => array('type', 'status'),
+      'updated' => array('updated'),
+      // Work around length constraint by limiting to 255.
+      'url' => array(array('url', 255)),
+      'url_updated' => array(array('url', 255), 'updated'),
+    ),
+  );
+
+  return $schema;
+}
+
 /**
  * Perform setup tasks.
  */
@@ -12,6 +140,59 @@ function quant_install() {
   // Prepare configuration for Quant tokens.
   variable_set('quant_token_secret', bin2hex(random_bytes(32)));
   variable_set('quant_token_timeout', '+1 minute');
+  variable_set('queue_class_quant_seed', 'QuantQueue');
+  variable_set('quant_queue_hash_length', 48);
+  variable_set('quant_queue_hash_method', 'sha256');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_uninstall() {
+  // Remove variables from install.
+  variable_del('quant_token_secret');
+  variable_del('quant_token_timeout');
+  variable_del('queue_class_quant_seed');
+  variable_del('quant_queue_hash_length');
+  variable_del('quant_queue_hash_method');
+
+  // Remove variables from main configuration.
+  variable_del('quant_enabled');
+  variable_del('quant_enabled_nodes');
+  variable_del('quant_enabled_taxonomy');
+  variable_del('quant_xpath_selectors');
+  // @todo Rename to add quant namespace.
+  variable_del('disable_content_drafts');
+  variable_del('quant_seed_check_log');
+  variable_del('quant_rewrite_relative');
+  variable_del('quant_proxy_override');
+  variable_del('quant_verbose_logging');
+  variable_del('quant_verify_ssl');
+  variable_del('quant_alternate_file_handler');
+  variable_del('quant_seed_get');
+  variable_del('quant_base_url');
+  variable_del('quant_hostname');
+
+  // Remove variables from seed configuration.
+  variable_del('quant_seed_entity_node');
+  variable_del('quant_seed_entity_node_bundles');
+  variable_del('quant_seed_entity_taxonomy');
+  variable_del('quant_seed_theme_assets');
+  variable_del('quant_seed_views');
+  variable_del('quant_custom_routes_enabled');
+  variable_del('quant_custom_routes');
+  variable_del('quant_robots');
+  variable_del('trigger_quant_seed');
+
+  // Remove variables from token configuration.
+  variable_del('quant_token_disable');
+  variable_del('quant_token_timeout');
+  variable_del('quant_token_strict');
+  variable_del('quant_token_secret_regenerate');
+
+  // Delete tables.
+  db_delete('quant_queue');
+  db_delete('quant_log');
 }
 
 /**
@@ -23,4 +204,44 @@ function quant_update_7000() {
   }
   variable_set('quant_token_secret', bin2hex(random_bytes(32)));
   variable_set('quant_token_timeout', '+1 minute');
+}
+
+
+/**
+ * Migrate to new default XPath selectors variable.
+ */
+function quant_update_7001() {
+  if (variable_get('quant_pager_xpath')) {
+    variable_set('quant_xpath_selectors', variable_get('quant_pager_xpath'));
+    variable_del('quant_pager_xpath');
+  }
+}
+
+/**
+ * Add the `quant_queue` table.
+ */
+function quant_update_7002() {
+  variable_set('queue_class_quant_seed', 'QuantQueue');
+  variable_set('quant_queue_hash_length', 48);
+  variable_set('quant_queue_hash_method', 'sha256');
+  if (!db_table_exists('quant_queue')) {
+    db_create_table('quant_queue', drupal_get_schema_unprocessed('quant', 'quant_queue'));
+  }
+}
+
+/**
+ * Add the `quant_log` table.
+ */
+function quant_update_7003() {
+  if (!db_table_exists('quant_log')) {
+    db_create_table('quant_log', drupal_get_schema_unprocessed('quant', 'quant_log'));
+  }
+  module_enable(array('views'));
+}
+
+/**
+ * Set the `quant_seed_get` variable.
+ */
+function quant_update_7004() {
+  variable_set('quant_seed_get', TRUE);
 }
