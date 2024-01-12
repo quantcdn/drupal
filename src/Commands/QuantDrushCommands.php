@@ -9,6 +9,7 @@ use Drupal\quant\Event\CollectEntitiesEvent;
 use Drupal\quant\Event\CollectFilesEvent;
 use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
+use Drupal\quant\Event\CollectTaxonomyTermsEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
 use Drupal\quant\QuantQueueFactory;
 
@@ -209,6 +210,11 @@ class QuantDrushCommands extends DrushCommands {
     if ($form_state->getValue('entity_node') || $form_state->getValue('entity_node_revisions')) {
       $event = new CollectEntitiesEvent($form_state);
       $dispatcher->dispatch($event, QuantCollectionEvents::ENTITIES);
+    }
+
+    if ($form_state->getValue('entity_taxonomy_term')) {
+      $event = new CollectTaxonomyTermsEvent($form_state);
+      $dispatcher->dispatch($event, QuantCollectionEvents::TAXONOMY_TERMS);
     }
 
     $event = new CollectRoutesEvent($form_state);

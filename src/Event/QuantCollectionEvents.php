@@ -30,6 +30,17 @@ final class QuantCollectionEvents {
   const ENTITIES = 'quant.seed.entities';
 
   /**
+   * Name of the event when collecting taxonomy terms.
+   *
+   * @Event
+   *
+   * @see Drupal\quant\Event\CollectTaxonomyTermsEvent
+   *
+   * @var string
+   */
+  const TAXONOMY_TERMS = 'quant.seed.taxonomy_terms';
+
+  /**
    * Name of the event when collecting files.
    *
    * @Event
