@@ -1798,9 +1798,9 @@ function _rebuild_url($url) {
 }
 
 /**
- * Get entity.
+ * Get entity by path.
  */
-function quant_get_entity($path) {
+function quant_get_entity_by_path($path) {
   $entity = NULL;
   if (strpos($path, 'node/') === 0) {
     $prefix = $type = 'node';

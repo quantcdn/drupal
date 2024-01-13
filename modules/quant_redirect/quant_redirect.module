@@ -154,7 +154,7 @@ function quant_redirect_quant_seed_queue() {
     $status_code = empty($redirect['status_code']) ? variable_get('redirect_default_status_code', 301) : $redirect['status_code'];
 
     // Handle redirects for changed entity aliases.
-    $entity = quant_get_entity($redirect['redirect']);
+    $entity = quant_get_entity_by_path($redirect['redirect']);
     if ($entity) {
       // Strange behavior; the "to" and "from" are swapped for entity redirects.
       // The redirects use the canonical path for the "to" and old alias as the
