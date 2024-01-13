@@ -149,11 +149,21 @@ function quant_redirect_quant_seed_queue() {
   while ($redirect = $redirects->fetchAssoc()) {
     $status_code = empty($redirect['status_code']) ? variable_get('redirect_default_status_code', 301) : $redirect['status_code'];
 
-    // Strange behavior; to/from are swapped.
-    if (strpos($redirect['redirect'], 'node') === 0 && $redirect['status_code'] == 0) {
+    // Handle redirects for changed entity aliases.
+    $entity = quant_get_entity($redirect['redirect']);
+    if ($entity) {
+      // Strange behavior; the "to" and "from" are swapped for entity redirects.
+      // The redirects use the canonical path for the "to" and old alias as the
+      // "from". Need to go from old to new alias so redirects work as expected.
+      $old_alias = $redirect['source'];
+      $alias = drupal_get_path_alias($redirect['redirect']);
+      if ($old_alias == $alias) {
+        // Shouldn't happen but check anyway.
+        continue;
+      }
       $redirect = array(
-        'redirect' => $redirect['source'],
-        'source' => $redirect['redirect'],
+        'source' => $old_alias,
+        'redirect' => $alias,
         'status_code' => 301,
       );
     }

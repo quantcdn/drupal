@@ -1796,3 +1796,31 @@ function _rebuild_url($url) {
 
   return $rebuilt_url;
 }
+
+/**
+ * Get entity.
+ */
+function quant_get_entity($path) {
+  $entity = NULL;
+  if (strpos($path, 'node/') === 0) {
+    $prefix = $type = 'node';
+  }
+  elseif (strpos($path, 'taxonomy/term/') === 0) {
+    $prefix = 'taxonomy\/term';
+    $type = 'taxonomy_term';
+  }
+  elseif (strpos($path, 'file/') === 0) {
+    $prefix = $type = 'file';
+  }
+  else {
+    return;
+  }
+
+  if (preg_match("/" . $prefix . "\/(\d+)/", $path, $matches)) {
+    if (isset($matches[1])) {
+      $entity = entity_load($type, [$matches[1]]);
+    }
+  }
+
+  return $entity;
+}
