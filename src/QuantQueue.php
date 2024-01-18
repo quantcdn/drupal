@@ -44,7 +44,6 @@ class QuantQueue extends DatabaseQueue {
       return $query->execute();
     }
     catch (IntegrityConstraintViolationException $err) {
-      var_dump('skipping cause exists');
       return FALSE;
     }
   }

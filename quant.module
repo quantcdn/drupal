@@ -9,6 +9,7 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Site\Settings;
 use Drupal\Core\Url;
 use Drupal\node\NodeInterface;
 use Drupal\quant\Exception\TokenValidationDisabledException;
@@ -439,9 +440,14 @@ function quant_preprocess_page(&$variables) {
   // Show the Quant page info block for non-admin pages if enabled.
   $config = \Drupal::configFactory()->getEditable('quant.settings');
   $enabled = $config->get('quant_show_page_info_block');
-
   if ($enabled && !\Drupal::service('router.admin_context')->isAdminRoute()) {
     $variables['page']['content']['#prefix'] = Utility::getPageInfo() . ($variables['page']['content']['#prefix'] ?? '');
+  }
+
+  // Add warning on Quant admin pages if queue factory is not set.
+  $current_path = \Drupal::requestStack()->getCurrentRequest()->getPathInfo();
+  if ((strpos($current_path, '/admin/config/quant') === 0) && Settings::get('queue_service_quant_seed_worker') != "quant.queue_factory") {
+    \Drupal::messenger()->addWarning(t('For the best performance, it is highly recommended you update <em>queue_service_quant_seed_worker</em> in your settings. See the <a href="https://docs.quantcdn.io/docs/integrations/drupal">Drupal docs</a> for setup information.'));
   }
 }
 
