@@ -47,13 +47,17 @@ function quant_redirect_redirect_delete($redirect) {
   }
 
   $status_code = empty($redirect->status_code) ? variable_get('redirect_default_status_code', 301) : $redirect->status_code;
-  quant_redirect_request($redirect->source, $redirect->redirect, $status_code, FALSE);
+  quant_redirect_request($redirect->source, $redirect->redirect, $status_code);
 }
 
 /**
  * Trigger an API request to Quant for a redirect.
  */
 function quant_redirect_request($from, $to, $status = 301, $published = TRUE, $is_new = FALSE) {
+  if (empty($from) || empty($to)) {
+    return;
+  }
+
   $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT);
 
   if (empty($api)) {
@@ -149,11 +153,21 @@ function quant_redirect_quant_seed_queue() {
   while ($redirect = $redirects->fetchAssoc()) {
     $status_code = empty($redirect['status_code']) ? variable_get('redirect_default_status_code', 301) : $redirect['status_code'];
 
-    // Strange behavior; to/from are swapped.
-    if (strpos($redirect['redirect'], 'node') === 0 && $redirect['status_code'] == 0) {
+    // Handle redirects for changed entity aliases.
+    $entity = quant_get_entity_by_path($redirect['redirect']);
+    if ($entity) {
+      // Strange behavior; the "to" and "from" are swapped for entity redirects.
+      // The redirects use the canonical path for the "to" and old alias as the
+      // "from". Need to go from old to new alias so redirects work as expected.
+      $old_alias = $redirect['source'];
+      $alias = drupal_get_path_alias($redirect['redirect']);
+      if ($old_alias == $alias) {
+        // Shouldn't happen but check anyway.
+        continue;
+      }
       $redirect = array(
-        'redirect' => $redirect['source'],
-        'source' => $redirect['redirect'],
+        'source' => $old_alias,
+        'redirect' => $alias,
         'status_code' => 301,
       );
     }
@@ -182,4 +196,65 @@ function quant_redirect_quant_seed($location, $data, $meta = [], $context = []) 
 
   // @todo: generate canonical redirects (e.g. node/123 or taxonomy/term/123)
 
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function quant_redirect_entity_insert($entity) {
+  quant_redirect_update_entity_canonical($entity);
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function quant_redirect_entity_update($entity) {
+  quant_redirect_update_entity_canonical($entity);
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function quant_redirect_entity_delete($entity) {
+  quant_redirect_update_entity_canonical($entity);
+}
+
+/**
+ * Handle entity canonical redirect.
+ */
+function quant_redirect_update_entity_canonical($entity) {
+  // Canonical redirect is based on type.
+  if (isset($entity->nid)) {
+    $from = 'node/' . $entity->nid;
+  }
+  elseif (isset($entity->tid)) {
+    $from = 'taxonomy/term/' . $entity->tid;
+  }
+  elseif (isset($entity->fid)) {
+    $from = 'file/' . $entity->fid;
+  }
+  else {
+    return;
+  }
+
+  // Get the most current alias, if any.
+  $to = drupal_lookup_path('alias', $from);
+  $status = $entity->status ?? TRUE;
+
+  // Add canonical redirect.
+  if ($from != $to) {
+    quant_redirect_request($from, $to, 301, $status);
+  }
+
+  // Update all existing redirects with new alias. If the alias has been
+  // removed then old aliases will redirect to the canonical path.
+  $redirects = db_select('redirect', 'r')
+    ->fields('r', array('source', 'redirect', 'status_code', 'status'))
+    ->condition('redirect', $from)
+    ->execute();
+
+  while ($redirect = $redirects->fetchAssoc()) {
+    $status_code = empty($redirect['status_code']) ? variable_get('redirect_default_status_code', 301) : $redirect['status_code'];
+    quant_redirect_request($redirect['source'], $to, $status_code, $status);
+  }
 }

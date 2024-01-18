@@ -575,7 +575,8 @@ function quant_seed($url, array $context = array()) {
     return;
   }
 
-  if (($response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
+  $published = $context['entity']->status ?? TRUE;
+  if ((!$published || $response->code == 404 || $response->code == 403) && strpos($url, '/_quant404') === FALSE) {
     // Ensure that the route is not accessible in Quant.
     quant_api_unpublish_route($url);
     quant_log_seed($url, $context, 'Unpublish route in Quant.');
@@ -1025,8 +1026,7 @@ function _quant_queue_nodes(array $bundles = array()) {
   $queue = quant_get_queue();
 
   $query = db_select('node', 'n')
-    ->fields('n', array('nid'))
-    ->condition('status', 1);
+    ->fields('n', array('nid'));
 
   if (!empty($bundles)) {
     $query->condition('n.type', array_keys($bundles), 'IN');
@@ -1795,4 +1795,32 @@ function _rebuild_url($url) {
     (isset($parsed_url['query']) ? "?{$parsed_url['query']}" : '');
 
   return $rebuilt_url;
+}
+
+/**
+ * Get entity by path.
+ */
+function quant_get_entity_by_path($path) {
+  $entity = NULL;
+  if (strpos($path, 'node/') === 0) {
+    $prefix = $type = 'node';
+  }
+  elseif (strpos($path, 'taxonomy/term/') === 0) {
+    $prefix = 'taxonomy\/term';
+    $type = 'taxonomy_term';
+  }
+  elseif (strpos($path, 'file/') === 0) {
+    $prefix = $type = 'file';
+  }
+  else {
+    return;
+  }
+
+  if (preg_match("/" . $prefix . "\/(\d+)/", $path, $matches)) {
+    if (isset($matches[1])) {
+      $entity = entity_load($type, [$matches[1]]);
+    }
+  }
+
+  return $entity;
 }
