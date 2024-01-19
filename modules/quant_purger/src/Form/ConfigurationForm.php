@@ -2,10 +2,10 @@
 
 namespace Drupal\quant_purger\Form;
 
-use Drupal\Core\Form\FormStateInterface;
-use Drupal\purge_ui\Form\QueuerConfigFormBase;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\PrependCommand;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\purge_ui\Form\QueuerConfigFormBase;
 
 /**
  * Configuration form for the Quant queuer.
@@ -31,7 +31,17 @@ class ConfigurationForm extends QueuerConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('quant_purger.settings');
-    $settings = ['path_blocklist', 'tag_blocklist'];
+    $settings = [
+      'path_blocklist',
+      'path_allowlist',
+      'tag_blocklist',
+      'tag_allowlist',
+    ];
+
+    $form['info'] = [
+      '#markup' => $this->t('<p class="messages messages--warning">After making changes to the Quant Purger configuration, all content must be re-seeded so the database reflects the changes.<p>'),
+      '#weight' => -10,
+    ];
 
     foreach ($settings as $key) {
       $form["{$key}_fieldset"] = [
@@ -81,8 +91,9 @@ class ConfigurationForm extends QueuerConfigFormBase {
     }
 
     $form['path_blocklist_fieldset']['#description'] = $this->t('The Quant purge queuer collects HTTP requests that the Quant module makes to generate static representations of content. It requires that the request has a valid token to limit the performance impact of gathering traffic information in such a manner. This is a user-managed list of paths and query strings that will be excluded from traffic gathering.');
-
+    $form['path_allowlist_fieldset']['#description'] = $this->t('This list overrides paths in the blocklist for more granularly. For example, <code>/admin/*</code> could be in the blocklist and <code>/admin/special/page</code> could be in the allowlist so all admin pages except that one would be excluded.');
     $form['tag_blocklist_fieldset']['#description'] = $this->t('If this list is empty, all cache tag invalidations will trigger a queue entry. Some of these invalidations can have widespread effects on the site and require a full content seed. This setting allows you to exclude certain tags from triggering a content re-seed.');
+    $form['tag_allowlist_fieldset']['#description'] = $this->t('This list overrides tags in the blocklist for more granularly. For example, <code>config:*</code> could be in the blocklist and <code>config:system.menu.main</code> could be in the allowlist so all config except that one would be excluded.');
 
     $form['actions']['clear'] = [
       '#type' => 'submit',
@@ -137,8 +148,12 @@ class ConfigurationForm extends QueuerConfigFormBase {
   public function submitFormSuccess(array &$form, FormStateInterface $form_state) {
     $this->config('quant_purger.settings')
       ->set('tag_blocklist', $form_state->getValue('tag_blocklist'))
+      ->set('tag_allowlist', $form_state->getValue('tag_allowlist'))
       ->set('path_blocklist', $form_state->getValue('path_blocklist'))
+      ->set('path_allowlist', $form_state->getValue('path_allowlist'))
       ->save();
+
+    \Drupal::messenger()->addMessage($this->t('Succesfully saved the Quant Purger configuration. All content must be re-seeded so the database reflects the changes.'));
   }
 
   /**
@@ -155,7 +170,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
     if (!$form_state->getErrors()) {
       \Drupal::service('quant_purger.registry')->clear();
       $status = 'status';
-      $message = $this->t('Succesfully cleared the traffic registry.');
+      $message = $this->t('Succesfully cleared the traffic registry. All content must be re-seeded so the database reflects the configuration.');
     }
     else {
       $status = 'error';
@@ -171,7 +186,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    // @todo Add validation for path_blocklist and tag_blocklist.
+    // @todo Add validation.
   }
 
 }

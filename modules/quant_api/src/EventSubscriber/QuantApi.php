@@ -315,7 +315,7 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (\Exception $error) {
       // Don't log it if it's a 404, since the content is unpublished.
-      if (strpos($error->getMessage(), '404 Not Found') === FALSE) {
+      if (!str_contains($error->getMessage(), '404 Not Found') && !str_contains($error->getMessage(), 'Resource is already unpublished')) {
         $this->logger->error($error->getMessage());
       }
       return;
