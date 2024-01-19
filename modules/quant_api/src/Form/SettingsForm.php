@@ -126,7 +126,7 @@ class SettingsForm extends ConfigFormBase {
     }
 
     // Show error if not using TSL verification.
-    if ((isset($overrides['api_tls_disabled']) && !$overrides['api_tls_disabled']) || !$config->get('api_tls_disabled')) {
+    if ((isset($overrides['api_tls_disabled']) && $overrides['api_tls_disabled']) || $config->get('api_tls_disabled')) {
       \Drupal::messenger()->addError($this->t('<strong>DANGER ZONE:</strong> TLS verification is disabled for Quant API connections. It is <strong>highly recommended</strong> that you update your server configuration to handle TLS rather than disabling TLS verification.'));
     }
 
