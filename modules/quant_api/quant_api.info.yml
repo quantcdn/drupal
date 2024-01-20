@@ -3,7 +3,7 @@ description: Connect to the hosted Quant service
 package: Quant
 
 type: module
-core_version_requirement: ^9.3 || ^10
+core_version_requirement: ^9.3 || ^10 || ^11
 configure: quant_api.settings_form
 dependencies:
   - drupal:quant

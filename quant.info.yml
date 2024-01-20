@@ -3,7 +3,7 @@ description: Quant content export
 package: Quant
 
 type: module
-core_version_requirement: ^9.3 || ^10
+core_version_requirement: ^9.3 || ^10 || ^11
 configure: quant.config
 dependencies:
   - drupal:views

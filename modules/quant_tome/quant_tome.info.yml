@@ -3,7 +3,7 @@ description: 'Deploy Tome static output to Quant.'
 package: Quant
 
 type: module
-core_version_requirement: ^9.3 || ^10
+core_version_requirement: ^9.3 || ^10 || ^11
 
 dependencies:
 - tome:tome_static

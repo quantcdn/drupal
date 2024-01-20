@@ -3,7 +3,7 @@ description: 'Allows creation of Quant Search pages.'
 package: Quant
 
 type: module
-core_version_requirement: ^9.3 || ^10
+core_version_requirement: ^9.3 || ^10 || ^11
 configure: quant_search.main
 dependencies:
   - drupal:quant

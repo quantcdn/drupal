@@ -3,7 +3,7 @@ description: Quant Form support for Webform
 package: Quant
 
 type: module
-core_version_requirement: ^9.3 || ^10
+core_version_requirement: ^9.3 || ^10 || ^11
 
 dependencies:
   - quant:quant
