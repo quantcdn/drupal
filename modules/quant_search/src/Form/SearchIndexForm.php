@@ -115,7 +115,7 @@ class SearchIndexForm extends ConfigFormBase {
       '#type' => 'hidden',
       '#value' => FALSE,
       '#title' => $this->t('Taxonomy terms'),
-      '#description' => $this->t('Exports taxonomy term pages.'),
+      '#description' => $this->t('Reindex taxonomy term pages.'),
     ];
 
     return parent::buildForm($form, $form_state);
