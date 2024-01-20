@@ -111,11 +111,12 @@ class SearchIndexForm extends ConfigFormBase {
     ];
 
     // @todo Implement taxonomy terms.
-    //$form['quant_search_index_entity_taxonomy_term'] = [
-      //'#type' => 'checkbox',
-      //'#title' => $this->t('Taxonomy terms'),
-      //'#description' => $this->t('Exports taxonomy term pages.'),
-    //];
+    $form['quant_search_index_entity_taxonomy_term'] = [
+      '#type' => 'hidden',
+      '#value' => FALSE,
+      '#title' => $this->t('Taxonomy terms'),
+      '#description' => $this->t('Exports taxonomy term pages.'),
+    ];
 
     return parent::buildForm($form, $form_state);
   }
