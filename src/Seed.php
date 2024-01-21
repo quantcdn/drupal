@@ -6,6 +6,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
+use Drupal\taxonomy\Entity\Term;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use GuzzleHttp\Exception\ConnectException;
@@ -155,7 +156,7 @@ class Seed {
       $node = Node::load($matches[1]);
     }
     elseif (preg_match('/taxonomy\/term\/(\d+)/', $path, $matches)) {
-      $term = Taxonomy::load($matches[1]);
+      $term = Term::load($matches[1]);
     }
 
     // Create multilingual redirects.

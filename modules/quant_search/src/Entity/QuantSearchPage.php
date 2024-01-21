@@ -141,4 +141,13 @@ class QuantSearchPage extends ConfigEntityBase implements QuantSearchPageInterfa
    */
   protected $display = [];
 
+  /**
+   * Get route for string representation.
+   *
+   * @var array
+   */
+  public function __toString() {
+    return $this->route;
+  }
+
 }
