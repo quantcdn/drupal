@@ -152,6 +152,9 @@ class QuantApi implements EventSubscriberInterface {
     $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
 
+    // File redirects happen when using path prefixes.
+    $allow_redirects = Utility::usesLanguagePathPrefixes();
+
     foreach ($media as $item) {
       // @todo Configurable to disallow remote files.
       // @todo Strip base domain.
@@ -207,7 +210,7 @@ class QuantApi implements EventSubscriberInterface {
         $response = \Drupal::httpClient()->get($url, [
           'http_errors' => FALSE,
           'headers' => $headers,
-          'allow_redirects' => FALSE,
+          'allow_redirects' => $allow_redirects,
           'verify' => boolval($config->get('ssl_cert_verify')),
         ]);
         if ($response->getStatusCode() != 200) {
