@@ -128,6 +128,12 @@ class Utility {
    */
   public static function getPageInfo(array $urls = NULL) : string {
     try {
+      // Only allow administrators and content editors access.
+      $roles = ['administrator', 'content_editor', 'editor'];
+      if (empty(array_intersect($roles, \Drupal::currentUser()->getRoles()))) {
+        return '';
+      }
+
       // Default to the current page.
       if (!$urls) {
         $urls = [self::getUrl()];
