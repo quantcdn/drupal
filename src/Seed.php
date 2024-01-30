@@ -283,11 +283,11 @@ class Seed {
       $language = \Drupal::languageManager()->getLanguage($langcode);
       $options['language'] = $language;
     }
+    $defaultLangcode = \Drupal::languageManager()->getDefaultLanguage()->getId();
 
     $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
 
     // If this is the front/home page, rewrite URL as /.
-    // @todo Handle translated front/home page.
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
 
@@ -296,7 +296,24 @@ class Seed {
         // Trigger redirect event from alias to /.
         \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($url, "/", 301), QuantRedirectEvent::UPDATE);
       }
+
       $url = "/";
+
+      // Handle default language prefix.
+      if ($langcode && $langcode == $defaultLangcode) {
+        // Tack on the prefix if it's set.
+        $negotiation = \Drupal::config('language.negotiation')->get('url');
+        $url .= $negotiation['prefixes'][$langcode] ?? '';
+        if ($url != "/") {
+          \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/", $url, 301), QuantRedirectEvent::UPDATE);
+          \Drupal::logger('quant_seed')->notice("Adding home page redirect: / => @url", ['@url' => $url]);
+        }
+      }
+      // Handle translated front/home page.
+      elseif ($prefix = Utility::getPathPrefix($langcode)) {
+        $url = $prefix;
+        \Drupal::logger('quant_seed')->notice("Adding translated home page: @url", ['@url' => $url]);
+      }
     }
 
     $response = self::markupFromRoute($url, ['quant-revision' => $rid]);
@@ -332,7 +349,7 @@ class Seed {
       if ((strpos($value, '/node/') === 0) && $entity->get('nid')->value == substr($value, 6)) {
         // Only set for the default language.
         // @todo Handle translated status pages.
-        if (empty($langcode) || $langcode == \Drupal::languageManager()->getDefaultLanguage()->getId()) {
+        if (empty($langcode) || $langcode == $defaultLangcode) {
           $url = $key;
           \Drupal::logger('quant')->notice("Setting status page: @key => @value",
             [

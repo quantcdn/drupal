@@ -57,20 +57,41 @@ class Utility {
     }
 
     // Handle multilingual paths.
+    $prefix = self::getPathPrefix($langcode);
+
+    // Only add the language prefix if it's not there.
+    if (!str_starts_with($url, $prefix)) {
+      $url = $prefix . $url;
+    }
+
+    return $url;
+  }
+
+  /**
+   * Get path prefix based on site settings.
+   *
+   * @param string $langcode
+   *   The language code.
+   *
+   * @return string
+   *   The path prefix based on multilingual settings. Defaults to '/'.
+   */
+  public static function getPathPrefix(string $langcode = NULL) : string {
+
+    // Always start with a slash.
+    $prefix = '/';
+
+    // Handle multilingual paths.
     if (self::usesLanguagePathPrefixes()) {
       // Use the current language if none is provided.
       if (!$langcode) {
         $langcode = \Drupal::languageManager()->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
       }
+      // @todo Handle when prefix is different than the langcode.
       $prefix = '/' . $langcode;
-
-      // Only add the language prefix if it's not there.
-      if (!str_starts_with($url, $prefix)) {
-        $url = $prefix . $url;
-      }
     }
 
-    return $url;
+    return $prefix;
   }
 
   /**
