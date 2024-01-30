@@ -21,6 +21,13 @@ class Search extends ControllerBase {
   const SETTINGS = 'quant_api.settings';
 
   /**
+   * The Quant API client.
+   *
+   * @var \Drupal\quant_api\Client\QuantClientInterface
+   */
+  protected $client;
+
+  /**
    * Build the form.
    */
   public function __construct(QuantClientInterface $client) {
