@@ -8,7 +8,6 @@ use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
-use Drupal\quant\Utility;
 use Drupal\taxonomy\Entity\Term;
 use GuzzleHttp\Exception\ConnectException;
 
