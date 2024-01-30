@@ -8,6 +8,7 @@ use Drupal\quant\Event\CollectRedirectsEvent;
 use Drupal\quant\Event\CollectRoutesEvent;
 use Drupal\quant\Event\CollectTaxonomyTermsEvent;
 use Drupal\quant\Event\QuantCollectionEvents;
+use Drupal\quant\Utility;
 use Drupal\user\Entity\User;
 use Drupal\views\Views;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -239,21 +240,8 @@ class CollectionSubscriber implements EventSubscriberInterface {
     // Handle unpublished content based on settings.
     $disable_drafts = $this->configFactory->get('quant.settings')->get('disable_content_drafts');
 
-    // Collect the site configured routes.
-    $system = $this->configFactory->get('system.site');
-    $system_pages = ['page.front', 'page.404', 'page.403'];
-
-    foreach ($system_pages as $config) {
-      $system_path = $system->get($config);
-      if (!empty($system_path)) {
-        $event->queueItem(['route' => $system_path]);
-      }
-    }
-
     // Add special Quant pages.
-    $quant_pages = ['/', '/_quant404', '/_quant403'];
-
-    foreach ($quant_pages as $page) {
+    foreach (Utility::getSpecialPages() as $page) {
       $event->queueItem(['route' => $page]);
     }
 

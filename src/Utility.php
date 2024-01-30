@@ -118,6 +118,34 @@ class Utility {
   }
 
   /**
+   * Get special pages.
+   *
+   * @return array
+   *   An array of special pages to process.
+   */
+  public static function getSpecialPages() {
+    $system = \Drupal::config('system.site');
+    $pages = [
+      $system->get('page.front'),
+      $system->get('page.404'),
+      $system->get('page.403'),
+      '/',
+      '/_quant404',
+      '/_quant403',
+    ];
+
+    $validator = \Drupal::service('path.validator');
+    foreach ($pages as $index => $page) {
+      // Remove any pages that don't exist.
+      if (empty($page) || !$validator->getUrlIfValid($page)) {
+        unset($pages[$index]);
+      }
+    }
+
+    return $pages;
+  }
+
+  /**
    * Get Quant page info for the given URLs.
    *
    * @param array $urls

@@ -358,19 +358,11 @@ function quant_form_system_site_information_settings_alter(&$form, FormStateInte
  * Update the special pages when the form is saved.
  */
 function quant_special_pages() {
-  $system = \Drupal::config('system.site');
-  $system_pages = [
-    $system->get('page.front'),
-    $system->get('page.404'),
-    $system->get('page.403'),
-    '/',
-    '/_quant404',
-    '/_quant403',
-  ];
 
-  foreach ($system_pages as $route) {
+  foreach (Utility::getSpecialPages() as $route) {
     $item = new RouteItem(['route' => $route]);
     $item->send();
+    \Drupal::logger('quant')->notice("Sending route: @route", ['@route' => $route]);
   }
 }
 
