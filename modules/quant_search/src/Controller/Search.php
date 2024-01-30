@@ -5,7 +5,6 @@ namespace Drupal\quant_search\Controller;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Seed;
 use Drupal\quant\Utility;
@@ -261,7 +260,6 @@ class Search extends ControllerBase {
 
     // @todo Update node-only logic.
     $record['url'] = Utility::getCanonicalUrl('node', $entity->id(), $langcode);
-
 
     // Add search meta for node entities.
     if ($entity->getEntityTypeId() == 'node') {
