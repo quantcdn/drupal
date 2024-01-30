@@ -192,6 +192,7 @@ function quant_node_access(NodeInterface $node, $op, AccountInterface $account) 
   }
 
   // The "canonical" URL is the alias, if it exists, or the internal path.
+  // @todo Use Utility::getCanonicalUrl()?
   $options = ['absolute' => FALSE];
   $url = Url::fromRoute('entity.node.canonical', ['node' => $node->id()], $options)->toString();
 

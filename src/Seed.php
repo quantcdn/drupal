@@ -6,9 +6,10 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
-use Drupal\taxonomy\Entity\Term;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
+use Drupal\quant\Utility;
+use Drupal\taxonomy\Entity\Term;
 use GuzzleHttp\Exception\ConnectException;
 
 /**
@@ -212,14 +213,7 @@ class Seed {
   public static function seedTaxonomyTerm($entity, $langcode = NULL) {
     $tid = $entity->get('tid')->value;
 
-    $options = ['absolute' => FALSE];
-    if (!empty($langcode)) {
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $options['language'] = $language;
-    }
-
-    // The "canonical" URL is the alias, if it exists, or the internal path.
-    $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+    $url = Utility::getCanonicalUrl('taxonomy_term', $tid, $langcode);
     $response = self::markupFromRoute($url);
 
     if (empty($response)) {
@@ -271,14 +265,7 @@ class Seed {
     $nid = $entity->get('nid')->value;
     $rid = $entity->get('vid')->value;
 
-    $options = ['absolute' => FALSE];
-    if (!empty($langcode)) {
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $options['language'] = $language;
-    }
-
-    // The "canonical" URL is the alias, if it exists, or the internal path.
-    $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
+    $url = Utility::getCanonicalUrl('node', $nid, $langcode);
 
     // Special case for home-page, rewrite URL as /.
     $site_config = \Drupal::config('system.site');
@@ -350,14 +337,7 @@ class Seed {
     $langcode = $entity->language()->getId();
     $nid = $entity->get('nid')->value;
 
-    $options = ['absolute' => FALSE];
-    if (!empty($langcode)) {
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $options['language'] = $language;
-    }
-
-    // The "canonical" URL is the alias, if it exists, or the internal path.
-    $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
+    $url = Utility::getCanonicalUrl('node', $nid, $langcode);
 
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
@@ -382,14 +362,7 @@ class Seed {
     $langcode = $entity->language()->getId();
     $tid = $entity->get('tid')->value;
 
-    $options = ['absolute' => FALSE];
-    if (!empty($langcode)) {
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $options['language'] = $language;
-    }
-
-    // The "canonical" URL is the alias, if it exists, or the internal path.
-    $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+    $url = Utility::getCanonicalUrl('taxonomy_term', $tid, $langcode);
 
     // Handle internal path redirects.
     self::handleInternalPathRedirects($entity, $langcode, $url);

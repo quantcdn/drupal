@@ -4,6 +4,7 @@ namespace Drupal\quant;
 
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Url;
 use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
 
 /**
@@ -71,6 +72,30 @@ class Utility {
     }
 
     return $url;
+  }
+
+  /**
+   * Get the canonical URL.
+   *
+   * @param string $type
+   *   The entity type.
+   * @param integer $id
+   *   The entity id.
+   * @param string $langcode
+   *   The language code.
+   *
+   * @return string
+   *   The relative canonical URL.
+   */
+  public static function getCanonicalUrl($type, $id, $langcode) {
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    // The "canonical" URL is the alias, if it exists, or the internal path.
+    return Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], $options)->toString();
   }
 
   /**
