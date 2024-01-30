@@ -261,6 +261,7 @@ class Search extends ControllerBase {
     }
 
     // @todo Update node-only logic.
+    // The "canonical" URL is the alias, if it exists, or the internal path.
     $record['url'] = Url::fromRoute('entity.node.canonical', ['node' => $entity->id()], $options)->toString();
 
     // Add search meta for node entities.

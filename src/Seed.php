@@ -218,6 +218,7 @@ class Seed {
       $options['language'] = $language;
     }
 
+    // The "canonical" URL is the alias, if it exists, or the internal path.
     $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
     $response = self::markupFromRoute($url);
 
@@ -251,8 +252,8 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    // Handle canonical redirects.
-    self::handleCanonicalRedirects($entity, $langcode, $url);
+    // Handle internal path redirects.
+    self::handleInternalPathRedirects($entity, $langcode, $url);
   }
 
   /**
@@ -276,6 +277,7 @@ class Seed {
       $options['language'] = $language;
     }
 
+    // The "canonical" URL is the alias, if it exists, or the internal path.
     $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
 
     // Special case for home-page, rewrite URL as /.
@@ -333,8 +335,8 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    // Handle canonical redirects.
-    self::handleCanonicalRedirects($entity, $langcode, $url);
+    // Handle internal path redirects.
+    self::handleInternalPathRedirects($entity, $langcode, $url);
   }
 
   /**
@@ -354,6 +356,7 @@ class Seed {
       $options['language'] = $language;
     }
 
+    // The "canonical" URL is the alias, if it exists, or the internal path.
     $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
 
     $site_config = \Drupal::config('system.site');
@@ -362,8 +365,8 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
     }
 
-    // Handle canonical redirects.
-    self::handleCanonicalRedirects($entity, $langcode, $url);
+    // Handle internal path redirects.
+    self::handleInternalPathRedirects($entity, $langcode, $url);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }
@@ -385,10 +388,11 @@ class Seed {
       $options['language'] = $language;
     }
 
+    // The "canonical" URL is the alias, if it exists, or the internal path.
     $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
 
-    // Handle canonical redirects.
-    self::handleCanonicalRedirects($entity, $langcode, $url);
+    // Handle internal path redirects.
+    self::handleInternalPathRedirects($entity, $langcode, $url);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }
@@ -404,7 +408,7 @@ class Seed {
   }
 
   /**
-   * Handle canonical redirects.
+   * Handle internal path redirects.
    *
    * Example redirects:
    * - en node 123, no alias: /node/123 to /en/node/123.
@@ -417,20 +421,21 @@ class Seed {
    *
    * @todo Create simpler logic for when multilingual isn't used?
    */
-  public static function handleCanonicalRedirects($entity, $langcode, $url) {
+  public static function handleInternalPathRedirects($entity, $langcode, $url) {
     $type = $entity->getEntityTypeId();
     if (!in_array($type, ['node', 'taxonomy_term'])) {
-      \Drupal::logger('quant_seed')->error('Quant: handleCanonicalRedirects called with wrong type [@type]', ['@type' => $type]);
+      \Drupal::logger('quant_seed')->error('Quant: handleInternalPathRedirects called with wrong type [@type]', ['@type' => $type]);
       return;
     }
 
     $id = $entity->id();
     $published = $entity->isPublished();
-    $canonical = ($type == 'node') ? "/node/{$id}" : "/taxonomy/term/{$id}";
+    $internalPath = ($type == 'node') ? "/node/{$id}" : "/taxonomy/term/{$id}";
     $usesPrefixes = Utility::usesLanguagePathPrefixes();
 
-    // If there is default language content, then the canonical redirect can
+    // If there is default language content, then the internal path redirect can
     // use the default URL. Otherwise, it should use the current language.
+    // Note, the canonical URL is the alias, if it exists, or the internal path.
     $defaultLanguage = \Drupal::languageManager()->getDefaultLanguage();
     $defaultUrl = Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], ['language' => $defaultLanguage])->toString();
     $defaultTranslation = $entity->hasTranslation($defaultLanguage->getId()) ? $entity->getTranslation($defaultLanguage->getId()) : NULL;
@@ -442,22 +447,21 @@ class Seed {
     }
 
     // Only create redirects if the content has an alias.
-    if ($canonical != $url) {
-      $type = 'entity.' . $type . '.canonical';
-      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($canonical, $defaultUrl, 301), QuantRedirectEvent::UPDATE);
+    if ($internalPath != $url) {
+      \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($internalPath, $defaultUrl, 301), QuantRedirectEvent::UPDATE);
       if ($usesPrefixes) {
         // Handle redirects with path prefix too.
-        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$langcode}{$canonical}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
+        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$langcode}{$internalPath}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
       }
     }
 
     // Unpublish redirects.
     if (!$defaultPublished) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $canonical, [], NULL), QuantEvent::UNPUBLISH);
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $internalPath, [], NULL), QuantEvent::UNPUBLISH);
     }
     if (!$published && $usesPrefixes) {
       // Handle redirects with path prefix too.
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$langcode}{$canonical}", [], NULL), QuantEvent::UNPUBLISH);
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$langcode}{$internalPath}", [], NULL), QuantEvent::UNPUBLISH);
     }
   }
 
