@@ -263,7 +263,7 @@ class Search extends ControllerBase {
 
       foreach ($entity->getTranslationLanguages() as $code => $lang) {
         $language_label = \Drupal::service('string_translation')->translate($language->getName(), [], ['langcode' => $code]);
-        $record["language_${code}"] = $language_label;
+        $record["language_{$code}"] = $language_label;
       }
     }
 
