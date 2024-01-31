@@ -300,7 +300,7 @@ class Seed {
       $url = "/";
 
       // Handle default language prefix.
-      if ($langcode && $langcode == $defaultLangcode) {
+      if ($langcode == $defaultLangcode) {
         // Tack on the prefix if it's set.
         $negotiation = \Drupal::config('language.negotiation')->get('url');
         $url .= $negotiation['prefixes'][$langcode] ?? '';
