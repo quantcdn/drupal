@@ -32,6 +32,13 @@ class QuantClient implements QuantClientInterface {
   protected $logger;
 
   /**
+   * The Guzzle client.
+   *
+   * @var \GuzzleHttp\Client
+   */
+  protected $client;
+
+  /**
    * The client account.
    *
    * @var string
