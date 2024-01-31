@@ -283,19 +283,37 @@ class Seed {
       $language = \Drupal::languageManager()->getLanguage($langcode);
       $options['language'] = $language;
     }
+    $defaultLangcode = \Drupal::languageManager()->getDefaultLanguage()->getId();
 
     $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
 
-    // Special case for home-page, rewrite URL as /.
+    // If this is the front/home page, rewrite URL as /.
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
 
     if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
       if ($entity->isPublished() && $entity->isDefaultRevision()) {
-        // Trigger redirect event from alias to home.
+        // Trigger redirect event from alias to /.
         \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($url, "/", 301), QuantRedirectEvent::UPDATE);
       }
+
       $url = "/";
+
+      // Handle default language prefix.
+      if ($langcode == $defaultLangcode) {
+        // Tack on the prefix if it's set.
+        $negotiation = \Drupal::config('language.negotiation')->get('url');
+        $url .= $negotiation['prefixes'][$langcode] ?? '';
+        if ($url != "/") {
+          \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/", $url, 301), QuantRedirectEvent::UPDATE);
+          \Drupal::logger('quant_seed')->notice("Adding home page redirect: / => @url", ['@url' => $url]);
+        }
+      }
+      // Handle translated front/home page.
+      elseif ($prefix = Utility::getPathPrefix($langcode)) {
+        $url = $prefix;
+        \Drupal::logger('quant_seed')->notice("Adding translated home page: @url", ['@url' => $url]);
+      }
     }
 
     $response = self::markupFromRoute($url, ['quant-revision' => $rid]);
@@ -319,16 +337,27 @@ class Seed {
       }
     }
 
-    // Special case pages (403/404/Home)
-    $specialPages = [
-      '/' => $site_config->get('page.front'),
-      '/_quant404' => $site_config->get('page.404'),
+    // Handle status pages. Must happen after response has been checked.
+    $statusPages = [
       '/_quant403' => $site_config->get('page.403'),
+      '/_quant404' => $site_config->get('page.404'),
     ];
 
-    foreach ($specialPages as $k => $v) {
-      if ((strpos($v, '/node/') === 0) && $entity->get('nid')->value == substr($v, 6)) {
-        $url = $k;
+    // If this node is a status page, rewrite URL to use special internal route
+    // so they show up properly when getting a 403 or 404 status code.
+    foreach ($statusPages as $key => $value) {
+      if ((strpos($value, '/node/') === 0) && $entity->get('nid')->value == substr($value, 6)) {
+        // Only set for the default language.
+        // @todo Handle translated status pages.
+        if (empty($langcode) || $langcode == $defaultLangcode) {
+          $url = $key;
+          \Drupal::logger('quant')->notice("Setting status page: @key => @value",
+            [
+              '@key' => $key,
+              '@value' => $value,
+            ]
+          );
+        }
       }
     }
 
