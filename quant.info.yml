@@ -6,5 +6,6 @@ type: module
 core_version_requirement: ^9.3 || ^10
 configure: quant.config
 dependencies:
+  - drupal:taxonomy
   - drupal:views
   - quant:quant_api
