@@ -58,20 +58,41 @@ class Utility {
     }
 
     // Handle multilingual paths.
+    $prefix = self::getPathPrefix($langcode);
+
+    // Only add the language prefix if it's not there.
+    if (!str_starts_with($url, $prefix)) {
+      $url = $prefix . $url;
+    }
+
+    return $url;
+  }
+
+  /**
+   * Get path prefix based on site settings.
+   *
+   * @param string $langcode
+   *   The language code.
+   *
+   * @return string
+   *   The path prefix based on multilingual settings. Defaults to '/'.
+   */
+  public static function getPathPrefix(string $langcode = NULL) : string {
+
+    // Always start with a slash.
+    $prefix = '/';
+
+    // Handle multilingual paths.
     if (self::usesLanguagePathPrefixes()) {
       // Use the current language if none is provided.
       if (!$langcode) {
         $langcode = \Drupal::languageManager()->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
       }
+      // @todo Handle when prefix is different than the langcode.
       $prefix = '/' . $langcode;
-
-      // Only add the language prefix if it's not there.
-      if (!str_starts_with($url, $prefix)) {
-        $url = $prefix . $url;
-      }
     }
 
-    return $url;
+    return $prefix;
   }
 
   /**
@@ -143,6 +164,34 @@ class Utility {
   }
 
   /**
+   * Get special pages.
+   *
+   * @return array
+   *   An array of special pages to process.
+   */
+  public static function getSpecialPages() {
+    $system = \Drupal::config('system.site');
+    $pages = [
+      $system->get('page.front'),
+      $system->get('page.404'),
+      $system->get('page.403'),
+      '/',
+      '/_quant404',
+      '/_quant403',
+    ];
+
+    $validator = \Drupal::service('path.validator');
+    foreach ($pages as $index => $page) {
+      // Remove any pages that don't exist.
+      if (empty($page) || !$validator->getUrlIfValid($page)) {
+        unset($pages[$index]);
+      }
+    }
+
+    return $pages;
+  }
+
+  /**
    * Get Quant page info for the given URLs.
    *
    * @param array $urls
@@ -153,6 +202,12 @@ class Utility {
    */
   public static function getPageInfo(array $urls = NULL) : string {
     try {
+      // Only allow administrators and content editors access.
+      $roles = ['administrator', 'content_editor', 'editor'];
+      if (empty(array_intersect($roles, \Drupal::currentUser()->getRoles()))) {
+        return '';
+      }
+
       // Default to the current page.
       if (!$urls) {
         $urls = [self::getUrl()];

@@ -17,6 +17,13 @@ class SearchIndexForm extends ConfigFormBase {
   const SETTINGS = 'quant_search.index.settings';
 
   /**
+   * The Quant API client.
+   *
+   * @var \Drupal\quant_api\Client\QuantClientInterface
+   */
+  protected $client;
+
+  /**
    * Build the form.
    */
   public function __construct(QuantClientInterface $client) {
@@ -110,10 +117,12 @@ class SearchIndexForm extends ConfigFormBase {
       '#options' => $content_types,
     ];
 
+    // @todo Implement taxonomy terms.
     $form['quant_search_index_entity_taxonomy_term'] = [
-      '#type' => 'checkbox',
+      '#type' => 'hidden',
+      '#value' => FALSE,
       '#title' => $this->t('Taxonomy terms'),
-      '#description' => $this->t('Exports taxonomy term pages.'),
+      '#description' => $this->t('Reindex taxonomy term pages.'),
     ];
 
     return parent::buildForm($form, $form_state);
@@ -122,42 +131,60 @@ class SearchIndexForm extends ConfigFormBase {
   /**
    * {@inheritdoc}
    */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $process_nodes = $form_state->getValue('quant_search_index_entity_node');
+    $process_terms = $form_state->getValue('quant_search_index_entity_taxonomy_term');
+
+    if (empty($process_nodes) && empty($process_terms)) {
+      $form_state->setErrorByName('quant_search_index_entity_node', $this->t('Choose an option to update the index.'));
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
-    $query = \Drupal::entityQuery('node')
-      ->accessCheck(TRUE)
-      ->condition('status', 1);
+    $process_nodes = $form_state->getValue('quant_search_index_entity_node');
+    $process_terms = $form_state->getValue('quant_search_index_entity_taxonomy_term');
 
-    $bundles = $form_state->getValue('quant_search_index_entity_node_bundles');
+    // @todo Handle taxonomy terms as well.
+    if ($process_nodes) {
+      $query = \Drupal::entityQuery('node')
+        ->accessCheck(TRUE)
+        ->condition('status', 1);
 
-    if (!empty($bundles)) {
-      $bundles = array_filter($bundles);
+      $bundles = $form_state->getValue('quant_search_index_entity_node_bundles');
+
       if (!empty($bundles)) {
-        $query->condition('type', array_keys($bundles), 'IN');
+        $bundles = array_filter($bundles);
+        if (!empty($bundles)) {
+          $query->condition('type', array_keys($bundles), 'IN');
+        }
       }
+
+      $nids = $query->execute();
+
+      // Chunk into a few batches.
+      $batches = array_chunk($nids, 50);
+
+      $batch = [
+        'title' => $this->t('Exporting to Quant...'),
+        'operations' => [],
+        'init_message'     => $this->t('Starting'),
+        'progress_message' => $this->t('Processed @current out of @total.'),
+        'error_message'    => $this->t('An error occurred during processing.'),
+      ];
+
+      // Filter by language.
+      $languages = $form_state->getValue('quant_search_index_entity_node_languages');
+
+      foreach ($batches as $b) {
+        $batch['operations'][] = ['quant_search_run_index', [$b, $languages]];
+      }
+
+      batch_set($batch);
     }
-
-    $nids = $query->execute();
-
-    // Chunk into a few batches.
-    $batches = array_chunk($nids, 50);
-
-    $batch = [
-      'title' => $this->t('Exporting to Quant...'),
-      'operations' => [],
-      'init_message'     => $this->t('Starting'),
-      'progress_message' => $this->t('Processed @current out of @total.'),
-      'error_message'    => $this->t('An error occurred during processing.'),
-    ];
-
-    // Filter by language.
-    $languages = $form_state->getValue('quant_search_index_entity_node_languages');
-
-    foreach ($batches as $b) {
-      $batch['operations'][] = ['quant_search_run_index', [$b, $languages]];
-    }
-
-    batch_set($batch);
 
     parent::submitForm($form, $form_state);
   }

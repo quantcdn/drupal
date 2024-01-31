@@ -17,6 +17,13 @@ class SearchEntitiesForm extends ConfigFormBase {
   const SETTINGS = 'quant_search.entities.settings';
 
   /**
+   * The Quant API client.
+   *
+   * @var \Drupal\quant_api\Client\QuantClientInterface
+   */
+  protected $client;
+
+  /**
    * Build the form.
    */
   public function __construct(QuantClientInterface $client) {
