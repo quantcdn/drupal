@@ -6,6 +6,7 @@ use Drupal\Core\Extension\ModuleHandler;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\Url;
 
 /**
  * Sitemap manager for Quant Sitemap.
@@ -164,13 +165,27 @@ class SitemapManager {
    *   A list of sitemap items.
    */
   protected function getSimpleSitemaps() : array {
-    $items = ['/sitemap.xml', '/sitemap_generator/default/sitemap.xsl'];
-    foreach ($this->getSitemapManager()->getAllBundleSettings() as $variant => $def) {
-      if ($variant == "default") {
-        continue;
+
+    // Gather XML and XSL files.
+    $items = [];
+    foreach ($this->getSitemapManager()->getSitemaps() as $id => $sitemap) {
+
+      // Only add enabled sitemaps with content.
+      if ($sitemap->isEnabled() && $sitemap->contentStatus()) {
+
+        // Note, creating an options array with 'absolute' => FALSE does not
+        // generate a relative URL, so we have to extract it.
+        $items[] = parse_url($sitemap->toUrl()->toString())['path'];
+
+        // Figure out the XSL file for this sitemap.
+        $pluginId = $sitemap->getType()->getSitemapGenerator()->getPluginId();
+        $items[] = '/sitemap_generator/' . $pluginId . '/sitemap.xsl';
       }
-      $items[] = "/$variant/sitemap.xml";
     }
+
+    // Remove duplicate XSL files.
+    $items = array_unique($items);
+
     return $items;
   }
 

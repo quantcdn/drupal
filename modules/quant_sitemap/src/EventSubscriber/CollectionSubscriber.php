@@ -50,6 +50,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
     }
     foreach ($this->manager->getSitemaps() as $route) {
       $event->queueItem(['route' => $route]);
+      \Drupal::logger('quant_sitemap')->notice("[route_item] @route", ['@route' => $route]);
     }
   }
 
