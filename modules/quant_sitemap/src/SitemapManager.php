@@ -6,7 +6,6 @@ use Drupal\Core\Extension\ModuleHandler;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\Core\Url;
 
 /**
  * Sitemap manager for Quant Sitemap.
