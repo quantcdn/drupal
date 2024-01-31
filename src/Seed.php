@@ -265,6 +265,7 @@ class Seed {
     $rid = $entity->get('vid')->value;
 
     $url = Utility::getCanonicalUrl('node', $nid, $langcode);
+    $defaultLangcode = \Drupal::languageManager()->getDefaultLanguage()->getId();
 
     // If this is the front/home page, rewrite URL as /.
     $site_config = \Drupal::config('system.site');
