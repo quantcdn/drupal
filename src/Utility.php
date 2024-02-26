@@ -73,7 +73,7 @@ class Utility {
    *
    * @param string $type
    *   The entity type.
-   * @param integer $id
+   * @param int $id
    *   The entity ID.
    *
    * @return string
