@@ -4,6 +4,7 @@ namespace Drupal\quant;
 
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Url;
 use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
 
 /**
@@ -78,7 +79,7 @@ class Utility {
    * @return string
    *   The URL for the entity.
    */
-  function getEntityUrl($type, $id) {
+  public static function getEntityUrl($type, $id) {
     $options = ['absolute' => FALSE];
     if (!empty($langcode)) {
       $language = \Drupal::languageManager()->getLanguage($langcode);

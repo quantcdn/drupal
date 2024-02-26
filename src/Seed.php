@@ -432,29 +432,13 @@ class Seed {
    * Unpublish the file from Quant.
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
-   *   The term entity.
+   *   The file entity.
    */
   public static function unpublishFile(EntityInterface $entity) {
 
-    $langcode = $entity->language()->getId();
-    $fid = $entity->get('fid')->value;
-    $url = Utility::getEntityUrl('file', $fid);
-
-    // Unpublish canonical redirect from file/123.
-    if ("/file/{$fid}" != $url) {
-      // QuantEvent can be used to unpublish any resource. Note, the source must
-      // be given here and not the destination.
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/file/{$fid}", [], NULL), QuantEvent::UNPUBLISH);
-    }
+    $url = $entity->createFileUrl();
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
-
-    // Unpublish the underlying file path.
-    $path = \Drupal::service('file_system')->realpath($entity->getFileUri());
-\Drupal::logger('kptesting')->notice("file path = $path");
-    $path = str_replace($_SERVER['DOCUMENT_ROOT'], '', $path);
-\Drupal::logger('kptesting')->notice("file path 2 = $path");
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $path, [], NULL), QuantEvent::UNPUBLISH);
   }
 
   /**
