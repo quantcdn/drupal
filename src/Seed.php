@@ -388,14 +388,7 @@ class Seed {
 
     $langcode = $entity->language()->getId();
     $nid = $entity->get('nid')->value;
-
-    $options = ['absolute' => FALSE];
-    if (!empty($langcode)) {
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $options['language'] = $language;
-    }
-
-    $url = Url::fromRoute('entity.node.canonical', ['node' => $nid], $options)->toString();
+    $url = Utility::getEntityUrl('node', $nid);
 
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
@@ -423,14 +416,7 @@ class Seed {
 
     $langcode = $entity->language()->getId();
     $tid = $entity->get('tid')->value;
-
-    $options = ['absolute' => FALSE];
-    if (!empty($langcode)) {
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $options['language'] = $language;
-    }
-
-    $url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tid], $options)->toString();
+    $url = Utility::getEntityUrl('taxonomy_term', $tid);
 
     // Unpublish canonical redirect from taxonomy/term/123.
     if ("/taxonomy/term/{$tid}" != $url) {
@@ -440,6 +426,35 @@ class Seed {
     }
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+  }
+
+  /**
+   * Unpublish the file from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The term entity.
+   */
+  public static function unpublishFile(EntityInterface $entity) {
+
+    $langcode = $entity->language()->getId();
+    $fid = $entity->get('fid')->value;
+    $url = Utility::getEntityUrl('file', $fid);
+
+    // Unpublish canonical redirect from file/123.
+    if ("/file/{$fid}" != $url) {
+      // QuantEvent can be used to unpublish any resource. Note, the source must
+      // be given here and not the destination.
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/file/{$fid}", [], NULL), QuantEvent::UNPUBLISH);
+    }
+
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+
+    // Unpublish the underlying file path.
+    $path = \Drupal::service('file_system')->realpath($entity->getFileUri());
+\Drupal::logger('kptesting')->notice("file path = $path");
+    $path = str_replace($_SERVER['DOCUMENT_ROOT'], '', $path);
+\Drupal::logger('kptesting')->notice("file path 2 = $path");
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $path, [], NULL), QuantEvent::UNPUBLISH);
   }
 
   /**

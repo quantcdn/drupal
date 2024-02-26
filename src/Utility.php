@@ -68,6 +68,27 @@ class Utility {
   }
 
   /**
+   * Get URL based on the entity type and id.
+   *
+   * @param string $type
+   *   The entity type.
+   * @param integer $id
+   *   The entity ID.
+   *
+   * @return string
+   *   The URL for the entity.
+   */
+  function getEntityUrl($type, $id) {
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    return Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], $options)->toString();
+  }
+
+  /**
    * Get path prefix based on site settings.
    *
    * @param string $langcode
