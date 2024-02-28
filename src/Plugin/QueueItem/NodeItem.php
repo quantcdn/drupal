@@ -35,9 +35,8 @@ class NodeItem implements QuantQueueItemInterface {
   /**
    * Include entity revisions.
    *
-   * @todo Remove this?
-   *
    * @var bool
+   * @todo Remove this?
    */
   private $revisions;
 
