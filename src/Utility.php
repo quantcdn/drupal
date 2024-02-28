@@ -69,27 +69,6 @@ class Utility {
   }
 
   /**
-   * Get URL based on the entity type and id.
-   *
-   * @param string $type
-   *   The entity type.
-   * @param int $id
-   *   The entity ID.
-   *
-   * @return string
-   *   The URL for the entity.
-   */
-  public static function getEntityUrl($type, $id) {
-    $options = ['absolute' => FALSE];
-    if (!empty($langcode)) {
-      $language = \Drupal::languageManager()->getLanguage($langcode);
-      $options['language'] = $language;
-    }
-
-    return Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], $options)->toString();
-  }
-
-  /**
    * Get path prefix based on site settings.
    *
    * @param string $langcode
@@ -114,6 +93,30 @@ class Utility {
     }
 
     return $prefix;
+  }
+
+  /**
+   * Get the canonical URL.
+   *
+   * @param string $type
+   *   The entity type.
+   * @param int $id
+   *   The entity id.
+   * @param string $langcode
+   *   The language code.
+   *
+   * @return string
+   *   The relative canonical URL.
+   */
+  public static function getCanonicalUrl($type, $id, $langcode) {
+    $options = ['absolute' => FALSE];
+    if (!empty($langcode)) {
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $options['language'] = $language;
+    }
+
+    // The "canonical" URL is the alias, if it exists, or the internal path.
+    return Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], $options)->toString();
   }
 
   /**
