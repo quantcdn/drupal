@@ -12,11 +12,25 @@ use Drupal\quant\Event\QuantFileEvent;
 class FileItem implements QuantQueueItemInterface {
 
   /**
-   * A filepath.
+   * The file path.
    *
    * @var string
    */
   private $file;
+
+  /**
+   * The file URL.
+   *
+   * @var string
+   */
+  private $url;
+
+  /**
+   * The file full path.
+   *
+   * @var string
+   */
+  private $fullPath;
 
   /**
    * {@inheritdoc}
