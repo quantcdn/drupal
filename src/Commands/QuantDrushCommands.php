@@ -180,6 +180,7 @@ class QuantDrushCommands extends DrushCommands {
       'file_paths',
       'file_paths_textarea',
       'robots',
+      'export_sitemap',
       'lunr',
     ];
 
