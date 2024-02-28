@@ -390,13 +390,6 @@ class Seed {
     $tid = $entity->get('tid')->value;
     $url = Utility::getCanonicalUrl('taxonomy_term', $tid, $langcode);
 
-    // Unpublish canonical redirect from taxonomy/term/123.
-    if ("/taxonomy/term/{$tid}" != $url) {
-      // QuantEvent can be used to unpublish any resource. Note, the source must
-      // be given here and not the destination.
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/taxonomy/term/{$tid}", [], NULL), QuantEvent::UNPUBLISH);
-    }
-
     // Handle internal path redirects.
     self::handleInternalPathRedirects($entity, $langcode, $url);
 
