@@ -8,6 +8,7 @@
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
+use Drupal\quant\Utility;
 use Drupal\quant_search\Controller\Search;
 
 /**
@@ -98,6 +99,5 @@ function quant_search_run_index($nids, $languages, array &$context) {
  * Implements hook_ENTITY_TYPE_delete().
  */
 function quant_search_quant_search_page_delete(EntityInterface $entity) {
-  $route = $entity->get('route');
-  \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $route, [], NULL), QuantEvent::UNPUBLISH);
+  Utility::unpublishUrl($entity->get('route'));
 }

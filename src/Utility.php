@@ -139,6 +139,16 @@ class Utility {
   }
 
   /**
+   * Unpublish URL in Quant.
+   *
+   * @param string $url
+   *   The URL.
+   */
+  public static function unpublishUrl(string $url) {
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+  }
+
+  /**
    * Checks if an item is in a list which may use regular expressions.
    *
    * @param string $item

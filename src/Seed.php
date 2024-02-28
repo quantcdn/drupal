@@ -96,7 +96,7 @@ class Seed {
     if (!$redirect->isNew()) {
       $originalSource = $redirect->original->getSourcePathWithQuery();
       if ($originalSource && $originalSource != $redirect->getSourcePathWithQuery()) {
-        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $originalSource, [], NULL), QuantEvent::UNPUBLISH);
+        Utility::unpublishUrl($originalSource);
       }
     }
 
@@ -202,7 +202,7 @@ class Seed {
     foreach ($redirects as $r) {
       // QuantEvent can be used to unpublish any resource. Note, the source must
       // be given here and not the destination.
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $r['source'], [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($r['source']);
     }
   }
 
@@ -218,7 +218,7 @@ class Seed {
     if (empty($response)) {
       // The markupFromRoute function works differently for unpublished terms
       // versus nodes. If the response is empty, the term is unpublished.
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($url);
       return;
     }
 
@@ -242,7 +242,7 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
     }
     else {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($url);
     }
 
     // Handle internal path redirects.
@@ -347,7 +347,7 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
     }
     else {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($url);
     }
 
     // Handle internal path redirects.
@@ -369,13 +369,13 @@ class Seed {
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
     if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl('/');
     }
 
     // Handle internal path redirects.
     self::handleInternalPathRedirects($entity, $langcode, $url);
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    Utility::unpublishUrl($url);
   }
 
   /**
@@ -393,7 +393,7 @@ class Seed {
     // Handle internal path redirects.
     self::handleInternalPathRedirects($entity, $langcode, $url);
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    Utility::unpublishUrl($url);
   }
 
   /**
@@ -403,20 +403,65 @@ class Seed {
    *   The file entity.
    */
   public static function unpublishFile(EntityInterface $entity) {
+    Utility::unpublishUrl($entity->createFileUrl());
+  }
 
+  /**
+   * Unpublish the media from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The file entity.
+   */
+  public static function unpublishMedia(EntityInterface $entity) {
+
+    // @fixme
     $url = $entity->createFileUrl();
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    Utility::unpublishUrl($entity->createFileUrl());
+
+    // Get the file for the media type.
+    $type = $entity->bundle();
+
+    switch ($type) {
+      case 'audio':
+        $field_name = 'field_media_audio_file';
+        break;
+
+      case 'document':
+        $field_name = 'field_media_document';
+        break;
+
+      case 'image':
+        $field_name = 'field_media_image';
+        break;
+
+      case 'video':
+        $field_name = 'field_media_video_file';
+        break;
+
+      default:
+        return;
+    }
+
+    // Check data exists.
+    if (!$media->hasField($field_name) || $media->get($field_name)->isEmpty()) {
+      return;
+    }
+
+    // Get the file entity for the media.
+    $file = $media->get($field_name)->entity;
+    if ($file) {
+      Utility::unpublishUrl($file->createFileUrl());
+    }
+
   }
 
   /**
    * Unpublish path alias via API request.
    */
   public static function unpublishPathAlias($pathAlias) {
-
     $alias = Utility::getUrl($pathAlias->get('alias')->value, $pathAlias->get('langcode')->value);
-
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $alias, [], NULL), QuantEvent::UNPUBLISH);
+    Utility::unpublishUrl($alias);
   }
 
   /**

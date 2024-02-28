@@ -7,6 +7,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\quant\Utility;
 use Drupal\quant_search\Controller\Search;
 use Drupal\taxonomy\Entity\Vocabulary;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -524,7 +525,7 @@ class QuantSearchPageForm extends EntityForm {
     }
     // Only unpublish if page already exists, so was sent before.
     elseif ($status !== SAVED_NEW) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $route, [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($route);
     }
 
     $form_state->setRedirect('entity.quant_search_page.collection');
