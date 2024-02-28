@@ -364,7 +364,6 @@ class Seed {
 
     $langcode = $entity->language()->getId();
     $nid = $entity->get('nid')->value;
-
     $url = Utility::getCanonicalUrl('node', $nid, $langcode);
 
     $site_config = \Drupal::config('system.site');
@@ -389,11 +388,23 @@ class Seed {
 
     $langcode = $entity->language()->getId();
     $tid = $entity->get('tid')->value;
-
     $url = Utility::getCanonicalUrl('taxonomy_term', $tid, $langcode);
 
     // Handle internal path redirects.
     self::handleInternalPathRedirects($entity, $langcode, $url);
+
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+  }
+
+  /**
+   * Unpublish the file from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The file entity.
+   */
+  public static function unpublishFile(EntityInterface $entity) {
+
+    $url = $entity->createFileUrl();
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
   }

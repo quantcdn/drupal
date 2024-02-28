@@ -296,6 +296,10 @@ function _quant_entity_delete_op(EntityInterface $entity) {
     case 'taxonomy_term':
       Seed::unpublishTaxonomyTerm($entity);
       break;
+
+    case 'file':
+      Seed::unpublishFile($entity);
+      break;
   }
 
 }
