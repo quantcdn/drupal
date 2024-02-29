@@ -180,6 +180,15 @@ class Utility {
       '/_quant403',
     ];
 
+    // Add translations of home page.
+    if (self::usesLanguagePathPrefixes()) {
+      if ($prefixes = \Drupal::config('language.negotiation')->get('url.prefixes')) {
+        foreach ($prefixes as $prefix) {
+          $pages[] = "/{$prefix}";
+        }
+      }
+    }
+
     $validator = \Drupal::service('path.validator');
     foreach ($pages as $index => $page) {
       // Remove any pages that don't exist.
