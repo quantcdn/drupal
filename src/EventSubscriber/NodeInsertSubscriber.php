@@ -13,6 +13,13 @@ use Drupal\quant\Seed;
 class NodeInsertSubscriber implements EventSubscriberInterface {
 
   /**
+   * The metadata manager.
+   *
+   * @var Drupal\quant\Plugin\QuantMetadataManager
+   */
+  protected $metadataManager;
+
+  /**
    * Constructs a node insertion event object.
    *
    * @param \Drupal\quant\Plugin\QuantMetadataManager $metadata_manager

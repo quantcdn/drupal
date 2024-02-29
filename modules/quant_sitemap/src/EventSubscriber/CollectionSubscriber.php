@@ -23,6 +23,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
    * The entity type manager.
    *
    * @var Drupal\Core\Entity\EntityTypeManager
+   * @todo Remove this?
    */
   protected $entityTypeManager;
 

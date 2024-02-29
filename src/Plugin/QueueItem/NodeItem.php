@@ -12,11 +12,18 @@ use Drupal\quant\Seed;
 class NodeItem implements QuantQueueItemInterface {
 
   /**
-   * A Drupal entity.
+   * The entity id.
    *
    * @var int
    */
   private $id;
+
+  /**
+   * The revision id.
+   *
+   * @var int
+   */
+  private $vid;
 
   /**
    * The language code for the entity.
@@ -25,11 +32,11 @@ class NodeItem implements QuantQueueItemInterface {
    */
   private $filter;
 
-
   /**
    * Include entity revisions.
    *
    * @var bool
+   * @todo Remove this?
    */
   private $revisions;
 

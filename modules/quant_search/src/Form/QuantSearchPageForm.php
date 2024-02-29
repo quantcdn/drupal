@@ -17,6 +17,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class QuantSearchPageForm extends EntityForm {
 
   /**
+   * The entity type manager.
+   *
+   * @var Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * Constructs a QuantSearchPageForm object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
