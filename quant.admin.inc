@@ -424,11 +424,15 @@ function quant_seed_settings() {
     '#default_value' => variable_get('quant_custom_routes', FALSE),
   ];
 
-  $form['quant_robots'] = [
-    '#type' => 'checkbox',
-    '#title' => t('Export robots.txt'),
-    '#default_value' => variable_get('quant_robots', FALSE),
-  ];
+  // Only show if it exists.
+  $file = $_SERVER['DOCUMENT_ROOT'] . '/robots.txt';
+  if (file_exists($file)) {
+    $form['quant_robots'] = [
+      '#type' => 'checkbox',
+      '#title' => t('Export robots.txt'),
+      '#default_value' => variable_get('quant_robots', FALSE),
+    ];
+  }
 
   $form['trigger_quant_seed'] = array(
     '#type' => 'checkbox',
