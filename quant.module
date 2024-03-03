@@ -987,9 +987,7 @@ function _quant_prepare_entity($type, $entity_id) {
  *   Optionally filter by menu names.
  */
 function _quant_queue_menu_paths(array $menus_filter = array()) {
-  // @todo Use quant_get_base_url().
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
   $menus = menu_get_menus();
 
   $options = array();

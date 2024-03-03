@@ -96,7 +96,7 @@ function quant_api_get_request_headers() {
  * Implements hook_quant_seed().
  */
 function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
-  global $base_url;
+  $base = quant_get_base_url();
 
   $api = variable_get('quant_api_endpoint', QUANT_API_ENDPOINT_DEFAULT) . '/v1';
 
@@ -183,8 +183,7 @@ function quant_api_quant_seed($location, $data, $meta = [], $context = []) {
       continue;
     }
 
-    // @fixme Should this be quant_get_base_url() instead of $base_url?
-    if (!empty($domain) && stripos($base_url, $domain) == -1) {
+    if (!empty($domain) && stripos($base, $domain) == -1) {
       // @todo: Determine local vs. remote.
       continue;
     }
