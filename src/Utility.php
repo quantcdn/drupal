@@ -88,8 +88,8 @@ class Utility {
       if (!$langcode) {
         $langcode = \Drupal::languageManager()->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
       }
-      // @todo Handle when prefix is different than the langcode.
-      $prefix = '/' . $langcode;
+      $prefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
+      $prefix .= $prefixes[$langcode] ?? '';
     }
 
     return $prefix;
