@@ -201,7 +201,7 @@ class ConfigForm extends ConfigFormBase {
    * Checks the Quant validation route for an expected response.
    *
    * @return bool
-   *   If quant can connect to local webserver or not.
+   *   If Quant can connect to local webserver or not.
    */
   private function checkValidationRoute() {
 

@@ -30,7 +30,7 @@ abstract class MetadataBase extends PluginBase implements MetadataInterface {
   /**
    * Build a configuration form.
    *
-   * This allows some quant metadata plugins to accept configuration
+   * This allows some Quant metadata plugins to accept configuration
    * values.
    *
    * @return array

@@ -6,7 +6,7 @@ use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Seed;
 
 /**
- * A quant queue item for a redirect.
+ * A Quant queue item for a redirect.
  *
  * @ingroup quant
  */

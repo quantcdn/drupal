@@ -19,7 +19,7 @@ trait TraitUrlRegistrar {
    *   If the request can be cached.
    */
   public function determine(Request $request, Response $response) {
-    // Don't gather responses that don't have a quant token. As this
+    // Don't gather responses that don't have a Quant token. As this
     // is a HTTP middleware we need to make sure this is as lean as
     // possible - we don't want to add a huge performance burden to
     // begin tracking pages to cachetags.

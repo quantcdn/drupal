@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Add cron support for quant processing.
+ * Add cron support for Quant processing.
  */
 
 use Drupal\quant\Seed;

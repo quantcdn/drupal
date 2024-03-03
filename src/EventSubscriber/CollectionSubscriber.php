@@ -19,7 +19,7 @@ use Drupal\quant\Seed;
 use Drupal\redirect\Entity\Redirect;
 
 /**
- * Event subscribers for the quant collection events.
+ * Event subscribers for the Quant collection events.
  */
 class CollectionSubscriber implements EventSubscriberInterface {
 
@@ -214,7 +214,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
   }
 
   /**
-   * Collect files for quant seeding.
+   * Collect files for Quant seeding.
    */
   public function collectFiles(CollectFilesEvent $event) {
 

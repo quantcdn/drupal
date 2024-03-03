@@ -5,7 +5,7 @@ namespace Drupal\quant\Plugin\QueueItem;
 use Drupal\quant\Event\QuantFileEvent;
 
 /**
- * A quant queue file item.
+ * A Quant queue file item.
  *
  * @ingroup quant
  */

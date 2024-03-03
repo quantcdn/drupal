@@ -7,7 +7,7 @@ use Drupal\Core\Database\Query\Condition;
 use Drupal\quant_purger\StackMiddleware\TraitUrlRegistrar;
 
 /**
- * The quant traffic registry.
+ * The Quant traffic registry.
  */
 class TrafficRegistry implements TrafficRegistryInterface {
 
@@ -21,14 +21,14 @@ class TrafficRegistry implements TrafficRegistryInterface {
   protected $connection;
 
   /**
-   * The configuration object for quant purger.
+   * The configuration object for Quant purger.
    *
    * @var \Drupal\Core\Config\ImmutableConfig
    */
   protected $config;
 
   /**
-   * Constructs a quant traffic registry event.
+   * Constructs a Quant traffic registry event.
    *
    * @param \Drupal\Core\Database\Connection $connection
    *   The active database connection.

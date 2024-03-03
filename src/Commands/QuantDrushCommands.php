@@ -111,7 +111,7 @@ class QuantDrushCommands extends DrushCommands {
   }
 
   /**
-   * Unlock quant queue.
+   * Unlock Quant queue.
    *
    * @command quant:unlock-queue
    * @aliases quant-queue-unlock
@@ -125,7 +125,7 @@ class QuantDrushCommands extends DrushCommands {
   }
 
   /**
-   * Clear the quant queue.
+   * Clear the Quant queue.
    *
    * @command quant:clear-queue
    * @aliases quant-queue-clear
