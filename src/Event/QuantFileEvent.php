@@ -16,7 +16,7 @@ final class QuantFileEvent extends Event {
   /**
    * Allow modules to hook into the transport event.
    *
-   * This allows modules to redirect the outupt to different storage
+   * This allows modules to redirect the output to different storage
    * locations.
    *
    * @var string

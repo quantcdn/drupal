@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 class QuantValidateController {
 
   /**
-   * Returns a simple Symfony Http Response.
+   * Returns a simple Symfony HTTP Response.
    *
    * @return \Symfony\Component\HttpFoundation\Response
    *   The validation content to return.

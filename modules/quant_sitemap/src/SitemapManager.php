@@ -204,7 +204,7 @@ class SitemapManager {
       if (empty($context['language']) || $context['language'] == $lang_code) {
         // Default langcode is always served via sitemap.xml as a hard coded
         // link from xmlsitemap and this will result in a 404 — so we just
-        // skip the default langauge for now.
+        // skip the default language for now.
         continue;
       }
       $items[] = "/{$context['language']}/sitemap.xml";

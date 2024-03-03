@@ -19,7 +19,7 @@ use Drupal\Core\Extension\ModuleHandler;
 class SitemapManagerTest extends KernelTestBase {
 
   /**
-   * Verify quant sitemap compatibilty with xmlsitemap.
+   * Verify quant sitemap compatibility with xmlsitemap.
    */
   public function testSimpleSitemapSupportedVersion() {
     $module_handler_mock = $this->createMock(ModuleHandler::class);
@@ -47,7 +47,7 @@ class SitemapManagerTest extends KernelTestBase {
   }
 
   /**
-   * Verify quant sitemap compatibilty with simple_sitemap.
+   * Verify quant sitemap compatibility with simple_sitemap.
    */
   public function testSimpleSitemapUnsupportedVersion() {
     $module_handler_mock = $this->createMock(ModuleHandler::class);
@@ -77,7 +77,7 @@ class SitemapManagerTest extends KernelTestBase {
   }
 
   /**
-   * Verify quant sitemap compatibilty with xmlsitemap.
+   * Verify quant sitemap compatibility with xmlsitemap.
    */
   public function testXmlsitemapSupportedVersion() {
     $module_handler_mock = $this->createMock(ModuleHandler::class);
@@ -107,7 +107,7 @@ class SitemapManagerTest extends KernelTestBase {
   }
 
   /**
-   * Verify quant sitemap compatibilty with xmlsitemap.
+   * Verify quant sitemap compatibility with xmlsitemap.
    */
   public function testXmlsitemapUnsupportedVersion() {
     $module_handler_mock = $this->createMock(ModuleHandler::class);

@@ -18,7 +18,7 @@ class QuantQueue extends DatabaseQueue {
   public const TABLE_NAME = 'quant_queue';
 
   /**
-   * Length of the hash coulmn.
+   * Length of the hash column.
    */
   public const HASH_LENGTH = 48;
 
