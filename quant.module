@@ -439,6 +439,23 @@ function quant_file_delete($file) {
 }
 
 /**
+ * Implements hook_views_view_delete().
+ */
+function quant_views_view_delete($view) {
+  if (!empty($view->display)) {
+    foreach ($view->display as $display_id => $display) {
+      if ($display->display_plugin == 'page' && !empty($display->display_options['path'])) {
+        $url = url($display->display_options['path'], array('absolute' => TRUE));
+
+        quant_api_unpublish_route($url);
+
+        quant_log('Quant: Unpublished view page !url.', array('!url' => $url));
+      }
+    }
+  }
+}
+
+/**
  * Intermediary shutdown function.
  *
  * This is an intermediary shutdown function to ensure that Quant's
