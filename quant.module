@@ -440,6 +440,8 @@ function quant_file_delete($file) {
 
 /**
  * Implements hook_views_view_delete().
+ *
+ * @todo Delete the views pager pages.
  */
 function quant_views_view_delete($view) {
   if (!empty($view->display)) {
