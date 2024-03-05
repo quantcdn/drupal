@@ -639,17 +639,37 @@ class Seed {
     // Do not strip host domain unless configured.
     $strip = $config->get('host_domain_strip') ?: FALSE;
     if (!$strip) {
+      // Handle iframes even if `host_domain_strip` is disabled, so iframe
+      // renders correctly.
+      $markup = self::rewriteRelativeIframe($markup);
+
       return $markup;
     }
 
     // Strip the host domain from everywhere in the content including header
     // metadata such as canonical links.
-    $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-    $port = $_SERVER['SERVER_PORT'];
-    $markup = preg_replace("/(https?:\/\/)?{$hostname}(\:{$port})?/i", '', $markup);
+    $markup = Utility::stripLocalHost($markup);
 
-    // Edge case: Replace http://default when run via drush without base_url.
-    $markup = preg_replace("/http:\/\/default/i", '', $markup);
+    return $markup;
+  }
+
+  /**
+   * Replaces absolute iframe URLs with relative in markup.
+   *
+   * @param string $markup
+   *   The markup to search and rewire relative iframe paths for.
+   *
+   * @return string
+   *   Sanitized markup string.
+   */
+  public static function rewriteRelativeIframe($markup) {
+    $pattern = '/<iframe src="([^"]+)"/i';
+    if (preg_match_all($pattern, $markup, $matches)) {
+      foreach ($matches[1] as $url) {
+        $updated_url = Utility::stripLocalHost($url);
+        $markup = str_replace($url, $updated_url, $markup);
+      }
+    }
 
     return $markup;
   }

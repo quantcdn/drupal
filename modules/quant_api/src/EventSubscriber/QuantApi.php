@@ -263,8 +263,13 @@ class QuantApi implements EventSubscriberInterface {
     /** @var \DOMElement $node */
     foreach ($xpath->query('//iframe[contains(@src, "/media/oembed")]') as $node) {
       $oembed_url = $new_href = $node->getAttribute('src');
-      $oembed_item = new RouteItem(['route' => $oembed_url]);
-      $oembed_item->send();
+      // Only add if it's a relative URL to handle the case where the URL
+      // contains `/media/oembed` but is from another website.
+      if (str_starts_with($oembed_url, '/')) {
+        $oembed_item = new RouteItem(['route' => $oembed_url]);
+        $oembed_item->send();
+        $this->logger->notice("[route_item] $oembed_url");
+      }
     }
 
     // @todo Report on forms that need proxying (attachments.forms).
