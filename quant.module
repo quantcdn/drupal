@@ -416,6 +416,48 @@ function quant_taxonomy_term_update($term) {
 }
 
 /**
+ * Implements hook_taxonomy_term_delete().
+ */
+function quant_taxonomy_term_delete($term) {
+  list($url, $context) = _quant_prepare_entity('taxonomy_term', $term->tid);
+
+  quant_api_unpublish_route($url);
+
+  quant_log('Quant: Unpublished taxonomy term page !url.', array('!url' => $url));
+}
+
+/**
+ * Implements hook_file_delete().
+ */
+function quant_file_delete($file) {
+  // Note, _quant_prepare_entity does not return the correct URL.
+  $url = file_create_url($file->uri);
+
+  quant_api_unpublish_route($url);
+
+  quant_log('Quant: Unpublished file !url.', array('!url' => $url));
+}
+
+/**
+ * Implements hook_views_view_delete().
+ *
+ * @todo Delete the views pager pages.
+ */
+function quant_views_view_delete($view) {
+  if (!empty($view->display)) {
+    foreach ($view->display as $display_id => $display) {
+      if ($display->display_plugin == 'page' && !empty($display->display_options['path'])) {
+        $url = url($display->display_options['path'], array('absolute' => TRUE));
+
+        quant_api_unpublish_route($url);
+
+        quant_log('Quant: Unpublished view page !url.', array('!url' => $url));
+      }
+    }
+  }
+}
+
+/**
  * Intermediary shutdown function.
  *
  * This is an intermediary shutdown function to ensure that Quant's
@@ -938,6 +980,7 @@ function _quant_prepare_entity($type, $entity_id) {
 
   switch ($type) {
     case 'file':
+      // @todo Should this be different than the default?
       $uri = entity_uri($type, $entity);
       if (!empty($uri)) {
         $path = $uri['path'];

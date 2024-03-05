@@ -46,8 +46,11 @@ function quant_redirect_redirect_delete($redirect) {
     return;
   }
 
-  $status_code = empty($redirect->status_code) ? variable_get('redirect_default_status_code', 301) : $redirect->status_code;
-  quant_redirect_request($redirect->source, $redirect->redirect, $status_code);
+  $url = $redirect->source;
+
+  quant_api_unpublish_route($url);
+
+  quant_log('Quant: Unpublished redirect !url.', array('!url' => $url));
 }
 
 /**
