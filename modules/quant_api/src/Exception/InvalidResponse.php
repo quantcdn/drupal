@@ -3,7 +3,7 @@
 namespace Drupal\quant_api\Exception;
 
 /**
- * Invalid reponse exception.
+ * Invalid response exception.
  */
 class InvalidResponse extends \Exception {
 

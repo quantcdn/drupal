@@ -268,7 +268,7 @@ class SeedForm extends FormBase {
       $form['lunr'] = [
         '#type' => 'checkbox',
         '#title' => 'Lunr search assets',
-        '#description' => $this->t('Exports required lunr javascript libraries and all search indexes for decoupled search.'),
+        '#description' => $this->t('Exports required Lunr JavaScript libraries and all search indexes for decoupled search.'),
         '#default_value' => $seed_config->get('lunr'),
       ];
     }
@@ -354,7 +354,7 @@ class SeedForm extends FormBase {
 
     // Lunr.
     if ($form_state->getValue('lunr')) {
-      // @todo Sub-module for lunr support using the events.
+      // @todo Submodule for Lunr support using the events.
       $assets = array_merge($assets, Seed::findLunrAssets());
       $routes = array_merge($routes, Seed::findLunrRoutes());
     }

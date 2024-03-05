@@ -176,7 +176,7 @@ class CronSettingsForm extends FormBase {
       $form['lunr'] = [
         '#type' => 'checkbox',
         '#title' => 'Lunr search assets',
-        '#description' => $this->t('Exports required lunr javascript libraries and all search indexes for decoupled search.'),
+        '#description' => $this->t('Exports required Lunr JavaScript libraries and all search indexes for decoupled search.'),
         '#default_value' => $config->get('lunr'),
       ];
     }

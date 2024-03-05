@@ -396,10 +396,10 @@ class Search extends ControllerBase {
   }
 
   /**
-   * Sanitises values to send to Algolia.
+   * Sanitizes values to send to Algolia.
    */
   private static function sanitizeValues($value) {
-    // Ensures &#[0-9]+ entities are converted to utf-8.
+    // Ensures &#[0-9]+ entities are converted to UTF-8.
     $value = preg_replace_callback("/(&#[0-9]+;)/", function ($m) {
       return mb_convert_encoding($m[1], "UTF-8", "HTML-ENTITIES");
     }, $value);

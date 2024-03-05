@@ -39,7 +39,7 @@ if (empty($method->getReturnType())) {
     protected $registry;
 
     /**
-     * The configuration object for quant purger.
+     * The configuration object for Quant purger.
      *
      * @var \Drupal\Core\Config\ImmutableConfig
      */
@@ -94,7 +94,7 @@ else {
     protected $registry;
 
     /**
-     * The configuration object for quant purger.
+     * The configuration object for Quant purger.
      *
      * @var \Drupal\Core\Config\ImmutableConfig
      */

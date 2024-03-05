@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Add cron support for quant processing.
+ * Add cron support for Quant processing.
  */
 
 use Drupal\quant\Seed;
@@ -270,7 +270,7 @@ function quant_cron_get_views_routes() {
 
         $paths[] = $path;
 
-        // Languge negotiation may also provide path prefixes.
+        // Language negotiation may also provide path prefixes.
         if ($prefixes = \Drupal::config('language.negotiation')->get('url.prefixes')) {
           foreach ($prefixes as $prefix) {
             $paths[] = "/{$prefix}/{$path}";

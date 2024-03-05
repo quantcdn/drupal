@@ -1,14 +1,14 @@
 quant:
   title: 'Quant'
   route_name: quant.config
-  description: 'Configuration for the quant static exporter'
+  description: 'Configuration for the Quant static exporter'
   parent: system.admin_config
   weight: 10
 
 quant.config:
   title: 'Quant'
   route_name: quant.config
-  description: 'Configuration for the quant static exporter'
+  description: 'Configuration for the Quant static exporter'
   parent: quant
   weight: 1
 

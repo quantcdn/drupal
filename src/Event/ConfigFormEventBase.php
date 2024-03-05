@@ -41,7 +41,7 @@ class ConfigFormEventBase extends Event implements ConfigFormEventInterface {
   }
 
   /**
-   * Accessor for the form state.
+   * Getter for the form state.
    *
    * @return Drupal\Core\Form\FormStateInterface
    *   The form state.

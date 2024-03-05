@@ -40,9 +40,9 @@ class Seed {
   }
 
   /**
-   * Find lunr assets.
+   * Find Lunr assets.
    *
-   * This includes static output from the lunr module.
+   * This includes static output from the Lunr module.
    */
   public static function findLunrAssets() {
     $scheme = \Drupal::config('system.file')->get('default_scheme');
@@ -69,9 +69,9 @@ class Seed {
   }
 
   /**
-   * Find lunr routes.
+   * Find Lunr routes.
    *
-   * Determine URLs lunr indexes are exposed on.
+   * Determine URLs Lunr indexes are exposed on.
    */
   public static function findLunrRoutes() {
     $lunr_storage = \Drupal::service('entity_type.manager')->getStorage('lunr_search');
@@ -250,7 +250,7 @@ class Seed {
   }
 
   /**
-   * Trigger an internal http request to retrieve node markup.
+   * Trigger an internal HTTP request to retrieve node markup.
    *
    * Seeds an individual node update to Quant.
    *
@@ -631,7 +631,7 @@ class Seed {
    *   The markup to search and rewire relative paths for.
    *
    * @return string
-   *   Sanitised markup string.
+   *   Sanitized markup string.
    */
   public static function rewriteRelative($markup) {
     $config = \Drupal::config('quant.settings');
