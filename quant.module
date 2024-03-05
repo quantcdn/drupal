@@ -300,6 +300,10 @@ function _quant_entity_delete_op(EntityInterface $entity) {
     case 'file':
       Seed::unpublishFile($entity);
       break;
+
+    case 'media':
+      Seed::unpublishMedia($entity);
+      break;
   }
 
 }

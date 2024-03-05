@@ -410,6 +410,33 @@ class Seed {
   }
 
   /**
+   * Unpublish the media from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The media entity.
+   */
+  public static function unpublishMedia(EntityInterface $entity) {
+
+    // @todo Handle custom media types or ones from other modules. Could grab
+    // all fields through introspection and check if it's a file field.
+    $fields = [
+      'field_media_audio_file',
+      'field_media_document',
+      'field_media_image',
+      'field_media_video_file',
+    ];
+
+    foreach ($fields as $field) {
+      if ($entity->hasField($field)) {
+        $file = $entity->get($field)->entity;
+        if ($file) {
+          self::unpublishFile($file);
+        }
+      }
+    }
+  }
+
+  /**
    * Unpublish path alias via API request.
    */
   public static function unpublishPathAlias($pathAlias) {
