@@ -5,7 +5,6 @@ namespace Drupal\quant_search\Form;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Utility;
 use Drupal\quant_search\Controller\Search;
