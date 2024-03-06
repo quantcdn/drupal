@@ -100,5 +100,5 @@ function quant_search_run_index($nids, $languages, array &$context) {
  */
 function quant_search_quant_search_page_delete(EntityInterface $entity) {
   $route = $entity->get('route');
-  Utility::unpublishUrl($route, 'Unpublished search page');
+  Utility::unpublishUrl('/' . $route, 'Unpublished search page');
 }

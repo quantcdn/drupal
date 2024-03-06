@@ -532,7 +532,7 @@ class QuantSearchPageForm extends EntityForm {
     }
     // Only unpublish if page already exists, so was sent before.
     elseif ($status !== SAVED_NEW) {
-      Utility::unpublishUrl($route, 'Unpublished search page');
+      Utility::unpublishUrl('/' . $route, 'Unpublished search page');
     }
 
     $form_state->setRedirect('entity.quant_search_page.collection');
