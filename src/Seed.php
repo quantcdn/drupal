@@ -5,10 +5,12 @@ namespace Drupal\quant;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Url;
+use Drupal\image\Entity\ImageStyle;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\taxonomy\Entity\Term;
+use Drupal\views\Views;
 use GuzzleHttp\Exception\ConnectException;
 
 /**
@@ -407,6 +409,20 @@ class Seed {
     $url = $entity->createFileUrl();
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+
+    // If the file is an image, unpublish any image styles.
+    $uri = $entity->getFileUri();
+    $styles = ImageStyle::loadMultiple();
+    $urls = [];
+
+    foreach ($styles as $style) {
+      if ($style->supportsUri($uri)) {
+        $path = DRUPAL_ROOT . $uri;
+        if (file_exists($path)) {
+          \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $uri, [], NULL), QuantEvent::UNPUBLISH);
+        }
+      }
+    }
   }
 
   /**
@@ -431,6 +447,76 @@ class Seed {
         $file = $entity->get($field)->entity;
         if ($file) {
           self::unpublishFile($file);
+        }
+      }
+    }
+  }
+
+  /**
+   * Unpublish the view paths from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The view entity.
+   */
+  public static function unpublishView(EntityInterface $entity) {
+    // Go through all displays to find pages.
+    $displays = [];
+    foreach ($entity->get('display') as $display_id => $display) {
+      if (!empty($display['display_options']['path'])) {
+        $displays[] = $display_id;
+      }
+    }
+
+    // Unpublish main path and all pager pages.
+    $view = Views::getView($entity->id());
+    foreach ($displays as $display_id) {
+      $view->setDisplay($display_id);
+
+      // Get the pager settings.
+      $pager = $view->display_handler->getOption('pager');
+      $type = $pager['type'];
+      $items_per_page = $pager['options']['items_per_page'];
+
+      // Don't process if not using pager.
+      if ($type == 'some' || $type == 'none') {
+        continue;
+      }
+
+      // Switch to not using a pager to get all results.
+      $view->display_handler->setOption('pager', [
+        'type' => 'none',
+        'options' => [
+          'offset' => 0
+        ],
+      ]);
+
+      // Get the number of pages.
+      $view->execute();
+      $count = count($view->result);
+      $total_pages = ceil($count / $items_per_page);
+
+      // Construct the URLs.
+      $path = $view->getPath();
+      for ($i = 0; $i < $total_pages; $i++) {
+        // Handle multilingual paths prefixes and no prefix.
+        $prefixes = \Drupal::config('language.negotiation')->get('url.prefixes') ?? [];
+        $prefixes = array_unique([''] + $prefixes);
+        foreach ($prefixes as $prefix) {
+          if ($prefix) {
+            $prefix = "/{$prefix}";
+          }
+
+          // Handle the base path.
+          if ($i === 0) {
+            $url = "{$prefix}/{$path}";
+
+            \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+          }
+
+          // Handle the pager path.
+          $pager_url = "{$prefix}/{$path}?page={$i}";
+
+          \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $pager_url, [], NULL), QuantEvent::UNPUBLISH);
         }
       }
     }
