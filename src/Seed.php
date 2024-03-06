@@ -515,7 +515,7 @@ class Seed {
           // Handle the pager path.
           $pager_url = "{$prefix}/{$path}?page={$i}";
 
-          Utility::unpublishUrl($pager_url, "Unpublished views pager page [$i]");
+          Utility::unpublishUrl($pager_url, 'Unpublished views pager page');
         }
       }
     }
