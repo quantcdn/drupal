@@ -284,10 +284,9 @@ class Utility {
       return;
     }
 
-    $response = \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
 
-    // Only log if it's not a 404.
-    if ($log && $response) {
+    if ($log) {
       if (empty($message)) {
         $message = 'Unpublished url';
       }
