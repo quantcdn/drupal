@@ -413,14 +413,12 @@ class Seed {
     // If the file is an image, unpublish any image styles.
     $uri = $entity->getFileUri();
     $styles = ImageStyle::loadMultiple();
-    $urls = [];
-
     foreach ($styles as $style) {
       if ($style->supportsUri($uri)) {
-        $path = DRUPAL_ROOT . $uri;
-        if (file_exists($path)) {
-          \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $uri, [], NULL), QuantEvent::UNPUBLISH);
-        }
+        // Don't check filesystem because files have been deleted by this point.
+        $path = parse_url($style->buildUrl($uri))['path'];
+
+        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $path, [], NULL), QuantEvent::UNPUBLISH);
       }
     }
   }
@@ -486,7 +484,7 @@ class Seed {
       $view->display_handler->setOption('pager', [
         'type' => 'none',
         'options' => [
-          'offset' => 0
+          'offset' => 0,
         ],
       ]);
 
