@@ -436,6 +436,35 @@ function quant_file_delete($file) {
   quant_api_unpublish_route($url);
 
   quant_log('Quant: Unpublished file !url.', array('!url' => $url));
+
+  // If the file is an image, unpublish any image styles.
+  $type = file_get_mimetype($url);
+  $image_types = array(
+    'image/bmp',
+    'image/jpeg',
+    'image/gif',
+    'image/png',
+    'image/webp',
+  );
+  if (!in_array($type, $image_types)) {
+    return;
+  }
+
+  // Strip out the base files directory.
+  $path = parse_url($url)['path'];
+  $directory = variable_get('file_public_path', conf_path() . '/files') . '/';
+  $path = str_replace($directory, '', $path);
+
+  // Handle each style.
+  $styles = image_styles();
+  foreach ($styles as $style_name => $style) {
+    $url = image_style_url($style_name, $path);
+    $style_path = parse_url($url)['path'];
+
+    quant_api_unpublish_route($style_path);
+
+    quant_log('Quant: Unpublished image style !style_path.', array('!style_path' => $style_path));
+  }
 }
 
 /**
