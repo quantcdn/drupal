@@ -5,10 +5,12 @@ namespace Drupal\quant;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Url;
+use Drupal\image\Entity\ImageStyle;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\taxonomy\Entity\Term;
+use Drupal\views\Views;
 use GuzzleHttp\Exception\ConnectException;
 
 /**
@@ -86,8 +88,6 @@ class Seed {
 
   /**
    * Add/update redirect via API request.
-   *
-   * @todo Unpublish redirects when content is deleted?
    */
   public static function seedRedirect($redirect) {
 
@@ -96,10 +96,11 @@ class Seed {
     if (!$redirect->isNew()) {
       $originalSource = $redirect->original->getSourcePathWithQuery();
       if ($originalSource && $originalSource != $redirect->getSourcePathWithQuery()) {
-        \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $originalSource, [], NULL), QuantEvent::UNPUBLISH);
+        Utility::unpublishUrl($originalSource, 'Unpublished redirect');
       }
     }
 
+    // @todo For "all language" redirects, the non-prefixed redirect is missing.
     $redirects = self::getRedirectLocationsFromRedirect($redirect);
     foreach ($redirects as $r) {
       $event = new QuantRedirectEvent($r['source'], $r['destination'], $r['status_code']);
@@ -195,14 +196,14 @@ class Seed {
   }
 
   /**
-   * Delete existing redirects via API request.
+   * Unpublish existing redirects via API request.
    */
-  public static function deleteRedirect($redirect) {
+  public static function unpublishRedirect($redirect) {
     $redirects = self::getRedirectLocationsFromRedirect($redirect);
     foreach ($redirects as $r) {
       // QuantEvent can be used to unpublish any resource. Note, the source must
       // be given here and not the destination.
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $r['source'], [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($r['source'], 'Unpublished redirect');
     }
   }
 
@@ -218,7 +219,8 @@ class Seed {
     if (empty($response)) {
       // The markupFromRoute function works differently for unpublished terms
       // versus nodes. If the response is empty, the term is unpublished.
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($url, 'Unpublished taxonomy term page');
+
       return;
     }
 
@@ -242,7 +244,7 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, NULL, $entity, $langcode), QuantEvent::OUTPUT);
     }
     else {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($url, 'Unpublished taxonomy term page');
     }
 
     // Handle internal path redirects.
@@ -347,7 +349,7 @@ class Seed {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent($markup, $url, $meta, $rid, $entity, $langcode), QuantEvent::OUTPUT);
     }
     else {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($url, 'Unpublished content page');
     }
 
     // Handle internal path redirects.
@@ -369,13 +371,13 @@ class Seed {
     $site_config = \Drupal::config('system.site');
     $front = $site_config->get('page.front');
     if ((strpos($front, '/node/') === 0) && $nid == substr($front, 6)) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', '/', [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl('/', 'Unpublished home page');
     }
 
     // Handle internal path redirects.
     self::handleInternalPathRedirects($entity, $langcode, $url);
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    Utility::unpublishUrl($url, 'Unpublished content page');
   }
 
   /**
@@ -393,7 +395,7 @@ class Seed {
     // Handle internal path redirects.
     self::handleInternalPathRedirects($entity, $langcode, $url);
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    Utility::unpublishUrl($url, 'Unpublished taxonomy term page');
   }
 
   /**
@@ -406,7 +408,116 @@ class Seed {
 
     $url = $entity->createFileUrl();
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+    Utility::unpublishUrl($url, 'Unpublished file');
+
+    // If the file is an image, unpublish any image styles.
+    $uri = $entity->getFileUri();
+    $styles = ImageStyle::loadMultiple();
+    foreach ($styles as $style) {
+      if ($style->supportsUri($uri)) {
+        // Don't check filesystem because files have been deleted by this point.
+        $path = parse_url($style->buildUrl($uri))['path'];
+
+        Utility::unpublishUrl($path, 'Unpublished image style');
+      }
+    }
+  }
+
+  /**
+   * Unpublish the media from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The media entity.
+   */
+  public static function unpublishMedia(EntityInterface $entity) {
+
+    // @todo Handle custom media types or ones from other modules. Could grab
+    // all fields through introspection and check if it's a file field.
+    $fields = [
+      'field_media_audio_file',
+      'field_media_document',
+      'field_media_image',
+      'field_media_video_file',
+    ];
+
+    foreach ($fields as $field) {
+      if ($entity->hasField($field)) {
+        $file = $entity->get($field)->entity;
+        if ($file) {
+          self::unpublishFile($file);
+        }
+      }
+    }
+  }
+
+  /**
+   * Unpublish the view paths from Quant.
+   *
+   * @param Drupal\Core\Entity\EntityInterface $entity
+   *   The view entity.
+   */
+  public static function unpublishView(EntityInterface $entity) {
+    // Go through all displays to find pages.
+    $displays = [];
+    foreach ($entity->get('display') as $display_id => $display) {
+      if (!empty($display['display_options']['path'])) {
+        $displays[] = $display_id;
+      }
+    }
+
+    // Unpublish main path and all pager pages.
+    $view = Views::getView($entity->id());
+    foreach ($displays as $display_id) {
+      $view->setDisplay($display_id);
+
+      // Get the pager settings.
+      $pager = $view->display_handler->getOption('pager');
+      $type = $pager['type'];
+      $items_per_page = $pager['options']['items_per_page'];
+
+      // Don't process if not using pager.
+      if ($type == 'some' || $type == 'none') {
+        continue;
+      }
+
+      // Switch to not using a pager to get all results.
+      $view->display_handler->setOption('pager', [
+        'type' => 'none',
+        'options' => [
+          'offset' => 0,
+        ],
+      ]);
+
+      // Get the number of pages.
+      $view->execute();
+      $count = count($view->result);
+      $total_pages = ceil($count / $items_per_page);
+
+      // Construct the URLs.
+      $path = $view->getPath();
+      for ($i = 0; $i < $total_pages; $i++) {
+        // Handle multilingual paths prefixes and no prefix.
+        $prefixes = \Drupal::config('language.negotiation')->get('url.prefixes') ?? [];
+        $prefixes = array_unique([''] + $prefixes);
+        foreach ($prefixes as $prefix) {
+          if ($prefix) {
+            $prefix = "/{$prefix}";
+          }
+
+          // Handle the base path.
+          if ($i === 0) {
+            $url = "{$prefix}/{$path}";
+
+            Utility::unpublishUrl($url, 'Unpublished views page');
+          }
+
+          // Handle the pager path.
+          $pager_url = "{$prefix}/{$path}?page={$i}";
+
+          Utility::unpublishUrl($pager_url, 'Unpublished views page');
+        }
+      }
+    }
   }
 
   /**
@@ -414,9 +525,15 @@ class Seed {
    */
   public static function unpublishPathAlias($pathAlias) {
 
-    $alias = Utility::getUrl($pathAlias->get('alias')->value, $pathAlias->get('langcode')->value);
+    $langcode = $pathAlias->get('langcode')->value;
+    $alias = Utility::getUrl($pathAlias->get('alias')->value, $langcode);
 
-    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $alias, [], NULL), QuantEvent::UNPUBLISH);
+    // Strip the 'und'.
+    if ($langcode == LanguageInterface::LANGCODE_NOT_SPECIFIED) {
+      $alias = str_replace("/{$langcode}", '', $alias);
+    }
+
+    Utility::unpublishUrl($alias, 'Unpublished path alias');
   }
 
   /**
@@ -469,11 +586,11 @@ class Seed {
 
     // Unpublish redirects.
     if (!$defaultPublished) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $internalPath, [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl($internalPath, 'Unpublished internal path');
     }
     if (!$published && $usesPrefixes) {
       // Handle redirects with path prefix too.
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$langcode}{$internalPath}", [], NULL), QuantEvent::UNPUBLISH);
+      Utility::unpublishUrl("/{$langcode}{$internalPath}", 'Unpublished internal path');
     }
   }
 

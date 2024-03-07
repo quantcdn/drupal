@@ -157,7 +157,19 @@ function quant_entity_predelete(EntityInterface $entity) {
   // This needs to not be a shutdown hook and also needs to be on
   // the predelete hook as the path alias is removed in the entity
   // delete clean-up.
-  _quant_entity_delete_op($entity);
+  _quant_unpublish_entity($entity);
+
+  // Handle any translations.
+  if (method_exists($entity, 'isTranslatable') && $entity->isTranslatable()) {
+    foreach ($entity->getTranslationLanguages() as $language) {
+      if ($language->getId() != $entity->language()->getId()) {
+        $translation = $entity->getTranslation($language->getId());
+
+        _quant_unpublish_entity($translation);
+      }
+    }
+  }
+
 }
 
 /**
@@ -232,20 +244,6 @@ function quant_redirect_presave($redirect) {
 }
 
 /**
- * Implements hook_redirect_delete().
- */
-function quant_redirect_delete($redirect) {
-  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
-  $quant_redirect_enabled = \Drupal::config('quant.settings')->get('quant_enabled_redirects');
-
-  if (!$quant_enabled || !$quant_redirect_enabled) {
-    return;
-  }
-
-  Seed::deleteRedirect($redirect);
-}
-
-/**
  * Entity update operation hook.
  *
  * @param Drupal\Core\Entity\EntityInterface $entity
@@ -273,17 +271,17 @@ function _quant_entity_update_op(EntityInterface $entity) {
 }
 
 /**
- * Entity delete operation hook.
+ * Unpublish entity.
+ *
+ * Used to trigger an unpublish from the Quant API.
  *
  * @param Drupal\Core\Entity\EntityInterface $entity
  *   The entity.
- *
- *   Used to trigger an unpublish from the Quant API.
- *
- * @todo Entity support.
  */
-function _quant_entity_delete_op(EntityInterface $entity) {
+function _quant_unpublish_entity(EntityInterface $entity) {
 
+  // @todo Try to handle entities more generically.
+  // @todo Check tracking is enabled for entity first.
   switch ($entity->getEntityTypeId()) {
     case 'node':
       Seed::unpublishNode($entity);
@@ -300,22 +298,34 @@ function _quant_entity_delete_op(EntityInterface $entity) {
     case 'file':
       Seed::unpublishFile($entity);
       break;
+
+    case 'media':
+      Seed::unpublishMedia($entity);
+      break;
+
+    case 'view':
+      Seed::unpublishView($entity);
+      break;
+
+    case 'redirect':
+      Seed::unpublishRedirect($entity);
+      break;
   }
 
 }
 
 /**
- * Implements hook_ENTITY_TYPE_translation_delete().
+ * Implements hook_entity_translation_delete().
  */
-function quant_node_translation_delete($entity) {
+function quant_entity_translation_delete($entity) {
   $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
-  $quant_node_enabled = \Drupal::config('quant.settings')->get('quant_enabled_nodes');
 
-  if (!$quant_enabled || !$quant_node_enabled) {
+  if (!$quant_enabled) {
     return;
   }
 
-  Seed::unpublishNode($entity);
+  _quant_unpublish_entity($entity);
+
 }
 
 /**

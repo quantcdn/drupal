@@ -6,6 +6,7 @@ use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Url;
 use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
+use Drupal\quant\Event\QuantEvent;
 
 /**
  * Quant utility class for helper functions.
@@ -264,6 +265,35 @@ class Utility {
       return '';
     }
 
+  }
+
+  /**
+   * Unpublish the given URL and optionally log a message.
+   *
+   * @param string $url
+   *   The URL to unpublish.
+   * @param string $message
+   *   The message to log.
+   * @param bool $log
+   *   Whether or not to log the message.
+   */
+  public static function unpublishUrl(string $url, string $message = '', bool $log = TRUE) : void {
+    if (!trim($url)) {
+      \Drupal::logger('quant')->notice('Cannot unpublished empty url.');
+
+      return;
+    }
+
+    \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
+
+    if ($log) {
+      if (empty($message)) {
+        $message = 'Unpublished url';
+      }
+      $message .= ' @url';
+
+      \Drupal::logger('quant')->notice($message, ['@url' => $url]);
+    }
   }
 
 }
