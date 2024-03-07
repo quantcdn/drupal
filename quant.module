@@ -318,6 +318,11 @@ function _quant_unpublish_entity(EntityInterface $entity) {
  * Implements hook_entity_translation_delete().
  */
 function quant_entity_translation_delete($entity) {
+  $quant_enabled = \Drupal::config('quant.settings')->get('quant_enabled');
+
+  if (!$quant_enabled) {
+    return;
+  }
 
   _quant_unpublish_entity($entity);
 
