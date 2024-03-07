@@ -98,7 +98,7 @@ class Seed {
     if (!$redirect->isNew()) {
       $originalSource = $redirect->original->getSourcePathWithQuery();
       if ($originalSource && $originalSource != $redirect->getSourcePathWithQuery()) {
-        Utility::unpublishUrl($originalSource, 'Unpublished redirect / => ');
+        Utility::unpublishUrl($originalSource, 'Unpublished redirect');
       }
     }
 
@@ -197,14 +197,14 @@ class Seed {
   }
 
   /**
-   * Delete existing redirects via API request.
+   * Unpublish existing redirects via API request.
    */
-  public static function deleteRedirect($redirect) {
+  public static function unpublishRedirect($redirect) {
     $redirects = self::getRedirectLocationsFromRedirect($redirect);
     foreach ($redirects as $r) {
       // QuantEvent can be used to unpublish any resource. Note, the source must
       // be given here and not the destination.
-      Utility::unpublishUrl($r['source'], 'Unpublished redirect / => ');
+      Utility::unpublishUrl($r['source'], 'Unpublished redirect');
     }
   }
 
@@ -515,7 +515,7 @@ class Seed {
           // Handle the pager path.
           $pager_url = "{$prefix}/{$path}?page={$i}";
 
-          Utility::unpublishUrl($pager_url, 'Unpublished views pager page');
+          Utility::unpublishUrl($pager_url, 'Unpublished views page');
         }
       }
     }
@@ -526,7 +526,13 @@ class Seed {
    */
   public static function unpublishPathAlias($pathAlias) {
 
-    $alias = Utility::getUrl($pathAlias->get('alias')->value, $pathAlias->get('langcode')->value);
+    $langcode = $pathAlias->get('langcode')->value;
+    $alias = Utility::getUrl($pathAlias->get('alias')->value, $langcode);
+
+    // Strip the 'und'.
+    if ($langcode == LanguageInterface::LANGCODE_NOT_SPECIFIED) {
+      $alias = str_replace("/{$langcode}", '', $alias);
+    }
 
     Utility::unpublishUrl($alias, 'Unpublished path alias');
   }
