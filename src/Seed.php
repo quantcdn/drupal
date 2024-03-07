@@ -88,8 +88,6 @@ class Seed {
 
   /**
    * Add/update redirect via API request.
-   *
-   * @todo Unpublish redirects when content is deleted?
    */
   public static function seedRedirect($redirect) {
 
@@ -102,6 +100,7 @@ class Seed {
       }
     }
 
+    // @todo For "all language" redirects, the non-prefixed redirect is missing.
     $redirects = self::getRedirectLocationsFromRedirect($redirect);
     foreach ($redirects as $r) {
       $event = new QuantRedirectEvent($r['source'], $r['destination'], $r['status_code']);
