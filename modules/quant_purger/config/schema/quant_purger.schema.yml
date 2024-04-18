@@ -9,7 +9,7 @@ quant_purger.settings:
       translatable: false
       sequence:
         type: string
-        label: 'String that cannot be present in the ccache tag.'
+        label: 'String that cannot be present in the cache tag.'
         translatable: false
     path_blacklist:
       label: 'A list of string patterns that will not get queued.'
