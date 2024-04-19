@@ -11,7 +11,7 @@ use Drupal\purge\Plugin\Purge\TagsHeader\TagsHeaderBase;
  *
  * @PurgeTagsHeader(
  *   id = "quant_tagsheader",
- *   header_name = "Cache-Tags",
+ *   header_name = "Cache-Keys",
  * )
  */
 class QuantCacheTagsHeader extends TagsHeaderBase implements TagsHeaderInterface {
