@@ -234,6 +234,44 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
+  public function purgePath(string $path) : array {
+    $response = $this->client->post($this->endpoint . '/purge', [
+        RequestOptions::JSON => [],
+        'headers' => [
+            'Quant-Customer' => $this->username,
+            'Quant-Project'  => $this->project,
+            'Quant-Token'    => $this->token,
+            'Quant-Url'      => $path,
+        ],
+        'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function purgeTags(array $tags) : array {
+
+    $response = $this->client->post($this->endpoint . '/purge', [
+        RequestOptions::JSON => [],
+        'headers' => [
+            'Quant-Customer' => $this->username,
+            'Quant-Project'  => $this->project,
+            'Quant-Token'    => $this->token,
+            'Cache-Keys'     => implode(' ', $tags),
+        ],
+        'verify' => $this->tlsDisabled ? FALSE : TRUE,
+    ]);
+
+    return json_decode($response->getBody(), TRUE);
+
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function send(array $data) : array {
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint, [

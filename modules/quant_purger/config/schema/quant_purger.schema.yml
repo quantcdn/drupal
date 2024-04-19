@@ -19,3 +19,47 @@ quant_purger.settings:
         type: string
         label: 'String that cannot be present in a fully qualified URL.'
         translatable: false
+
+quant_purger.settings.*:
+  type: config_entity
+  label: 'Section Purger'
+  mapping:
+
+    #
+    # Instance metadata:
+    #
+    id:
+      type: string
+      translatable: false
+    name:
+      type: string
+      translatable: false
+    invalidationtype:
+      type: string
+      translatable: false
+
+    #
+    # Performance settings:
+    #
+    runtime_measurement:
+      type: boolean
+      translatable: false
+    timeout:
+      type: float
+      translatable: false
+    connect_timeout:
+      type: float
+      translatable: false
+    cooldown_time:
+      type: float
+      translatable: false
+    max_requests:
+      type: integer
+      translatable: false
+
+    #
+    # Success resolution:
+    #
+    http_errors:
+      type: boolean
+      translatable: false

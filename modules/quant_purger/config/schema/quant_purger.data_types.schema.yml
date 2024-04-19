@@ -1,0 +1,10 @@
+quant_purge_header:
+  type: mapping
+  label: 'Quant Header'
+  mapping:
+    field:
+      type: string
+      translatable: false
+    value:
+      type: string
+      translatable: false

@@ -48,6 +48,34 @@ interface QuantClientInterface {
   public function send(array $data) : array;
 
   /**
+   * Sends a purge payload (path based) to the API.
+   *
+   * @param string $path
+   *   The path to purge.
+   *
+   * @return array
+   *   Return array of response data.
+   *
+   * @throws \Drupal\quant_api\Exception\InvalidPayload
+   * @throws \Drupal\quant_api\Exception\InvalidResposne
+   */
+  public function purgePath(string $path) : array;
+
+  /**
+   * Sends a purge payload (tags based) to the API.
+   *
+   * @param array $tags
+   *   The array of tags to purge.
+   *
+   * @return array
+   *   Return array of response data.
+   *
+   * @throws \Drupal\quant_api\Exception\InvalidPayload
+   * @throws \Drupal\quant_api\Exception\InvalidResposne
+   */
+  public function purgeTags(array $tags) : array;
+
+  /**
    * Send a file to the API.
    *
    * @param string $file
