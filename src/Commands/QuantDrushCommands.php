@@ -28,6 +28,14 @@ class QuantDrushCommands extends DrushCommands {
   private $runningProcs = [];
 
   /**
+   * Returns lock file location (project specific).
+   */
+  private function getLockFileLocation() {
+    $config = \Drupal::configFactory()->getEditable('quant_api.settings');
+    return sys_get_temp_dir() . '/' . $config->get('api_project') . '_quant_seed_worker.lock';
+  }
+
+  /**
    * Returns path to drush binary for process forking.
    *
    * Priority order: $CWD, $DRUSH_PATH, $PATH, vendor/bin/drush.
@@ -76,13 +84,14 @@ class QuantDrushCommands extends DrushCommands {
   public function message($options = ['threads' => 5]) {
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
-    $lockFilePath = sys_get_temp_dir() . '/quant_seed_worker.lock';
+    $lockFilePath = $this->getLockFileLocation();
     $cmd = $drushPath . ' queue:run quant_seed_worker';
     $this->output()->writeln("<comment>Using drush binary at $drushPath. Override with \$DRUSH_PATH if required.</comment>");
 
     // Bail if another run is in progress.
     if (file_exists($lockFilePath)) {
-      $this->output()->writeln("<info>Seeding bailed. Another seed run is in progress.</info>");
+      $this->output()->writeln("<info>Seeding bailed. Another seed run is in progress (lockfile is present: {$lockFilePath})</info>");
+      $this->output()->writeln("<info>Run drush quant:unlock-queue to manually unlock the queue.</info>");
       return;
     }
     else {
@@ -118,7 +127,7 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:unlock-queue
    */
   public function unlock($options = []) {
-    $lockFilePath = sys_get_temp_dir() . '/quant_seed_worker.lock';
+    $lockFilePath = $this->getLockFileLocation();
     unlink($lockFilePath);
 
     $this->output()->writeln("Unlocked Quant queue.");
