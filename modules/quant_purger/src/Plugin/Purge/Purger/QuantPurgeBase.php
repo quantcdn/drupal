@@ -189,7 +189,7 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
   }
 
   /**
-   * Sends a path based purge request to the Quant API.
+   * Sends a path-based purge request to the Quant API.
    *
    * @param string $path
    *   The path to purge.
@@ -199,7 +199,7 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
   }
 
   /**
-   * Sends a tags based purge request to the Quant API.
+   * Sends a tags-based purge request to the Quant API.
    *
    * @param array $tags
    *   The array of tags to purge.

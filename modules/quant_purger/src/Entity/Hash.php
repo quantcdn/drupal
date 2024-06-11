@@ -56,7 +56,7 @@ class Hash {
    * Create a unique hash that identifies this site.
    *
    * @param string $site_name
-   *   The identifier of the site on Acquia Cloud.
+   *   The identifier of the site on QuantCDN.
    * @param string $site_path
    *   The path of the site, e.g. 'site/default' or 'site/database_a'.
    *

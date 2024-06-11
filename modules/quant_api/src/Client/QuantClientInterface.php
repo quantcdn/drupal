@@ -48,7 +48,7 @@ interface QuantClientInterface {
   public function send(array $data) : array;
 
   /**
-   * Sends a purge payload (path based) to the API.
+   * Sends a purge payload (path-based) to the API.
    *
    * @param string $path
    *   The path to purge.
@@ -62,7 +62,7 @@ interface QuantClientInterface {
   public function purgePath(string $path) : array;
 
   /**
-   * Sends a purge payload (tags based) to the API.
+   * Sends a purge payload (tags-based) to the API.
    *
    * @param array $tags
    *   The array of tags to purge.
