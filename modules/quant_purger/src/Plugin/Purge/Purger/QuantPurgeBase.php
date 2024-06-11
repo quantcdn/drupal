@@ -30,11 +30,6 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
   protected $settings;
 
   /**
-   * The settings entity holding the Quant API configuration.
-   */
-  protected $api_settings;
-
-  /**
    * The token service.
    *
    * @var \Drupal\Core\Utility\Token
