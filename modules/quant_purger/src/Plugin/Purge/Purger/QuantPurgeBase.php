@@ -58,7 +58,7 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
   public function __construct(array $configuration, $plugin_id, $plugin_definition, ClientInterface $http_client, Token $token) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->settings = QuantPurgeSettings::load($this->getId());
-    // Note: We actually use the Quant HTTP client rather than the generic Guzzle client.
+    // Note: We use the Quant HTTP client rather than the generic Guzzle client.
     $this->client = \Drupal::service('quant_api.client');
     $this->token = $token;
   }
@@ -116,28 +116,29 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
    *   The invalidations array.
    *
    * @return array
+   *   The array of filtered tags and paths.
    */
   public function processInvalidations(array $invalidations) {
     $filtered_tags = [];
     $filtered_paths = [];
 
-    $everything = false;
+    $everything = FALSE;
 
-    foreach($invalidations as $invalidation) {
+    foreach ($invalidations as $invalidation) {
 
       if ($invalidation->getType() == 'tag') {
         $invalidation->setState(InvalidationInterface::PROCESSING);
         $filtered_tags[] = $invalidation;
       }
       elseif ($invalidation->getType() == 'path') {
-        // @todo: dunno what this looks like
+        // @todo Not sure what this looks like.
         $invalidation->setState(InvalidationInterface::PROCESSING);
         $filtered_paths[] = $invalidation;
       }
       elseif ($invalidation->getType() == 'everything') {
         // 'Everything' trumps everything and will issue a site-wide purge.
         $invalidation->setState(InvalidationInterface::PROCESSING);
-        $everything = true;
+        $everything = TRUE;
         $filtered_paths = [];
         $filtered_tags = [];
         break;
@@ -148,9 +149,9 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
     }
 
     $filtered_array = [
-        'everything' => $everything,
-        'tags' => $filtered_tags,
-        'paths' => $filtered_paths,
+      'everything' => $everything,
+      'tags' => $filtered_tags,
+      'paths' => $filtered_paths,
     ];
 
     return $filtered_array;
@@ -193,7 +194,7 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
    * @param string $path
    *   The path to purge.
    */
-  public function purgePath($path) {
+  public function purgePath(string $path) {
     $this->client->purgePath($path);
   }
 
@@ -203,7 +204,7 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
    * @param array $tags
    *   The array of tags to purge.
    */
-  public function purgeTags($tags) {
+  public function purgeTags(array $tags) {
     $this->client->purgeTags($tags);
   }
 

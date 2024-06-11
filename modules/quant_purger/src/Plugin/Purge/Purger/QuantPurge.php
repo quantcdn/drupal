@@ -29,19 +29,18 @@ class QuantPurge extends QuantPurgeBase implements PurgerInterface {
     $filtered_validations = $this->processInvalidations($invalidations);
 
     if ($filtered_validations['everything']) {
-        $this->invalidateEverything($invalidations);
-        return;
+      $this->invalidateEverything($invalidations);
+      return;
     }
 
     if (!empty($filtered_validations['tags'])) {
-        $this->invalidateTags($filtered_validations['tags']);
+      $this->invalidateTags($filtered_validations['tags']);
     }
 
     if (!empty($filtered_validations['paths'])) {
-        $this->invalidatePaths($filtered_validations['paths']);
+      $this->invalidatePaths($filtered_validations['paths']);
     }
   }
-
 
   /**
    * {@inheritdoc}
@@ -49,29 +48,23 @@ class QuantPurge extends QuantPurgeBase implements PurgerInterface {
   public function invalidateTags(array $invalidations) {
     $tags = [];
     foreach ($invalidations as $invalidation) {
-        $tags[] = Hash::cacheTags([$invalidation->getExpression()])[0];
+      $tags[] = Hash::cacheTags([$invalidation->getExpression()])[0];
     }
 
     try {
-        $this->logger()->debug('[tags] Purging tags: ' . implode(' ', $tags));
-        $this->purgeTags($tags);
-        $invalidation->setState(InvalidationInterface::SUCCEEDED);
+      $this->logger()->debug('[tags] Purging tags: ' . implode(' ', $tags));
+      $this->purgeTags($tags);
+      $invalidation->setState(InvalidationInterface::SUCCEEDED);
     }
     catch (\Exception $e) {
-        $this->logger()->notice('Error attempting to purge cache path: ' . $e->getMessage());
-        error_log($e->getMessage());
-        $invalidation->setState(InvalidationInterface::FAILED);
+      $this->logger()->notice('Error attempting to purge cache path: ' . $e->getMessage());
+      error_log($e->getMessage());
+      $invalidation->setState(InvalidationInterface::FAILED);
     }
-
-
-
-
   }
 
   /**
-   * InvalidatePaths
-   *
-   * This will invalidate path based invalidations in a loop.
+   * Invalidate path-based invalidations in a loop.
    *
    * @param array $invalidations
    *   This takes in an array of Invalidation, processing them all in a loop,
@@ -80,24 +73,22 @@ class QuantPurge extends QuantPurgeBase implements PurgerInterface {
   public function invalidatePaths(array $invalidations) {
 
     foreach ($invalidations as $invalidation) {
-        try {
-            $path = '/' . $invalidation->getExpression();
-            $this->logger()->debug('[path] Purging path invalidation: ' . $path);
-            $this->purgePath($path);
-            $invalidation->setState(InvalidationInterface::SUCCEEDED);
-        }
-        catch (\Exception $e) {
-            $this->logger()->notice('Error attempting to purge cache path: ' . $e->getMessage());
-            error_log($e->getMessage());
-            $invalidation->setState(InvalidationInterface::FAILED);
-        }
+      try {
+        $path = '/' . $invalidation->getExpression();
+        $this->logger()->debug('[path] Purging path invalidation: ' . $path);
+        $this->purgePath($path);
+        $invalidation->setState(InvalidationInterface::SUCCEEDED);
+      }
+      catch (\Exception $e) {
+        $this->logger()->notice('Error attempting to purge cache path: ' . $e->getMessage());
+        error_log($e->getMessage());
+        $invalidation->setState(InvalidationInterface::FAILED);
+      }
     }
   }
 
   /**
-   * InvalidateEverything.
-   *
-   * This will invalidate with the path '/*' to purge the entire project cache.
+   * Invalidate with the path '/*' to purge the entire project cache.
    *
    * @param array $invalidations
    *   This takes in an array of Invalidation, processing them all in a loop,
@@ -106,18 +97,18 @@ class QuantPurge extends QuantPurgeBase implements PurgerInterface {
   public function invalidateEverything(array $invalidations) {
 
     try {
-        $this->logger()->debug('[everything] Purging entire site cache (/*)');
-        $this->purgePath('/*');
-        foreach ($invalidations as $invalidation) {
-            $invalidation->setState(InvalidationInterface::SUCCEEDED);
-        }
+      $this->logger()->debug('[everything] Purging entire site cache (/*)');
+      $this->purgePath('/*');
+      foreach ($invalidations as $invalidation) {
+        $invalidation->setState(InvalidationInterface::SUCCEEDED);
+      }
     }
     catch (\Exception $e) {
-        $this->logger()->notice('Error attempting to purge entire cache: ' . $e->getMessage());
-        error_log($e->getMessage());
-        foreach ($invalidations as $invalidation) {
-            $invalidation->setState(InvalidationInterface::FAILED);
-        }
+      $this->logger()->notice('Error attempting to purge entire cache: ' . $e->getMessage());
+      error_log($e->getMessage());
+      foreach ($invalidations as $invalidation) {
+        $invalidation->setState(InvalidationInterface::FAILED);
+      }
     }
   }
 

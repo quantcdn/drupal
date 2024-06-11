@@ -236,14 +236,14 @@ class QuantClient implements QuantClientInterface {
    */
   public function purgePath(string $path) : array {
     $response = $this->client->post($this->endpoint . '/purge', [
-        RequestOptions::JSON => [],
-        'headers' => [
-            'Quant-Customer' => $this->username,
-            'Quant-Project'  => $this->project,
-            'Quant-Token'    => $this->token,
-            'Quant-Url'      => $path,
-        ],
-        'verify' => $this->tlsDisabled ? FALSE : TRUE,
+      RequestOptions::JSON => [],
+      'headers' => [
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+        'Quant-Url'      => $path,
+      ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
     ]);
 
     return json_decode($response->getBody(), TRUE);
@@ -255,14 +255,14 @@ class QuantClient implements QuantClientInterface {
   public function purgeTags(array $tags) : array {
 
     $response = $this->client->post($this->endpoint . '/purge', [
-        RequestOptions::JSON => [],
-        'headers' => [
-            'Quant-Customer' => $this->username,
-            'Quant-Project'  => $this->project,
-            'Quant-Token'    => $this->token,
-            'Cache-Keys'     => implode(' ', $tags),
-        ],
-        'verify' => $this->tlsDisabled ? FALSE : TRUE,
+      RequestOptions::JSON => [],
+      'headers' => [
+        'Quant-Customer' => $this->username,
+        'Quant-Project'  => $this->project,
+        'Quant-Token'    => $this->token,
+        'Cache-Keys'     => implode(' ', $tags),
+      ],
+      'verify' => $this->tlsDisabled ? FALSE : TRUE,
     ]);
 
     return json_decode($response->getBody(), TRUE);

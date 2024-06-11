@@ -105,7 +105,7 @@ abstract class QuantPurgeFormBase extends PurgerConfigFormBase {
    *   An associative array containing the structure of the form.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current state of the form.
-   * @param \Drupal\quant_purger\Entity\QuantPurgeSettingsPurgeSettings $settings
+   * @param \Drupal\quant_purger\Entity\QuantPurgeSettings $settings
    *   Configuration entity for the purger being configured.
    */
   public function buildFormPerformance(array &$form, FormStateInterface $form_state, QuantPurgeSettings $settings) {
