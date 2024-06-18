@@ -199,10 +199,9 @@ class QuantClientTest extends UnitTestCase {
 
   /**
    * Ensure that send handles server errors.
-   *
-   * @expectedException GuzzleHttp\Exception\RequestException
    */
   public function testSendError() {
+    $this->expectException(\GuzzleHttp\Exception\RequestException::class);
     $http = $this->prophesize(Client::class);
     $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
     $config = $this->getConfigStub();
@@ -254,10 +253,9 @@ class QuantClientTest extends UnitTestCase {
 
   /**
    * Ensure a valid redirect response is sent.
-   *
-   * @expectedException GuzzleHttp\Exception\RequestException
    */
   public function testSendRedirectError() {
+    $this->expectException(\GuzzleHttp\Exception\RequestException::class);
     $http = $this->prophesize(Client::class);
     $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
     $config = $this->getConfigStub();
@@ -278,10 +276,9 @@ class QuantClientTest extends UnitTestCase {
 
   /**
    * Ensure files are validated before sending.
-   *
-   * @expectedException Drupal\quant_api\Exception\InvalidPayload
    */
   public function testSendFileFileNoExist() {
+    $this->expectException(\Drupal\quant_api\Exception\InvalidPayload::class);
     // phpcs:ignore
     global $exists_return;
     // phpcs:ignore

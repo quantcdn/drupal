@@ -45,7 +45,7 @@ class NodeInsertSubscriber implements EventSubscriberInterface {
   /**
    * {@inheritdoc}
    */
-  public static function getSubscribedEvents() {
+  public static function getSubscribedEvents(): array {
     $events[NodeInsertEvent::NODE_INSERT_EVENT][] = ['onNodeInsert'];
     return $events;
   }

@@ -37,7 +37,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
   /**
    * {@inheritdoc}
    */
-  public static function getSubscribedEvents() {
+  public static function getSubscribedEvents(): array {
     $events[QuantCollectionEvents::ROUTES][] = ['collectRoutes'];
     return $events;
   }

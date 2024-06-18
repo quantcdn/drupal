@@ -45,7 +45,7 @@ class SearchEventSubscriber implements EventSubscriberInterface {
   /**
    * {@inheritdoc}
    */
-  public static function getSubscribedEvents() {
+  public static function getSubscribedEvents(): array {
     $events[QuantEvent::OUTPUT] = ['onOutput', 1];
     return $events;
   }

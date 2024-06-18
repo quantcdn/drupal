@@ -48,7 +48,7 @@ class CollectionSubscriber implements EventSubscriberInterface {
   /**
    * {@inheritdoc}
    */
-  public static function getSubscribedEvents() {
+  public static function getSubscribedEvents(): array {
     $events[QuantCollectionEvents::ENTITIES][] = ['collectEntities'];
     $events[QuantCollectionEvents::TAXONOMY_TERMS][] = ['collectTaxonomyTerms'];
     $events[QuantCollectionEvents::FILES][] = ['collectFiles'];
