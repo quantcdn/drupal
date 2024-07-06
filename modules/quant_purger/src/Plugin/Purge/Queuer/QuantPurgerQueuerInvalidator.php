@@ -10,7 +10,7 @@ use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 /**
  * Queues URLs with Quant when Drupal invalidates cache tags.
  */
-class QuantPurger implements CacheTagsInvalidatorInterface, ContainerAwareInterface {
+class QuantPurgerQueuerInvalidator implements CacheTagsInvalidatorInterface, ContainerAwareInterface {
   use ContainerAwareTrait;
 
   /**

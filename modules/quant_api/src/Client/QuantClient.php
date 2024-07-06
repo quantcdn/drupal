@@ -235,6 +235,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function purgePath(string $path) : array {
+
     $response = $this->client->post($this->endpoint . '/purge', [
       RequestOptions::JSON => [],
       'headers' => [

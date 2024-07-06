@@ -1,6 +1,6 @@
-quant_purge_header:
+quant_purger_header:
   type: mapping
-  label: 'Quant Header'
+  label: 'Quant Purger Header'
   mapping:
     field:
       type: string

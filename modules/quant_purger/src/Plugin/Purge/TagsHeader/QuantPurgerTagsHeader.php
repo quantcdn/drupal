@@ -20,7 +20,7 @@ class QuantPurgerTagsHeader extends TagsHeaderBase implements TagsHeaderInterfac
    * {@inheritdoc}
    */
   public function getValue(array $tags) {
-    return new CacheTagsHeaderValue($tags, Hash::cacheTags($tags));
+    return new QuantPurgerTagsHeaderValue($tags, Hash::cacheTags($tags));
   }
 
 }

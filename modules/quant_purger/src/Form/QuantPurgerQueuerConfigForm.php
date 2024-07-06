@@ -16,6 +16,8 @@ class QuantPurgerQueuerConfigForm extends QueuerConfigFormBase {
    * {@inheritdoc}
    */
   protected function getEditableConfigNames() {
+    // @todo There are multiple purger config forms. Should this be
+    // 'quant_purger.queuer_settings'? Requires an update hook.
     return ['quant_purger.settings'];
   }
 
@@ -23,8 +25,8 @@ class QuantPurgerQueuerConfigForm extends QueuerConfigFormBase {
    * {@inheritdoc}
    */
   public function getFormId() {
-    // @todo This should be 'quant_purger.queuer_config_form' which will
-    // require an update hook.
+    // @todo There are multiple purger config forms. Should this be
+    // 'quant_purger.queuer_config_form'? Requires an update hook.
     return 'quant_purger.configuration_form';
   }
 

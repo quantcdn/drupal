@@ -1,28 +1,44 @@
- # Schema for the configuration files of the purge_queuer_url module.
 quant_purger.settings:
   type: config_object
-  label: 'Quant purger settings.'
+  label: 'Quant Purger Queuer Settings'
   mapping:
-    tag_blacklist:
-      label: 'A list of string tags that will not trigger a queue.'
+    tag_blocklist:
+      label: 'A list of tags that will not get queued.'
       type: sequence
       translatable: false
       sequence:
         type: string
         label: 'String that cannot be present in the cache tag.'
         translatable: false
-    path_blacklist:
-      label: 'A list of string patterns that will not get queued.'
+    tag_allowlist:
+      label: 'A list of tags that can get queued.'
+      type: sequence
+      translatable: false
+      sequence:
+        type: string
+        label: 'String that can be present in the cache tag.'
+        translatable: false
+    path_blocklist:
+      label: 'A list of paths that will not get queued.'
       type: sequence
       translatable: false
       sequence:
         type: string
         label: 'String that cannot be present in a fully qualified URL.'
         translatable: false
+    path_allowlist:
+      label: 'A list of paths that can not get queued.'
+      type: sequence
+      translatable: false
+      sequence:
+        type: string
+        label: 'String that can be present in a fully qualified URL.'
+        translatable: false
 
+// @todo Why is this under the queuer settings?
 quant_purger.settings.*:
   type: config_entity
-  label: 'Section Purger'
+  label: 'Quant Purger Settings'
   mapping:
 
     #
@@ -34,7 +50,7 @@ quant_purger.settings.*:
     name:
       type: string
       translatable: false
-    invalidationtype:
+    invalidation_type:
       type: string
       translatable: false
 

@@ -9,8 +9,8 @@ use Drupal\purge\Plugin\Purge\Purger\PurgerSettingsInterface;
  * Defines the QuantPurgerSettings entity.
  *
  * @ConfigEntityType(
- *   id = "quantpurgersettings",
- *   label = @Translation("QuantCDN"),
+ *   id = "quant_purger_settings",
+ *   label = @Translation("Quant Purger Settings"),
  *   config_prefix = "settings",
  *   static_cache = TRUE,
  *   entity_keys = {"id" = "id"},
@@ -19,7 +19,7 @@ use Drupal\purge\Plugin\Purge\Purger\PurgerSettingsInterface;
  *     "label",
  *     "description",
  *     "name",
- *     "invalidationtype",
+ *     "invalidation_type",
  *     "runtime_measurement",
  *     "timeout",
  *     "connect_timeout",
@@ -47,7 +47,7 @@ class QuantPurgerSettings extends PurgerSettingsBase implements PurgerSettingsIn
    *
    * @var string
    */
-  public $invalidationtype = 'tag';
+  public $invalidation_type = 'tag';
 
   /**
    * Runtime measurement.

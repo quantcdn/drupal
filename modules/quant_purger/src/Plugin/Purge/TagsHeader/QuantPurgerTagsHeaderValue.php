@@ -5,7 +5,7 @@ namespace Drupal\quant_purger\Plugin\Purge\TagsHeader;
 /**
  * Provides simple value object for cache tag headers.
  */
-class CacheTagsHeaderValue {
+class QuantPurgerTagsHeaderValue {
 
   /**
    * String: separation character used.
