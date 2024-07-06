@@ -35,7 +35,6 @@ quant_purger.settings:
         label: 'String that can be present in a fully qualified URL.'
         translatable: false
 
-// @todo Why is this under the queuer settings?
 quant_purger.settings.*:
   type: config_entity
   label: 'Quant Purger Settings'
