@@ -7,7 +7,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\purge\Plugin\Purge\Invalidation\InvalidationsServiceInterface;
 use Drupal\purge_ui\Form\PurgerConfigFormBase;
-use Drupal\quant_purger\Entity\QuantPurgeSettings;
+use Drupal\quant_purger\Entity\QuantPurgerSettings;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 
 /**
@@ -67,7 +67,7 @@ abstract class QuantPurgeFormBase extends PurgerConfigFormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $settings = QuantPurgeSettings::load($this->getId($form_state));
+    $settings = QuantPurgerSettings::load($this->getId($form_state));
     $form['tabs'] = ['#type' => 'vertical_tabs', '#weight' => 10];
     $this->buildFormMetadata($form, $form_state, $settings);
     $this->buildFormPerformance($form, $form_state, $settings);
@@ -81,10 +81,10 @@ abstract class QuantPurgeFormBase extends PurgerConfigFormBase {
    *   An associative array containing the structure of the form.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current state of the form.
-   * @param \Drupal\quant_purger\Entity\QuantPurgeSettings $settings
+   * @param \Drupal\quant_purger\Entity\QuantPurgerSettings $settings
    *   Configuration entity for the purger being configured.
    */
-  public function buildFormMetadata(array &$form, FormStateInterface $form_state, QuantPurgeSettings $settings) {
+  public function buildFormMetadata(array &$form, FormStateInterface $form_state, QuantPurgerSettings $settings) {
     $form['name'] = [
       '#title' => $this->t('Name'),
       '#type' => 'textfield',
@@ -105,10 +105,10 @@ abstract class QuantPurgeFormBase extends PurgerConfigFormBase {
    *   An associative array containing the structure of the form.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current state of the form.
-   * @param \Drupal\quant_purger\Entity\QuantPurgeSettings $settings
+   * @param \Drupal\quant_purger\Entity\QuantPurgerSettings $settings
    *   Configuration entity for the purger being configured.
    */
-  public function buildFormPerformance(array &$form, FormStateInterface $form_state, QuantPurgeSettings $settings) {
+  public function buildFormPerformance(array &$form, FormStateInterface $form_state, QuantPurgerSettings $settings) {
     $form['performance'] = [
       '#type' => 'details',
       '#group' => 'tabs',
@@ -201,7 +201,7 @@ abstract class QuantPurgeFormBase extends PurgerConfigFormBase {
    * {@inheritdoc}
    */
   public function submitFormSuccess(array &$form, FormStateInterface $form_state) {
-    $settings = QuantPurgeSettings::load($this->getId($form_state));
+    $settings = QuantPurgerSettings::load($this->getId($form_state));
 
     // Iterate the config object and overwrite values found in the form state.
     foreach ($settings as $key => $default_value) {

@@ -6,7 +6,7 @@ use Drupal\Core\Utility\Token;
 use GuzzleHttp\ClientInterface;
 use Drupal\purge\Plugin\Purge\Purger\PurgerBase;
 use Drupal\purge\Plugin\Purge\Purger\PurgerInterface;
-use Drupal\quant_purger\Entity\QuantPurgeSettings;
+use Drupal\quant_purger\Entity\QuantPurgerSettings;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\purge\Plugin\Purge\Invalidation\InvalidationInterface;
 
@@ -25,7 +25,7 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
   /**
    * The settings entity holding all configuration.
    *
-   * @var \Drupal\quant_purger\Entity\QuantPurgeSettings
+   * @var \Drupal\quant_purger\Entity\QuantPurgerSettings
    */
   protected $settings;
 
@@ -52,7 +52,7 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, ClientInterface $http_client, Token $token) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->settings = QuantPurgeSettings::load($this->getId());
+    $this->settings = QuantPurgerSettings::load($this->getId());
     // Note: We use the Quant HTTP client rather than the generic Guzzle client.
     $this->client = \Drupal::service('quant_api.client');
     $this->token = $token;
@@ -75,7 +75,7 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
    * {@inheritdoc}
    */
   public function delete() {
-    QuantPurgeSettings::load($this->getId())->delete();
+    QuantPurgerSettings::load($this->getId())->delete();
   }
 
   /**

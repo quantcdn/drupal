@@ -29,7 +29,7 @@ use Drupal\purge\Plugin\Purge\Purger\PurgerSettingsInterface;
  *   },
  * )
  */
-class QuantPurgeSettings extends PurgerSettingsBase implements PurgerSettingsInterface {
+class QuantPurgerSettings extends PurgerSettingsBase implements PurgerSettingsInterface {
 
   /**
    * Instance metadata.
