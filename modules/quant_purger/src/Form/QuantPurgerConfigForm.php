@@ -38,8 +38,8 @@ class QuantPurgerConfigForm extends PurgerConfigFormBase {
    *   The factory for configuration objects.
    * @param \Drupal\purge\Plugin\Purge\Invalidation\InvalidationsServiceInterface $purge_invalidation_factory
    *   The invalidation objects factory service.
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
-   *   The entityTypeManager.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
    */
   public function __construct(ConfigFactoryInterface $config_factory, InvalidationsServiceInterface $purge_invalidation_factory, EntityTypeManagerInterface $entity_type_manager) {
     $this->setConfigFactory($config_factory);

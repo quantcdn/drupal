@@ -47,6 +47,7 @@ class QuantPurgerSettings extends PurgerSettingsBase implements PurgerSettingsIn
    *
    * @var string
    */
+  // @phpcs:ignore
   public $invalidation_type = 'tag';
 
   /**
