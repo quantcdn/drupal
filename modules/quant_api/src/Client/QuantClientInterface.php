@@ -57,7 +57,7 @@ interface QuantClientInterface {
    *   Return array of response data.
    *
    * @throws \Drupal\quant_api\Exception\InvalidPayload
-   * @throws \Drupal\quant_api\Exception\InvalidResposne
+   * @throws \Drupal\quant_api\Exception\InvalidResponse
    */
   public function purgePath(string $path) : array;
 
