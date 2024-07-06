@@ -6,7 +6,7 @@ use Drupal\purge\Plugin\Purge\Purger\PurgerSettingsBase;
 use Drupal\purge\Plugin\Purge\Purger\PurgerSettingsInterface;
 
 /**
- * Defines the QuantCDN purger settings entity.
+ * Defines the QuantPurgerSettings entity.
  *
  * @ConfigEntityType(
  *   id = "quantpurgersettings",
