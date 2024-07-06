@@ -6,15 +6,16 @@ use Drupal\purge\Plugin\Purge\Queuer\QueuerBase;
 use Drupal\purge\Plugin\Purge\Queuer\QueuerInterface;
 
 /**
- * Quant purger.
+ * Quant Purger Queuer.
  *
  * @PurgeQueuer(
  *   id = "quant",
- *   label = @Translation("Purge Quant"),
+ *   label = @Translation("Quant Purger Queuer"),
  *   description = @Translation("Queue impacted content updates."),
  *   enable_by_default = true,
  *   types = {"tag"},
- *   configform = "\Drupal\quant_purger\Form\ConfigurationForm",
+ *   configform = "\Drupal\quant_purger\Form\QuantPurgerQueuerConfigForm",
  * )
  */
-class QuantPurgerPlugin extends QueuerBase implements QueuerInterface {}
+// @todo Change id to 'quant_purger_queuer' which requires an update hook.
+class QuantPurgerQueuer extends QueuerBase implements QueuerInterface {}

@@ -3,9 +3,9 @@
 namespace Drupal\quant_purger\Form;
 
 /**
- * Configuration form for the HTTP Bundled Purger.
+ * Configuration form for the Quant Purger.
  */
-class QuantPurgeForm extends QuantPurgeFormBase {
+class QuantPurgerConfigForm extends QuantPurgerConfigFormBase {
 
   /**
    * The token group names this purger supports replacing tokens for.

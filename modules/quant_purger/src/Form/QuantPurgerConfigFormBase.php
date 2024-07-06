@@ -2,18 +2,18 @@
 
 namespace Drupal\quant_purger\Form;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\purge\Plugin\Purge\Invalidation\InvalidationsServiceInterface;
 use Drupal\purge_ui\Form\PurgerConfigFormBase;
 use Drupal\quant_purger\Entity\QuantPurgerSettings;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Abstract form base for HTTP based configurable purgers.
+ * Abstract form base for Quant Purger configuration.
  */
-abstract class QuantPurgeFormBase extends PurgerConfigFormBase {
+abstract class QuantPurgerConfigFormBase extends PurgerConfigFormBase {
 
   /**
    * The service that generates invalidation objects on-demand.
@@ -23,7 +23,7 @@ abstract class QuantPurgeFormBase extends PurgerConfigFormBase {
   protected $purgeInvalidationFactory;
 
   /**
-   * Constructs a \Drupal\quant_purger\Form\ConfigurationForm object.
+   * Constructs a base Quant Purger configuration form.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The factory for configuration objects.
@@ -122,7 +122,7 @@ abstract class QuantPurgeFormBase extends PurgerConfigFormBase {
       '#title' => $this->t('Cooldown time'),
       '#default_value' => $settings->cooldown_time,
       '#required' => TRUE,
-      '#description' => $this->t('Number of seconds to wait after a group of HTTP requests (so that other purgers get fresh content)'),
+      '#description' => $this->t('Number of seconds to wait after a group of HTTP requests so that other purgers get fresh content.'),
     ];
     $form['performance']['max_requests'] = [
       '#type' => 'number',

@@ -8,9 +8,9 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\purge_ui\Form\QueuerConfigFormBase;
 
 /**
- * Configuration form for the Quant queuer.
+ * Configuration form for the Quant Purger Queuer.
  */
-class ConfigurationForm extends QueuerConfigFormBase {
+class QuantPurgerQueuerConfigForm extends QueuerConfigFormBase {
 
   /**
    * {@inheritdoc}
@@ -23,6 +23,8 @@ class ConfigurationForm extends QueuerConfigFormBase {
    * {@inheritdoc}
    */
   public function getFormId() {
+    // @todo This should be 'quant_purger.queuer_config_form' which will
+    // require an update hook.
     return 'quant_purger.configuration_form';
   }
 
@@ -39,7 +41,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
     ];
 
     $form['info'] = [
-      '#markup' => $this->t('<p class="messages messages--warning">After making changes to the Quant Purger configuration, all content must be re-seeded so the database reflects the changes.<p>'),
+      '#markup' => $this->t('<p class="messages messages--warning">After making changes to the Quant Purger Queuer configuration, all content must be re-seeded so the database reflects the changes.<p>'),
       '#weight' => -10,
     ];
 
@@ -153,7 +155,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
       ->set('path_allowlist', $form_state->getValue('path_allowlist'))
       ->save();
 
-    \Drupal::messenger()->addMessage($this->t('Successfully saved the Quant Purger configuration. All content must be re-seeded so the database reflects the changes.'));
+    \Drupal::messenger()->addMessage($this->t('Successfully saved the Quant Purger Queuer configuration. All content must be re-seeded so the database reflects the changes.'));
   }
 
   /**

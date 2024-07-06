@@ -3,17 +3,17 @@
 namespace Drupal\quant_purger\Plugin\Purge\Purger;
 
 use Drupal\Core\Utility\Token;
-use GuzzleHttp\ClientInterface;
+use Drupal\purge\Plugin\Purge\Invalidation\InvalidationInterface;
 use Drupal\purge\Plugin\Purge\Purger\PurgerBase;
 use Drupal\purge\Plugin\Purge\Purger\PurgerInterface;
 use Drupal\quant_purger\Entity\QuantPurgerSettings;
+use GuzzleHttp\ClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\purge\Plugin\Purge\Invalidation\InvalidationInterface;
 
 /**
- * Abstract base class for HTTP based configurable purgers.
+ * Abstract base class for Quant Purger.
  */
-abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
+abstract class QuantPurgerBase extends PurgerBase implements PurgerInterface {
 
   /**
    * The Guzzle HTTP client.
@@ -105,51 +105,49 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
   }
 
   /**
-   * Returns array of tags and paths to purge in the provided array.
+   * Process invalidations based on type.
    *
    * @param array $invalidations
    *   The invalidations array.
    *
    * @return array
-   *   The array of filtered tags and paths.
+   *   The processed array with 'everything', 'paths' and 'tags' keys.
    */
   public function processInvalidations(array $invalidations) {
-    $filtered_tags = [];
-    $filtered_paths = [];
-
     $everything = FALSE;
+    $paths = [];
+    $tags = [];
 
     foreach ($invalidations as $invalidation) {
 
-      if ($invalidation->getType() == 'tag') {
-        $invalidation->setState(InvalidationInterface::PROCESSING);
-        $filtered_tags[] = $invalidation;
-      }
-      elseif ($invalidation->getType() == 'path') {
-        // @todo Not sure what this looks like.
-        $invalidation->setState(InvalidationInterface::PROCESSING);
-        $filtered_paths[] = $invalidation;
-      }
-      elseif ($invalidation->getType() == 'everything') {
+      if ($invalidation->getType() == 'everything') {
         // 'Everything' trumps everything and will issue a site-wide purge.
         $invalidation->setState(InvalidationInterface::PROCESSING);
         $everything = TRUE;
-        $filtered_paths = [];
-        $filtered_tags = [];
+        $paths = [];
+        $tags = [];
         break;
+      }
+      elseif ($invalidation->getType() == 'path') {
+        $invalidation->setState(InvalidationInterface::PROCESSING);
+        $paths[] = $invalidation;
+      }
+      elseif ($invalidation->getType() == 'tag') {
+        $invalidation->setState(InvalidationInterface::PROCESSING);
+        $tags[] = $invalidation;
       }
       else {
         $invalidation->setState(InvalidationInterface::NOT_SUPPORTED);
       }
     }
 
-    $filtered_array = [
+    $processed = [
       'everything' => $everything,
-      'tags' => $filtered_tags,
-      'paths' => $filtered_paths,
+      'paths' => $paths,
+      'tags' => $tags,
     ];
 
-    return $filtered_array;
+    return $processed;
   }
 
   /**
@@ -170,9 +168,9 @@ abstract class QuantPurgeBase extends PurgerBase implements PurgerInterface {
    */
   public function getTypes() {
     return [
-      "tag",
-      "everything",
-      "path",
+      'everything',
+      'path',
+      'tag',
     ];
   }
 

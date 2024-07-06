@@ -2,19 +2,19 @@
 
 namespace Drupal\quant_purger\Plugin\Purge\TagsHeader;
 
-use Drupal\quant_purger\Entity\Hash;
-use Drupal\purge\Plugin\Purge\TagsHeader\TagsHeaderInterface;
 use Drupal\purge\Plugin\Purge\TagsHeader\TagsHeaderBase;
+use Drupal\purge\Plugin\Purge\TagsHeader\TagsHeaderInterface;
+use Drupal\quant_purger\Entity\Hash;
 
 /**
  * Sets and formats the default response header with cache tags.
  *
  * @PurgeTagsHeader(
- *   id = "quant_tagsheader",
+ *   id = "quant_purger_tags_header",
  *   header_name = "Cache-Keys",
  * )
  */
-class QuantCacheTagsHeader extends TagsHeaderBase implements TagsHeaderInterface {
+class QuantPurgerTagsHeader extends TagsHeaderBase implements TagsHeaderInterface {
 
   /**
    * {@inheritdoc}

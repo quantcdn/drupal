@@ -40,7 +40,7 @@ class QuantPurgerSettings extends PurgerSettingsBase implements PurgerSettingsIn
    *
    * @var string
    */
-  public $name = '';
+  public $name = 'Quant Purger';
 
   /**
    * The invalidation plugin ID that this purger invalidates.
