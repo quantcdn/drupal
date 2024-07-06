@@ -79,7 +79,7 @@ class QuantPurgeSettings extends PurgerSettingsBase implements PurgerSettingsInt
    * Cooldown time.
    *
    * Number of seconds to wait after one or more invalidations took place (so
-   * that other purgers get fresh content).'
+   * that other purgers get fresh content).
    *
    * @var float
    */
