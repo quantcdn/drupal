@@ -78,7 +78,7 @@ class Utility {
    *   The path prefix based on multilingual settings. Defaults to '/'.
    */
   public static function getPathPrefix(string $langcode = NULL) : string {
-
+ 
     // Always start with a slash.
     $prefix = '/';
 
@@ -88,8 +88,12 @@ class Utility {
       if (!$langcode) {
         $langcode = \Drupal::languageManager()->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
       }
-      // @todo Handle when prefix is different than the langcode.
-      $prefix = '/' . $langcode;
+
+      // Prefixes can be different than the langcode.
+      $prefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
+      if (isset($prefixes[$langcode])) {
+        $prefix = '/' . $prefixes[$langcode];
+      }
     }
 
     return $prefix;
