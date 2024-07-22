@@ -78,7 +78,7 @@ class Utility {
    *   The path prefix based on multilingual settings. Defaults to '/'.
    */
   public static function getPathPrefix(string $langcode = NULL) : string {
- 
+
     // Always start with a slash.
     $prefix = '/';
 
