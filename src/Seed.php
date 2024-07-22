@@ -136,8 +136,9 @@ class Seed {
 
     // Get language and prefix configuration.
     $langcode = $redirect->language()->getId();
-    $siteDefaultLangcode = \Drupal::service('language.default')->get()->getId();
+    $defaultLangcode = \Drupal::service('language.default')->get()->getId();
     $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
+    $defaultPrefix = $pathPrefixes[$defaultLangcode] ?? '';
 
     // Multilingual redirects can be configured for a specific language or
     // for all languages. If the redirect is configured for all languages,
@@ -150,8 +151,8 @@ class Seed {
     // Check if a node or term for this path exists.
     $node = NULL;
     $term = NULL;
-    $aliasWithoutLangcode = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', '/', $destination);
-    $path = \Drupal::service('path_alias.manager')->getPathByAlias($aliasWithoutLangcode);
+    $aliasWithoutPrefix = preg_replace('/^\/(' . $defaultPrefix . ')\//', '/', $destination);
+    $path = \Drupal::service('path_alias.manager')->getPathByAlias($aliasWithoutPrefix);
     if (preg_match('/node\/(\d+)/', $path, $matches)) {
       $node = Node::load($matches[1]);
     }
@@ -183,7 +184,7 @@ class Seed {
       }
       // @todo Test use case where page is not a node or term.
       else {
-        $updatedDestination = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', $pathPrefix . '/', $destination);
+        $updatedDestination = preg_replace('/^\/(' . $defaultPrefix . ')\//', $pathPrefix . '/', $destination);
       }
       $redirects[] = [
         'source' => $updatedSource,
@@ -443,7 +444,7 @@ class Seed {
     $id = $entity->id();
     $published = $entity->isPublished();
     $internalPath = ($type == 'node') ? "/node/{$id}" : "/taxonomy/term/{$id}";
-    $usesPrefixes = Utility::usesLanguagePathPrefixes();
+    $prefix = Utility::getPathPrefix($langcode);
 
     // If there is default language content, then the internal path redirect can
     // use the default URL. Otherwise, it should use the current language.
@@ -461,9 +462,9 @@ class Seed {
     // Only create redirects if the content has an alias.
     if ($internalPath != $url) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($internalPath, $defaultUrl, 301), QuantRedirectEvent::UPDATE);
-      if ($usesPrefixes) {
+      if ($prefix) {
         // Handle redirects with path prefix too.
-        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$langcode}{$internalPath}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
+        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$prefix}{$internalPath}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
       }
     }
 
@@ -471,9 +472,9 @@ class Seed {
     if (!$defaultPublished) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $internalPath, [], NULL), QuantEvent::UNPUBLISH);
     }
-    if (!$published && $usesPrefixes) {
+    if (!$published && $prefix) {
       // Handle redirects with path prefix too.
-      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$langcode}{$internalPath}", [], NULL), QuantEvent::UNPUBLISH);
+      \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', "/{$prefix}{$internalPath}", [], NULL), QuantEvent::UNPUBLISH);
     }
   }
 
