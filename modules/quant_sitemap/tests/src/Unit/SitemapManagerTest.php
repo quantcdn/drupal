@@ -37,7 +37,9 @@ class SitemapManagerTest extends KernelTestBase {
       ->with('simple_sitemap')
       ->willReturn($module);
 
-    $entity_manager_mock = $this->createMock(EntityTypeManager::class);
+    $entity_manager_mock = $this->getMockBuilder(EntityTypeManager::class)
+      ->disableOriginalConstructor()
+      ->getMock();
 
     $manager = new SitemapManager($module_handler_mock, $entity_manager_mock, $module_list_mock);
     $result = $manager->isAvailable();
@@ -65,7 +67,9 @@ class SitemapManagerTest extends KernelTestBase {
       ->with('simple_sitemap')
       ->willReturn($module);
 
-    $entity_manager_mock = $this->createMock(EntityTypeManager::class);
+    $entity_manager_mock = $this->getMockBuilder(EntityTypeManager::class)
+      ->disableOriginalConstructor()
+      ->getMock();
 
     $manager = new SitemapManager($module_handler_mock, $entity_manager_mock, $module_list_mock);
     $result = $manager->isAvailable();
@@ -93,7 +97,9 @@ class SitemapManagerTest extends KernelTestBase {
       ->with('xmlsitemap')
       ->willReturn($module);
 
-    $entity_manager_mock = $this->createMock(EntityTypeManager::class);
+    $entity_manager_mock = $this->getMockBuilder(EntityTypeManager::class)
+      ->disableOriginalConstructor()
+      ->getMock();
 
     $manager = new SitemapManager($module_handler_mock, $entity_manager_mock, $module_list_mock);
     $result = $manager->isAvailable();
@@ -121,7 +127,9 @@ class SitemapManagerTest extends KernelTestBase {
       ->with('xmlsitemap')
       ->willReturn($module);
 
-    $entity_manager_mock = $this->createMock(EntityTypeManager::class);
+    $entity_manager_mock = $this->getMockBuilder(EntityTypeManager::class)
+      ->disableOriginalConstructor()
+      ->getMock();
 
     $manager = new SitemapManager($module_handler_mock, $entity_manager_mock, $module_list_mock);
     $result = $manager->isAvailable();
@@ -149,6 +157,7 @@ class SitemapManagerTest extends KernelTestBase {
         $entity_manager_mock,
         $module_list_mock,
       ])
+      ->onlyMethods(['isAvailable'])
       ->getMock();
 
     $manager->expects($this->once())
@@ -188,6 +197,7 @@ class SitemapManagerTest extends KernelTestBase {
         $entity_manager_mock,
         $module_list_mock,
       ])
+      ->onlyMethods(['isAvailable', 'getSitemapManager'])
       ->getMock();
 
     $manager->expects($this->once())
