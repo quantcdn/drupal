@@ -15,7 +15,7 @@ interface ConfigFormEventInterface {
    * @param Drupal\Core\Form\FormStateInterface $form_state
    *   The configuration values.
    */
-  public function __construct(FormStateInterface $form_state = NULL);
+  public function __construct(?FormStateInterface $form_state = NULL);
 
   /**
    * Accessor for the form state.

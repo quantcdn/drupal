@@ -31,7 +31,7 @@ class StrictTokenException extends \Exception {
   /**
    * {@inheritdoc}
    */
-  public function __construct(string $token, $token_route = NULL, $expected_route = NULL, string $message = "The token routes do not match", int $code = 0, \Throwable $previous = NULL) {
+  public function __construct(string $token, $token_route = NULL, $expected_route = NULL, string $message = "The token routes do not match", int $code = 0, ?\Throwable $previous = NULL) {
     $this->token = $token;
     $this->tokenRoute = $token_route;
     $this->expectedRoute = $expected_route;
