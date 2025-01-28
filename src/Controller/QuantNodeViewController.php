@@ -53,7 +53,7 @@ class QuantNodeViewController extends NodeViewController {
    * @param \Drupal\Core\Session\AccountSwitcherInterface $account_switcher
    *   The account switcher interface.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, RendererInterface $renderer, AccountInterface $current_user = NULL, EntityRepositoryInterface $entity_repository = NULL, RequestStack $request_stack, CurrentRouteMatch $route_match, AccountSwitcherInterface $account_switcher) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, RendererInterface $renderer, ?AccountInterface $current_user = NULL, ?EntityRepositoryInterface $entity_repository = NULL, RequestStack $request_stack, CurrentRouteMatch $route_match, AccountSwitcherInterface $account_switcher) {
     parent::__construct($entity_type_manager, $renderer, $current_user, $entity_repository);
 
     $this->accountSwitcher = $account_switcher;

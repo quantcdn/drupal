@@ -45,7 +45,7 @@ class Utility {
    * @return string
    *   The URL adjusted for multilingual settings. Defaults to current url.
    */
-  public static function getUrl(string $url = NULL, string $langcode = NULL) : string {
+  public static function getUrl(?string $url = NULL, ?string $langcode = NULL) : string {
 
     // Default to current URL.
     if (!$url) {
@@ -77,7 +77,7 @@ class Utility {
    * @return string
    *   The path prefix based on multilingual settings. Defaults to '/'.
    */
-  public static function getPathPrefix(string $langcode = NULL) : string {
+  public static function getPathPrefix(?string $langcode = NULL) : string {
 
     // Always start with a slash.
     $prefix = '/';
@@ -200,7 +200,7 @@ class Utility {
    * @return string
    *   The markup with the page info.
    */
-  public static function getPageInfo(array $urls = NULL) : string {
+  public static function getPageInfo(?array $urls = NULL) : string {
     try {
       // Only allow administrators and content editors access.
       $roles = ['administrator', 'content_editor', 'editor'];

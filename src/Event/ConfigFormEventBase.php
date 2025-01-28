@@ -36,7 +36,7 @@ class ConfigFormEventBase extends Event implements ConfigFormEventInterface {
   /**
    * {@inheritdoc}
    */
-  public function __construct(FormStateInterface $form_state = NULL) {
+  public function __construct(?FormStateInterface $form_state = NULL) {
     $this->formState = $form_state;
   }
 
