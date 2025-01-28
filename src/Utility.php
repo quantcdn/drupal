@@ -89,8 +89,8 @@ class Utility {
       if (!$langcode) {
         $langcode = \Drupal::languageManager()->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
       }
-      // @todo Handle when prefix is different than the langcode.
-      $prefix = '/' . $langcode;
+      $prefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
+      $prefix .= $prefixes[$langcode] ?? '';
     }
 
     return $prefix;
@@ -109,7 +109,7 @@ class Utility {
    * @return string
    *   The relative canonical URL.
    */
-  public static function getCanonicalUrl($type, $id, $langcode) {
+  public static function getCanonicalUrl(string $type, int $id, string $langcode) : string {
     $options = ['absolute' => FALSE];
     if (!empty($langcode)) {
       $language = \Drupal::languageManager()->getLanguage($langcode);
@@ -118,6 +118,28 @@ class Utility {
 
     // The "canonical" URL is the alias, if it exists, or the internal path.
     return Url::fromRoute('entity.' . $type . '.canonical', [$type => $id], $options)->toString();
+  }
+
+  /**
+   * Strip local host from text.
+   *
+   * @param string $text
+   *   The text.
+   *
+   * @return string
+   *   The text without local host.
+   */
+  public static function stripLocalHost(string $text) : string {
+
+    $config = \Drupal::config('quant.settings');
+    $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
+    $port = $_SERVER['SERVER_PORT'];
+    $text = preg_replace("/(https?:\/\/)?{$hostname}(\:{$port})?/i", '', $text);
+
+    // Edge case: Replace http://default when run via drush without base_url.
+    $text = preg_replace("/http:\/\/default/i", '', $text);
+
+    return $text;
   }
 
   /**

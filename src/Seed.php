@@ -137,8 +137,9 @@ class Seed {
 
     // Get language and prefix configuration.
     $langcode = $redirect->language()->getId();
-    $siteDefaultLangcode = \Drupal::service('language.default')->get()->getId();
+    $defaultLangcode = \Drupal::service('language.default')->get()->getId();
     $pathPrefixes = \Drupal::config('language.negotiation')->get('url.prefixes');
+    $defaultPrefix = $pathPrefixes[$defaultLangcode] ?? '';
 
     // Multilingual redirects can be configured for a specific language or
     // for all languages. If the redirect is configured for all languages,
@@ -151,8 +152,8 @@ class Seed {
     // Check if a node or term for this path exists.
     $node = NULL;
     $term = NULL;
-    $aliasWithoutLangcode = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', '/', $destination);
-    $path = \Drupal::service('path_alias.manager')->getPathByAlias($aliasWithoutLangcode);
+    $aliasWithoutPrefix = preg_replace('/^\/(' . $defaultPrefix . ')\//', '/', $destination);
+    $path = \Drupal::service('path_alias.manager')->getPathByAlias($aliasWithoutPrefix);
     if (preg_match('/node\/(\d+)/', $path, $matches)) {
       $node = Node::load($matches[1]);
     }
@@ -184,7 +185,7 @@ class Seed {
       }
       // @todo Test use case where page is not a node or term.
       else {
-        $updatedDestination = preg_replace('/^\/(' . $siteDefaultLangcode . ')\//', $pathPrefix . '/', $destination);
+        $updatedDestination = preg_replace('/^\/(' . $defaultPrefix . ')\//', $pathPrefix . '/', $destination);
       }
       $redirects[] = [
         'source' => $updatedSource,
@@ -560,7 +561,7 @@ class Seed {
     $id = $entity->id();
     $published = $entity->isPublished();
     $internalPath = ($type == 'node') ? "/node/{$id}" : "/taxonomy/term/{$id}";
-    $usesPrefixes = Utility::usesLanguagePathPrefixes();
+    $prefix = Utility::getPathPrefix($langcode);
 
     // If there is default language content, then the internal path redirect can
     // use the default URL. Otherwise, it should use the current language.
@@ -578,9 +579,9 @@ class Seed {
     // Only create redirects if the content has an alias.
     if ($internalPath != $url) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($internalPath, $defaultUrl, 301), QuantRedirectEvent::UPDATE);
-      if ($usesPrefixes) {
+      if ($prefix) {
         // Handle redirects with path prefix too.
-        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$langcode}{$internalPath}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
+        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$prefix}{$internalPath}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
       }
     }
 
@@ -588,9 +589,9 @@ class Seed {
     if (!$defaultPublished) {
       Utility::unpublishUrl($internalPath, 'Unpublished internal path');
     }
-    if (!$published && $usesPrefixes) {
+    if (!$published && $prefix) {
       // Handle redirects with path prefix too.
-      Utility::unpublishUrl("/{$langcode}{$internalPath}", 'Unpublished internal path');
+      Utility::unpublishUrl("/{$prefix}{$internalPath}", 'Unpublished internal path');
     }
   }
 
@@ -756,17 +757,37 @@ class Seed {
     // Do not strip host domain unless configured.
     $strip = $config->get('host_domain_strip') ?: FALSE;
     if (!$strip) {
+      // Handle iframes even if `host_domain_strip` is disabled, so iframe
+      // renders correctly.
+      $markup = self::rewriteRelativeIframe($markup);
+
       return $markup;
     }
 
     // Strip the host domain from everywhere in the content including header
     // metadata such as canonical links.
-    $hostname = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-    $port = $_SERVER['SERVER_PORT'];
-    $markup = preg_replace("/(https?:\/\/)?{$hostname}(\:{$port})?/i", '', $markup);
+    $markup = Utility::stripLocalHost($markup);
 
-    // Edge case: Replace http://default when run via drush without base_url.
-    $markup = preg_replace("/http:\/\/default/i", '', $markup);
+    return $markup;
+  }
+
+  /**
+   * Replaces absolute iframe URLs with relative in markup.
+   *
+   * @param string $markup
+   *   The markup to search and rewire relative iframe paths for.
+   *
+   * @return string
+   *   Sanitized markup string.
+   */
+  public static function rewriteRelativeIframe($markup) {
+    $pattern = '/<iframe src="([^"]+)"/i';
+    if (preg_match_all($pattern, $markup, $matches)) {
+      foreach ($matches[1] as $url) {
+        $updated_url = Utility::stripLocalHost($url);
+        $markup = str_replace($url, $updated_url, $markup);
+      }
+    }
 
     return $markup;
   }
