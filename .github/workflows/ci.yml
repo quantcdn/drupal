@@ -21,7 +21,7 @@ jobs:
         ports:
           - 3306:3306
         env:
-          MYSQL_DATABASE: drupal11
+          MYSQL_DATABASE: drupal
           MYSQL_ROOT_PASSWORD: drupal
           MYSQL_USER: drupal
           MYSQL_PASSWORD: drupal
@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Install Drupal
-        run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal11 -y
+        run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal -y
         working-directory: /var/www/drupal
 
       - name: Install module dependencies
