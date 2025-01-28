@@ -2,12 +2,13 @@
 
 namespace Drupal\Tests\quant_api\Unit;
 
-use Drupal\Tests\UnitTestCase;
-use Drupal\quant_api\Client\QuantClient;
-use GuzzleHttp\Client;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ImmutableConfig;
+use Drupal\quant_api\Client\QuantClient;
+use Drupal\quant_api\Exception\InvalidPayload;
+use Drupal\Tests\UnitTestCase;
+use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\RequestOptions;
@@ -201,7 +202,7 @@ class QuantClientTest extends UnitTestCase {
    * Ensure that send handles server errors.
    */
   public function testSendError() {
-    $this->expectException(\GuzzleHttp\Exception\RequestException::class);
+    $this->expectException(RequestException::class);
     $http = $this->prophesize(Client::class);
     $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
     $config = $this->getConfigStub();
@@ -255,7 +256,7 @@ class QuantClientTest extends UnitTestCase {
    * Ensure a valid redirect response is sent.
    */
   public function testSendRedirectError() {
-    $this->expectException(\GuzzleHttp\Exception\RequestException::class);
+    $this->expectException(RequestException::class);
     $http = $this->prophesize(Client::class);
     $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
     $config = $this->getConfigStub();
@@ -278,7 +279,7 @@ class QuantClientTest extends UnitTestCase {
    * Ensure files are validated before sending.
    */
   public function testSendFileFileNoExist() {
-    $this->expectException(\Drupal\quant_api\Exception\InvalidPayload::class);
+    $this->expectException(InvalidPayload::class);
     // phpcs:ignore
     global $exists_return;
     // phpcs:ignore
