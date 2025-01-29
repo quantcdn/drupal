@@ -17,7 +17,6 @@ use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\QuantQueueFactory;
 use Drupal\quant\Seed;
 use Drupal\quant\Utility;
-use Drupal\views\ViewExecutable;
 
 /**
  * Implements hook_menu_local_tasks_alter().
@@ -507,7 +506,7 @@ function quant_preprocess_views_view_table(&$variables) {
  * Implements hook_preprocess_views_view().
  */
 function quant_preprocess_views_view(array &$variables) {
-  /** @var ViewExecutable $view */
+  /** @var \Drupal\views\ViewExecutable $view */
   $view = $variables['view'];
 
   // If the view has exposed filters, add a warning for admins.
