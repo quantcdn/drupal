@@ -283,6 +283,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
  * @ingroup forms
  */
 function quant_seed_settings() {
+  global $base_url;
 
   drupal_set_title(t('Quant Seed'));
 
@@ -425,8 +426,8 @@ function quant_seed_settings() {
   ];
 
   // Only show if it exists.
-  $file = $_SERVER['DOCUMENT_ROOT'] . '/robots.txt';
-  if (file_exists($file)) {
+  $response = drupal_http_request($base_url . '/robots.txt');
+  if ($response->code == 200) {
     $form['quant_robots'] = [
       '#type' => 'checkbox',
       '#title' => t('Export robots.txt'),
