@@ -17,6 +17,7 @@ use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\QuantQueueFactory;
 use Drupal\quant\Seed;
 use Drupal\quant\Utility;
+use Drupal\views\ViewExecutable;
 
 /**
  * Implements hook_menu_local_tasks_alter().
@@ -499,5 +500,18 @@ function quant_preprocess_views_view_table(&$variables) {
       // $variables['rows'][$id]['attributes']->addClass('messages');
       // $variables['rows'][$id]['attributes']->addClass('messages--warning');
     }
+  }
+}
+
+/**
+ * Implements hook_preprocess_views_view().
+ */
+function quant_preprocess_views_view(array &$variables) {
+  /** @var ViewExecutable $view */
+  $view = $variables['view'];
+
+  // If the view has exposed filters, add a warning for admins.
+  if ($view->exposed_data && \Drupal::currentUser()->hasRole('administrator')) {
+    \Drupal::messenger()->addWarning(t('The view (@view_id) on this page has exposed filters which need special handling for a static website.<br/> <a href="https://docs.quantcdn.io/integrations/drupal">Review the documentation for your options</a>.', ['@view_id' => $view->id()]));
   }
 }
