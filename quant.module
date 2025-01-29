@@ -416,6 +416,77 @@ function quant_taxonomy_term_update($term) {
 }
 
 /**
+ * Implements hook_taxonomy_term_delete().
+ */
+function quant_taxonomy_term_delete($term) {
+  list($url, $context) = _quant_prepare_entity('taxonomy_term', $term->tid);
+
+  quant_api_unpublish_route($url);
+
+  quant_log('Quant: Unpublished taxonomy term page !url.', array('!url' => $url));
+}
+
+/**
+ * Implements hook_file_delete().
+ */
+function quant_file_delete($file) {
+  // Note, _quant_prepare_entity does not return the correct URL.
+  $url = file_create_url($file->uri);
+
+  quant_api_unpublish_route($url);
+
+  quant_log('Quant: Unpublished file !url.', array('!url' => $url));
+
+  // If the file is an image, unpublish any image styles.
+  $type = file_get_mimetype($url);
+  $image_types = array(
+    'image/bmp',
+    'image/jpeg',
+    'image/gif',
+    'image/png',
+    'image/webp',
+  );
+  if (!in_array($type, $image_types)) {
+    return;
+  }
+
+  // Strip out the base files directory.
+  $path = parse_url($url)['path'];
+  $directory = variable_get('file_public_path', conf_path() . '/files') . '/';
+  $path = str_replace($directory, '', $path);
+
+  // Handle each style.
+  $styles = image_styles();
+  foreach ($styles as $style_name => $style) {
+    $url = image_style_url($style_name, $path);
+    $style_path = parse_url($url)['path'];
+
+    quant_api_unpublish_route($style_path);
+
+    quant_log('Quant: Unpublished image style !style_path.', array('!style_path' => $style_path));
+  }
+}
+
+/**
+ * Implements hook_views_view_delete().
+ *
+ * @todo Delete the views pager pages.
+ */
+function quant_views_view_delete($view) {
+  if (!empty($view->display)) {
+    foreach ($view->display as $display_id => $display) {
+      if ($display->display_plugin == 'page' && !empty($display->display_options['path'])) {
+        $url = url($display->display_options['path'], array('absolute' => TRUE));
+
+        quant_api_unpublish_route($url);
+
+        quant_log('Quant: Unpublished view page !url.', array('!url' => $url));
+      }
+    }
+  }
+}
+
+/**
  * Intermediary shutdown function.
  *
  * This is an intermediary shutdown function to ensure that Quant's
@@ -938,6 +1009,7 @@ function _quant_prepare_entity($type, $entity_id) {
 
   switch ($type) {
     case 'file':
+      // @todo Should this be different than the default?
       $uri = entity_uri($type, $entity);
       if (!empty($uri)) {
         $path = $uri['path'];
@@ -987,9 +1059,7 @@ function _quant_prepare_entity($type, $entity_id) {
  *   Optionally filter by menu names.
  */
 function _quant_queue_menu_paths(array $menus_filter = array()) {
-  // @todo Use quant_get_base_url().
-  global $base_url;
-  $base = variable_get('quant_base_url', $base_url);
+  $base = quant_get_base_url();
   $menus = menu_get_menus();
 
   $options = array();
