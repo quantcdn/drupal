@@ -283,6 +283,7 @@ function quant_form_quant_config_validate($form = array(), &$form_state = array(
  * @ingroup forms
  */
 function quant_seed_settings() {
+  global $base_url;
 
   drupal_set_title(t('Quant Seed'));
 
@@ -424,11 +425,15 @@ function quant_seed_settings() {
     '#default_value' => variable_get('quant_custom_routes', FALSE),
   ];
 
-  $form['quant_robots'] = [
-    '#type' => 'checkbox',
-    '#title' => t('Export robots.txt'),
-    '#default_value' => variable_get('quant_robots', FALSE),
-  ];
+  // Only show if it exists.
+  $response = drupal_http_request($base_url . '/robots.txt');
+  if ($response->code == 200) {
+    $form['quant_robots'] = [
+      '#type' => 'checkbox',
+      '#title' => t('Export robots.txt'),
+      '#default_value' => variable_get('quant_robots', FALSE),
+    ];
+  }
 
   $form['trigger_quant_seed'] = array(
     '#type' => 'checkbox',
