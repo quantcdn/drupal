@@ -83,6 +83,10 @@ class QuantApi implements EventSubscriberInterface {
     $dest = $event->getDestinationUrl();
     $statusCode = $event->getStatusCode();
 
+    if ($source == $dest) {
+      return;
+    }
+
     $data = [
       'url' => $source,
       'redirect_url' => $dest,
