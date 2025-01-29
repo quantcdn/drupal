@@ -512,6 +512,6 @@ function quant_preprocess_views_view(array &$variables) {
 
   // If the view has exposed filters, add a warning for admins.
   if ($view->exposed_data && \Drupal::currentUser()->hasRole('administrator')) {
-    \Drupal::messenger()->addWarning(t('The view (@view_id) on this page has exposed filters which need special handling for a static website.<br/> <a href="https://docs.quantcdn.io/integrations/drupal">Review the documentation for your options</a>.', ['@view_id' => $view->id()]));
+    \Drupal::messenger()->addWarning(t('The view (@view_id) on this page has exposed filters which need special handling for a static website.<br/> <a href="https://docs.quantcdn.io/integrations/drupal">See the documentation for your options</a>.', ['@view_id' => $view->id()]));
   }
 }
