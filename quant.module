@@ -514,7 +514,7 @@ function quant_preprocess_views_view(array &$variables) {
     \Drupal::messenger()->addWarning(t('The view (@view_id - @view_display) has exposed filters which need special handling for a static website.<br/> <a href="https://docs.quantcdn.io/integrations/drupal">See the documentation for your options</a>.',
       [
         '@view_id' => $view->id(),
-        '@view_display' => $view->current_display
+        '@view_display' => $view->current_display,
       ])
     );
   }
