@@ -1,4 +1,7 @@
 services:
+  _defaults:
+    autoconfigure: true
+
   plugin.manager.quant.metadata:
     class: Drupal\quant\Plugin\QuantMetadataManager
     parent: default_plugin_manager
