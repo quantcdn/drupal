@@ -60,11 +60,33 @@ class NodeItem implements QuantQueueItemInterface {
       $entity = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($this->vid);
     }
 
+    if (!$entity) {
+      \Drupal::logger('quant')->error(
+        'Failed to load entity for node ID: @id, revision ID: @vid',
+        [
+          '@id' => $this->id,
+          '@vid' => $this->vid,
+        ]
+      );
+      return;
+    }
+
     foreach ($entity->getTranslationLanguages() as $langcode => $language) {
       if (!empty($this->filter) && !in_array($langcode, $this->filter)) {
         continue;
       }
-      Seed::seedNode($entity, $langcode);
+
+      \Drupal::logger('quant_seed')->notice(
+        'Processing language @langcode for node @id',
+        [
+          '@langcode' => $langcode,
+          '@id' => $this->id,
+        ]
+      );
+
+      // getTranslation provides more accurate published status.
+      $translated_entity = $entity->getTranslation($langcode);
+      Seed::seedNode($translated_entity, $langcode);
     }
   }
 
