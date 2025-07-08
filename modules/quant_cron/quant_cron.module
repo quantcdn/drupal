@@ -70,8 +70,7 @@ function quant_cron_cron() {
         if (!empty($filter) && !in_array($langcode, $filter)) {
           continue;
         }
-        $translated_entity = $entity->getTranslation($langcode);
-        Seed::seedNode($translated_entity, $langcode);
+        Seed::seedNode($entity, $langcode);
 
         \Drupal::logger('quant_cron')->notice("quant_cron sending node: nid: @nid, langcode: @lang",
           [
@@ -93,8 +92,7 @@ function quant_cron_cron() {
       $term = Term::load($tid);
 
       foreach ($term->getTranslationLanguages() as $langcode => $language) {
-        $translated_term = $term->getTranslation($langcode);
-        Seed::seedTaxonomyTerm($translated_term, $langcode);
+        Seed::seedTaxonomyTerm($term, $langcode);
 
         \Drupal::logger('quant_cron')->notice("quant_cron sending term: tid: @tid, langcode: @lang",
           [

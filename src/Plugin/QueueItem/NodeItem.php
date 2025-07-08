@@ -76,7 +76,7 @@ class NodeItem implements QuantQueueItemInterface {
         continue;
       }
 
-      \Drupal::logger('quant_seed')->notice(
+      \Drupal::logger('quant')->notice(
         'Processing language @langcode for node @id',
         [
           '@langcode' => $langcode,
@@ -84,9 +84,7 @@ class NodeItem implements QuantQueueItemInterface {
         ]
       );
 
-      // getTranslation provides more accurate published status.
-      $translated_entity = $entity->getTranslation($langcode);
-      Seed::seedNode($translated_entity, $langcode);
+      Seed::seedNode($entity, $langcode);
     }
   }
 
