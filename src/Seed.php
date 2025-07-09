@@ -212,6 +212,10 @@ class Seed {
    * Seeds taxonomy term.
    */
   public static function seedTaxonomyTerm($entity, $langcode = NULL) {
+
+    // Use the translation to ensure correct metadata such as published state.
+    $entity = $entity->getTranslation($langcode);
+
     $tid = $entity->get('tid')->value;
 
     $url = Utility::getCanonicalUrl('taxonomy_term', $tid, $langcode);
@@ -263,6 +267,9 @@ class Seed {
    *   The node language.
    */
   public static function seedNode(EntityInterface $entity, $langcode = NULL) {
+
+    // Use the translation to ensure correct metadata such as published state.
+    $entity = $entity->getTranslation($langcode);
 
     $nid = $entity->get('nid')->value;
     $rid = $entity->get('vid')->value;
