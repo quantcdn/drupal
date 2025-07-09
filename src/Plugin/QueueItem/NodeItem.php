@@ -61,7 +61,7 @@ class NodeItem implements QuantQueueItemInterface {
     }
 
     if (!$entity) {
-      \Drupal::logger('quant')->error(
+      \Drupal::logger('quant_seed')->error(
         'Failed to load entity for node ID: @id, revision ID: @vid',
         [
           '@id' => $this->id,
@@ -76,7 +76,7 @@ class NodeItem implements QuantQueueItemInterface {
         continue;
       }
 
-      \Drupal::logger('quant')->notice(
+      \Drupal::logger('quant_seed')->notice(
         'Processing language @langcode for node @id',
         [
           '@langcode' => $langcode,
