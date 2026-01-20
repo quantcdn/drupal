@@ -11,7 +11,7 @@ services:
     tags:
       - { name: http_middleware, priority: 250 }
   quant_purger.queuer:
-    class: Drupal\quant_purger\Plugin\Purge\Queuer\QuantPurger
+    class: Drupal\quant_purger\Plugin\Purge\Queuer\QuantPurgerQueuerInvalidator
     tags:
       - { name: cache_tags_invalidator }
     calls:

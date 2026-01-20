@@ -1,5 +1,5 @@
 name: Quant Purger
-description: Cache tag purger for Quant.
+description: Purge content in Quant based on paths and cache tags.
 package: Quant
 
 type: module
