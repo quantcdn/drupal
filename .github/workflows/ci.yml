@@ -4,7 +4,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    container: quantcdn/drupal-ci:10.4.x-dev
+    container: quantcdn/drupal-ci:11.1.x-dev
     steps:
       - uses: actions/checkout@v4
       - name: Lint
@@ -12,12 +12,7 @@ jobs:
 
   phpunit:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        drupal:
-          - { container: "quantcdn/drupal-ci:10.4.x-dev", db: "drupal10" }
-          - { container: "quantcdn/drupal-ci:11.1.x-dev", db: "drupal11" }
-    container: ${{ matrix.drupal.container }}
+    container: quantcdn/drupal-ci:11.1.x-dev
 
     services:
       mariadb:
@@ -25,7 +20,7 @@ jobs:
         ports:
           - 3306:3306
         env:
-          MYSQL_DATABASE: ${{ matrix.drupal.db }}
+          MYSQL_DATABASE: drupal11
           MYSQL_ROOT_PASSWORD: drupal
           MYSQL_USER: drupal
           MYSQL_PASSWORD: drupal
@@ -37,7 +32,7 @@ jobs:
 
     steps:
       - name: Install Drupal
-        run: drush si --db-url=mysql://root:drupal@mariadb:3306/${{ matrix.drupal.db }} -y
+        run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal11 -y
         working-directory: /var/www/drupal
 
       - name: Install module dependencies
