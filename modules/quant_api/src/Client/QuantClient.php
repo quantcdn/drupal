@@ -270,7 +270,7 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
-  public function sendFile(string $file, string $url, int $rid = NULL) : array {
+  public function sendFile(string $file, string $url, ?int $rid = NULL) : array {
 
     // Ensure the file is accessible before attempting to send to the API.
     if (!file_exists($file) || !is_readable($file) || !is_file($file)) {
