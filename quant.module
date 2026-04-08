@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -156,7 +157,7 @@ function quant_entity_predelete(EntityInterface $entity) {
 
   // Only process content entities (nodes, users, taxonomy terms, etc.)
   // Skip configuration entities (field configs, views, etc.)
-  if (!($entity instanceof \Drupal\Core\Entity\ContentEntityInterface)) {
+  if (!($entity instanceof ContentEntityInterface)) {
     return;
   }
 
