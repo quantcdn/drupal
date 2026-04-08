@@ -154,13 +154,19 @@ function quant_entity_predelete(EntityInterface $entity) {
     return;
   }
 
+  // Only process content entities (nodes, users, taxonomy terms, etc.)
+  // Skip configuration entities (field configs, views, etc.)
+  if (!($entity instanceof \Drupal\Core\Entity\ContentEntityInterface)) {
+    return;
+  }
+
   // This needs to not be a shutdown hook and also needs to be on
   // the predelete hook as the path alias is removed in the entity
   // delete clean-up.
   _quant_unpublish_entity($entity);
 
   // Handle any translations.
-  if (method_exists($entity, 'isTranslatable') && $entity->isTranslatable()) {
+  if (method_exists($entity, 'isTranslatable') && $entity->isTranslatable() && method_exists($entity, 'getTranslationLanguages')) {
     foreach ($entity->getTranslationLanguages() as $language) {
       if ($language->getId() != $entity->language()->getId()) {
         $translation = $entity->getTranslation($language->getId());
