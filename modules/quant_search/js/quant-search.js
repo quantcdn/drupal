@@ -12,7 +12,7 @@
                 const search = instantsearch({
                     indexName: drupalSettings.quantSearch.algolia_index,
                     searchClient: algoliasearch(drupalSettings.quantSearch.algolia_application_id, drupalSettings.quantSearch.algolia_read_key),
-                    routing: true,
+                    routing: false,
                     initialUiState: {
                         [drupalSettings.quantSearch.algolia_index]: {
                             query: getParameterByName('keys')

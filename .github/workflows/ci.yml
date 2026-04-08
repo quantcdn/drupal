@@ -1,19 +1,23 @@
-# To add new Drupal versions, update quant-ci-images repo.
 name: Test and code coverage
 on:
   - push
 jobs:
   lint:
     runs-on: ubuntu-latest
-    container: quantcdn/drupal-ci:11.0.x-dev
+    container: quantcdn/drupal-ci:10.4.x-dev
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Lint
         run: phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,yml .
 
   phpunit:
     runs-on: ubuntu-latest
-    container: quantcdn/drupal-ci:11.0.x-dev
+    strategy:
+      matrix:
+        drupal:
+          - { container: "quantcdn/drupal-ci:10.4.x-dev", db: "drupal10" }
+          - { container: "quantcdn/drupal-ci:11.1.x-dev", db: "drupal11" }
+    container: ${{ matrix.drupal.container }}
 
     services:
       mariadb:
@@ -21,19 +25,19 @@ jobs:
         ports:
           - 3306:3306
         env:
-          MYSQL_DATABASE: drupal
+          MYSQL_DATABASE: ${{ matrix.drupal.db }}
           MYSQL_ROOT_PASSWORD: drupal
           MYSQL_USER: drupal
           MYSQL_PASSWORD: drupal
         options: >-
-          --health-cmd="mysqladmin ping" 
+          --health-cmd="mysqladmin ping"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=30
 
     steps:
       - name: Install Drupal
-        run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal -y
+        run: drush si --db-url=mysql://root:drupal@mariadb:3306/${{ matrix.drupal.db }} -y
         working-directory: /var/www/drupal
 
       - name: Install module dependencies
@@ -43,7 +47,7 @@ jobs:
       - name: Set up custom module
         run: mkdir -p /var/www/drupal/web/modules/custom/quant
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           path: quant
 
