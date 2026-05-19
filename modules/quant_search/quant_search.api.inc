@@ -47,7 +47,7 @@ function quant_search_api_request($path, $method = 'GET', $body = NULL) {
 function quant_search_api_project() {
   $response = quant_search_api_request('/ping', 'GET');
   if ($response->code == 200 && !empty($response->data)) {
-    return drupal_json_decode($response->data, FALSE);
+    return json_decode($response->data);
   }
   watchdog('quant_search', 'Project lookup failed: @code', array('@code' => $response->code), WATCHDOG_WARNING);
   return FALSE;
@@ -113,7 +113,7 @@ function quant_search_api_add_facets(array $keys) {
 function quant_search_api_stats() {
   $response = quant_search_api_request('/search', 'GET');
   if ($response->code == 200 && !empty($response->data)) {
-    return drupal_json_decode($response->data, FALSE);
+    return json_decode($response->data);
   }
   return FALSE;
 }
