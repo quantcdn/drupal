@@ -53,13 +53,22 @@ function quant_search_generate_record($node) {
   $record += quant_search_node_terms($node, $langcode);
 
   // Date fields as numeric timestamps.
-  $record += quant_search_node_dates($node, $config['node']['date_fields']);
+  $date_fields = isset($config['node']['date_fields']) ? $config['node']['date_fields'] : '';
+  $record += quant_search_node_dates($node, $date_fields);
 
   return $record;
 }
 
 /**
  * Returns taxonomy term names for a node, keyed {vocabulary}_{langcode}.
+ *
+ * @param object $node
+ *   The node.
+ * @param string $langcode
+ *   The node's language code, appended to each vocabulary key.
+ *
+ * @return array
+ *   Map of {vocabulary_machine_name}_{langcode} => array of term names.
  */
 function quant_search_node_terms($node, $langcode) {
   $out = array();
