@@ -124,3 +124,36 @@ function quant_search_node_dates($node, $date_fields) {
   }
   return $out;
 }
+
+/**
+ * Queues a node to be pushed to the search index after the response.
+ *
+ * Mirrors the parent quant module's reactive-push pattern: the API call
+ * runs in a shutdown function so content saves take no latency hit.
+ */
+function quant_search_index_node($node) {
+  $pending = &drupal_static('quant_search_pending_nodes', array());
+  $pending[$node->nid] = $node;
+  drupal_register_shutdown_function('quant_search_index_shutdown');
+}
+
+/**
+ * Shutdown callback: builds and sends records for queued nodes.
+ */
+function quant_search_index_shutdown() {
+  $pending = &drupal_static('quant_search_pending_nodes', array());
+  if (empty($pending)) {
+    return;
+  }
+  $records = array();
+  foreach ($pending as $node) {
+    $record = quant_search_generate_record($node);
+    if ($record) {
+      $records[] = $record;
+    }
+  }
+  $pending = array();
+  if ($records) {
+    quant_search_api_send_records($records);
+  }
+}

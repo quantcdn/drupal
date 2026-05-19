@@ -54,3 +54,24 @@ function quant_search_menu() {
 
   return $items;
 }
+
+/**
+ * Implements hook_node_insert().
+ */
+function quant_search_node_insert($node) {
+  if (!empty($node->status)) {
+    quant_search_index_node($node);
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function quant_search_node_update($node) {
+  if (!empty($node->status)) {
+    quant_search_index_node($node);
+  }
+  // Note: per-record removal on unpublish is not supported by the current
+  // Quant search API (no single-record DELETE). Unpublished/deleted content
+  // is reconciled by the next full re-index. See README.
+}
