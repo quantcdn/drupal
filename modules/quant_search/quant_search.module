@@ -19,3 +19,37 @@ function quant_search_permission() {
     ),
   );
 }
+
+/**
+ * Implements hook_menu().
+ */
+function quant_search_menu() {
+  $items = array();
+
+  $items['admin/config/services/quant/search'] = array(
+    'title' => 'Search',
+    'description' => 'Quant hosted search configuration.',
+    'page callback' => 'quant_search_admin_overview',
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 60,
+    'file' => 'quant_search.admin.inc',
+  );
+  $items['admin/config/services/quant/search/overview'] = array(
+    'title' => 'Overview',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/config/services/quant/search/entities'] = array(
+    'title' => 'Entities',
+    'description' => 'Choose which content is indexed.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_entities_form'),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+    'file' => 'quant_search.admin.inc',
+  );
+
+  return $items;
+}
