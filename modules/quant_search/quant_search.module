@@ -5,6 +5,8 @@
  * Quant Search: index content to Quant hosted search and build search pages.
  */
 
+module_load_include('inc', 'quant_search', 'quant_search.api');
+
 /**
  * Implements hook_permission().
  */
