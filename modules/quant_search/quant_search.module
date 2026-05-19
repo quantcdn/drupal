@@ -6,6 +6,7 @@
  */
 
 module_load_include('inc', 'quant_search', 'quant_search.api');
+module_load_include('inc', 'quant_search', 'quant_search.index');
 
 /**
  * Implements hook_permission().
