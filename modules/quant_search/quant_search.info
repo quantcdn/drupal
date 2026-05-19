@@ -1,0 +1,8 @@
+name = Quant Search
+description = Index content to Quant hosted search and build faceted search pages.
+package = Quant
+core = 7.x
+configure = admin/config/services/quant/search
+dependencies[] = quant
+dependencies[] = quant:quant_api
+dependencies[] = token

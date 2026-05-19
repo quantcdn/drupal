@@ -1,0 +1,19 @@
+<?php
+
+/**
+ * @file
+ * Quant Search: index content to Quant hosted search and build search pages.
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function quant_search_permission() {
+  return array(
+    'administer quant search' => array(
+      'title' => t('Administer Quant Search'),
+      'description' => t('Configure the Quant search index and search pages.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
