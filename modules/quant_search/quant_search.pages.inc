@@ -57,10 +57,22 @@ function quant_search_page_unpack($row) {
     'bundles' => array(),
     'manual_filters' => '',
     'facets' => array(),
-    'display' => array(
-      'results' => array('display_search' => 1, 'display_stats' => 1, 'show_clear_refinements' => 1),
-      'pagination' => array('pagination_enabled' => 1, 'per_page' => 20),
-    ),
+    'display' => array(),
+  );
+  // Fill nested display defaults so callers that stored an empty display
+  // still receive sensible defaults for every sub-key.
+  $config['display'] += array(
+    'results' => array(),
+    'pagination' => array(),
+  );
+  $config['display']['results'] += array(
+    'display_search' => 1,
+    'display_stats' => 1,
+    'show_clear_refinements' => 1,
+  );
+  $config['display']['pagination'] += array(
+    'pagination_enabled' => 1,
+    'per_page' => 20,
   );
   unset($row['config']);
   return array_merge($row, $config);
