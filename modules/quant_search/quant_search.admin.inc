@@ -6,11 +6,41 @@
  */
 
 /**
- * Page callback: overview/status (fleshed out in a later task).
+ * Page callback: Quant Search overview / status.
  */
 function quant_search_admin_overview() {
+  module_load_include('inc', 'quant_search', 'quant_search.api');
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+
+  $project = quant_search_api_project();
+  $rows = array();
+
+  if (!$project) {
+    $rows[] = array(t('Connection'), t('Could not reach the Quant API. Check the Quant API settings.'));
+  }
+  else {
+    $enabled = !empty($project->config->search_enabled);
+    $rows[] = array(t('Hosted search enabled'), $enabled ? t('Yes') : t('No — enable it in the Quant dashboard.'));
+    if ($enabled) {
+      $stats = quant_search_api_stats();
+      if ($stats && isset($stats->index)) {
+        $rows[] = array(t('Index'), check_plain(is_scalar($stats->index) ? $stats->index : drupal_json_encode($stats->index)));
+      }
+    }
+  }
+  $rows[] = array(t('Search pages'), count(quant_search_page_load_all()));
+
   return array(
-    '#markup' => t('Quant Search overview. Use the tabs to configure indexing and search pages.'),
+    'status' => array(
+      '#theme' => 'table',
+      '#header' => array(t('Item'), t('Value')),
+      '#rows' => $rows,
+    ),
+    'links' => array(
+      '#markup' => '<p>' . l(t('Manage search pages'), 'admin/config/services/quant/search/pages')
+        . ' · ' . l(t('Configure indexing'), 'admin/config/services/quant/search/entities')
+        . ' · ' . l(t('Re-index'), 'admin/config/services/quant/search/index') . '</p>',
+    ),
   );
 }
 
