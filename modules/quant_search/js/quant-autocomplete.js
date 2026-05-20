@@ -31,7 +31,7 @@
         getSources: function () {
           return [{
             sourceId: cfg.index,
-            getItemUrl: function (params) { return params.item.url; },
+            getItemUrl: function (params) { return safeUrl(params.item.url); },
             getItems: function (params) {
               return getAlgoliaResults({
                 searchClient: client,
@@ -42,7 +42,7 @@
                 }]
               });
             },
-            onSelect: function (params) { window.location.assign(params.item.url); },
+            onSelect: function (params) { window.location.assign(safeUrl(params.item.url)); },
             templates: {
               item: function (params) {
                 var title = params.item.title || '';
@@ -57,5 +57,20 @@
       });
     }
   };
+
+
+  /**
+   * Returns a URL that is safe to follow, or '#' if it is unsafe.
+   * Accepts site-relative paths and http/https absolute URLs only.
+   */
+  function safeUrl(url) {
+    if (typeof url !== 'string' || url === '') {
+      return '#';
+    }
+    if (url.charAt(0) === '/' || /^https?:\/\//i.test(url)) {
+      return url;
+    }
+    return '#';
+  }
 
 }(Drupal));

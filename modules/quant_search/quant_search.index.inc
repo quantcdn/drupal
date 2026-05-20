@@ -48,6 +48,14 @@ function quant_search_generate_record($node) {
   $record['content_type'] = $node->type;
   $type_info = node_type_get_type($node);
   $record['content_type_' . $langcode] = $type_info ? $type_info->name : $node->type;
+  // Language name keyed by the node's language so a `language` facet works.
+  $languages = language_list();
+  if (isset($languages[$langcode])) {
+    $record['language_' . $langcode] = $languages[$langcode]->name;
+  }
+  else {
+    $record['language_' . $langcode] = $langcode;
+  }
 
   // Taxonomy terms, grouped by vocabulary.
   $record += quant_search_node_terms($node, $langcode);
