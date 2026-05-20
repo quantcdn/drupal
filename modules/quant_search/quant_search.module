@@ -170,3 +170,39 @@ function quant_search_view_page($machine_name) {
   }
   return quant_search_render($page);
 }
+
+/**
+ * Implements hook_block_info().
+ */
+function quant_search_block_info() {
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  $blocks = array();
+  foreach (quant_search_page_load_all(TRUE) as $page) {
+    if (!empty($page['expose_block'])) {
+      $blocks['page_' . $page['machine_name']] = array(
+        'info' => t('Quant search: !label', array('!label' => $page['label'])),
+        'cache' => DRUPAL_NO_CACHE,
+      );
+    }
+  }
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function quant_search_block_view($delta = '') {
+  if (strpos($delta, 'page_') !== 0) {
+    return NULL;
+  }
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  module_load_include('inc', 'quant_search', 'quant_search.theme');
+  $page = quant_search_page_load_by_name(substr($delta, strlen('page_')));
+  if (!$page || !$page['status']) {
+    return NULL;
+  }
+  return array(
+    'subject' => '',
+    'content' => quant_search_render($page),
+  );
+}
