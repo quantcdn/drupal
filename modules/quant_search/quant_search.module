@@ -203,7 +203,7 @@ function quant_search_block_view($delta = '') {
     $page_name = variable_get('quant_search_autocomplete_page', '');
     $page = $page_name ? quant_search_page_load_by_name($page_name) : FALSE;
     $project = quant_search_api_project();
-    if (!$page || !$project || empty($project->config->search_enabled)) {
+    if (!$page || empty($page['status']) || empty($page['route']) || !$project || empty($project->config->search_enabled)) {
       return NULL;
     }
     $index = $project->config->search_index;

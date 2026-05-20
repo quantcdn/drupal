@@ -45,9 +45,11 @@
             onSelect: function (params) { window.location.assign(params.item.url); },
             templates: {
               item: function (params) {
-                var summary = (cfg.show_summary && params.item.summary)
-                  ? params.html('<div class="qs-ac-summary">' + params.item.summary + '</div>') : '';
-                return params.html('<div><strong>' + (params.item.title || '') + '</strong>' + summary + '</div>');
+                var title = params.item.title || '';
+                if (cfg.show_summary && params.item.summary) {
+                  return params.html`<div><strong>${title}</strong><div class="qs-ac-summary">${params.item.summary}</div></div>`;
+                }
+                return params.html`<div><strong>${title}</strong></div>`;
               }
             }
           }];
