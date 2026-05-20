@@ -28,6 +28,20 @@
   Drupal.quantSearch = Drupal.quantSearch || {};
 
   /**
+   * Returns a URL that is safe to put in an href/src, or '#' otherwise.
+   * Accepts site-relative paths and http/https absolute URLs only.
+   */
+  Drupal.quantSearch.safeUrl = function (url) {
+    if (typeof url !== 'string' || url === '') {
+      return '#';
+    }
+    if (url.charAt(0) === '/' || /^https?:\/\//i.test(url)) {
+      return Drupal.checkPlain(url);
+    }
+    return '#';
+  };
+
+  /**
    * Builds and starts one InstantSearch instance.
    */
   Drupal.quantSearch.build = function (cfg) {
@@ -96,10 +110,14 @@
       templates: {
         empty: '<p>' + Drupal.t('No results found.') + '</p>',
         item: function (hit) {
-          var img = hit.image ? '<img src="' + hit.image + '" alt="" class="qs-hit-image" />' : '';
-          var summary = hit.summary ? '<div class="qs-hit-summary">' + hit.summary + '</div>' : '';
-          return '<a class="qs-hit" href="' + (hit.url || '#') + '">' + img +
-            '<h4 class="qs-hit-title">' + (hit.title || '') + '</h4>' + summary + '</a>';
+          var url = Drupal.quantSearch.safeUrl(hit.url);
+          var image = Drupal.quantSearch.safeUrl(hit.image);
+          var img = image ? '<img src="' + image + '" alt="" class="qs-hit-image" />' : '';
+          var summary = hit.summary
+            ? '<div class="qs-hit-summary">' + Drupal.checkPlain(hit.summary) + '</div>' : '';
+          return '<a class="qs-hit" href="' + url + '">' + img +
+            '<h4 class="qs-hit-title">' + Drupal.checkPlain(hit.title || '') + '</h4>' +
+            summary + '</a>';
         }
       }
     }));
