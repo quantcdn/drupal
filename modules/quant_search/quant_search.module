@@ -71,6 +71,39 @@ function quant_search_menu() {
     'weight' => 30,
     'file' => 'quant_search.admin.inc',
   );
+  $items['admin/config/services/quant/search/pages'] = array(
+    'title' => 'Pages',
+    'description' => 'Manage search pages.',
+    'page callback' => 'quant_search_pages_list',
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+    'file' => 'quant_search.pages.inc',
+  );
+  $items['admin/config/services/quant/search/pages/add'] = array(
+    'title' => 'Add search page',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_page_form'),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'quant_search.pages.inc',
+  );
+  $items['admin/config/services/quant/search/pages/%/edit'] = array(
+    'title' => 'Edit search page',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_page_form', 6),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_CALLBACK,
+    'file' => 'quant_search.pages.inc',
+  );
+  $items['admin/config/services/quant/search/pages/%/delete'] = array(
+    'title' => 'Delete search page',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_page_delete_form', 6),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_CALLBACK,
+    'file' => 'quant_search.pages.inc',
+  );
 
   return $items;
 }
