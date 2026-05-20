@@ -118,3 +118,103 @@ function quant_search_view_mode_options($entity_type) {
   }
   return $options;
 }
+
+/**
+ * Form: trigger a full re-index.
+ */
+function quant_search_index_form($form, &$form_state) {
+  $form['help'] = array(
+    '#markup' => '<p>' . t('Re-index all published content of the configured types into Quant search.') . '</p>',
+  );
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Re-index now'));
+  return $form;
+}
+
+/**
+ * Submit handler: builds a batch over all indexed nodes.
+ */
+function quant_search_index_form_submit($form, &$form_state) {
+  $config = variable_get('quant_search_entities', array());
+  $bundles = !empty($config['node']['bundles']) ? $config['node']['bundles'] : array();
+  if (empty($config['node']['enabled']) || empty($bundles)) {
+    drupal_set_message(t('No content types are configured for indexing.'), 'warning');
+    return;
+  }
+  $nids = db_select('node', 'n')
+    ->fields('n', array('nid'))
+    ->condition('status', 1)
+    ->condition('type', $bundles, 'IN')
+    ->execute()
+    ->fetchCol();
+
+  $operations = array();
+  foreach (array_chunk($nids, 50) as $chunk) {
+    $operations[] = array('quant_search_index_batch_op', array($chunk));
+  }
+  batch_set(array(
+    'title' => t('Indexing content'),
+    'operations' => $operations,
+    'finished' => 'quant_search_index_batch_finished',
+    'file' => drupal_get_path('module', 'quant_search') . '/quant_search.admin.inc',
+  ));
+}
+
+/**
+ * Batch operation: index one chunk of node ids.
+ */
+function quant_search_index_batch_op($nids, &$context) {
+  module_load_include('inc', 'quant_search', 'quant_search.index');
+  module_load_include('inc', 'quant_search', 'quant_search.api');
+  $records = array();
+  foreach (node_load_multiple($nids) as $node) {
+    $record = quant_search_generate_record($node);
+    if ($record) {
+      $records[] = $record;
+    }
+  }
+  if ($records) {
+    quant_search_api_send_records($records);
+  }
+  $context['results']['count'] = (isset($context['results']['count']) ? $context['results']['count'] : 0) + count($records);
+}
+
+/**
+ * Batch finished callback.
+ */
+function quant_search_index_batch_finished($success, $results, $operations) {
+  if ($success) {
+    drupal_set_message(t('Indexed @n records.', array('@n' => isset($results['count']) ? $results['count'] : 0)));
+  }
+  else {
+    drupal_set_message(t('Indexing finished with errors.'), 'error');
+  }
+}
+
+/**
+ * Form: confirm clearing the whole index.
+ */
+function quant_search_clear_form($form, &$form_state) {
+  return confirm_form(
+    array(),
+    t('Clear the entire Quant search index?'),
+    'admin/config/services/quant/search',
+    t('This removes every record. It cannot be undone.'),
+    t('Clear index'),
+    t('Cancel')
+  );
+}
+
+/**
+ * Submit handler: clears the index.
+ */
+function quant_search_clear_form_submit($form, &$form_state) {
+  module_load_include('inc', 'quant_search', 'quant_search.api');
+  if (quant_search_api_clear()) {
+    drupal_set_message(t('Search index cleared.'));
+  }
+  else {
+    drupal_set_message(t('Failed to clear the search index.'), 'error');
+  }
+  $form_state['redirect'] = 'admin/config/services/quant/search';
+}
