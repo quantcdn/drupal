@@ -185,6 +185,10 @@ function quant_search_block_info() {
       );
     }
   }
+  $blocks['autocomplete'] = array(
+    'info' => t('Quant search: autocomplete'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
   return $blocks;
 }
 
@@ -192,6 +196,44 @@ function quant_search_block_info() {
  * Implements hook_block_view().
  */
 function quant_search_block_view($delta = '') {
+  if ($delta === 'autocomplete') {
+    module_load_include('inc', 'quant_search', 'quant_search.pages');
+    module_load_include('inc', 'quant_search', 'quant_search.theme');
+    module_load_include('inc', 'quant_search', 'quant_search.api');
+    $page_name = variable_get('quant_search_autocomplete_page', '');
+    $page = $page_name ? quant_search_page_load_by_name($page_name) : FALSE;
+    $project = quant_search_api_project();
+    if (!$page || !$project || empty($project->config->search_enabled)) {
+      return NULL;
+    }
+    $index = $project->config->search_index;
+    $module_path = drupal_get_path('module', 'quant_search');
+    return array(
+      'subject' => '',
+      'content' => array(
+        '#markup' => '<div id="quant-search-autocomplete"></div>',
+        '#attached' => array(
+          'js' => array(
+            array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js'),
+            array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js'),
+            $module_path . '/js/quant-autocomplete.js',
+            array('type' => 'setting', 'data' => array('quantSearchAutocomplete' => array(
+              'app_id' => $index->algolia_application_id,
+              'read_key' => $index->algolia_read_key,
+              'index' => $index->algolia_index,
+              'placeholder' => variable_get('quant_search_autocomplete_placeholder', t('Search')),
+              'show_summary' => (bool) variable_get('quant_search_autocomplete_summary', FALSE),
+              'search_path' => '/' . $page['route'],
+              'filters' => quant_search_build_filters($page),
+            ))),
+          ),
+          'css' => array(
+            array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/@algolia/autocomplete-theme-classic'),
+          ),
+        ),
+      ),
+    );
+  }
   if (strpos($delta, 'page_') !== 0) {
     return NULL;
   }
@@ -205,4 +247,48 @@ function quant_search_block_view($delta = '') {
     'subject' => '',
     'content' => quant_search_render($page),
   );
+}
+
+/**
+ * Implements hook_block_configure().
+ */
+function quant_search_block_configure($delta = '') {
+  $form = array();
+  if ($delta === 'autocomplete') {
+    module_load_include('inc', 'quant_search', 'quant_search.pages');
+    $options = array('' => t('- Select -'));
+    foreach (quant_search_page_load_all(TRUE) as $page) {
+      if ($page['route'] !== '') {
+        $options[$page['machine_name']] = $page['label'];
+      }
+    }
+    $form['quant_search_autocomplete_page'] = array(
+      '#type' => 'select',
+      '#title' => t('Search page to submit to'),
+      '#options' => $options,
+      '#default_value' => variable_get('quant_search_autocomplete_page', ''),
+    );
+    $form['quant_search_autocomplete_placeholder'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Placeholder text'),
+      '#default_value' => variable_get('quant_search_autocomplete_placeholder', t('Search')),
+    );
+    $form['quant_search_autocomplete_summary'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Show result summaries'),
+      '#default_value' => variable_get('quant_search_autocomplete_summary', FALSE),
+    );
+  }
+  return $form;
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function quant_search_block_save($delta = '', $edit = array()) {
+  if ($delta === 'autocomplete') {
+    variable_set('quant_search_autocomplete_page', $edit['quant_search_autocomplete_page']);
+    variable_set('quant_search_autocomplete_placeholder', $edit['quant_search_autocomplete_placeholder']);
+    variable_set('quant_search_autocomplete_summary', (bool) $edit['quant_search_autocomplete_summary']);
+  }
 }

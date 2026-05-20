@@ -80,4 +80,7 @@ function quant_search_schema() {
  */
 function quant_search_uninstall() {
   variable_del('quant_search_entities');
+  variable_del('quant_search_autocomplete_page');
+  variable_del('quant_search_autocomplete_placeholder');
+  variable_del('quant_search_autocomplete_summary');
 }
