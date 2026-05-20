@@ -8,6 +8,7 @@
 module_load_include('inc', 'quant_search', 'quant_search.api');
 module_load_include('inc', 'quant_search', 'quant_search.index');
 module_load_include('inc', 'quant_search', 'quant_search.pages');
+module_load_include('inc', 'quant_search', 'quant_search.theme');
 
 /**
  * Implements hook_permission().
@@ -18,6 +19,18 @@ function quant_search_permission() {
       'title' => t('Administer Quant Search'),
       'description' => t('Configure the Quant search index and search pages.'),
       'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function quant_search_theme($existing, $type, $theme, $path) {
+  return array(
+    'quant_search_page' => array(
+      'variables' => array('page' => NULL, 'facets' => array(), 'instance' => ''),
+      'template' => 'templates/quant-search-page',
     ),
   );
 }
@@ -105,6 +118,19 @@ function quant_search_menu() {
     'file' => 'quant_search.pages.inc',
   );
 
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  foreach (quant_search_page_load_all(TRUE) as $page) {
+    if ($page['route'] !== '') {
+      $items[$page['route']] = array(
+        'title' => $page['title'] !== '' ? $page['title'] : $page['label'],
+        'page callback' => 'quant_search_view_page',
+        'page arguments' => array($page['machine_name']),
+        'access arguments' => array('access content'),
+        'type' => MENU_NORMAL_ITEM,
+      );
+    }
+  }
+
   return $items;
 }
 
@@ -127,4 +153,20 @@ function quant_search_node_update($node) {
   // Note: per-record removal on unpublish is not supported by the current
   // Quant search API (no single-record DELETE). Unpublished/deleted content
   // is reconciled by the next full re-index. See README.
+}
+
+/**
+ * Page callback: renders a search page by machine name.
+ */
+function quant_search_view_page($machine_name) {
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  module_load_include('inc', 'quant_search', 'quant_search.theme');
+  $page = quant_search_page_load_by_name($machine_name);
+  if (!$page || !$page['status']) {
+    return MENU_NOT_FOUND;
+  }
+  if (!empty($page['title'])) {
+    drupal_set_title($page['title']);
+  }
+  return quant_search_render($page);
 }

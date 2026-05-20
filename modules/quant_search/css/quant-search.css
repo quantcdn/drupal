@@ -1,0 +1,8 @@
+.quant-search-grid { display: flex; gap: 2rem; }
+.quant-search-facets { flex: 0 0 240px; }
+.quant-search-results { flex: 1 1 auto; }
+.quant-search-facet { margin-bottom: 1.5rem; }
+.quant-search-facet-heading { font-weight: bold; margin-bottom: .5rem; }
+.quant-search-date-range { display: flex; gap: .5rem; }
+.quant-search-date-range label { display: flex; flex-direction: column; font-size: .85em; }
+@media (max-width: 700px) { .quant-search-grid { flex-direction: column; } }
