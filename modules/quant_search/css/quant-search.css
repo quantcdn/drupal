@@ -1,33 +1,48 @@
 /* Two-column grid: facets sidebar + results. */
-.quant-search-grid { display: flex; gap: 2rem; }
+.quant-search-grid { display: flex; gap: 2rem; align-items: flex-start; }
 .quant-search-facets { flex: 0 0 240px; }
 .quant-search-results { flex: 1 1 auto; min-width: 0; }
 .quant-search-facet { margin-bottom: 1.5rem; }
 .quant-search-facet-heading { font-weight: bold; margin-bottom: .5rem; }
-.quant-search-date-range { display: flex; gap: .5rem; }
+.quant-search-date-range { display: flex; flex-wrap: wrap; gap: .5rem; }
 .quant-search-date-range label { display: flex; flex-direction: column; font-size: .85em; }
 
 /* Layout toolbar. */
 .quant-search-toolbar { display: flex; justify-content: flex-end; gap: .25rem; margin-bottom: 1rem; }
-.quant-search-toolbar button { padding: .25rem .9rem; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: .9em; }
+.quant-search-toolbar button { padding: .35rem 1rem; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: .9em; border-radius: 4px; }
 .quant-search-toolbar button.is-active { background: #333; color: #fff; border-color: #333; }
 
 /* Shared hit styles. */
 .qs-hit { display: block; text-decoration: none; color: inherit; }
+.qs-hit:hover .qs-hit-title { text-decoration: underline; }
 .qs-hit-title { margin: 0; }
 .qs-hit-sessions { color: #555; font-size: .9em; margin: .25rem 0; }
-.qs-hit-summary { color: #444; font-size: .95em; }
+.qs-hit-summary { color: #444; font-size: .95em; line-height: 1.45; }
 
-/* Cards layout — responsive grid. */
-.quant-search--layout-card .ais-Hits-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; list-style: none; padding: 0; margin: 0; }
-.quant-search--layout-card .ais-Hits-item { border: 1px solid #e5e5e5; border-radius: 6px; padding: 1rem; background: #fff; }
-.quant-search--layout-card .qs-hit-image { width: 100%; height: 180px; object-fit: cover; display: block; margin-bottom: .75rem; border-radius: 4px; }
+/* Cards layout. Image bleeds edge-to-edge, fixed aspect ratio, generous columns. */
+.quant-search--layout-card .ais-Hits-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.75rem; list-style: none; padding: 0; margin: 0; }
+.quant-search--layout-card .ais-Hits-item { border: 1px solid #e5e5e5; border-radius: 8px; background: #fff; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .15s ease, transform .15s ease; }
+.quant-search--layout-card .ais-Hits-item:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); transform: translateY(-2px); }
+.quant-search--layout-card .qs-hit { display: flex; flex-direction: column; height: 100%; }
+.quant-search--layout-card .qs-hit-image { width: 100%; aspect-ratio: 16 / 9; height: auto; object-fit: cover; display: block; margin: 0; border-radius: 0; background: #f3f3f3; }
+.quant-search--layout-card .qs-hit-title { padding: 1rem 1rem 0; font-size: 1.1rem; line-height: 1.3; }
+.quant-search--layout-card .qs-hit-sessions { padding: 0 1rem; margin: .35rem 0; }
+.quant-search--layout-card .qs-hit-summary { padding: 0 1rem 1rem; margin-top: .5rem; }
+/* When the image is missing/hidden, drop the placeholder gap. */
+.quant-search--layout-card .qs-hit-image[hidden] { display: none; }
 
 /* List layout — horizontal rows. */
 .quant-search--layout-list .ais-Hits-list { list-style: none; padding: 0; margin: 0; }
 .quant-search--layout-list .ais-Hits-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
+.quant-search--layout-list .ais-Hits-item:hover { background: #fafafa; }
 .quant-search--layout-list .qs-hit { display: flex; gap: 1rem; align-items: flex-start; }
-.quant-search--layout-list .qs-hit-image { width: 120px; height: 90px; object-fit: cover; flex-shrink: 0; border-radius: 4px; }
-.quant-search--layout-list .qs-hit-body { flex: 1 1 auto; min-width: 0; }
+.quant-search--layout-list .qs-hit-image { width: 140px; aspect-ratio: 16 / 9; height: auto; object-fit: cover; flex-shrink: 0; border-radius: 4px; background: #f3f3f3; }
+.quant-search--layout-list .qs-hit-image[hidden] { display: none; }
 
-@media (max-width: 700px) { .quant-search-grid { flex-direction: column; } .quant-search-facets { flex-basis: auto; } }
+@media (max-width: 700px) {
+  .quant-search-grid { flex-direction: column; }
+  .quant-search-facets { flex-basis: auto; }
+  .quant-search--layout-card .ais-Hits-list { grid-template-columns: 1fr; }
+  .quant-search--layout-list .qs-hit { flex-direction: column; }
+  .quant-search--layout-list .qs-hit-image { width: 100%; }
+}

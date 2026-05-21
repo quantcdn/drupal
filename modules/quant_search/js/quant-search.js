@@ -177,7 +177,7 @@
         item: function (hit) {
           var url = Drupal.quantSearch.safeUrl(hit.url);
           var image = Drupal.quantSearch.safeUrl(hit.image);
-          var img = image ? '<img src="' + image + '" alt="" class="qs-hit-image" />' : '';
+          var img = image ? '<img src="' + image + '" alt="" class="qs-hit-image" onerror="this.hidden=true" />' : '';
           var summary = hit.summary
             ? '<div class="qs-hit-summary">' + Drupal.checkPlain(hit.summary) + '</div>' : '';
           var sessions = Drupal.quantSearch.formatSessionInfo(hit, dateFacetKeys, dateRefinements);
