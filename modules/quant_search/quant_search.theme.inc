@@ -106,6 +106,11 @@ function quant_search_render($page) {
     ),
   );
 
+  // Let other modules and themes mutate the per-instance settings before
+  // they ship to the browser. The reference is to the inner per-instance
+  // array so implementations do not have to dig through the wrapper.
+  drupal_alter('quant_search_settings', $settings['quantSearch'][$instance], $page);
+
   $module_path = drupal_get_path('module', 'quant_search');
   return array(
     '#theme' => 'quant_search_page',
