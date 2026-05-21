@@ -228,6 +228,9 @@
       Drupal.quantSearch.applyLayout(instance, layout);
     });
     results.insertBefore(bar, results.firstChild);
+    // Mark the initial layout's button active.
+    var activeBtn = bar.querySelector('button[data-qs-layout="' + initial + '"]');
+    if (activeBtn) { activeBtn.classList.add('is-active'); }
   };
 
   /**
