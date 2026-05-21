@@ -1,0 +1,294 @@
+<?php
+
+/**
+ * @file
+ * Quant Search: index content to Quant hosted search and build search pages.
+ */
+
+module_load_include('inc', 'quant_search', 'quant_search.api');
+module_load_include('inc', 'quant_search', 'quant_search.index');
+module_load_include('inc', 'quant_search', 'quant_search.pages');
+module_load_include('inc', 'quant_search', 'quant_search.theme');
+
+/**
+ * Implements hook_permission().
+ */
+function quant_search_permission() {
+  return array(
+    'administer quant search' => array(
+      'title' => t('Administer Quant Search'),
+      'description' => t('Configure the Quant search index and search pages.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function quant_search_theme($existing, $type, $theme, $path) {
+  return array(
+    'quant_search_page' => array(
+      'variables' => array('page' => NULL, 'facets' => array(), 'instance' => ''),
+      'template' => 'templates/quant-search-page',
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function quant_search_menu() {
+  $items = array();
+
+  $items['admin/config/services/quant/search'] = array(
+    'title' => 'Search',
+    'description' => 'Quant hosted search configuration.',
+    'page callback' => 'quant_search_admin_overview',
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 60,
+    'file' => 'quant_search.admin.inc',
+  );
+  $items['admin/config/services/quant/search/overview'] = array(
+    'title' => 'Overview',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/config/services/quant/search/entities'] = array(
+    'title' => 'Entities',
+    'description' => 'Choose which content is indexed.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_entities_form'),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+    'file' => 'quant_search.admin.inc',
+  );
+  $items['admin/config/services/quant/search/index'] = array(
+    'title' => 'Index',
+    'description' => 'Re-index all content.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_index_form'),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 20,
+    'file' => 'quant_search.admin.inc',
+  );
+  $items['admin/config/services/quant/search/clear'] = array(
+    'title' => 'Clear index',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_clear_form'),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_ACTION,
+    'weight' => 30,
+    'file' => 'quant_search.admin.inc',
+  );
+  $items['admin/config/services/quant/search/pages'] = array(
+    'title' => 'Pages',
+    'description' => 'Manage search pages.',
+    'page callback' => 'quant_search_pages_list',
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+    'file' => 'quant_search.pages.inc',
+  );
+  $items['admin/config/services/quant/search/pages/add'] = array(
+    'title' => 'Add search page',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_page_form'),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'quant_search.pages.inc',
+  );
+  $items['admin/config/services/quant/search/pages/%/edit'] = array(
+    'title' => 'Edit search page',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_page_form', 6),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_CALLBACK,
+    'file' => 'quant_search.pages.inc',
+  );
+  $items['admin/config/services/quant/search/pages/%/delete'] = array(
+    'title' => 'Delete search page',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quant_search_page_delete_form', 6),
+    'access arguments' => array('administer quant search'),
+    'type' => MENU_CALLBACK,
+    'file' => 'quant_search.pages.inc',
+  );
+
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  foreach (quant_search_page_load_all(TRUE) as $page) {
+    if ($page['route'] !== '') {
+      $items[$page['route']] = array(
+        'title' => $page['title'] !== '' ? $page['title'] : $page['label'],
+        'page callback' => 'quant_search_view_page',
+        'page arguments' => array($page['machine_name']),
+        'access arguments' => array('access content'),
+        'type' => MENU_NORMAL_ITEM,
+      );
+    }
+  }
+
+  return $items;
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function quant_search_node_insert($node) {
+  if (!empty($node->status)) {
+    quant_search_index_node($node);
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function quant_search_node_update($node) {
+  if (!empty($node->status)) {
+    quant_search_index_node($node);
+  }
+  // Note: per-record removal on unpublish is not supported by the current
+  // Quant search API (no single-record DELETE). Unpublished/deleted content
+  // is reconciled by the next full re-index. See README.
+}
+
+/**
+ * Page callback: renders a search page by machine name.
+ */
+function quant_search_view_page($machine_name) {
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  module_load_include('inc', 'quant_search', 'quant_search.theme');
+  $page = quant_search_page_load_by_name($machine_name);
+  if (!$page || !$page['status']) {
+    return MENU_NOT_FOUND;
+  }
+  if (!empty($page['title'])) {
+    drupal_set_title($page['title']);
+  }
+  return quant_search_render($page);
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function quant_search_block_info() {
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  $blocks = array();
+  foreach (quant_search_page_load_all(TRUE) as $page) {
+    if (!empty($page['expose_block'])) {
+      $blocks['page_' . $page['machine_name']] = array(
+        'info' => t('Quant search: !label', array('!label' => $page['label'])),
+        'cache' => DRUPAL_NO_CACHE,
+      );
+    }
+  }
+  $blocks['autocomplete'] = array(
+    'info' => t('Quant search: autocomplete'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function quant_search_block_view($delta = '') {
+  if ($delta === 'autocomplete') {
+    module_load_include('inc', 'quant_search', 'quant_search.pages');
+    module_load_include('inc', 'quant_search', 'quant_search.theme');
+    module_load_include('inc', 'quant_search', 'quant_search.api');
+    $page_name = variable_get('quant_search_autocomplete_page', '');
+    $page = $page_name ? quant_search_page_load_by_name($page_name) : FALSE;
+    $project = quant_search_api_project();
+    if (!$page || empty($page['status']) || empty($page['route']) || !$project || empty($project->config->search_enabled)) {
+      return NULL;
+    }
+    $index = $project->config->search_index;
+    $module_path = drupal_get_path('module', 'quant_search');
+    return array(
+      'subject' => '',
+      'content' => array(
+        '#markup' => '<div id="quant-search-autocomplete"></div>',
+        '#attached' => array(
+          'js' => array(
+            array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js'),
+            array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js'),
+            $module_path . '/js/quant-autocomplete.js',
+            array('type' => 'setting', 'data' => array('quantSearchAutocomplete' => array(
+              'app_id' => $index->algolia_application_id,
+              'read_key' => $index->algolia_read_key,
+              'index' => $index->algolia_index,
+              'placeholder' => variable_get('quant_search_autocomplete_placeholder', t('Search')),
+              'show_summary' => (bool) variable_get('quant_search_autocomplete_summary', FALSE),
+              'search_path' => '/' . $page['route'],
+              'filters' => quant_search_build_filters($page),
+            ))),
+          ),
+          'css' => array(
+            array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/@algolia/autocomplete-theme-classic'),
+          ),
+        ),
+      ),
+    );
+  }
+  if (strpos($delta, 'page_') !== 0) {
+    return NULL;
+  }
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  module_load_include('inc', 'quant_search', 'quant_search.theme');
+  $page = quant_search_page_load_by_name(substr($delta, strlen('page_')));
+  if (!$page || !$page['status']) {
+    return NULL;
+  }
+  return array(
+    'subject' => '',
+    'content' => quant_search_render($page),
+  );
+}
+
+/**
+ * Implements hook_block_configure().
+ */
+function quant_search_block_configure($delta = '') {
+  $form = array();
+  if ($delta === 'autocomplete') {
+    module_load_include('inc', 'quant_search', 'quant_search.pages');
+    $options = array('' => t('- Select -'));
+    foreach (quant_search_page_load_all(TRUE) as $page) {
+      if ($page['route'] !== '') {
+        $options[$page['machine_name']] = $page['label'];
+      }
+    }
+    $form['quant_search_autocomplete_page'] = array(
+      '#type' => 'select',
+      '#title' => t('Search page to submit to'),
+      '#options' => $options,
+      '#default_value' => variable_get('quant_search_autocomplete_page', ''),
+    );
+    $form['quant_search_autocomplete_placeholder'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Placeholder text'),
+      '#default_value' => variable_get('quant_search_autocomplete_placeholder', t('Search')),
+    );
+    $form['quant_search_autocomplete_summary'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Show result summaries'),
+      '#default_value' => variable_get('quant_search_autocomplete_summary', FALSE),
+    );
+  }
+  return $form;
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function quant_search_block_save($delta = '', $edit = array()) {
+  if ($delta === 'autocomplete') {
+    variable_set('quant_search_autocomplete_page', $edit['quant_search_autocomplete_page']);
+    variable_set('quant_search_autocomplete_placeholder', $edit['quant_search_autocomplete_placeholder']);
+    variable_set('quant_search_autocomplete_summary', (bool) $edit['quant_search_autocomplete_summary']);
+  }
+}

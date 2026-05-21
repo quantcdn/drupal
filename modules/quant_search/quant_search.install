@@ -1,0 +1,86 @@
+<?php
+
+/**
+ * @file
+ * Install, schema and uninstall hooks for Quant Search.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function quant_search_schema() {
+  $schema['quant_search_page'] = array(
+    'description' => 'Faceted search page definitions.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'machine_name' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Stable identifier: route, block delta, JS instance id.',
+      ),
+      'label' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'status' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      'route' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Drupal path. Empty means block-only.',
+      ),
+      'expose_block' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'title' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'description' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'config' => array(
+        'type' => 'blob',
+        'size' => 'big',
+        'not null' => FALSE,
+        'serialize' => TRUE,
+        'description' => 'Serialized array: languages, bundles, manual_filters, facets, display.',
+      ),
+    ),
+    'primary key' => array('id'),
+    'unique keys' => array(
+      'machine_name' => array('machine_name'),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_search_uninstall() {
+  variable_del('quant_search_entities');
+  variable_del('quant_search_autocomplete_page');
+  variable_del('quant_search_autocomplete_placeholder');
+  variable_del('quant_search_autocomplete_summary');
+}
