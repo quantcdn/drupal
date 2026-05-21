@@ -95,8 +95,8 @@
     var initialLayout = (function () {
       try { return window.localStorage.getItem(storageKey); } catch (e) { return null; }
     }()) || (cfg.display && cfg.display.layout) || 'card';
-    Drupal.quantSearch.applyLayout(cfg.instance, initialLayout);
     Drupal.quantSearch.installLayoutToolbar(cfg.instance, initialLayout);
+    Drupal.quantSearch.applyLayout(cfg.instance, initialLayout);
 
     var search = instantsearch({
       indexName: cfg.index,
