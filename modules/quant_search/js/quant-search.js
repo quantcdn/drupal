@@ -42,6 +42,49 @@
   };
 
   /**
+   * Returns HTML annotating an event hit with its session count and earliest
+   * in-range date. Returns '' when no date attribute applies.
+   *
+   * @param {object} hit
+   * @param {array} dateFacetKeys
+   *   Attribute names that hold timestamp arrays for this search page.
+   * @param {object} refinements
+   *   Map of attribute name -> {min, max} (in Unix seconds), reflecting the
+   *   active date-range refinement, or empty when no range is applied.
+   */
+  Drupal.quantSearch.formatSessionInfo = function (hit, dateFacetKeys, refinements) {
+    if (!dateFacetKeys || !dateFacetKeys.length) { return ''; }
+    for (var i = 0; i < dateFacetKeys.length; i++) {
+      var key = dateFacetKeys[i];
+      var values = hit && hit[key];
+      if (!values) { continue; }
+      if (!Array.isArray(values)) { values = [values]; }
+      var ref = refinements[key];
+      var inRange = values.filter(function (ts) {
+        if (typeof ts !== 'number') { return false; }
+        if (ref && ref.min !== undefined && ts < ref.min) { return false; }
+        if (ref && ref.max !== undefined && ts > ref.max) { return false; }
+        return true;
+      });
+      if (!inRange.length) { continue; }
+      inRange.sort(function (a, b) { return a - b; });
+      var label;
+      if (inRange.length === 1) {
+        label = Drupal.t('1 session');
+      }
+      else {
+        label = Drupal.t('@n sessions', { '@n': inRange.length });
+      }
+      var first = new Date(inRange[0] * 1000);
+      var dateText = first.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      var nextWord = ref ? Drupal.t('from') : Drupal.t('next');
+      return '<div class="qs-hit-sessions"><strong>' + label + '</strong> · ' +
+        nextWord + ' ' + Drupal.checkPlain(dateText) + '</div>';
+    }
+    return '';
+  };
+
+  /**
    * Builds and starts one InstantSearch instance.
    */
   Drupal.quantSearch.build = function (cfg) {
@@ -71,6 +114,12 @@
       widgets.push(instantsearch.widgets.clearRefinements({ container: id('clear') }));
     }
 
+    // Track active date-range refinements for use in the hits template.
+    var dateRefinements = {};
+    var dateFacetKeys = (cfg.facets || []).filter(function (f) {
+      return f.widget === 'date' || f.type === 'date_range';
+    }).map(function (f) { return f.facet_key; });
+
     // Facets.
     (cfg.facets || []).forEach(function (facet) {
       var container = id('facet-' + facet.facet_container);
@@ -94,7 +143,15 @@
           break;
 
         case 'date':
-          widgets.push(Drupal.quantSearch.dateRangeWidget(container, facet.facet_key));
+          (function (key) {
+            widgets.push(Drupal.quantSearch.dateRangeWidget(container, key, function (min, max) {
+              if (min === undefined && max === undefined) {
+                delete dateRefinements[key];
+              } else {
+                dateRefinements[key] = { min: min, max: max };
+              }
+            }));
+          }(facet.facet_key));
           break;
       }
     });
@@ -115,9 +172,10 @@
           var img = image ? '<img src="' + image + '" alt="" class="qs-hit-image" />' : '';
           var summary = hit.summary
             ? '<div class="qs-hit-summary">' + Drupal.checkPlain(hit.summary) + '</div>' : '';
+          var sessions = Drupal.quantSearch.formatSessionInfo(hit, dateFacetKeys, dateRefinements);
           return '<a class="qs-hit" href="' + url + '">' + img +
             '<h4 class="qs-hit-title">' + Drupal.checkPlain(hit.title || '') + '</h4>' +
-            summary + '</a>';
+            sessions + summary + '</a>';
         }
       }
     }));
@@ -133,7 +191,7 @@
    * recurring dates); the search backend matches a numeric range against any
    * value in the array.
    */
-  Drupal.quantSearch.dateRangeWidget = function (container, attribute) {
+  Drupal.quantSearch.dateRangeWidget = function (container, attribute, onChange) {
     var render = function (renderOptions, isFirstRender) {
       var node = document.querySelector(container);
       if (!node) { return; }
@@ -148,6 +206,7 @@
           var to = node.querySelector('.qs-date-to').value;
           var min = from ? Math.floor(new Date(from + 'T00:00:00').getTime() / 1000) : undefined;
           var max = to ? Math.floor(new Date(to + 'T23:59:59').getTime() / 1000) : undefined;
+          if (typeof onChange === 'function') { onChange(min, max); }
           renderOptions.refine([min, max]);
         };
         node.querySelector('.qs-date-from').addEventListener('change', apply);
