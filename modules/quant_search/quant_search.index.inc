@@ -179,6 +179,19 @@ function quant_search_index_shutdown() {
 }
 
 /**
+ * Returns a site-relative URL for a file URI (e.g. "/sites/default/files/foo.jpg").
+ *
+ * file_create_url() returns absolute URLs based on Drupal's bootstrapped
+ * $base_url, which is incorrect in CLI/drush context (resolves to "default").
+ * The browser fills in the correct host at render time.
+ */
+function quant_search_relative_file_url($uri) {
+  $absolute = file_create_url($uri);
+  $parts = parse_url($absolute);
+  return isset($parts['path']) ? $parts['path'] : $absolute;
+}
+
+/**
  * Resolves an image URL for an entity given an image_field machine name.
  *
  * Supports direct image fields and entityreference fields (one level). Returns
@@ -195,12 +208,12 @@ function quant_search_node_image_url($node, $field_name) {
   $first = reset($items);
   // Direct image field — has 'uri'.
   if (!empty($first['uri'])) {
-    return file_create_url($first['uri']);
+    return quant_search_relative_file_url($first['uri']);
   }
   // File field (legacy) — has 'fid'.
   if (!empty($first['fid'])) {
     $file = file_load($first['fid']);
-    return $file ? file_create_url($file->uri) : NULL;
+    return $file ? quant_search_relative_file_url($file->uri) : NULL;
   }
   // Entityreference / node_reference — follow one level.
   $target_id = isset($first['target_id']) ? $first['target_id']
@@ -225,7 +238,7 @@ function quant_search_node_image_url($node, $field_name) {
           if ($titems) {
             $tfirst = reset($titems);
             if (!empty($tfirst['uri'])) {
-              return file_create_url($tfirst['uri']);
+              return quant_search_relative_file_url($tfirst['uri']);
             }
           }
         }
