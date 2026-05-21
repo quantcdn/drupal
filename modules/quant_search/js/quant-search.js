@@ -85,6 +85,34 @@
   };
 
   /**
+   * Default hit renderer. Override Drupal.quantSearch.renderHit in site JS
+   * (loaded after this module's JS) to customise card markup.
+   *
+   * The hit object carries every field the indexer wrote — including the
+   * fields named in the per-entity `index_fields` config (e.g. field_cost,
+   * field_booking_status_label). cfg._dateFacetKeys and cfg._dateRefinements
+   * expose the active date-facet state for renderers that want to show
+   * the in-range session count.
+   *
+   * @param {object} hit  The Algolia hit (every indexed field is available).
+   * @param {object} cfg  The InstantSearch config for this instance.
+   * @return {string}     HTML.
+   */
+  Drupal.quantSearch.renderHit = function (hit, cfg) {
+    var url = Drupal.quantSearch.safeUrl(hit.url);
+    var image = Drupal.quantSearch.safeUrl(hit.image);
+    var img = image ? '<img src="' + image + '" alt="" class="qs-hit-image" onerror="this.hidden=true" />' : '';
+    var summary = hit.summary
+      ? '<div class="qs-hit-summary">' + Drupal.checkPlain(hit.summary) + '</div>' : '';
+    var sessions = Drupal.quantSearch.formatSessionInfo(
+      hit, cfg._dateFacetKeys || [], cfg._dateRefinements || {}
+    );
+    return '<a class="qs-hit" href="' + url + '">' + img +
+      '<h4 class="qs-hit-title">' + Drupal.checkPlain(hit.title || '') + '</h4>' +
+      sessions + summary + '</a>';
+  };
+
+  /**
    * Builds and starts one InstantSearch instance.
    */
   Drupal.quantSearch.build = function (cfg) {
@@ -127,6 +155,10 @@
     var dateFacetKeys = (cfg.facets || []).filter(function (f) {
       return f.widget === 'date' || f.type === 'date_range';
     }).map(function (f) { return f.facet_key; });
+
+    // Expose the date-facet state to renderHit overrides via cfg.
+    cfg._dateFacetKeys = dateFacetKeys;
+    cfg._dateRefinements = dateRefinements;
 
     // Facets.
     (cfg.facets || []).forEach(function (facet) {
@@ -174,17 +206,7 @@
       container: id('hits'),
       templates: {
         empty: '<p>' + Drupal.t('No results found.') + '</p>',
-        item: function (hit) {
-          var url = Drupal.quantSearch.safeUrl(hit.url);
-          var image = Drupal.quantSearch.safeUrl(hit.image);
-          var img = image ? '<img src="' + image + '" alt="" class="qs-hit-image" onerror="this.hidden=true" />' : '';
-          var summary = hit.summary
-            ? '<div class="qs-hit-summary">' + Drupal.checkPlain(hit.summary) + '</div>' : '';
-          var sessions = Drupal.quantSearch.formatSessionInfo(hit, dateFacetKeys, dateRefinements);
-          return '<a class="qs-hit" href="' + url + '">' + img +
-            '<h4 class="qs-hit-title">' + Drupal.checkPlain(hit.title || '') + '</h4>' +
-            sessions + summary + '</a>';
-        }
+        item: function (hit) { return Drupal.quantSearch.renderHit(hit, cfg); }
       }
     }));
 
