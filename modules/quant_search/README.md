@@ -48,7 +48,7 @@ Drupal.quantSearch.renderHit = function (hit, cfg) {
     ? '<span class="qs-badge qs-badge--sold-out">' + Drupal.t('Sold Out') + '</span>'
     : '';
   var cost = hit.field_cost
-    ? '<div class="qs-hit-cost">' + Drupal.t('Cost: ') + Drupal.checkPlain(hit.field_cost) + '</div>'
+    ? '<div class="qs-hit-cost">' + Drupal.t('Cost: @cost', {'@cost': hit.field_cost}) + '</div>'
     : '';
   var sessions = Drupal.quantSearch.formatSessionInfo(
     hit, cfg._dateFacetKeys || [], cfg._dateRefinements || {}
