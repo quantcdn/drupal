@@ -27,13 +27,21 @@ function quant_search_generate_record($node) {
   // Token-driven fields.
   $data = array('node' => $node);
   $opts = array('clear' => TRUE, 'sanitize' => FALSE);
-  foreach (array('title' => 'title_token', 'summary' => 'summary_token', 'image' => 'image_token') as $key => $cfg) {
+  foreach (array('title' => 'title_token', 'summary' => 'summary_token') as $key => $cfg) {
     if (!empty($config['node'][$cfg])) {
       $value = trim(token_replace($config['node'][$cfg], $data, $opts));
       if ($value !== '') {
-        $record[$key] = ($key === 'image') ? $value : decode_entities(strip_tags($value));
+        $record[$key] = decode_entities(strip_tags($value));
       }
     }
+  }
+  // Image: prefer image_field with entityref-follow; fall back to image_token.
+  $image = quant_search_node_image_url($node, isset($config['node']['image_field']) ? $config['node']['image_field'] : '');
+  if ($image === NULL && !empty($config['node']['image_token'])) {
+    $image = trim(token_replace($config['node']['image_token'], $data, $opts));
+  }
+  if (!empty($image)) {
+    $record['image'] = $image;
   }
 
   // Rendered body.
@@ -63,6 +71,10 @@ function quant_search_generate_record($node) {
   // Date fields as numeric timestamps.
   $date_fields = isset($config['node']['date_fields']) ? $config['node']['date_fields'] : '';
   $record += quant_search_node_dates($node, $date_fields);
+
+  // Index arbitrary configured fields.
+  $extra = isset($config['node']['index_fields']) ? $config['node']['index_fields'] : '';
+  $record += quant_search_node_extra_fields($node, $extra);
 
   return $record;
 }
@@ -164,4 +176,149 @@ function quant_search_index_shutdown() {
   if ($records) {
     quant_search_api_send_records($records);
   }
+}
+
+/**
+ * Resolves an image URL for an entity given an image_field machine name.
+ *
+ * Supports direct image fields and entityreference fields (one level). Returns
+ * NULL when no image can be resolved.
+ */
+function quant_search_node_image_url($node, $field_name) {
+  if (!$field_name) {
+    return NULL;
+  }
+  $items = field_get_items('node', $node, $field_name);
+  if (!$items) {
+    return NULL;
+  }
+  $first = reset($items);
+  // Direct image field — has 'uri'.
+  if (!empty($first['uri'])) {
+    return file_create_url($first['uri']);
+  }
+  // File field (legacy) — has 'fid'.
+  if (!empty($first['fid'])) {
+    $file = file_load($first['fid']);
+    return $file ? file_create_url($file->uri) : NULL;
+  }
+  // Entityreference / node_reference — follow one level.
+  $target_id = isset($first['target_id']) ? $first['target_id']
+             : (isset($first['nid']) ? $first['nid'] : NULL);
+  if ($target_id) {
+    // Determine entity type by inspecting the field's settings.
+    $info = field_info_field($field_name);
+    $target_type = 'node';
+    if (!empty($info['settings']['target_type'])) {
+      $target_type = $info['settings']['target_type'];
+    }
+    $target = entity_load_single($target_type, $target_id);
+    if ($target) {
+      $target_info = entity_get_info($target_type);
+      $bundle_key = isset($target_info['entity keys']['bundle']) ? $target_info['entity keys']['bundle'] : '';
+      $bundle = $bundle_key && isset($target->{$bundle_key}) ? $target->{$bundle_key} : NULL;
+      // Walk the target's fields looking for an image-type field.
+      foreach (field_info_instances($target_type, $bundle) as $tname => $instance) {
+        $tinfo = field_info_field($tname);
+        if (!empty($tinfo) && $tinfo['type'] === 'image') {
+          $titems = field_get_items($target_type, $target, $tname);
+          if ($titems) {
+            $tfirst = reset($titems);
+            if (!empty($tfirst['uri'])) {
+              return file_create_url($tfirst['uri']);
+            }
+          }
+        }
+      }
+    }
+  }
+  return NULL;
+}
+
+/**
+ * Extracts arbitrary configured fields from a node into search-record keys.
+ *
+ * For each field machine name in $field_names (comma-separated), writes:
+ *  - $record[$field_name] = single value or array of values (raw value)
+ *  - $record[$field_name . '_label'] = the human-readable label when the
+ *    field has allowed_values (list_text / list_integer / list_boolean) or
+ *    is an entityreference / taxonomy_term_reference (the referenced label).
+ */
+function quant_search_node_extra_fields($node, $field_names) {
+  $out = array();
+  $names = array_filter(array_map('trim', explode(',', (string) $field_names)));
+  foreach ($names as $name) {
+    $info = field_info_field($name);
+    if (!$info) {
+      continue;
+    }
+    $items = field_get_items('node', $node, $name);
+    if (!$items) {
+      continue;
+    }
+    $values = array();
+    $labels = array();
+    foreach ($items as $item) {
+      switch ($info['type']) {
+        case 'list_text':
+        case 'list_integer':
+        case 'list_boolean':
+          $v = isset($item['value']) ? $item['value'] : NULL;
+          if ($v === NULL) { break; }
+          $values[] = $v;
+          $allowed = isset($info['settings']['allowed_values']) ? $info['settings']['allowed_values'] : array();
+          if (isset($allowed[$v])) {
+            $labels[] = trim(strip_tags((string) $allowed[$v]));
+          }
+          break;
+
+        case 'taxonomy_term_reference':
+          if (!empty($item['tid'])) {
+            $values[] = (int) $item['tid'];
+            $term = taxonomy_term_load($item['tid']);
+            if ($term) { $labels[] = $term->name; }
+          }
+          break;
+
+        case 'entityreference':
+        case 'node_reference':
+          $tid = isset($item['target_id']) ? $item['target_id']
+               : (isset($item['nid']) ? $item['nid'] : NULL);
+          if ($tid) {
+            $values[] = (int) $tid;
+            $tt = !empty($info['settings']['target_type']) ? $info['settings']['target_type'] : 'node';
+            $t = entity_load_single($tt, $tid);
+            if ($t) {
+              $label = entity_label($tt, $t);
+              if ($label !== FALSE) { $labels[] = $label; }
+            }
+          }
+          break;
+
+        case 'text':
+        case 'text_long':
+        case 'text_with_summary':
+          $v = isset($item['value']) ? $item['value'] : NULL;
+          if ($v === NULL || $v === '') { break; }
+          $values[] = decode_entities(trim(strip_tags((string) $v)));
+          break;
+
+        default:
+          if (isset($item['value'])) { $values[] = $item['value']; }
+      }
+    }
+    if (!$values) {
+      continue;
+    }
+    // Single-cardinality fields → scalar; multi → array.
+    if (!empty($info['cardinality']) && $info['cardinality'] == 1) {
+      $out[$name] = $values[0];
+      if (isset($labels[0])) { $out[$name . '_label'] = $labels[0]; }
+    }
+    else {
+      $out[$name] = $values;
+      if ($labels) { $out[$name . '_label'] = $labels; }
+    }
+  }
+  return $out;
 }

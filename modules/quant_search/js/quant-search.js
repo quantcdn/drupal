@@ -90,6 +90,14 @@
   Drupal.quantSearch.build = function (cfg) {
     var id = function (suffix) { return '#qs-' + cfg.instance + '-' + suffix; };
 
+    // Apply initial layout (admin default, overridable by the visitor's last choice).
+    var storageKey = 'qs-layout-' + cfg.instance;
+    var initialLayout = (function () {
+      try { return window.localStorage.getItem(storageKey); } catch (e) { return null; }
+    }()) || (cfg.display && cfg.display.layout) || 'card';
+    Drupal.quantSearch.applyLayout(cfg.instance, initialLayout);
+    Drupal.quantSearch.installLayoutToolbar(cfg.instance, initialLayout);
+
     var search = instantsearch({
       indexName: cfg.index,
       searchClient: algoliasearch(cfg.app_id, cfg.read_key),
@@ -182,6 +190,44 @@
 
     search.addWidgets(widgets);
     search.start();
+  };
+
+  /**
+   * Sets the active layout class on the wrapper and reflects it on the toolbar.
+   */
+  Drupal.quantSearch.applyLayout = function (instance, layout) {
+    var root = document.getElementById('quant-search-' + instance);
+    if (!root) { return; }
+    root.classList.remove('quant-search--layout-card', 'quant-search--layout-list');
+    root.classList.add('quant-search--layout-' + layout);
+    var buttons = root.querySelectorAll('.quant-search-toolbar button[data-qs-layout]');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].classList.toggle('is-active', buttons[i].getAttribute('data-qs-layout') === layout);
+    }
+  };
+
+  /**
+   * Inserts a Cards/List toggle above the results, persisting the choice in
+   * localStorage keyed by instance.
+   */
+  Drupal.quantSearch.installLayoutToolbar = function (instance, initial) {
+    var root = document.getElementById('quant-search-' + instance);
+    if (!root || root.querySelector('.quant-search-toolbar')) { return; }
+    var results = root.querySelector('.quant-search-results');
+    if (!results) { return; }
+    var bar = document.createElement('div');
+    bar.className = 'quant-search-toolbar';
+    bar.innerHTML =
+      '<button type="button" data-qs-layout="card">' + Drupal.t('Cards') + '</button>' +
+      '<button type="button" data-qs-layout="list">' + Drupal.t('List') + '</button>';
+    bar.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('button[data-qs-layout]');
+      if (!btn) { return; }
+      var layout = btn.getAttribute('data-qs-layout');
+      try { window.localStorage.setItem('qs-layout-' + instance, layout); } catch (err) {}
+      Drupal.quantSearch.applyLayout(instance, layout);
+    });
+    results.insertBefore(bar, results.firstChild);
   };
 
   /**

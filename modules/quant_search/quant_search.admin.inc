@@ -97,6 +97,18 @@ function quant_search_entities_form($form, &$form_state) {
     '#title' => t('Image token'),
     '#default_value' => isset($config['node']['image_token']) ? $config['node']['image_token'] : '',
   );
+  $form['node']['image_field'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Image field'),
+    '#description' => t('Optional: an image or entityreference field machine name. When set, the indexer resolves it to a file URL and overrides the Image token. Entityreference fields are followed one level: the first image field on the target entity is used. Example: field_hero_image'),
+    '#default_value' => isset($config['node']['image_field']) ? $config['node']['image_field'] : '',
+  );
+  $form['node']['index_fields'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Additional fields to index'),
+    '#description' => t('Comma-separated machine names of fields to include in the search record. Each field is indexed under its machine name. For list_* fields with allowed_values, an extra "<field>_label" is also written for human-readable display. Example: field_paid_free, field_cost, field_booking_status'),
+    '#default_value' => isset($config['node']['index_fields']) ? $config['node']['index_fields'] : '',
+  );
   $form['node']['date_fields'] = array(
     '#type' => 'textfield',
     '#title' => t('Date fields'),
@@ -128,6 +140,8 @@ function quant_search_entities_form_submit($form, &$form_state) {
       'title_token' => trim($v['node']['title_token']),
       'summary_token' => trim($v['node']['summary_token']),
       'image_token' => trim($v['node']['image_token']),
+      'image_field' => trim($v['node']['image_field']),
+      'index_fields' => trim($v['node']['index_fields']),
       'date_fields' => trim($v['node']['date_fields']),
     ),
   );

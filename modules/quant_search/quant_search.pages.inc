@@ -62,6 +62,7 @@ function quant_search_page_unpack($row) {
   // Fill nested display defaults so callers that stored an empty display
   // still receive sensible defaults for every sub-key.
   $config['display'] += array(
+    'layout' => 'card',
     'results' => array(),
     'pagination' => array(),
   );
@@ -271,6 +272,16 @@ function quant_search_page_form($form, &$form_state, $id = NULL) {
     '#type' => 'textfield', '#title' => t('Results per page'), '#size' => 5,
     '#default_value' => isset($d['pagination']['per_page']) ? $d['pagination']['per_page'] : 20,
   );
+  $form['display']['layout'] = array(
+    '#type' => 'select',
+    '#title' => t('Default results layout'),
+    '#options' => array(
+      'card' => t('Cards'),
+      'list' => t('List'),
+    ),
+    '#default_value' => isset($d['layout']) ? $d['layout'] : 'card',
+    '#description' => t('Visitors can switch on the page; this sets the initial layout.'),
+  );
 
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Save search page'));
@@ -402,6 +413,7 @@ function quant_search_page_form_submit($form, &$form_state) {
     'manual_filters' => $v['scope']['manual_filters'],
     'facets' => $facets,
     'display' => array(
+      'layout' => $v['display']['layout'],
       'results' => array(
         'display_search' => $v['display']['display_search'],
         'display_stats' => $v['display']['display_stats'],
