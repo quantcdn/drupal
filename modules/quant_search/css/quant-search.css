@@ -19,9 +19,11 @@
 .qs-hit-sessions { color: #555; font-size: .9em; margin: .25rem 0; }
 .qs-hit-summary { color: #444; font-size: .95em; line-height: 1.45; }
 
-/* Cards layout. Image bleeds edge-to-edge, fixed aspect ratio, generous columns. */
+/* Cards layout. Image bleeds edge-to-edge, fixed aspect ratio, generous columns.
+ * Algolia's instantsearch.css forces width:calc(25% - 1em) + padding:1em on every
+ * .ais-Hits-item; explicit width/padding/margin resets here override that. */
 .quant-search--layout-card .ais-Hits-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.75rem; list-style: none; padding: 0; margin: 0; }
-.quant-search--layout-card .ais-Hits-item { border: 1px solid #e5e5e5; border-radius: 8px; background: #fff; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .15s ease, transform .15s ease; }
+.quant-search--layout-card .ais-Hits-item { width: auto; padding: 0; margin: 0; border: 1px solid #e5e5e5; border-radius: 8px; background: #fff; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .15s ease, transform .15s ease; }
 .quant-search--layout-card .ais-Hits-item:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); transform: translateY(-2px); }
 .quant-search--layout-card .qs-hit { display: flex; flex-direction: column; height: 100%; }
 .quant-search--layout-card .qs-hit-image { width: 100%; aspect-ratio: 16 / 9; height: auto; object-fit: cover; display: block; margin: 0; border-radius: 0; background: #f3f3f3; }
@@ -31,9 +33,9 @@
 /* When the image is missing/hidden, drop the placeholder gap. */
 .quant-search--layout-card .qs-hit-image[hidden] { display: none; }
 
-/* List layout — horizontal rows. */
-.quant-search--layout-list .ais-Hits-list { list-style: none; padding: 0; margin: 0; }
-.quant-search--layout-list .ais-Hits-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
+/* List layout — horizontal rows. Same width/padding reset against Algolia defaults. */
+.quant-search--layout-list .ais-Hits-list { display: block; list-style: none; padding: 0; margin: 0; }
+.quant-search--layout-list .ais-Hits-item { width: auto; padding: 1rem 0; margin: 0; border-bottom: 1px solid #eee; }
 .quant-search--layout-list .ais-Hits-item:hover { background: #fafafa; }
 .quant-search--layout-list .qs-hit { display: flex; gap: 1rem; align-items: flex-start; }
 .quant-search--layout-list .qs-hit-image { width: 140px; aspect-ratio: 16 / 9; height: auto; object-fit: cover; flex-shrink: 0; border-radius: 4px; background: #f3f3f3; }
