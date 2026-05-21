@@ -6,6 +6,39 @@
  */
 
 /**
+ * Splits an attached-assets textarea value into #attached entries.
+ *
+ * One path or URL per line. URLs starting with http(s):// are tagged as
+ * 'external'; everything else passes through as a path string (D7's
+ * #attached treats bare strings as files).
+ *
+ * @param string $raw
+ *   Raw textarea value.
+ *
+ * @return array
+ *   List of entries suitable for $build['#attached']['js' or 'css'].
+ */
+function quant_search_split_attached($raw) {
+  $out = array();
+  if (!is_string($raw) || $raw === '') {
+    return $out;
+  }
+  foreach (preg_split('/\R+/', $raw) as $line) {
+    $line = trim($line);
+    if ($line === '') {
+      continue;
+    }
+    if (preg_match('#^https?://#i', $line)) {
+      $out[] = array('type' => 'external', 'data' => $line);
+    }
+    else {
+      $out[] = $line;
+    }
+  }
+  return $out;
+}
+
+/**
  * Computes the index attribute name and container id for each facet.
  *
  * @param array $facets
@@ -112,7 +145,7 @@ function quant_search_render($page) {
   drupal_alter('quant_search_settings', $settings['quantSearch'][$instance], $page);
 
   $module_path = drupal_get_path('module', 'quant_search');
-  return array(
+  $build = array(
     '#theme' => 'quant_search_page',
     '#page' => $page,
     '#facets' => $facets,
@@ -130,4 +163,14 @@ function quant_search_render($page) {
       ),
     ),
   );
+
+  // Per-page attached assets — paths or external URLs, one per line.
+  foreach (quant_search_split_attached($page['display']['attached_js']) as $entry) {
+    $build['#attached']['js'][] = $entry;
+  }
+  foreach (quant_search_split_attached($page['display']['attached_css']) as $entry) {
+    $build['#attached']['css'][] = $entry;
+  }
+
+  return $build;
 }

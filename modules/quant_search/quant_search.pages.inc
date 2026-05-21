@@ -63,6 +63,8 @@ function quant_search_page_unpack($row) {
   // still receive sensible defaults for every sub-key.
   $config['display'] += array(
     'layout' => 'card',
+    'attached_js' => '',
+    'attached_css' => '',
     'results' => array(),
     'pagination' => array(),
   );
@@ -282,6 +284,20 @@ function quant_search_page_form($form, &$form_state, $id = NULL) {
     '#default_value' => isset($d['layout']) ? $d['layout'] : 'card',
     '#description' => t('Visitors can switch on the page; this sets the initial layout.'),
   );
+  $form['display']['attached_js'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Additional JS to attach'),
+    '#description' => t('One path or URL per line. External URLs (http/https) are detected automatically; everything else is treated as a path relative to the Drupal root.'),
+    '#default_value' => isset($d['attached_js']) ? $d['attached_js'] : '',
+    '#rows' => 3,
+  );
+  $form['display']['attached_css'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Additional CSS to attach'),
+    '#description' => t('One path or URL per line.'),
+    '#default_value' => isset($d['attached_css']) ? $d['attached_css'] : '',
+    '#rows' => 3,
+  );
 
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Save search page'));
@@ -416,6 +432,8 @@ function quant_search_page_form_submit($form, &$form_state) {
     'facets' => $facets,
     'display' => array(
       'layout' => $v['display']['layout'],
+      'attached_js' => trim($v['display']['attached_js']),
+      'attached_css' => trim($v['display']['attached_css']),
       'results' => array(
         'display_search' => $v['display']['display_search'],
         'display_stats' => $v['display']['display_stats'],
