@@ -182,6 +182,10 @@
           }));
           break;
 
+        case 'radio':
+          widgets.push(Drupal.quantSearch.radioWidget(container, facet.facet_key, facet.limit || 10));
+          break;
+
         case 'date':
           (function (key) {
             widgets.push(Drupal.quantSearch.dateRangeWidget(container, key, function (min, max) {
@@ -253,6 +257,45 @@
     // Mark the initial layout's button active.
     var activeBtn = bar.querySelector('button[data-qs-layout="' + initial + '"]');
     if (activeBtn) { activeBtn.classList.add('is-active'); }
+  };
+
+  /**
+   * Single-select facet widget rendered as radio inputs with an "All" option.
+   *
+   * Backed by InstantSearch's connectMenu connector.
+   */
+  Drupal.quantSearch.radioWidget = function (container, attribute, limit) {
+    var name = 'qs-radio-' + attribute;
+    var render = function (renderOptions, isFirstRender) {
+      var node = document.querySelector(container);
+      if (!node) { return; }
+      if (isFirstRender) {
+        node.classList.add('quant-search--widget-radio');
+      }
+      var hasSelection = renderOptions.items.some(function (i) { return i.isRefined; });
+      var html = '<label class="qs-radio-item"><input type="radio" name="' + name + '" value=""' +
+                 (hasSelection ? '' : ' checked') + '> ' + Drupal.t('All') + '</label>';
+      renderOptions.items.forEach(function (item) {
+        html += '<label class="qs-radio-item"><input type="radio" name="' + name + '" value="' +
+                Drupal.checkPlain(item.value) + '"' +
+                (item.isRefined ? ' checked' : '') + '> ' +
+                Drupal.checkPlain(item.label) + ' <span class="qs-radio-count">(' + item.count + ')</span></label>';
+      });
+      node.innerHTML = html;
+      Array.from(node.querySelectorAll('input[type="radio"]')).forEach(function (input) {
+        input.addEventListener('change', function (e) {
+          var val = e.target.value;
+          if (val === '') {
+            renderOptions.items.forEach(function (item) {
+              if (item.isRefined) { renderOptions.refine(item.value); }
+            });
+          } else {
+            renderOptions.refine(val);
+          }
+        });
+      });
+    };
+    return instantsearch.connectors.connectMenu(render)({ attribute: attribute, limit: limit });
   };
 
   /**

@@ -48,3 +48,8 @@
   .quant-search--layout-list .qs-hit { flex-direction: column; }
   .quant-search--layout-list .qs-hit-image { width: 100%; }
 }
+
+/* Radio widget — single-select facet. */
+.quant-search--widget-radio { display: flex; flex-direction: column; gap: .35rem; }
+.quant-search--widget-radio .qs-radio-item { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .95em; }
+.quant-search--widget-radio .qs-radio-count { color: #888; font-size: .9em; }

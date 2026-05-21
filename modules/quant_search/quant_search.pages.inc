@@ -308,6 +308,8 @@ function quant_search_page_facet_rows($facets) {
     'checkbox' => t('Checkbox list'),
     'select' => t('Select dropdown'),
     'menu' => t('Menu'),
+    'radio' => t('Radio buttons (single-select)'),
+    'pills' => t('Pill buttons (multi-select)'),
     'date' => t('Date range inputs'),
   );
   $vocab_options = array();
