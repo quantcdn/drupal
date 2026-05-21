@@ -170,6 +170,15 @@
           }));
           break;
 
+        case 'pills':
+          widgets.push(instantsearch.widgets.refinementList({
+            container: container,
+            attribute: facet.facet_key,
+            limit: facet.limit || 10,
+            cssClasses: { root: 'quant-search--widget-pills' }
+          }));
+          break;
+
         case 'select':
           widgets.push(instantsearch.widgets.menuSelect({
             container: container, attribute: facet.facet_key, limit: facet.limit || 10

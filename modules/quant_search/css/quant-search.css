@@ -53,3 +53,12 @@
 .quant-search--widget-radio { display: flex; flex-direction: column; gap: .35rem; }
 .quant-search--widget-radio .qs-radio-item { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .95em; }
 .quant-search--widget-radio .qs-radio-count { color: #888; font-size: .9em; }
+
+/* Pills widget — multi-select facet styled as toggle buttons. */
+.quant-search--widget-pills .ais-RefinementList-list { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 0; }
+.quant-search--widget-pills .ais-RefinementList-item { margin: 0; padding: 0; }
+.quant-search--widget-pills .ais-RefinementList-label { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .9rem; border: 1px solid #ccc; border-radius: 9999px; background: #fff; cursor: pointer; font-size: .9em; line-height: 1.2; }
+.quant-search--widget-pills .ais-RefinementList-checkbox { position: absolute; opacity: 0; pointer-events: none; }
+.quant-search--widget-pills .ais-RefinementList-item--selected .ais-RefinementList-label,
+.quant-search--widget-pills .ais-RefinementList-label:has(input:checked) { background: #333; color: #fff; border-color: #333; }
+.quant-search--widget-pills .ais-RefinementList-count { color: inherit; opacity: .7; font-size: .85em; }
