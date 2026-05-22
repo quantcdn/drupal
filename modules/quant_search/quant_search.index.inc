@@ -65,17 +65,6 @@ function quant_search_generate_record($node) {
     }
   }
 
-  // Cap the indexed content. The opening text drives search relevance; full
-  // transcripts / long bodies bloat the record (a 50-record batch of 29 KB
-  // transcripts is ~1.5 MB, which the backend accepts synchronously but then
-  // silently drops during async indexing). Capping keeps batch payloads small
-  // and the index lean. Override with the 'quant_search_content_maxlen'
-  // variable; 0 disables the cap.
-  $maxlen = variable_get('quant_search_content_maxlen', 6000);
-  if ($maxlen > 0 && drupal_strlen($record['content']) > $maxlen) {
-    $record['content'] = drupal_substr($record['content'], 0, $maxlen);
-  }
-
   // Core attributes.
   $uri = entity_uri('node', $node);
   $record['url'] = '/' . drupal_get_path_alias($uri['path']);
