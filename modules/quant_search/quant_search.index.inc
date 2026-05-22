@@ -49,6 +49,22 @@ function quant_search_generate_record($node) {
   $build = node_view($node, $view_mode);
   $record['content'] = decode_entities(trim(strip_tags(drupal_render($build))));
 
+  // The search backend rejects records with an empty 'content' value. Some
+  // content types (e.g. pages whose view mode renders no body text) produce
+  // empty content; fall back to the summary, then the title, so every node
+  // stays indexable.
+  if ($record['content'] === '') {
+    if (!empty($record['summary'])) {
+      $record['content'] = $record['summary'];
+    }
+    elseif (!empty($record['title'])) {
+      $record['content'] = $record['title'];
+    }
+    else {
+      $record['content'] = $node->title;
+    }
+  }
+
   // Core attributes.
   $uri = entity_uri('node', $node);
   $record['url'] = '/' . drupal_get_path_alias($uri['path']);
