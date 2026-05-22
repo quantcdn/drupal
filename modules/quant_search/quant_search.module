@@ -292,3 +292,30 @@ function quant_search_block_save($delta = '', $edit = array()) {
     variable_set('quant_search_autocomplete_summary', (bool) $edit['quant_search_autocomplete_summary']);
   }
 }
+
+/**
+ * Implements hook_quant_seed_queue().
+ *
+ * Adds every enabled search page's route to the Quant seed queue so the
+ * static HTML shell (plus its InstantSearch JS and injected read-only search
+ * credentials) is pushed to QuantCDN. The search runs client-side, so the
+ * seeded snapshot is fully functional — facets and all — against the live
+ * search backend. Re-seed after changing a search page's facet/display
+ * config, since those settings are baked into the snapshot.
+ *
+ * Only relevant for static-export deployments; app deployments serve the
+ * route live and do not need seeding.
+ */
+function quant_search_quant_seed_queue() {
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  $queue = quant_get_queue();
+  $base = quant_get_base_url();
+  $context = array('type' => 'quant_search_page');
+  foreach (quant_search_page_load_all(TRUE) as $page) {
+    if ($page['route'] !== '') {
+      $url = url($page['route'], array('absolute' => TRUE, 'base_url' => $base));
+      $queue->createItem(array('quant_seed', array($url, $context)));
+      quant_log('Quant Search: queued search page [!path] for seeding.', array('!path' => $page['route']));
+    }
+  }
+}

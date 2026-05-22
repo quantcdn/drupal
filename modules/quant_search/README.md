@@ -22,6 +22,23 @@ autocomplete block.
    route and/or expose the page as a block, and add facets (taxonomy, content
    type, language, date range, or custom).
 
+## Static export / seeding
+
+`quant_search` implements `hook_quant_seed_queue()`, so when the `quant`
+module seeds the site to QuantCDN every **enabled search page with a route**
+is automatically queued — no need to list it in the seed "custom routes" box.
+The seeded snapshot is the HTML shell plus the InstantSearch JS and the
+injected read-only search credentials; because the search runs entirely
+client-side, the static page is fully functional (facets and all) against the
+live search backend.
+
+Re-seed a search page after changing its facet or display configuration —
+those settings are baked into the snapshot. New *content* does not require
+re-seeding the page; it is queried live.
+
+App deployments (server-rendered Drupal, e.g. on Quant Cloud) serve the route
+live and do not need seeding.
+
 ## Known limitations
 
 - The Quant search API exposes no single-record delete. Unpublished or deleted
