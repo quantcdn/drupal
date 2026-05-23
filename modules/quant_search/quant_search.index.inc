@@ -16,8 +16,7 @@
  */
 function quant_search_generate_record($node) {
   $config = variable_get('quant_search_entities', array());
-  if (empty($config['node']['enabled']) || empty($config['node']['bundles'])
-      || !in_array($node->type, $config['node']['bundles'], TRUE)) {
+  if (!quant_search_node_is_indexable($node)) {
     return FALSE;
   }
 
@@ -66,8 +65,7 @@ function quant_search_generate_record($node) {
   }
 
   // Core attributes.
-  $uri = entity_uri('node', $node);
-  $record['url'] = '/' . drupal_get_path_alias($uri['path']);
+  $record['url'] = quant_search_node_url($node);
   $record['lang_code'] = $langcode;
   $record['content_type'] = $node->type;
   $type_info = node_type_get_type($node);
@@ -191,6 +189,63 @@ function quant_search_index_shutdown() {
   $pending = array();
   if ($records) {
     quant_search_api_send_records($records);
+  }
+}
+
+/**
+ * Returns TRUE if the node's bundle is configured for indexing.
+ *
+ * Shared by the index and unindex paths so they agree on which nodes the
+ * module manages in the search index.
+ */
+function quant_search_node_is_indexable($node) {
+  $config = variable_get('quant_search_entities', array());
+  return !empty($config['node']['enabled'])
+    && !empty($config['node']['bundles'])
+    && in_array($node->type, $config['node']['bundles'], TRUE);
+}
+
+/**
+ * Returns the search-record URL for a node: '/' . path alias.
+ *
+ * This is both the value stored in a record's 'url' attribute and the key used
+ * to remove the record from the index again, so indexing and unindexing stay
+ * in lock-step.
+ */
+function quant_search_node_url($node) {
+  $uri = entity_uri('node', $node);
+  return '/' . drupal_get_path_alias($uri['path']);
+}
+
+/**
+ * Queues a node for removal from the search index after the response.
+ *
+ * Mirrors quant_search_index_node(): the API call runs in a shutdown function
+ * so the content operation takes no latency hit. The URL is captured now —
+ * while the node and its alias are still available — and sent later.
+ */
+function quant_search_unindex_node($node) {
+  if (!quant_search_node_is_indexable($node)) {
+    return;
+  }
+  $url = quant_search_node_url($node);
+  $pending = &drupal_static('quant_search_pending_deletes', array());
+  $pending[$url] = $url;
+  drupal_register_shutdown_function('quant_search_unindex_shutdown');
+}
+
+/**
+ * Shutdown callback: removes queued URLs (all their chunks) from the index.
+ */
+function quant_search_unindex_shutdown() {
+  $pending = &drupal_static('quant_search_pending_deletes', array());
+  if (empty($pending)) {
+    return;
+  }
+  $urls = $pending;
+  $pending = array();
+  foreach ($urls as $url) {
+    quant_search_api_delete_record($url);
   }
 }
 

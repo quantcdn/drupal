@@ -39,10 +39,25 @@ re-seeding the page; it is queried live.
 App deployments (server-rendered Drupal, e.g. on Quant Cloud) serve the route
 live and do not need seeding.
 
+## Indexing lifecycle
+
+Content stays in sync with the index automatically:
+
+- **Publish / update** a published node → it is (re)indexed.
+- **Unpublish or delete** a node → it is removed from the index (all of its
+  content chunks) via `DELETE /v1/search`.
+
+Both run in a post-response shutdown function, so content operations take no
+latency hit.
+
 ## Known limitations
 
-- The Quant search API exposes no single-record delete. Unpublished or deleted
-  content is removed from the index by the next full re-index, not immediately.
+- **URL alias changes.** If a node's path alias changes, the record at the old
+  URL is orphaned until the next full re-index (the new URL is indexed
+  immediately). Re-index after bulk alias changes.
+- **Bundle config changes.** Removing a bundle from the indexing config does
+  not retroactively purge already-indexed records of that bundle; run a full
+  re-index to reconcile.
 
 ## Customisation
 

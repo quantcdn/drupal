@@ -147,12 +147,20 @@ function quant_search_node_insert($node) {
  * Implements hook_node_update().
  */
 function quant_search_node_update($node) {
+  // Published nodes are (re)indexed; unpublishing removes them from the index.
   if (!empty($node->status)) {
     quant_search_index_node($node);
   }
-  // Note: per-record removal on unpublish is not supported by the current
-  // Quant search API (no single-record DELETE). Unpublished/deleted content
-  // is reconciled by the next full re-index. See README.
+  else {
+    quant_search_unindex_node($node);
+  }
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function quant_search_node_delete($node) {
+  quant_search_unindex_node($node);
 }
 
 /**

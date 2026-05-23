@@ -93,6 +93,35 @@ function quant_search_api_clear() {
 }
 
 /**
+ * Removes a single search record (all of its content chunks) by URL.
+ *
+ * @param string $url
+ *   The record URL as produced by quant_search_node_url() / stored in the
+ *   record's 'url' attribute. Lower-cased here to match how the backend
+ *   stores 'url' (build_search_record_populated() lower-cases it on write).
+ *
+ * @return bool
+ *   TRUE on HTTP 200.
+ */
+function quant_search_api_delete_record($url) {
+  $url = drupal_strtolower(trim((string) $url));
+  if ($url === '') {
+    return FALSE;
+  }
+  $headers = quant_api_get_request_headers();
+  $headers['Quant-Url'] = $url;
+  $options = array('method' => 'DELETE', 'headers' => $headers, 'timeout' => 30);
+  $response = drupal_http_request(quant_search_api_url('/search'), $options);
+  if ($response->code != 200) {
+    watchdog('quant_search', 'Delete record failed for @url: @code @data',
+      array('@url' => $url, '@code' => $response->code, '@data' => substr((string) $response->data, 0, 500)),
+      WATCHDOG_ERROR);
+    return FALSE;
+  }
+  return TRUE;
+}
+
+/**
  * Registers facetable attribute names with the search backend.
  *
  * @param array $keys
