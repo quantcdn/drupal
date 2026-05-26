@@ -37,16 +37,19 @@
 .quant-search--layout-list .ais-Hits-list { display: block; list-style: none; padding: 0; margin: 0; }
 .quant-search--layout-list .ais-Hits-item { width: auto; padding: 1rem 0; margin: 0; border-bottom: 1px solid #eee; }
 .quant-search--layout-list .ais-Hits-item:hover { background: #fafafa; }
-.quant-search--layout-list .qs-hit { display: flex; gap: 1rem; align-items: flex-start; }
-.quant-search--layout-list .qs-hit-image { width: 140px; aspect-ratio: 16 / 9; height: auto; object-fit: cover; flex-shrink: 0; border-radius: 4px; background: #f3f3f3; }
+/* A true vertical list: each result's title + summary stack full-width, with an
+ * optional thumbnail floated left. (Was display:flex, which turned the title and
+ * summary into two side-by-side columns for results that have no image.) */
+.quant-search--layout-list .qs-hit { display: block; }
+.quant-search--layout-list .qs-hit::after { content: ""; display: block; clear: both; }
+.quant-search--layout-list .qs-hit-image { float: left; width: 120px; aspect-ratio: 16 / 9; height: auto; object-fit: cover; margin: .15rem 1rem .25rem 0; border-radius: 4px; background: #f3f3f3; }
 .quant-search--layout-list .qs-hit-image[hidden] { display: none; }
 
 @media (max-width: 700px) {
   .quant-search-grid { flex-direction: column; }
   .quant-search-facets { flex-basis: auto; }
   .quant-search--layout-card .ais-Hits-list { grid-template-columns: 1fr; }
-  .quant-search--layout-list .qs-hit { flex-direction: column; }
-  .quant-search--layout-list .qs-hit-image { width: 100%; }
+  .quant-search--layout-list .qs-hit-image { width: 90px; }
 }
 
 /* Radio widget — single-select facet. */
