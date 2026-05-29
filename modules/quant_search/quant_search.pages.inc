@@ -386,23 +386,35 @@ function quant_search_page_form_remove_facet($form, &$form_state) {
 
 /**
  * Reads the current facet values out of submitted form input.
+ *
+ * Prefer the cleaned $form_state['values'], but fall back to the raw
+ * $form_state['input']. The Add facet and Remove facet buttons both set
+ * #limit_validation_errors => array(), which causes Drupal to clear
+ * $form_state['values'] before submit handlers run — so without this fallback
+ * collect_facets() would return an empty array on every Add/Remove click, and
+ * the submit handler would replace the existing rows with a single empty row.
+ * The raw input still holds the user's data and is unaffected by the flag.
  */
 function quant_search_page_collect_facets($form_state) {
   $facets = array();
-  if (!empty($form_state['values']['facets']['rows'])) {
-    foreach ($form_state['values']['facets']['rows'] as $row) {
-      $facets[] = array(
-        'heading' => $row['heading'],
-        'type' => $row['type'],
-        'vocabulary' => $row['vocabulary'],
-        'date_field' => $row['date_field'],
-        'custom_key' => $row['custom_key'],
-        'widget' => $row['widget'],
-        'language' => $row['language'],
-        'limit' => (int) $row['limit'],
-        'weight' => (int) $row['weight'],
-      );
+  $rows = !empty($form_state['values']['facets']['rows'])
+    ? $form_state['values']['facets']['rows']
+    : (!empty($form_state['input']['facets']['rows']) ? $form_state['input']['facets']['rows'] : array());
+  foreach ($rows as $row) {
+    if (!is_array($row)) {
+      continue;
     }
+    $facets[] = array(
+      'heading' => isset($row['heading']) ? $row['heading'] : '',
+      'type' => isset($row['type']) ? $row['type'] : 'taxonomy',
+      'vocabulary' => isset($row['vocabulary']) ? $row['vocabulary'] : '',
+      'date_field' => isset($row['date_field']) ? $row['date_field'] : '',
+      'custom_key' => isset($row['custom_key']) ? $row['custom_key'] : '',
+      'widget' => isset($row['widget']) ? $row['widget'] : 'checkbox',
+      'language' => isset($row['language']) ? $row['language'] : 'en',
+      'limit' => (int) (isset($row['limit']) ? $row['limit'] : 10),
+      'weight' => (int) (isset($row['weight']) ? $row['weight'] : 0),
+    );
   }
   return $facets;
 }
