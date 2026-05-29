@@ -103,14 +103,18 @@ function quant_search_entities_form($form, &$form_state) {
     '#description' => t('Optional: an image or entityreference field machine name. When set, the indexer resolves it to a file URL and overrides the Image token. Entityreference fields are followed one level: the first image field on the target entity is used. Example: field_hero_image'),
     '#default_value' => isset($config['node']['image_field']) ? $config['node']['image_field'] : '',
   );
+  // Textareas (not textfields) so longer field lists don't get silently
+  // truncated at Drupal's default 128-char #maxlength.
   $form['node']['index_fields'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
+    '#rows' => 3,
     '#title' => t('Additional fields to index'),
     '#description' => t('Comma-separated machine names of fields to include in the search record. Each field is indexed under its machine name. For list_* fields with allowed_values, an extra "<field>_label" is also written for human-readable display. Example: field_paid_free, field_cost, field_booking_status'),
     '#default_value' => isset($config['node']['index_fields']) ? $config['node']['index_fields'] : '',
   );
   $form['node']['date_fields'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
+    '#rows' => 2,
     '#title' => t('Date fields'),
     '#description' => t('Comma-separated machine names of date fields to index as numeric timestamps (for date-range facets), e.g. field_event_session.'),
     '#default_value' => isset($config['node']['date_fields']) ? $config['node']['date_fields'] : '',
