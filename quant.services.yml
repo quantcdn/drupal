@@ -41,3 +41,9 @@ services:
   quant.queue_factory:
     class: Drupal\quant\QuantQueueFactory
     parent: queue.database
+
+  quant.asset_generator:
+    class: Drupal\quant\AssetGenerator
+    arguments:
+      - '@http_client'
+      - '@config.factory'

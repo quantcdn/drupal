@@ -156,9 +156,6 @@ class QuantApi implements EventSubscriberInterface {
     $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
 
-    // File redirects happen when using path prefixes.
-    $allow_redirects = Utility::usesLanguagePathPrefixes();
-
     foreach ($media as $item) {
       // @todo Configurable to disallow remote files.
       // @todo Strip base domain.
@@ -197,28 +194,17 @@ class QuantApi implements EventSubscriberInterface {
         }
       }
 
-      // In Drupal 10.1, work around CSS/JS aggregation issues.
+      // Since Drupal 10.1, CSS/JS aggregates are generated on demand and may
+      // not exist on disk. Generate from the original path, which carries
+      // the query parameters the asset controller requires. The aggregate is
+      // persisted under the exact filename the markup references, even when
+      // library definitions have changed and core would only write it under
+      // a corrected filename.
       // Only process internal CSS/JS files.
       $check_file = (str_ends_with($file, 'css') || str_ends_with($file, 'js')) && !str_starts_with($item['original_path'], 'http');
       if (!file_exists($fileOnDisk) && $check_file) {
-
-        // Do an HTTP request for the full file path to generate the file.
-        // The `original_path` has the necessary query parameters.
-        $local_server = $config->get('local_server') ?: 'http://localhost';
-        $url = $local_server . $item['original_path'];
-
-        // Set the headers.
-        $headers['Host'] = $config->get('host_domain') ?: $_SERVER['SERVER_NAME'];
-
-        // If using basic auth, the credentials must already be in the host.
-        $response = \Drupal::httpClient()->get($url, [
-          'http_errors' => FALSE,
-          'headers' => $headers,
-          'allow_redirects' => $allow_redirects,
-          'verify' => boolval($config->get('ssl_cert_verify')),
-        ]);
-        if ($response->getStatusCode() != 200) {
-          $this->logger->error("Error retrieving file for route: $url");
+        if (!\Drupal::service('quant.asset_generator')->generate($item['original_path'], $fileOnDisk)) {
+          $this->logger->error("Error generating asset: " . $item['original_path']);
         }
       }
 
@@ -232,6 +218,7 @@ class QuantApi implements EventSubscriberInterface {
           'file' => $file,
           'url' => $url,
           'full_path' => $item['full_path'] ?? NULL,
+          'original_path' => $item['original_path'] ?? NULL,
         ]);
         $queue->createItem($file_item);
       }
