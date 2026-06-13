@@ -33,12 +33,20 @@ class FileItem implements QuantQueueItemInterface {
   private $fullPath;
 
   /**
+   * The path as referenced in markup, including any query string.
+   *
+   * @var string
+   */
+  private $originalPath;
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(array $data = []) {
     $this->file = $data['file'];
     $this->url = $data['url'] ?? NULL;
     $this->fullPath = $data['full_path'] ?? NULL;
+    $this->originalPath = $data['original_path'] ?? NULL;
   }
 
   /**
@@ -70,8 +78,21 @@ class FileItem implements QuantQueueItemInterface {
     // Ensure DRUPAL_ROOT prefix has not already been added.
     $this->file = preg_replace('#^' . DRUPAL_ROOT . '#', '', $this->file);
 
+    // CSS/JS aggregates are generated on demand since Drupal 10.1 and may
+    // not exist on disk. Generate from the original path, which carries the
+    // query parameters the asset controller requires.
+    $is_aggregate = $this->originalPath
+      && str_starts_with($this->originalPath, '/')
+      && (str_ends_with($this->file, '.css') || str_ends_with($this->file, '.js'));
+    if (!file_exists(DRUPAL_ROOT . $this->file) && $is_aggregate) {
+      \Drupal::service('quant.asset_generator')->generate($this->originalPath, DRUPAL_ROOT . $this->file);
+    }
+
     if (file_exists(DRUPAL_ROOT . $this->file)) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantFileEvent(DRUPAL_ROOT . $this->file, $this->file), QuantFileEvent::OUTPUT);
+    }
+    else {
+      \Drupal::logger('quant')->warning("Unable to send file that does not exist on disk: {$this->file}");
     }
   }
 
