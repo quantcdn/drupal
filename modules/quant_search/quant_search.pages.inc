@@ -368,8 +368,9 @@ function quant_search_page_form_facets_ajax($form, &$form_state) {
  * Submit: append an empty facet row.
  */
 function quant_search_page_form_add_facet($form, &$form_state) {
-  $form_state['facets'] = quant_search_page_collect_facets($form_state);
-  $form_state['facets'][] = array();
+  $facets = quant_search_page_collect_facets($form_state, TRUE);
+  $facets[] = array();
+  quant_search_page_set_working_facets($form_state, $facets);
   $form_state['rebuild'] = TRUE;
 }
 
@@ -377,29 +378,59 @@ function quant_search_page_form_add_facet($form, &$form_state) {
  * Submit: remove a facet row.
  */
 function quant_search_page_form_remove_facet($form, &$form_state) {
-  $form_state['facets'] = quant_search_page_collect_facets($form_state);
+  $facets = quant_search_page_collect_facets($form_state, TRUE);
   $index = $form_state['triggering_element']['#facet_index'];
-  unset($form_state['facets'][$index]);
-  $form_state['facets'] = array_values($form_state['facets']);
+  unset($facets[$index]);
+  quant_search_page_set_working_facets($form_state, array_values($facets));
   $form_state['rebuild'] = TRUE;
 }
 
 /**
- * Reads the current facet values out of submitted form input.
+ * Stores the working facet list, keeping the raw input in step with it.
  *
- * Prefer the cleaned $form_state['values'], but fall back to the raw
- * $form_state['input']. The Add facet and Remove facet buttons both set
- * #limit_validation_errors => array(), which causes Drupal to clear
- * $form_state['values'] before submit handlers run — so without this fallback
- * collect_facets() would return an empty array on every Add/Remove click, and
- * the submit handler would replace the existing rows with a single empty row.
- * The raw input still holds the user's data and is unaffected by the flag.
+ * On a rebuild Drupal repopulates every element's #value from
+ * $form_state['input'] by position, ignoring the #default_value we just
+ * computed. Leaving the pre-edit POST in place would therefore make the
+ * surviving rows render the removed row's data — remove the first of two
+ * facets and the remaining row would still show the first one's values.
+ * Rewriting the input to match the new list keeps the two in step.
  */
-function quant_search_page_collect_facets($form_state) {
+function quant_search_page_set_working_facets(&$form_state, array $facets) {
+  $form_state['facets'] = $facets;
+  $form_state['input']['facets']['rows'] = $facets;
+}
+
+/**
+ * Reads the current facet rows out of the submitted form.
+ *
+ * @param array $form_state
+ *   The form state.
+ * @param bool $from_input
+ *   TRUE to read the raw POST ($form_state['input']), FALSE to read the
+ *   validated $form_state['values'].
+ *
+ *   The Add facet and Remove facet buttons set #limit_validation_errors to an
+ *   empty array, which makes Drupal discard $form_state['values'] before the
+ *   submit handlers run — so those two handlers must read the raw input, which
+ *   is unaffected by the flag. Note that values is NOT reliably empty in that
+ *   case: form.inc re-injects the clicked button's own value at its #parents
+ *   path "for convenience", and because the form is #tree'd the Remove button
+ *   lives at facets[rows][N][remove]. That resurrects a phantom
+ *   $form_state['values']['facets']['rows'][N] holding nothing but the button,
+ *   so any "use values if non-empty" heuristic silently collects one empty
+ *   facet instead of the real list. Hence the explicit switch.
+ */
+function quant_search_page_collect_facets($form_state, $from_input = FALSE) {
   $facets = array();
-  $rows = !empty($form_state['values']['facets']['rows'])
-    ? $form_state['values']['facets']['rows']
-    : (!empty($form_state['input']['facets']['rows']) ? $form_state['input']['facets']['rows'] : array());
+  if ($from_input) {
+    $rows = isset($form_state['input']['facets']['rows']) ? $form_state['input']['facets']['rows'] : array();
+  }
+  else {
+    $rows = isset($form_state['values']['facets']['rows']) ? $form_state['values']['facets']['rows'] : array();
+  }
+  if (!is_array($rows)) {
+    return $facets;
+  }
   foreach ($rows as $row) {
     if (!is_array($row)) {
       continue;
