@@ -2,6 +2,7 @@
 
 namespace Drupal\quant\EventSubscriber;
 
+use Drupal\quant\CliDomainContext;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -62,6 +63,11 @@ class DomainGuardSubscriber implements EventSubscriberInterface {
       // content would still let a misdirected run rewrite another client's
       // redirect map. The publisher listens at -999.
       QuantRedirectEvent::UPDATE => ['onOutput', 100],
+      // Unpublishing is the one that cannot be walked back. Deleting a node
+      // on an unrecognised host would withdraw the matching URL from
+      // whichever project the fallback landed on, taking down a live page
+      // belonging to another client.
+      QuantEvent::UNPUBLISH => ['onOutput', 100],
     ];
   }
 
@@ -72,6 +78,14 @@ class DomainGuardSubscriber implements EventSubscriberInterface {
    *   The content or redirect event.
    */
   public function onOutput($event) {
+    // Every publish, redirect and unpublish passes through here, which makes
+    // it the one place guaranteed to run no matter what triggered the work.
+    // Quant's own drush commands negotiate the domain themselves, but a node
+    // deleted by drush php:eval, a migration, or any other command does not
+    // reach them, and would resolve the base project instead of the domain's.
+    // The call is cached per process, so this costs nothing after the first.
+    CliDomainContext::initialize();
+
     if (!$this->hostIsUnknown($host)) {
       return;
     }

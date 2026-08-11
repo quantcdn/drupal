@@ -284,9 +284,11 @@ function quant_cron_get_views_routes() {
 
         $paths[] = $path;
 
-        // Language negotiation may also provide path prefixes.
+        // Language negotiation may also provide path prefixes. The default
+        // language usually has an empty one, which would otherwise produce
+        // //path.
         if ($prefixes = \Drupal::config('language.negotiation')->get('url.prefixes')) {
-          foreach ($prefixes as $prefix) {
+          foreach (array_filter($prefixes) as $prefix) {
             $paths[] = "/{$prefix}/{$path}";
           }
         }

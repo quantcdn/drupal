@@ -79,8 +79,11 @@ class QuantApi implements EventSubscriberInterface {
    *   The redirect event.
    */
   public function onRedirect(QuantRedirectEvent $event) {
-    $source = $event->getSourceUrl();
-    $dest = $event->getDestinationUrl();
+    // Normalise before the self-redirect check, so that a malformed source
+    // like //fr/node/1 is recognised as the same path as its destination
+    // rather than published as a redirect to itself.
+    $source = Utility::normalizePath($event->getSourceUrl());
+    $dest = Utility::normalizePath($event->getDestinationUrl());
     $statusCode = $event->getStatusCode();
 
     if ($source == $dest) {
@@ -114,7 +117,10 @@ class QuantApi implements EventSubscriberInterface {
   public function onOutput(QuantEvent $event) {
 
     $config = \Drupal::config('quant.settings');
-    $path = $event->getLocation();
+    // Last line of defence: a path assembled from an empty prefix or base
+    // must not reach the API as //fr/node/1, which would publish a duplicate
+    // resource alongside the real one.
+    $path = Utility::normalizePath($event->getLocation());
     $content = $event->getContents();
     $meta = $event->getMetadata();
 

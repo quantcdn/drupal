@@ -4,6 +4,7 @@ namespace Drupal\quant\Plugin\QueueItem;
 
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Seed;
+use Drupal\quant\Utility;
 
 /**
  * A Quant queue item for a redirect.
@@ -49,7 +50,7 @@ class RouteItem implements QuantQueueItemInterface {
     if (substr($route, 0, 1) != '/') {
       $route = "/{$route}";
     }
-    $route = trim($route);
+    $route = Utility::normalizePath(trim($route));
 
     $this->route = $route;
     $this->uri = $data['uri'] ?? strtok($route, '?');

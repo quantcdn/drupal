@@ -305,14 +305,43 @@ class Utility {
   }
 
   /**
-   * Unpublish the given URL and optionally log a message.
+   * Collapses repeated slashes in a path.
+   *
+   * Paths are assembled from language prefixes, base paths and aliases, and
+   * any of those can be empty, which leaves a stray slash behind. A path like
+   * //fr/node/1 is published as a distinct resource from /fr/node/1, so the
+   * project accumulates duplicates nobody asked for. Callers should build the
+   * path correctly; this is the backstop that keeps a malformed one off the
+   * wire.
+   *
+   * @param string $path
+   *   The path, which may carry a query string.
+   *
+   * @return string
+   *   The path with repeated slashes collapsed.
+   */
+  public static function normalizePath(string $path) : string {
+    // Only the path can pick up stray slashes. A query string may legitimately
+    // contain them, in an oEmbed url for instance, so it is left alone.
+    $parts = explode('?', $path, 2);
+    $parts[0] = preg_replace('#/{2,}#', '/', $parts[0]);
+
+    if ($parts[0] === '') {
+      $parts[0] = '/';
+    }
+
+    return implode('?', $parts);
+  }
+
+  /**
+   * Unpublishes a url from Quant.
    *
    * @param string $url
-   *   The URL to unpublish.
+   *   The url to unpublish.
    * @param string $message
-   *   The message to log.
+   *   Message to log.
    * @param bool $log
-   *   Whether or not to log the message.
+   *   Whether to log the action.
    */
   public static function unpublishUrl(string $url, string $message = '', bool $log = TRUE) : void {
     if (!trim($url)) {
@@ -320,6 +349,8 @@ class Utility {
 
       return;
     }
+
+    $url = self::normalizePath($url);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
 
