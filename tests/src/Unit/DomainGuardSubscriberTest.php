@@ -11,6 +11,7 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\quant\Event\QuantEvent;
+use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\quant\EventSubscriber\DomainGuardSubscriber;
 use Drupal\Tests\UnitTestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -90,6 +91,40 @@ class DomainGuardSubscriberTest extends UnitTestCase {
    */
   protected function event() : QuantEvent {
     return new QuantEvent('<html></html>', '/node/1', [], NULL);
+  }
+
+  /**
+   * Redirects are guarded as well as content.
+   *
+   * A redirect is written to the same project by the same route, so guarding
+   * only content would still let a misdirected run rewrite another client's
+   * redirect map.
+   *
+   * @covers ::getSubscribedEvents
+   * @covers ::onOutput
+   */
+  public function testRedirectsAreGuarded() {
+    $events = DomainGuardSubscriber::getSubscribedEvents();
+    $this->assertArrayHasKey(QuantRedirectEvent::UPDATE, $events);
+
+    $event = new QuantRedirectEvent('/old', '/new', 301);
+    $this->subscriber(TRUE, ['clienta' => 'x', 'clientb' => 'y'], 'clienta.example', 'unregistered.example')
+      ->onOutput($event);
+
+    $this->assertTrue($event->isPropagationStopped());
+  }
+
+  /**
+   * A redirect on a recognised host is left alone.
+   *
+   * @covers ::onOutput
+   */
+  public function testRedirectPassesOnKnownHost() {
+    $event = new QuantRedirectEvent('/old', '/new', 301);
+    $this->subscriber(TRUE, ['clienta' => 'x', 'clientb' => 'y'], 'clientb.example', 'clientb.example')
+      ->onOutput($event);
+
+    $this->assertFalse($event->isPropagationStopped());
   }
 
   /**

@@ -3,6 +3,7 @@
 namespace Drupal\quant\EventSubscriber;
 
 use Drupal\quant\Event\QuantEvent;
+use Drupal\quant\Event\QuantRedirectEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -53,24 +54,30 @@ class DomainGuardSubscriber implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   public static function getSubscribedEvents(): array {
-    // Ahead of quant_search (1) and the API publisher (0), so that stopping
-    // propagation prevents the push entirely.
-    return [QuantEvent::OUTPUT => ['onOutput', 100]];
+    return [
+      // Ahead of quant_search (1) and the API publisher (0), so that stopping
+      // propagation prevents the push entirely.
+      QuantEvent::OUTPUT => ['onOutput', 100],
+      // Redirects reach the same project by the same route, so guarding only
+      // content would still let a misdirected run rewrite another client's
+      // redirect map. The publisher listens at -999.
+      QuantRedirectEvent::UPDATE => ['onOutput', 100],
+    ];
   }
 
   /**
    * Stops the push when the serving host has no domain record.
    *
-   * @param \Drupal\quant\Event\QuantEvent $event
-   *   The event.
+   * @param \Drupal\quant\Event\QuantEvent|\Drupal\quant\Event\QuantRedirectEvent $event
+   *   The content or redirect event.
    */
-  public function onOutput(QuantEvent $event) {
+  public function onOutput($event) {
     if (!$this->hostIsUnknown($host)) {
       return;
     }
 
     \Drupal::logger('quant')->error('Refused to publish @path: the host @host matches no domain, so the Domain module fell back to the default and this content would be published to project @project. Add a domain for @host, or correct the Host header reaching Drupal.', [
-      '@path' => $event->getLocation(),
+      '@path' => $event instanceof QuantEvent ? $event->getLocation() : $event->getSourceUrl(),
       '@host' => $host,
       '@project' => \Drupal::config('quant_api.settings')->get('api_project') ?: 'unknown',
     ]);

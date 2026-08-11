@@ -583,12 +583,17 @@ class Seed {
       $defaultUrl = $languageUrl;
     }
 
+    // getPathPrefix() already carries its leading slash, and returns a bare
+    // slash for a language that has no prefix. Concatenating another one
+    // published redirects at //fr/node/1 for every translation.
+    $hasPrefix = $prefix !== '' && $prefix !== '/';
+
     // Only create redirects if the content has an alias.
     if ($internalPath != $url) {
       \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($internalPath, $defaultUrl, 301), QuantRedirectEvent::UPDATE);
-      if ($prefix) {
+      if ($hasPrefix) {
         // Handle redirects with path prefix too.
-        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("/{$prefix}{$internalPath}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
+        \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent("{$prefix}{$internalPath}", $languageUrl, 301), QuantRedirectEvent::UPDATE);
       }
     }
 
@@ -596,9 +601,9 @@ class Seed {
     if (!$defaultPublished) {
       Utility::unpublishUrl($internalPath, 'Unpublished internal path');
     }
-    if (!$published && $prefix) {
+    if (!$published && $hasPrefix) {
       // Handle redirects with path prefix too.
-      Utility::unpublishUrl("/{$prefix}{$internalPath}", 'Unpublished internal path');
+      Utility::unpublishUrl("{$prefix}{$internalPath}", 'Unpublished internal path');
     }
   }
 
