@@ -20,15 +20,40 @@ namespace Drupal\quant;
 class CliDomainContext {
 
   /**
+   * The domain id resolved by the first initialize() call.
+   *
+   * @var string|null
+   */
+  protected static $domainId = NULL;
+
+  /**
+   * Whether initialize() has already run in this process.
+   *
+   * @var bool
+   */
+  protected static $initialized = FALSE;
+
+  /**
    * Negotiates the active domain so configuration overrides apply.
    *
    * Safe to call when the Domain module is absent. In that case it is a no-op
    * and base configuration continues to apply.
    *
+   * The result is cached for the life of the process. A single CLI process
+   * serves one domain, and resetting the config factory repeatedly would
+   * discard every cached config object for no gain, so callers in loops and
+   * batch callbacks can call this freely.
+   *
    * @return string|null
    *   The active domain id, or NULL when no domain was negotiated.
    */
   public static function initialize() : ?string {
+    if (static::$initialized) {
+      return static::$domainId;
+    }
+
+    static::$initialized = TRUE;
+
     $moduleHandler = \Drupal::moduleHandler();
 
     if (!$moduleHandler->moduleExists('domain')) {
@@ -45,12 +70,18 @@ class CliDomainContext {
       return NULL;
     }
 
-    // Any config object built before negotiation was cached without the
-    // override applied. Drop the static cache so the overridden values
-    // resolve on the next read.
-    \Drupal::configFactory()->reset();
+    static::$domainId = $domain->id();
 
-    return $domain->id();
+    // An HTTP request negotiates its domain from kernel.request, before any
+    // Quant code runs, so the config factory already holds the overridden
+    // values. Only CLI reaches this point with stale objects cached, and
+    // dropping them in a web request would discard the whole config cache
+    // for no benefit.
+    if (PHP_SAPI === 'cli') {
+      \Drupal::configFactory()->reset();
+    }
+
+    return static::$domainId;
   }
 
   /**
@@ -61,6 +92,16 @@ class CliDomainContext {
    */
   public static function getActiveProject() : ?string {
     return \Drupal::config('quant_api.settings')->get('api_project') ?: NULL;
+  }
+
+  /**
+   * Forgets the negotiated domain.
+   *
+   * Only needed by tests, which exercise several domains in one process.
+   */
+  public static function reset() : void {
+    static::$initialized = FALSE;
+    static::$domainId = NULL;
   }
 
 }

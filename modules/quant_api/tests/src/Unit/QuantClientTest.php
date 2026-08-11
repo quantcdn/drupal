@@ -2,378 +2,493 @@
 
 namespace Drupal\Tests\quant_api\Unit;
 
-use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ImmutableConfig;
+use Drupal\Core\DependencyInjection\ContainerBuilder;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\quant_api\Client\QuantClient;
 use Drupal\quant_api\Exception\InvalidPayload;
 use Drupal\Tests\UnitTestCase;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
-use GuzzleHttp\RequestOptions;
 
 /**
- * Ensure that the client responds correctly.
+ * Ensures the client forms correct requests and reads responses.
+ *
+ * Requests are driven through a Guzzle MockHandler and captured with the
+ * history middleware, so the assertions describe what reaches the wire —
+ * method, URI, headers and body — rather than the shape of an options array.
+ * Every request must carry Quant-Project, because that header alone decides
+ * which site the content is published to.
+ *
+ * @coversDefaultClass \Drupal\quant_api\Client\QuantClient
+ *
+ * @group quant_api
  */
 class QuantClientTest extends UnitTestCase {
 
   /**
-   * Get a stubbed config factory.
+   * Requests recorded by the history middleware.
+   *
+   * @var array
+   */
+  protected $history = [];
+
+  /**
+   * Temporary files created by a test, removed on teardown.
+   *
+   * @var string[]
+   */
+  protected $tempFiles = [];
+
+  /**
+   * The credentials every test configures.
+   */
+  const ACCOUNT = 'test-account';
+  const PROJECT = 'test-project';
+  const TOKEN = 'test-token';
+
+  /**
+   * The endpoint the client derives from the configured base.
+   */
+  const ENDPOINT = 'http://test/v1';
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp() : void {
+    parent::setUp();
+
+    // The client reports transport and subscription errors through
+    // \Drupal::messenger() rather than an injected service, so a container
+    // has to exist before those paths run.
+    $container = new ContainerBuilder();
+    $container->set('messenger', $this->createMock(MessengerInterface::class));
+    $container->set('string_translation', $this->getStringTranslationStub());
+    \Drupal::setContainer($container);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function tearDown() : void {
+    foreach ($this->tempFiles as $file) {
+      if (file_exists($file)) {
+        unlink($file);
+      }
+    }
+    parent::tearDown();
+  }
+
+  /**
+   * Builds a client whose transport returns the given responses in order.
+   *
+   * @param array $responses
+   *   Responses or exceptions for the MockHandler to yield.
+   * @param array $overrides
+   *   Configuration values to override.
+   *
+   * @return \Drupal\quant_api\Client\QuantClient
+   *   The client under test.
+   */
+  protected function client(array $responses, array $overrides = []) : QuantClient {
+    $stack = HandlerStack::create(new MockHandler($responses));
+    $stack->push(Middleware::history($this->history));
+
+    return new QuantClient(
+      new Client(['handler' => $stack]),
+      $this->configFactory($overrides),
+      $this->createMock(LoggerChannelFactoryInterface::class)
+    );
+  }
+
+  /**
+   * Builds a config factory returning the test credentials.
+   *
+   * @param array $overrides
+   *   Configuration values to override.
    *
    * @return \Drupal\Core\Config\ConfigFactoryInterface
-   *   The config interface.
+   *   The config factory double.
    */
-  protected function getConfigStub($default = []) {
-    $values = [
-      'api_account' => 'account',
-      'api_token' => 'token',
+  protected function configFactory(array $overrides = []) : ConfigFactoryInterface {
+    $values = $overrides + [
+      'api_account' => self::ACCOUNT,
+      'api_project' => self::PROJECT,
+      'api_token' => self::TOKEN,
       'api_endpoint' => 'http://test',
-    ] + $default;
-
-    $config = $this->prophesize(ImmutableConfig::class);
-
-    // Iterate the values, not the prophecy. Keys absent here resolve to NULL,
-    // which is what an unconfigured setting returns.
-    foreach ($values as $key => $value) {
-      $config->get($key)->willReturn($value);
-    }
-
-    $stub = $this->prophesize(ConfigFactoryInterface::class);
-
-    // Reveal both doubles. The client re-reads its credentials before every
-    // request, so the factory must answer get() more than once.
-    $stub->get('quant_api.settings')->willReturn($config->reveal());
-
-    return $stub->reveal();
-  }
-
-  /**
-   * Get a successful project response.
-   *
-   * @return GuzzleHttp\Psr7\Response
-   *   A response object.
-   */
-  protected function getProjectResponse() {
-    // @todo should these be fixtures.
-    $body = [
-      'project' => 'test',
-      'error' => FALSE,
-      'errorMsg' => '',
+      'api_tls_disabled' => FALSE,
     ];
 
-    $res = $this->prophesize(Response::class);
-    $res->getStatusCode->willReturn(200);
-    $res->getBody()->willReturn(json_encode($body));
+    $config = $this->createMock(ImmutableConfig::class);
+    $config->method('get')->willReturnCallback(
+      fn($key) => $values[$key] ?? NULL
+    );
 
-    return $res;
+    $factory = $this->createMock(ConfigFactoryInterface::class);
+    $factory->method('get')->willReturn($config);
+
+    return $factory;
   }
 
   /**
-   * A valid redirect response.
+   * Returns the request the client sent.
    *
-   * @return GuzzleHttp\Psr7\Response
-   *   A response object.
-   */
-  protected function getRedirectResponse() {
-    $body = [
-      'redirect_url' => '/b',
-      'quant_revision' => 1,
-      'url' => '/a',
-      'redirect_http_code' => 302,
-      'errorMsg' => '',
-      'error' => FALSE,
-    ];
-
-    $res = $this->prophesize(Response::class);
-    $res->getStatusCode->willReturn(200);
-    $res->getBody()->willReturn(json_encode($body));
-
-    return $res;
-  }
-
-  /**
-   * Get an invalid response.
+   * @param int $index
+   *   Which recorded request to return.
    *
-   * @return GuzzleHttp\Psr7\Response
-   *   A response object.
+   * @return \Psr\Http\Message\RequestInterface
+   *   The captured request.
    */
-  protected function getInvalidResponse() {
-    $body = [
-      'error' => TRUE,
-      'errorMsg' => 'Error',
-    ];
-
-    $res = $this->prophesize(Response::class);
-    $res->getStatusCode->willReturn(400);
-    $res->getBody->willReturn(json_encode($body));
-
-    return $res;
+  protected function request(int $index = 0) {
+    $this->assertArrayHasKey($index, $this->history, 'The client sent a request.');
+    return $this->history[$index]['request'];
   }
 
   /**
-   * Ensure that the client handles a failed ping to QuantAPI.
+   * Asserts the request carries the credentials that route it to a project.
+   *
+   * @param \Psr\Http\Message\RequestInterface $request
+   *   The captured request.
    */
-  public function testPingClientError() {
-    $http = $this->prophesize(Client::class);
-    $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
-    $config = $this->getConfigStub();
-
-    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
-    $http->get('http://test/ping', [
-      'http_errors' => FALSE,
-      'headers' => [
-        'Quant-Customer' => 'account',
-        'Quant-Token' => 'token',
-      ],
-      'exception' => FALSE,
-    ])->willThrow(new RequestException('ERROR'));
-
-    $client = new QuantClient($http, $config, $logger);
-    $this->assertFalse($client->ping());
+  protected function assertAuthHeaders($request) : void {
+    $this->assertEquals(self::ACCOUNT, $request->getHeaderLine('Quant-Customer'));
+    $this->assertEquals(self::PROJECT, $request->getHeaderLine('Quant-Project'));
+    $this->assertEquals(self::TOKEN, $request->getHeaderLine('Quant-Token'));
   }
 
   /**
-   * Ensure a valid ping can be made.
+   * Creates a real temporary file for the upload tests.
+   *
+   * @param string $extension
+   *   The file extension to use.
+   *
+   * @return string
+   *   The path to the file.
+   */
+  protected function tempFile(string $extension = 'jpg') : string {
+    $path = tempnam(sys_get_temp_dir(), 'quant') . '.' . $extension;
+    file_put_contents($path, 'test contents');
+    $this->tempFiles[] = $path;
+    return $path;
+  }
+
+  /**
+   * A successful ping returns TRUE.
+   *
+   * @covers ::ping
    */
   public function testPingValid() {
-    $http = $this->prophesize(Client::class);
-    $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
-    $config = $this->getConfigStub();
-    $res = $this->getProjectResponse();
+    $client = $this->client([new Response(200, [], json_encode(['project' => 'test']))]);
 
-    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
-    $http->get('http://test/ping', [
-      'http_errors' => FALSE,
-      'headers' => [
-        'Quant-Customer' => 'account',
-        'Quant-Token' => 'token',
-      ],
-      'exception' => FALSE,
-    ])->willReturn($res);
+    $this->assertTrue($client->ping());
 
-    $client = new QuantClient($http, $config, $logger);
-    $project = $client->ping();
-
-    $this->assertEquals($project, 'test');
+    $request = $this->request();
+    $this->assertEquals('GET', $request->getMethod());
+    $this->assertEquals(self::ENDPOINT . '/ping', (string) $request->getUri());
+    $this->assertAuthHeaders($request);
   }
 
   /**
-   * Ensure that ping handles an invalid response from the server.
+   * A non-200 ping returns FALSE.
+   *
+   * @covers ::ping
    */
   public function testPingInvalid() {
-    $http = $this->prophesize(Client::class);
-    $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
-    $config = $this->getConfigStub();
-    $res = $this->getInvalidResponse();
-
-    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
-    $http->get('http://test/ping', [
-      'http_errors' => FALSE,
-      'headers' => [
-        'Quant-Customer' => 'account',
-        'Quant-Token' => 'token',
-      ],
-      'exception' => FALSE,
-    ])->willReturn($res);
-
-    $client = new QuantClient($http, $config, $logger);
+    $client = $this->client([new Response(500, [], json_encode(['error' => TRUE]))]);
 
     $this->assertFalse($client->ping());
   }
 
   /**
-   * Ensure that send can send a valid payload.
+   * A transport failure during ping is caught and reported as FALSE.
+   *
+   * @covers ::ping
+   */
+  public function testPingClientError() {
+    $error = new RequestException('ERROR', new Request('GET', self::ENDPOINT . '/ping'));
+
+    $this->assertFalse($this->client([$error])->ping());
+  }
+
+  /**
+   * The project endpoint decodes the response body.
+   *
+   * @covers ::project
+   */
+  public function testProjectValid() {
+    $body = ['project' => 'test', 'config' => ['search_enabled' => TRUE]];
+    $client = $this->client([new Response(200, [], json_encode($body))]);
+
+    $project = $client->project();
+
+    $this->assertEquals('test', $project->project);
+    $this->assertTrue($project->config->search_enabled);
+    $this->assertAuthHeaders($this->request());
+  }
+
+  /**
+   * A valid send returns the decoded payload.
+   *
+   * @covers ::send
    */
   public function testSendValid() {
-    $http = $this->prophesize(Client::class);
-    $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
-    $config = $this->getConfigStub();
-    $res = $this->getProjectResponse();
+    $client = $this->client([new Response(200, [], json_encode(['project' => 'test']))]);
 
-    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
-    $http->post('http://test', [
-      RequestOptions::JSON => [],
-      'headers' => [
-        'Quant-Customer' => 'account',
-        'Quant-Token' => 'token',
-      ],
-    ])->willReturn($res);
+    $this->assertEquals(['project' => 'test'], $client->send(['url' => '/a']));
 
-    $client = new QuantClient($http, $config, $logger);
-    $this->assertEquals(['project' => 'test'], $client->send([]));
+    $request = $this->request();
+    $this->assertEquals('POST', $request->getMethod());
+    $this->assertEquals(self::ENDPOINT, (string) $request->getUri());
+    $this->assertEquals(['url' => '/a'], json_decode((string) $request->getBody(), TRUE));
+    $this->assertAuthHeaders($request);
   }
 
   /**
-   * Ensure that send handles server errors.
+   * A transport failure during send is not swallowed.
+   *
+   * @covers ::send
    */
   public function testSendError() {
+    $error = new RequestException('ERROR', new Request('POST', self::ENDPOINT));
+
     $this->expectException(RequestException::class);
-    $http = $this->prophesize(Client::class);
-    $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
-    $config = $this->getConfigStub();
-    $res = $this->getInvalidResponse();
-
-    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
-    $http->post('http://test', [
-      RequestOptions::JSON => [],
-      'headers' => [
-        'Quant-Customer' => 'account',
-        'Quant-Token' => 'token',
-      ],
-    ])->willReturn($res);
-
-    $client = new QuantClient($http, $config, $logger);
-    $client->send([]);
+    $this->client([$error])->send([]);
   }
 
   /**
-   * Ensure a valid redirect response is sent.
+   * A valid redirect send returns the decoded payload.
+   *
+   * @covers ::sendRedirect
    */
   public function testSendRedirectValid() {
-    $http = $this->prophesize(Client::class);
-    $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
-    $config = $this->getConfigStub();
-    $res = $this->getRedirectResponse();
-
-    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
-    $http->post('http://test/redirect', [
-      RequestOptions::JSON => [],
-      'headers' => [
-        'Quant-Customer' => 'account',
-        'Quant-Token' => 'token',
-      ],
-    ])->willReturn($res);
-
-    $client = new QuantClient($http, $config, $logger);
-    $redirect = $client->sendRedirect([]);
-
-    $this->assertEquals([
-      'redirect_url' => '/b',
-      'quant_revision' => 1,
+    $body = [
       'url' => '/a',
+      'redirect_url' => '/b',
       'redirect_http_code' => 302,
-      'errorMsg' => '',
       'error' => FALSE,
-    ], $redirect);
+    ];
+    $client = $this->client([new Response(200, [], json_encode($body))]);
+
+    $this->assertEquals($body, $client->sendRedirect(['url' => '/a']));
+    $this->assertEquals(self::ENDPOINT . '/redirect', (string) $this->request()->getUri());
   }
 
   /**
-   * Ensure a valid redirect response is sent.
+   * A transport failure during a redirect send is not swallowed.
+   *
+   * @covers ::sendRedirect
    */
   public function testSendRedirectError() {
+    $error = new RequestException('ERROR', new Request('POST', self::ENDPOINT . '/redirect'));
+
     $this->expectException(RequestException::class);
-    $http = $this->prophesize(Client::class);
-    $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
-    $config = $this->getConfigStub();
-    $res = $this->getInvalidResponse();
-
-    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
-    $http->post('http://test/redirect', [
-      RequestOptions::JSON => [],
-      'headers' => [
-        'Quant-Customer' => 'account',
-        'Quant-Token' => 'token',
-      ],
-    ])->willReturn($res);
-
-    $client = new QuantClient($http, $config, $logger);
-    $client->sendRedirect([]);
+    $this->client([$error])->sendRedirect([]);
   }
 
   /**
-   * Ensure files are validated before sending.
+   * A missing file is rejected before any request is made.
+   *
+   * @covers ::sendFile
    */
   public function testSendFileFileNoExist() {
+    $client = $this->client([]);
+
     $this->expectException(InvalidPayload::class);
-    // phpcs:ignore
-    global $exists_return;
-    // phpcs:ignore
-    global $readable_return;
-
-    $exists_return = FALSE;
-    $readable_return = FALSE;
-
-    $http = $this->prophesize(Client::class);
-    $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
-    $config = $this->getConfigStub();
-
-    $client = new QuantClient($http, $config, $logger);
-    $client->sendFile('/tmp/test', '/url');
+    $client->sendFile('/tmp/quant-does-not-exist-' . uniqid(), '/url');
   }
 
   /**
-   * Ensure files are validated before sending.
+   * A directory is rejected, since it is readable but not a file.
+   *
+   * @covers ::sendFile
+   */
+  public function testSendFileDirectoryRejected() {
+    $client = $this->client([]);
+
+    $this->expectException(InvalidPayload::class);
+    $client->sendFile(sys_get_temp_dir(), '/url');
+  }
+
+  /**
+   * A readable file is uploaded as multipart with the target url attached.
+   *
+   * @covers ::sendFile
    */
   public function testSendFileValid() {
-    // phpcs:ignore
-    global $exists_return;
-    // phpcs:ignore
-    global $readable_return;
+    $file = $this->tempFile();
+    $client = $this->client([new Response(200, [], json_encode(['project' => 'test']))]);
 
-    $exists_return = TRUE;
-    $readable_return = TRUE;
+    $this->assertEquals(['project' => 'test'], $client->sendFile($file, '/url'));
 
-    $http = $this->prophesize(Client::class);
-    $logger = $this->prophesize(LoggerChannelFactoryInterface::class);
-    $config = $this->getConfigStub();
-    $res = $this->getProjectResponse();
+    $request = $this->request();
+    $this->assertEquals('POST', $request->getMethod());
+    $this->assertEquals(self::ENDPOINT, (string) $request->getUri());
+    $this->assertEquals('/url', $request->getHeaderLine('Quant-File-Url'));
+    $this->assertAuthHeaders($request);
 
-    // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
-    $http->post('http://test', [
-      'headers' => [
-        'Quant-File-Url' => '/url',
-        'Quant-Customer' => 'account',
-        'Quant-Token' => 'token',
-      ],
-      'multipart' => [
-        [
-          'name' => 'filename',
-          'filename' => 'test.jpg',
-          'contents' => [],
-        ],
-      ],
-    ])->willReturn($res);
-
-    $client = new QuantClient($http, $config, $logger);
-    $client->sendFile('/tmp/test.jpg', '/url');
+    // The body is a multipart stream naming the file and carrying its bytes.
+    $body = (string) $request->getBody();
+    $this->assertStringContainsString(basename($file), $body);
+    $this->assertStringContainsString('test contents', $body);
   }
 
-}
+  /**
+   * Unpublish sends a PATCH naming the url to withdraw.
+   *
+   * @covers ::unpublish
+   */
+  public function testUnpublish() {
+    $client = $this->client([new Response(200, [], json_encode(['published' => FALSE]))]);
 
-//
-// Hacky... this is a hack to stub php built-ins so we
-// can correctly test the send file method.
-//
-namespace Drupal\quant_api\Client;
+    $this->assertEquals(['published' => FALSE], $client->unpublish('/a'));
 
-/**
- * Stub file_exists.
- */
-function file_exists($path) {
-  // phpcs:ignore
-  global $exists_return;
-  if (isset($exists_return)) {
-    return $exists_return;
+    $request = $this->request();
+    $this->assertEquals('PATCH', $request->getMethod());
+    $this->assertEquals(self::ENDPOINT . '/unpublish', (string) $request->getUri());
+    $this->assertEquals('/a', $request->getHeaderLine('Quant-Url'));
+    $this->assertAuthHeaders($request);
   }
-  return call_user_func_array('\file_exists', func_get_args());
-}
 
-/**
- * Stub is_readable.
- */
-function is_readable($path) {
-  // phpcs:ignore
-  global $readable_return;
-  if (isset($readable_return)) {
-    return $readable_return;
+  /**
+   * A bare url list is wrapped in the key the API expects.
+   *
+   * @covers ::getUrlMeta
+   */
+  public function testGetUrlMetaWrapsBareList() {
+    $client = $this->client([new Response(200, [], json_encode(['meta' => []]))]);
+
+    $client->getUrlMeta(['/a', '/b']);
+
+    $request = $this->request();
+    $this->assertEquals(self::ENDPOINT . '/url-meta', (string) $request->getUri());
+    $this->assertEquals(
+      ['Quant-Url' => ['/a', '/b']],
+      json_decode((string) $request->getBody(), TRUE)
+    );
   }
-  return call_user_func_array('\file_exists', func_get_args());
-}
 
-/**
- * Stub fopen.
- */
-function fopen($file, $opts) {
-  return [];
+  /**
+   * An already-wrapped url list is passed through unchanged.
+   *
+   * @covers ::getUrlMeta
+   */
+  public function testGetUrlMetaKeepsWrappedList() {
+    $client = $this->client([new Response(200, [], json_encode(['meta' => []]))]);
+
+    $client->getUrlMeta(['Quant-Url' => ['/a']]);
+
+    $this->assertEquals(
+      ['Quant-Url' => ['/a']],
+      json_decode((string) $this->request()->getBody(), TRUE)
+    );
+  }
+
+  /**
+   * Search records are posted to the search endpoint.
+   *
+   * @covers ::sendSearchRecords
+   */
+  public function testSendSearchRecords() {
+    $records = [['title' => 'A', 'url' => '/a']];
+    $client = $this->client([new Response(200, [], json_encode(['count' => 1]))]);
+
+    $this->assertEquals(['count' => 1], $client->sendSearchRecords($records));
+
+    $request = $this->request();
+    $this->assertEquals(self::ENDPOINT . '/search', (string) $request->getUri());
+    $this->assertEquals($records, json_decode((string) $request->getBody(), TRUE));
+    $this->assertAuthHeaders($request);
+  }
+
+  /**
+   * Clearing the index deletes the whole search collection.
+   *
+   * @covers ::clearSearchIndex
+   */
+  public function testClearSearchIndex() {
+    $client = $this->client([new Response(200, [], json_encode(['cleared' => TRUE]))]);
+
+    $this->assertEquals(['cleared' => TRUE], $client->clearSearchIndex());
+
+    $request = $this->request();
+    $this->assertEquals('DELETE', $request->getMethod());
+    $this->assertEquals(self::ENDPOINT . '/search/all', (string) $request->getUri());
+    $this->assertAuthHeaders($request);
+  }
+
+  /**
+   * Facets are posted to the facet endpoint.
+   *
+   * @covers ::addFacets
+   */
+  public function testAddFacets() {
+    $facets = ['category', 'tags'];
+    $client = $this->client([new Response(200, [], json_encode(['ok' => TRUE]))]);
+
+    $client->addFacets($facets);
+
+    $request = $this->request();
+    $this->assertEquals(self::ENDPOINT . '/search/facet', (string) $request->getUri());
+    $this->assertEquals($facets, json_decode((string) $request->getBody(), TRUE));
+  }
+
+  /**
+   * TLS verification is on by default and off when disabled.
+   *
+   * @covers ::send
+   */
+  public function testTlsVerificationFollowsConfig() {
+    $this->client([new Response(200, [], '{}')])->send([]);
+    $this->assertTrue($this->history[0]['options']['verify']);
+
+    $this->history = [];
+
+    $this->client([new Response(200, [], '{}')], ['api_tls_disabled' => TRUE])->send([]);
+    $this->assertFalse($this->history[0]['options']['verify']);
+  }
+
+  /**
+   * Overrides are reported by comparing active values against the original.
+   *
+   * @covers ::getOverrides
+   */
+  public function testGetOverridesReportsChangedKeys() {
+    $config = $this->createMock(ImmutableConfig::class);
+    $config->method('get')->willReturnCallback(fn($key) => match ($key) {
+      'api_project' => 'overridden-project',
+      'api_account' => self::ACCOUNT,
+      'api_token' => self::TOKEN,
+      'api_endpoint' => 'http://test',
+      'api_tls_disabled' => FALSE,
+      default => NULL,
+    });
+    // getOriginal() reports the pre-override value for the project only.
+    $config->method('getOriginal')->willReturnCallback(fn($key) => match ($key) {
+      'api_project' => 'base-project',
+      'api_account' => self::ACCOUNT,
+      'api_token' => self::TOKEN,
+      'api_endpoint' => 'http://test',
+      'api_tls_disabled' => FALSE,
+      default => NULL,
+    });
+
+    $factory = $this->createMock(ConfigFactoryInterface::class);
+    $factory->method('get')->willReturn($config);
+
+    $client = new QuantClient(
+      new Client(['handler' => HandlerStack::create(new MockHandler([]))]),
+      $factory,
+      $this->createMock(LoggerChannelFactoryInterface::class)
+    );
+
+    $this->assertEquals(['api_project' => 'overridden-project'], $client->getOverrides());
+  }
+
 }

@@ -2,6 +2,8 @@
 
 namespace Drupal\Tests\quant\Unit;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
@@ -19,6 +21,11 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
  * @group quant
  */
 class FileItemTest extends UnitTestCase {
+
+  /**
+   * The Quant project the container resolves to.
+   */
+  const PROJECT = 'test-project';
 
   /**
    * The mocked event dispatcher.
@@ -61,10 +68,19 @@ class FileItemTest extends UnitTestCase {
     $logger_factory = $this->prophesize(LoggerChannelFactoryInterface::class);
     $logger_factory->get('quant')->willReturn($this->logger->reveal());
 
+    // Queue items stamp the project they are created for, which reads
+    // quant_api.settings through the config factory.
+    $config = $this->prophesize(ImmutableConfig::class);
+    $config->get('api_project')->willReturn(self::PROJECT);
+
+    $config_factory = $this->prophesize(ConfigFactoryInterface::class);
+    $config_factory->get('quant_api.settings')->willReturn($config->reveal());
+
     $container = new ContainerBuilder();
     $container->set('event_dispatcher', $this->eventDispatcher->reveal());
     $container->set('quant.asset_generator', $this->assetGenerator->reveal());
     $container->set('logger.factory', $logger_factory->reveal());
+    $container->set('config.factory', $config_factory->reveal());
     \Drupal::setContainer($container);
   }
 
@@ -165,6 +181,23 @@ class FileItemTest extends UnitTestCase {
       'url' => $file,
     ]);
     $item->send();
+  }
+
+  /**
+   * Items record the project resolved when they were created.
+   *
+   * The worker compares this stamp against the project it is publishing to,
+   * so that an item queued for one site is never sent to another.
+   *
+   * @covers ::getTargetProject
+   */
+  public function testItemStampsTargetProject() {
+    $item = new FileItem([
+      'file' => '/sites/default/files/example.pdf',
+      'url' => '/sites/default/files/example.pdf',
+    ]);
+
+    $this->assertEquals(self::PROJECT, $item->getTargetProject());
   }
 
 }

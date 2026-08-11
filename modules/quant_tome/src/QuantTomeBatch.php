@@ -6,6 +6,7 @@ use Drupal\Core\Batch\BatchBuilder;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Queue\QueueFactory;
+use Drupal\quant\CliDomainContext;
 use Drupal\quant\Plugin\QueueItem\RedirectItem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant_api\Client\QuantClient;
@@ -204,6 +205,11 @@ class QuantTomeBatch {
    *   The file item to send to Quant API.
    */
   public function deploy($item, array &$context) {
+    // Batch operations may run in a forked process that never negotiated a
+    // domain, so resolve it here rather than relying on the caller. The call
+    // is cached per process and costs nothing after the first item.
+    CliDomainContext::initialize();
+
     \Drupal::logger('quant_tome')->notice('Sending %s', [
       '%s' => $item->log(),
     ]);
