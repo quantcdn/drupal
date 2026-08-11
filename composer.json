@@ -1,0 +1,18 @@
+{
+    "name": "drupal/quant",
+    "description": "Static site generator for Drupal, integrating with the QuantCDN static edge.",
+    "type": "drupal-module",
+    "license": "GPL-2.0-or-later",
+    "homepage": "https://www.quantcdn.io",
+    "support": {
+        "issues": "https://github.com/quantcdn/drupal/issues",
+        "docs": "https://docs.quantcdn.io/docs/integrations/drupal",
+        "source": "https://github.com/quantcdn/drupal"
+    },
+    "suggest": {
+        "drupal/token": "Required by Quant Search (quant_search).",
+        "drupal/purge": "Required by Quant Purger (quant_purger).",
+        "drupal/webform": "Required by Quant Webform (quant_webform).",
+        "drupal/tome": "Required by Quant Tome (quant_tome)."
+    }
+}
