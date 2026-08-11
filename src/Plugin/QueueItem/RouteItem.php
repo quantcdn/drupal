@@ -95,7 +95,7 @@ class RouteItem implements QuantQueueItemInterface {
     [$markup, $content_type] = $response;
 
     $config = \Drupal::config('quant.settings');
-    $proxy_override = boolval($config->get('proxy_override', FALSE));
+    $proxy_override = boolval($config->get('proxy_override') ?? FALSE);
 
     $meta = [
       'info' => [

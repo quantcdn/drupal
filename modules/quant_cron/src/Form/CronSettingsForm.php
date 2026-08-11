@@ -53,7 +53,7 @@ class CronSettingsForm extends FormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Nodes'),
       '#description' => $this->t('Exports the latest revision of each node.'),
-      '#default_value' => !empty($config->get('entity_node', '')),
+      '#default_value' => !empty($config->get('entity_node')),
     ];
 
     // Seed by language.
