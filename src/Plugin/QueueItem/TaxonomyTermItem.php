@@ -27,7 +27,7 @@ class TaxonomyTermItem implements QuantQueueItemInterface {
     $this->tid = $data['tid'];
 
     // Record the project this item is destined for.
-    $this->stampTargetProject();
+    $this->stampTargetProject($data);
   }
 
   /**

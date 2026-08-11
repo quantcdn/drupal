@@ -56,7 +56,7 @@ class RouteItem implements QuantQueueItemInterface {
     $this->filePath = $data['file_path'] ?? DRUPAL_ROOT . strtok($route, '?');
 
     // Record the project this item is destined for.
-    $this->stampTargetProject();
+    $this->stampTargetProject($data);
   }
 
   /**

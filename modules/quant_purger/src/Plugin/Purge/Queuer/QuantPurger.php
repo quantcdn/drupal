@@ -101,15 +101,54 @@ class QuantPurger implements CacheTagsInvalidatorInterface {
       return;
     }
 
-    $paths = $this->registry->getPaths($tags);
+    $pathsByDomain = $this->registry->getPathsByDomain($tags);
 
     foreach ($tags as $tag) {
       $this->invalidatedTags[] = $tag;
     }
 
-    foreach ($paths as $path) {
-      $this->quantSeedQueue->createItem(new RouteItem(['route' => $path]));
+    // A page shown on several domains has to be purged on each of them, and
+    // each domain publishes to its own project. Stamp every item with the
+    // project that owns it rather than the one this request happens to be
+    // serving, otherwise only the current domain is refreshed.
+    foreach ($pathsByDomain as $domainId => $paths) {
+      $project = $this->getProjectForDomain($domainId);
+
+      foreach ($paths as $path) {
+        $this->quantSeedQueue->createItem(new RouteItem([
+          'route' => $path,
+          'target_project' => $project,
+        ]));
+      }
     }
+  }
+
+  /**
+   * Resolves the Quant project a given domain publishes to.
+   *
+   * @param string $domainId
+   *   The domain id, or an empty string on a single-domain site.
+   *
+   * @return string|null
+   *   The project machine name, or NULL when none is configured.
+   */
+  protected function getProjectForDomain($domainId) {
+    $container = $this->container ?: \Drupal::getContainer();
+
+    // Without a domain, or without the override service, the site has one
+    // project and the base configuration names it.
+    if (!empty($domainId) && $container->has('domain.config_factory_override')) {
+      $override = $container->get('domain.config_factory_override')
+        ->getOverride($domainId, 'quant_api.settings');
+
+      if ($project = $override->get('api_project')) {
+        return $project;
+      }
+    }
+
+    return $container->get('config.factory')
+      ->get('quant_api.settings')
+      ->get('api_project') ?: NULL;
   }
 
 }

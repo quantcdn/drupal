@@ -23,6 +23,13 @@ function quant_purger_schema() {
         'length' => 255,
         'not null' => TRUE,
       ],
+      'domain' => [
+        'description' => 'The domain the URL was requested on, empty on single-domain sites',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ],
       'tags' => [
         'description' => 'Space-separated list of cache tag IDs for this entry',
         'type' => 'text',
@@ -31,6 +38,11 @@ function quant_purger_schema() {
       ],
     ],
     'primary key' => ['urlid'],
+    // The same path exists on every domain, so a URL is only unique when
+    // paired with the domain it was served from.
+    'unique keys' => [
+      'url_domain' => ['url', 'domain'],
+    ],
   ];
   return $schema;
 }
@@ -98,4 +110,30 @@ function quant_purger_update_9102(&$sandbox) {
   $config->set('tag_allowlist', ['']);
   $config->set('path_allowlist', ['']);
   $config->save();
+}
+
+/**
+ * Record the domain each tracked URL was served from.
+ */
+function quant_purger_update_9103(&$sandbox) {
+  $schema = \Drupal::database()->schema();
+
+  if (!$schema->fieldExists('purge_queuer_quant', 'domain')) {
+    $schema->addField('purge_queuer_quant', 'domain', [
+      'description' => 'The domain the URL was requested on, empty on single-domain sites',
+      'type' => 'varchar',
+      'length' => 128,
+      'not null' => TRUE,
+      'default' => '',
+    ]);
+  }
+
+  // Existing rows keep an empty domain, which is how a single-domain site
+  // continues to behave. A multi-domain site repopulates the registry as
+  // traffic arrives.
+  if (!$schema->indexExists('purge_queuer_quant', 'url_domain')) {
+    $schema->addUniqueKey('purge_queuer_quant', 'url_domain', ['url', 'domain']);
+  }
+
+  return t('Added the domain column to the Quant purger traffic registry.');
 }

@@ -51,7 +51,7 @@ class NodeItem implements QuantQueueItemInterface {
     $this->filter = isset($data['lang_filter']) && is_array($data['lang_filter']) ? array_filter($data['lang_filter']) : [];
 
     // Record the project this item is destined for.
-    $this->stampTargetProject();
+    $this->stampTargetProject($data);
   }
 
   /**

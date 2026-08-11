@@ -51,7 +51,7 @@ class FileItem implements QuantQueueItemInterface {
     $this->originalPath = $data['original_path'] ?? NULL;
 
     // Record the project this item is destined for.
-    $this->stampTargetProject();
+    $this->stampTargetProject($data);
   }
 
   /**

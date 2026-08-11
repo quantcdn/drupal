@@ -1,0 +1,62 @@
+quant_search.entities.settings:
+  type: config_object
+  label: 'Quant search record settings'
+  mapping:
+    quant_search_entity_node:
+      type: boolean
+      label: 'Keep search records for nodes updated'
+    quant_search_entity_node_bundles:
+      type: sequence
+      label: 'Node bundles to index'
+      sequence:
+        type: string
+        label: 'Bundle'
+    quant_search_entity_node_languages:
+      type: sequence
+      label: 'Languages to index'
+      sequence:
+        type: string
+        label: 'Language code'
+    quant_search_entity_taxonomy_term:
+      type: boolean
+      label: 'Keep search records for taxonomy terms updated'
+    quant_search_title_token:
+      type: string
+      label: 'Token used for the record title'
+    quant_search_summary_token:
+      type: string
+      label: 'Token used for the record summary'
+    quant_search_image_token:
+      type: string
+      label: 'Token used for the record image'
+    quant_search_content_viewmode:
+      type: string
+      label: 'View mode rendered into the record body'
+
+# Per bundle overrides of the defaults above, keyed by node type.
+quant_search.entities.settings.*:
+  type: config_object
+  label: 'Quant search record settings for a content type'
+  mapping:
+    enabled:
+      type: boolean
+      label: 'Override the default values for this content type'
+    exclude:
+      type: boolean
+      label: 'Exclude this content type from the search index'
+    quant_search_title_token:
+      type: string
+      label: 'Token used for the record title'
+      nullable: true
+    quant_search_summary_token:
+      type: string
+      label: 'Token used for the record summary'
+      nullable: true
+    quant_search_image_token:
+      type: string
+      label: 'Token used for the record image'
+      nullable: true
+    quant_search_content_viewmode:
+      type: string
+      label: 'View mode rendered into the record body'
+      nullable: true

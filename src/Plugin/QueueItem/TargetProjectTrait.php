@@ -29,9 +29,22 @@ trait TargetProjectTrait {
   protected $targetProject = NULL;
 
   /**
-   * Records the project resolved in the current domain context.
+   * Records the project this item must be published to.
+   *
+   * Defaults to the project the current domain context resolves to. Callers
+   * that queue work on behalf of a domain other than the one they are
+   * serving — cache invalidation touching every domain that shows a page,
+   * for example — pass the project explicitly.
+   *
+   * @param array $data
+   *   The queue item data. An explicit 'target_project' wins.
    */
-  protected function stampTargetProject() : void {
+  protected function stampTargetProject(array $data = []) : void {
+    if (!empty($data['target_project'])) {
+      $this->targetProject = $data['target_project'];
+      return;
+    }
+
     $this->targetProject = \Drupal::config('quant_api.settings')->get('api_project') ?: NULL;
   }
 

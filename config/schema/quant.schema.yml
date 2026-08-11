@@ -1,0 +1,116 @@
+quant.settings:
+  type: config_object
+  label: 'Quant settings'
+  mapping:
+    quant_enabled:
+      type: boolean
+      label: 'Enable Quant tracking'
+    quant_enabled_nodes:
+      type: boolean
+      label: 'Track node changes'
+    quant_enabled_taxonomy:
+      type: boolean
+      label: 'Track taxonomy term changes'
+    quant_enabled_views:
+      type: boolean
+      label: 'Track view changes'
+    quant_enabled_redirects:
+      type: boolean
+      label: 'Track redirect changes'
+    quant_show_page_info_block:
+      type: boolean
+      label: 'Show the page info block'
+    quant_routes_export:
+      type: string
+      label: 'Routes to export'
+      nullable: true
+    ssl_cert_verify:
+      type: boolean
+      label: 'Verify SSL certificates'
+    disable_content_drafts:
+      type: boolean
+      label: 'Do not export unpublished drafts'
+    proxy_override:
+      type: boolean
+      label: 'Override existing proxy configuration'
+    xpath_selectors:
+      type: string
+      label: 'XPath selectors used to discover pager links'
+    local_server:
+      type: string
+      label: 'Local webserver address used for the crawl'
+    host_domain:
+      type: string
+      label: 'HTTP Host header sent with the crawl'
+    host_domain_strip:
+      type: boolean
+      label: 'Strip the host domain from generated content'
+    entity_node:
+      type: boolean
+      label: 'Export nodes'
+    entity_node_revisions:
+      type: boolean
+      label: 'Export node revisions'
+    entity_node_bundles:
+      type: sequence
+      label: 'Node bundles to export'
+      sequence:
+        type: string
+        label: 'Bundle'
+    entity_node_languages:
+      type: sequence
+      label: 'Languages to export'
+      sequence:
+        type: string
+        label: 'Language code'
+    entity_taxonomy_term:
+      type: boolean
+      label: 'Export taxonomy terms'
+    theme_assets:
+      type: boolean
+      label: 'Export theme assets'
+    views_pages:
+      type: boolean
+      label: 'Export view pages'
+    redirects:
+      type: boolean
+      label: 'Export redirects'
+    robots:
+      type: boolean
+      label: 'Export robots.txt'
+    routes:
+      type: boolean
+      label: 'Export custom routes'
+    routes_textarea:
+      type: string
+      label: 'Custom routes, one per line'
+    file_paths:
+      type: boolean
+      label: 'Export custom file paths'
+    file_paths_textarea:
+      type: string
+      label: 'Custom file paths, one per line'
+    lunr:
+      type: boolean
+      label: 'Export Lunr search assets'
+    export_sitemap:
+      type: boolean
+      label: 'Export the XML sitemap'
+
+quant.token_settings:
+  type: config_object
+  label: 'Quant token settings'
+  mapping:
+    timeout:
+      type: string
+      label: 'Token lifetime, as a relative time string'
+    disable:
+      type: boolean
+      label: 'Disable token verification'
+    secret:
+      type: string
+      label: 'Shared secret used to sign tokens'
+      nullable: true
+    strict:
+      type: boolean
+      label: 'Reject requests whose token does not match the route'

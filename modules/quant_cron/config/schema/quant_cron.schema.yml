@@ -1,0 +1,48 @@
+quant_cron.settings:
+  type: config_object
+  label: 'Quant cron settings'
+  mapping:
+    entity_node:
+      type: boolean
+      label: 'Export nodes'
+    entity_node_bundles:
+      type: sequence
+      label: 'Node bundles to export'
+      sequence:
+        type: string
+        label: 'Bundle'
+    entity_node_languages:
+      type: sequence
+      label: 'Languages to export'
+      sequence:
+        type: string
+        label: 'Language code'
+    entity_taxonomy_term:
+      type: boolean
+      label: 'Export taxonomy terms'
+    theme_assets:
+      type: boolean
+      label: 'Export theme assets'
+    views_pages:
+      type: boolean
+      label: 'Export view pages'
+    robots:
+      type: boolean
+      label: 'Export robots.txt'
+    routes:
+      type: boolean
+      label: 'Export custom routes'
+    routes_export:
+      type: string
+      label: 'Custom routes, one per line'
+      nullable: true
+    file_paths:
+      type: boolean
+      label: 'Export custom file paths'
+    file_paths_textarea:
+      type: string
+      label: 'Custom file paths, one per line'
+      nullable: true
+    lunr:
+      type: boolean
+      label: 'Export Lunr search assets'

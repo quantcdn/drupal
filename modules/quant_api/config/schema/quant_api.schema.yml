@@ -1,0 +1,23 @@
+quant_api.settings:
+  type: config_object
+  label: 'Quant API settings'
+  mapping:
+    api_endpoint:
+      type: string
+      label: 'API endpoint'
+    api_account:
+      type: string
+      label: 'API organization'
+    api_project:
+      type: string
+      label: 'API project'
+      # Multi-domain sites override this per domain, so that each domain
+      # publishes to its own project.
+      nullable: true
+    api_token:
+      type: string
+      label: 'API token'
+      nullable: true
+    api_tls_disabled:
+      type: boolean
+      label: 'Disable TLS verification'

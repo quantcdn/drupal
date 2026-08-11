@@ -43,7 +43,7 @@ class RedirectItem implements QuantQueueItemInterface {
     $this->statusCode = $data['status_code'];
 
     // Record the project this item is destined for.
-    $this->stampTargetProject();
+    $this->stampTargetProject($data);
   }
 
   /**
