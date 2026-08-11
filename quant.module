@@ -15,6 +15,7 @@ use Drupal\Core\Site\Settings;
 use Drupal\Core\Url;
 use Drupal\node\NodeInterface;
 use Drupal\quant\Exception\TokenValidationDisabledException;
+use Symfony\Component\HttpFoundation\Request;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\QuantQueueFactory;
 use Drupal\quant\Seed;
@@ -196,7 +197,44 @@ function quant_shutdown(array $context = []) {
   }
 
   if (is_callable($context['callback'])) {
-    drupal_register_shutdown_function($context['callback'], $context['args']);
+    drupal_register_shutdown_function('_quant_run_with_request', $context['callback'], $context['args']);
+  }
+}
+
+/**
+ * Runs a seed callback with a request on the stack.
+ *
+ * Drupal pops the request once the response has been sent, so by the time
+ * these callbacks run \Drupal::request() is NULL. Anything that renders the
+ * entity or replaces a token then fails: token info asks the request for its
+ * base path and fatals on NULL. The error surfaces only in the PHP log,
+ * because the shutdown handler cannot reach the logger, so the page silently
+ * never reaches Quant.
+ *
+ * The globals still describe the request that triggered the save, including
+ * its host, so the rebuilt request also keeps the correct domain in scope.
+ *
+ * @param callable $callback
+ *   The seed callback to run.
+ * @param mixed $args
+ *   The argument to pass to it.
+ */
+function _quant_run_with_request(callable $callback, $args) {
+  $stack = \Drupal::service('request_stack');
+  $pushed = FALSE;
+
+  if ($stack->getCurrentRequest() === NULL) {
+    $stack->push(Request::createFromGlobals());
+    $pushed = TRUE;
+  }
+
+  try {
+    $callback($args);
+  }
+  finally {
+    if ($pushed) {
+      $stack->pop();
+    }
   }
 }
 

@@ -248,6 +248,10 @@ class Utility {
       $client = \Drupal::service('quant_api.client');
       $response = $client->getUrlMeta($urls);
 
+      // A page that has never been synced has no records, and the method is
+      // declared to return a string, so start from one.
+      $output = '';
+
       if (isset($response['global_meta']['records'])) {
         // Show meta information for the pages in Quant.
         $found_urls = [];
@@ -277,12 +281,14 @@ class Utility {
           else {
             $output .= '<strong>' . t('Page info could not be found for the following URLs:') . '</strong>';
           }
+
           $output .= '<ul>';
-        }
-        foreach ($urls as $url) {
-          if (!in_array($url, $found_urls)) {
-            $output .= '<li>' . $url . '</li>';
+          foreach ($urls as $url) {
+            if (!in_array($url, $found_urls)) {
+              $output .= '<li>' . $url . '</li>';
+            }
           }
+          // Closing the list inside the loop repeated it once per URL.
           $output .= '</ul>';
         }
 

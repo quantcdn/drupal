@@ -18,6 +18,13 @@ services:
     tags:
       - { name: 'event_subscriber' }
 
+  quant.domain_guard:
+    class: Drupal\quant\EventSubscriber\DomainGuardSubscriber
+    arguments:
+      - '@request_stack'
+    tags:
+      - { name: 'event_subscriber' }
+
   quant.collect_entity_subscriber:
     class: Drupal\quant\EventSubscriber\CollectionSubscriber
     arguments:
