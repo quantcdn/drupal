@@ -21,9 +21,12 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * Host header. Publishing on a guess is worse than not publishing, so this
  * stops the push and says why.
  *
- * This applies to the command line too. A --uri that names no configured
- * domain, or a cron run given no --uri at all, falls back the same way and
- * publishes an entire site into the default domain's project.
+ * This only engages where more than one domain is configured, because that is
+ * the only arrangement in which the fallback can reach a different site's
+ * project. A site with one domain, or none, has a single destination and
+ * publishes as it always has, whether or not a --uri was given. That matters
+ * on the command line especially, where plenty of sites run cron and seeds
+ * without one.
  *
  * @ingroup quant
  */
@@ -102,9 +105,10 @@ class DomainGuardSubscriber implements EventSubscriberInterface {
     $host = $request->getHttpHost();
     $storage = \Drupal::entityTypeManager()->getStorage('domain');
 
-    // No domains configured at all means the site is not using per-domain
-    // projects, so there is nothing to get wrong.
-    if (empty($storage->loadMultiple())) {
+    // With a single domain there is only one project to publish to, so the
+    // fallback cannot send content anywhere unexpected. Only a genuine
+    // multi-domain site can lose a page to another site's project.
+    if (count($storage->loadMultiple()) < 2) {
       return FALSE;
     }
 

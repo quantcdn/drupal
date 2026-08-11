@@ -130,13 +130,30 @@ class DomainGuardSubscriberTest extends UnitTestCase {
   }
 
   /**
+   * A single-domain site publishes even when the host does not resolve.
+   *
+   * There is only one project to reach, so the fallback cannot misdirect
+   * anything. Plenty of such sites run cron and seeds without a --uri, and
+   * blocking those would stop publishing for no safety gain.
+   *
+   * @covers ::hostIsUnknown
+   */
+  public function testPublishesOnSingleDomainSiteWithUnknownHost() {
+    $event = $this->event();
+    $this->subscriber(TRUE, ['clienta' => 'x'], 'clienta.example', 'unregistered.example')
+      ->onOutput($event);
+
+    $this->assertFalse($event->isPropagationStopped());
+  }
+
+  /**
    * A host that resolves to a domain publishes as normal.
    *
    * @covers ::onOutput
    */
   public function testPublishesWhenHostResolves() {
     $event = $this->event();
-    $this->subscriber(TRUE, ['clientb' => 'x'], 'clientb.example', 'clientb.example')
+    $this->subscriber(TRUE, ['clienta' => 'x', 'clientb' => 'y'], 'clientb.example', 'clientb.example')
       ->onOutput($event);
 
     $this->assertFalse($event->isPropagationStopped());
@@ -153,7 +170,7 @@ class DomainGuardSubscriberTest extends UnitTestCase {
    */
   public function testStopsWhenHostHasNoDomain() {
     $event = $this->event();
-    $this->subscriber(TRUE, ['clienta' => 'x'], 'clienta.example', 'unregistered.example')
+    $this->subscriber(TRUE, ['clienta' => 'x', 'clientb' => 'y'], 'clienta.example', 'unregistered.example')
       ->onOutput($event);
 
     $this->assertTrue($event->isPropagationStopped());
@@ -166,7 +183,7 @@ class DomainGuardSubscriberTest extends UnitTestCase {
    */
   public function testPortMismatchStopsPush() {
     $event = $this->event();
-    $this->subscriber(TRUE, ['clientb' => 'x'], 'clientb.example:8080', 'clientb.example')
+    $this->subscriber(TRUE, ['clienta' => 'x', 'clientb' => 'y'], 'clientb.example:8080', 'clientb.example')
       ->onOutput($event);
 
     $this->assertTrue($event->isPropagationStopped());

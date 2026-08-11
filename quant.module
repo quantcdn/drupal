@@ -205,11 +205,18 @@ function quant_shutdown(array $context = []) {
  * Runs a seed callback with a request on the stack.
  *
  * Drupal pops the request once the response has been sent, so by the time
- * these callbacks run \Drupal::request() is NULL. Anything that renders the
- * entity or replaces a token then fails: token info asks the request for its
- * base path and fatals on NULL. The error surfaces only in the PHP log,
- * because the shutdown handler cannot reach the logger, so the page silently
- * never reaches Quant.
+ * these callbacks run \Drupal::request() is NULL. Anything that then asks the
+ * request for something fails.
+ *
+ * The known case is the contrib token module, which quant_search depends on.
+ * It collects token info during a replacement, and the site:base-path token
+ * describes itself by calling \Drupal::request()->getBasePath(). The Info
+ * metadata plugin replaces [user:name] by default, so on a site with
+ * quant_search installed every entity save hit this. Core's token service
+ * alone does not, which is why sites without quant_search were unaffected.
+ *
+ * The error surfaces only in the PHP log, because the shutdown handler cannot
+ * reach the logger, so the page silently never reaches Quant.
  *
  * The globals still describe the request that triggered the save, including
  * its host, so the rebuilt request also keeps the correct domain in scope.
