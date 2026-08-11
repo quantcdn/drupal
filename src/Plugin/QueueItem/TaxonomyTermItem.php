@@ -11,6 +11,8 @@ use Drupal\quant\Seed;
  */
 class TaxonomyTermItem implements QuantQueueItemInterface {
 
+  use TargetProjectTrait;
+
   /**
    * The taxonomy term id.
    *
@@ -23,6 +25,9 @@ class TaxonomyTermItem implements QuantQueueItemInterface {
    */
   public function __construct(array $data = []) {
     $this->tid = $data['tid'];
+
+    // Record the project this item is destined for.
+    $this->stampTargetProject();
   }
 
   /**

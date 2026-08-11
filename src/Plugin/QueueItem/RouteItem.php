@@ -12,6 +12,8 @@ use Drupal\quant\Seed;
  */
 class RouteItem implements QuantQueueItemInterface {
 
+  use TargetProjectTrait;
+
   /**
    * A Drupal entity.
    *
@@ -52,6 +54,9 @@ class RouteItem implements QuantQueueItemInterface {
     $this->route = $route;
     $this->uri = $data['uri'] ?? strtok($route, '?');
     $this->filePath = $data['file_path'] ?? DRUPAL_ROOT . strtok($route, '?');
+
+    // Record the project this item is destined for.
+    $this->stampTargetProject();
   }
 
   /**

@@ -25,21 +25,27 @@ class QuantClientTest extends UnitTestCase {
    *   The config interface.
    */
   protected function getConfigStub($default = []) {
-    $value = [
+    $values = [
       'api_account' => 'account',
       'api_token' => 'token',
       'api_endpoint' => 'http://test',
     ] + $default;
 
-    $stub = $this->prophesize(ConfigFactoryInterface::class);
     $config = $this->prophesize(ImmutableConfig::class);
 
-    foreach ($config as $key => $value) {
+    // Iterate the values, not the prophecy. Keys absent here resolve to NULL,
+    // which is what an unconfigured setting returns.
+    foreach ($values as $key => $value) {
       $config->get($key)->willReturn($value);
     }
 
-    $stub->get('quant_api.settings')->willReturn($config);
-    return $stub;
+    $stub = $this->prophesize(ConfigFactoryInterface::class);
+
+    // Reveal both doubles. The client re-reads its credentials before every
+    // request, so the factory must answer get() more than once.
+    $stub->get('quant_api.settings')->willReturn($config->reveal());
+
+    return $stub->reveal();
   }
 
   /**

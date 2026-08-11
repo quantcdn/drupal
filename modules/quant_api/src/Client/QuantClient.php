@@ -74,12 +74,37 @@ class QuantClient implements QuantClientInterface {
   protected $tlsDisabled = FALSE;
 
   /**
+   * The configuration factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(Client $client, ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory) {
-    $this->config = $config_factory->get('quant_api.settings');
+    $this->configFactory = $config_factory;
     $this->client = $client;
     $this->logger = $logger_factory->get('quant_api');
+
+    $this->refreshCredentials();
+  }
+
+  /**
+   * Re-reads the API credentials from configuration.
+   *
+   * This service is a singleton for the lifetime of the process. On a
+   * multi-domain site the target project is not known until the active
+   * domain is negotiated, and that happens after the container is built.
+   * Values captured once in the constructor pin every subsequent request to
+   * whichever project the base configuration names, so they are re-read
+   * immediately before each API call.
+   */
+  protected function refreshCredentials() : void {
+    // Re-fetch from the factory rather than reuse a cached config object: a
+    // domain switch resets the factory and produces a new object.
+    $this->config = $this->configFactory->get('quant_api.settings');
 
     $this->username = $this->config->get('api_account');
     $this->token = $this->config->get('api_token');
@@ -89,9 +114,21 @@ class QuantClient implements QuantClientInterface {
   }
 
   /**
+   * Returns the Quant project this client currently targets.
+   *
+   * @return string|null
+   *   The project machine name, or NULL when none is configured.
+   */
+  public function getProject() : ?string {
+    $this->refreshCredentials();
+    return $this->project ?: NULL;
+  }
+
+  /**
    * Get API overrides.
    */
   public function getOverrides() {
+    $this->refreshCredentials();
     // Note this has to be processed in this class instead of in the
     // SettingsForm because the overrides aren't available in the form.
     $overrides = [];
@@ -117,6 +154,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function ping() {
+    $this->refreshCredentials();
 
     try {
       // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
@@ -157,6 +195,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function project() {
+    $this->refreshCredentials();
 
     try {
       // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
@@ -196,6 +235,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function search() {
+    $this->refreshCredentials();
 
     try {
       // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
@@ -235,6 +275,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function send(array $data) : array {
+    $this->refreshCredentials();
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint, [
       RequestOptions::JSON => $data,
@@ -253,6 +294,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function sendRedirect(array $data) : array {
+    $this->refreshCredentials();
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/redirect', [
       RequestOptions::JSON => $data,
@@ -271,6 +313,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function sendFile(string $file, string $url, ?int $rid = NULL) : array {
+    $this->refreshCredentials();
 
     // Ensure the file is accessible before attempting to send to the API.
     if (!file_exists($file) || !is_readable($file) || !is_file($file)) {
@@ -319,6 +362,7 @@ class QuantClient implements QuantClientInterface {
    *   The API response.
    */
   public function unpublish(string $url) : array {
+    $this->refreshCredentials();
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->patch($this->endpoint . '/unpublish', [
       'headers' => [
@@ -343,6 +387,7 @@ class QuantClient implements QuantClientInterface {
    *   The API response.
    */
   public function getUrlMeta(array $urls) : array {
+    $this->refreshCredentials();
     // Format array if it's not already.
     if (!array_key_exists('Quant-Url', $urls)) {
       $urls = [
@@ -367,6 +412,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function sendSearchRecords(array $records) : array {
+    $this->refreshCredentials();
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/search', [
       RequestOptions::JSON => $records,
@@ -385,6 +431,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function clearSearchIndex() : array {
+    $this->refreshCredentials();
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->delete($this->endpoint . '/search/all', [
       'headers' => [
@@ -402,6 +449,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function addFacets(array $facets) : array {
+    $this->refreshCredentials();
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/search/facet', [
       RequestOptions::JSON => $facets,

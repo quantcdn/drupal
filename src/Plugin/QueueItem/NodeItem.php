@@ -11,6 +11,8 @@ use Drupal\quant\Seed;
  */
 class NodeItem implements QuantQueueItemInterface {
 
+  use TargetProjectTrait;
+
   /**
    * The entity id.
    *
@@ -47,6 +49,9 @@ class NodeItem implements QuantQueueItemInterface {
     $this->id = $data['id'];
     $this->vid = $data['vid'] ?? FALSE;
     $this->filter = isset($data['lang_filter']) && is_array($data['lang_filter']) ? array_filter($data['lang_filter']) : [];
+
+    // Record the project this item is destined for.
+    $this->stampTargetProject();
   }
 
   /**
