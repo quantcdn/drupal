@@ -143,6 +143,12 @@ class QuantTomeBatch {
    *   The batch context.
    */
   public function checkRequiredFiles(&$context) {
+    // Items are stamped with their destination project as they are created,
+    // and this runs as a batch operation, which drush may hand to a separate
+    // process that never negotiated a domain. Resolve it here, where the
+    // items are built, rather than only where they are sent.
+    CliDomainContext::initialize();
+
     $file_hashes = $context['results']['files'];
 
     $queue = $this->queueFactory->get('quant_seed_worker');
