@@ -35,8 +35,10 @@ jobs:
         run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal11 -y
         working-directory: /var/www/drupal
 
+      # token is required by quant_search. purge is required by quant_purger,
+      # whose kernel tests install it, so the suite cannot run without it.
       - name: Install module dependencies
-        run: composer --no-interaction --no-progress require drupal/token
+        run: composer --no-interaction --no-progress require drupal/token drupal/purge
         working-directory: /var/www/drupal
 
       # The image ships phpunit globally, but its bootstrap needs the test
