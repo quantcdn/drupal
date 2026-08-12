@@ -62,7 +62,7 @@ class QuantPurgerProjectTest extends KernelTestBase {
    *   The resolved project.
    */
   protected function resolve(string $domainId) {
-    $plugin = new QuantPurger([], 'quant', []);
+    $plugin = new QuantPurger();
     $plugin->setContainer($this->container);
 
     $method = new \ReflectionMethod($plugin, 'getProjectForDomain');

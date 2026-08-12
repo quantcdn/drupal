@@ -157,7 +157,17 @@ class QuantApi implements EventSubscriberInterface {
       return FALSE;
     }
 
-    $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents'], $res['attachments']['media']['video']);
+    // A refused write returns an empty array, and the API is entitled to
+    // answer without attachments, so none of these keys can be assumed.
+    // array_merge() fatals on a NULL argument.
+    $attachments = $res['attachments'] ?? [];
+    $media = array_merge(
+      $attachments['js'] ?? [],
+      $attachments['css'] ?? [],
+      $attachments['media']['images'] ?? [],
+      $attachments['media']['documents'] ?? [],
+      $attachments['media']['video'] ?? []
+    );
 
     $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');

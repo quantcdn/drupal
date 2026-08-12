@@ -207,8 +207,10 @@ class QuantTomeBatch {
   /**
    * Deploy a file to Quant.
    *
-   * @var \Drupal\quant\Plugin\QueueItem $item
+   * @param \Drupal\quant\Plugin\QueueItem\QuantQueueItemInterface $item
    *   The file item to send to Quant API.
+   * @param array $context
+   *   The batch context.
    */
   public function deploy($item, array &$context) {
     // Batch operations may run in a forked process that never negotiated a

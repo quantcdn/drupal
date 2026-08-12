@@ -6,6 +6,7 @@ use Drupal\quant\CliDomainContext;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
+use Drupal\quant\PublishGuard;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -95,15 +96,13 @@ class DomainGuardSubscriber implements EventSubscriberInterface {
     // The call is cached per process, so this costs nothing after the first.
     CliDomainContext::initialize();
 
-    if (!$this->hostIsUnknown($host)) {
+    if (!PublishGuard::refuses($host, $this->requestStack)) {
       return;
     }
 
-    \Drupal::logger('quant')->error('Refused to publish @path: the host @host matches no domain, so the Domain module fell back to the default and this content would be published to project @project. Add a domain for @host, or correct the Host header reaching Drupal.', [
-      '@path' => self::describe($event),
-      '@host' => $host,
-      '@project' => \Drupal::config('quant_api.settings')->get('api_project') ?: 'unknown',
-    ]);
+    // Stopping here also skips the render and search work the later
+    // subscribers would do, which the client-level backstop cannot.
+    PublishGuard::logRefusal('to publish ' . self::describe($event), $host);
 
     $event->stopPropagation();
   }
@@ -127,43 +126,6 @@ class DomainGuardSubscriber implements EventSubscriberInterface {
     }
 
     return $event->getSourceUrl();
-  }
-
-  /**
-   * Determines whether the serving host has no domain record.
-   *
-   * @param string|null $host
-   *   Set to the offending host when the check fails.
-   *
-   * @return bool
-   *   TRUE when the push must be stopped.
-   */
-  protected function hostIsUnknown(&$host = NULL) : bool {
-    $host = NULL;
-
-    $moduleHandler = \Drupal::moduleHandler();
-
-    if (!$moduleHandler->moduleExists('domain')) {
-      return FALSE;
-    }
-
-    $request = $this->requestStack->getCurrentRequest();
-
-    if (!$request) {
-      return FALSE;
-    }
-
-    $host = $request->getHttpHost();
-    $storage = \Drupal::entityTypeManager()->getStorage('domain');
-
-    // With a single domain there is only one project to publish to, so the
-    // fallback cannot send content anywhere unexpected. Only a genuine
-    // multi-domain site can lose a page to another site's project.
-    if (count($storage->loadMultiple()) < 2) {
-      return FALSE;
-    }
-
-    return empty($storage->loadByHostname($host));
   }
 
 }

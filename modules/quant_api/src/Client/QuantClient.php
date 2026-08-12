@@ -4,6 +4,7 @@ namespace Drupal\quant_api\Client;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\quant\PublishGuard;
 use Drupal\quant_api\Exception\InvalidPayload;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
@@ -111,6 +112,30 @@ class QuantClient implements QuantClientInterface {
     $this->project = $this->config->get('api_project');
     $this->endpoint = $this->config->get('api_endpoint') . '/v1';
     $this->tlsDisabled = $this->config->get('api_tls_disabled');
+  }
+
+  /**
+   * Refuses a write the current context cannot be trusted to address.
+   *
+   * The event subscriber stops most work earlier, and more cheaply. This
+   * catches the writes that never dispatch an event — search records, facets
+   * and index clearing all call this client directly — so a method added
+   * later is covered without anyone remembering to guard it.
+   *
+   * @param string $operation
+   *   What is being attempted, for the log.
+   *
+   * @return bool
+   *   TRUE when the caller must not proceed.
+   */
+  protected function refusesWrite(string $operation) : bool {
+    if (!PublishGuard::refuses($host)) {
+      return FALSE;
+    }
+
+    PublishGuard::logRefusal($operation, $host);
+
+    return TRUE;
   }
 
   /**
@@ -276,6 +301,11 @@ class QuantClient implements QuantClientInterface {
    */
   public function send(array $data) : array {
     $this->refreshCredentials();
+
+    if ($this->refusesWrite('to publish ' . ($data['url'] ?? 'content'))) {
+      return [];
+    }
+
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint, [
       RequestOptions::JSON => $data,
@@ -295,6 +325,11 @@ class QuantClient implements QuantClientInterface {
    */
   public function sendRedirect(array $data) : array {
     $this->refreshCredentials();
+
+    if ($this->refusesWrite('to publish a redirect for ' . ($data['url'] ?? 'a url'))) {
+      return [];
+    }
+
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/redirect', [
       RequestOptions::JSON => $data,
@@ -314,6 +349,10 @@ class QuantClient implements QuantClientInterface {
    */
   public function sendFile(string $file, string $url, ?int $rid = NULL) : array {
     $this->refreshCredentials();
+
+    if ($this->refusesWrite('to upload ' . $url)) {
+      return [];
+    }
 
     // Ensure the file is accessible before attempting to send to the API.
     if (!file_exists($file) || !is_readable($file) || !is_file($file)) {
@@ -363,6 +402,11 @@ class QuantClient implements QuantClientInterface {
    */
   public function unpublish(string $url) : array {
     $this->refreshCredentials();
+
+    if ($this->refusesWrite('to unpublish ' . $url)) {
+      return [];
+    }
+
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->patch($this->endpoint . '/unpublish', [
       'headers' => [
@@ -394,6 +438,7 @@ class QuantClient implements QuantClientInterface {
         'Quant-Url' => $urls,
       ];
     }
+
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/url-meta', [
       RequestOptions::JSON => $urls,
@@ -413,6 +458,11 @@ class QuantClient implements QuantClientInterface {
    */
   public function sendSearchRecords(array $records) : array {
     $this->refreshCredentials();
+
+    if ($this->refusesWrite('to write ' . count($records) . ' search records')) {
+      return [];
+    }
+
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/search', [
       RequestOptions::JSON => $records,
@@ -432,6 +482,11 @@ class QuantClient implements QuantClientInterface {
    */
   public function clearSearchIndex() : array {
     $this->refreshCredentials();
+
+    if ($this->refusesWrite('to clear the search index')) {
+      return [];
+    }
+
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->delete($this->endpoint . '/search/all', [
       'headers' => [
@@ -450,6 +505,11 @@ class QuantClient implements QuantClientInterface {
    */
   public function addFacets(array $facets) : array {
     $this->refreshCredentials();
+
+    if ($this->refusesWrite('to write search facets')) {
+      return [];
+    }
+
     // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
     $response = $this->client->post($this->endpoint . '/search/facet', [
       RequestOptions::JSON => $facets,
