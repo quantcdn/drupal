@@ -2,6 +2,7 @@
 
 namespace Drupal\quant\Plugin\QueueWorker;
 
+use Drupal\Core\Queue\DelayedRequeueException;
 use Drupal\Core\Queue\QueueWorkerBase;
 use Drupal\quant\CliDomainContext;
 use Drupal\quant\Plugin\QueueItem\QuantQueueItemInterface;
@@ -18,6 +19,11 @@ use Drupal\quant\Plugin\QueueItem\QuantQueueItemInterface;
 class QuantSeedWorker extends QueueWorkerBase {
 
   /**
+   * Seconds to hold a mismatched item before it can be claimed again.
+   */
+  const REQUEUE_DELAY = 60;
+
+  /**
    * {@inheritdoc}
    */
   public function processItem($item) {
@@ -30,9 +36,7 @@ class QuantSeedWorker extends QueueWorkerBase {
     // kernel.request, so the domain context is otherwise empty.
     CliDomainContext::initialize();
 
-    if (!$this->targetsActiveProject($item)) {
-      return NULL;
-    }
+    $this->assertTargetsActiveProject($item);
 
     \Drupal::logger('quant_seed')->notice($item->log());
     return $item->send();
@@ -45,34 +49,42 @@ class QuantSeedWorker extends QueueWorkerBase {
    * another's domain. On a shared Drupal instance serving many clients that
    * is a content leak, so a mismatch stops the send rather than risking it.
    *
+   * The item is put back rather than dropped. A worker returning normally has
+   * its item deleted, so simply declining to send would consume work queued
+   * for another domain and that content would never be published at all. The
+   * queue is a single shared table, so whichever domain's worker claims first
+   * would quietly eat the rest.
+   *
    * @param \Drupal\quant\Plugin\QueueItem\QuantQueueItemInterface $item
    *   The queue item.
    *
-   * @return bool
-   *   TRUE when the item may be sent.
+   * @throws \Drupal\Core\Queue\DelayedRequeueException
+   *   When the item belongs to a different project.
    */
-  protected function targetsActiveProject(QuantQueueItemInterface $item) : bool {
+  protected function assertTargetsActiveProject(QuantQueueItemInterface $item) : void {
     $target = $item->getTargetProject();
 
     // Items queued before the stamp existed carry no target. Send them, to
     // keep existing single-domain queues working across an update.
     if (empty($target)) {
-      return TRUE;
+      return;
     }
 
     $active = \Drupal::service('quant_api.client')->getProject();
 
     if ($target === $active) {
-      return TRUE;
+      return;
     }
 
-    \Drupal::logger('quant_seed')->error('Skipped @item: queued for project @target but this worker publishes to @active. Run the queue with --uri set to the domain that owns @target.', [
+    \Drupal::logger('quant_seed')->error('Requeued @item: queued for project @target but this worker publishes to @active. Run the queue with --uri set to the domain that owns @target.', [
       '@item' => $item->log(),
       '@target' => $target,
       '@active' => $active ?: 'none',
     ]);
 
-    return FALSE;
+    // Long enough that a single run cannot spin on the same item, short
+    // enough that the correct worker picks it up on its next pass.
+    throw new DelayedRequeueException(self::REQUEUE_DELAY);
   }
 
 }

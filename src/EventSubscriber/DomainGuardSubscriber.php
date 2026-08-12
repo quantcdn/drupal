@@ -4,6 +4,7 @@ namespace Drupal\quant\EventSubscriber;
 
 use Drupal\quant\CliDomainContext;
 use Drupal\quant\Event\QuantEvent;
+use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -68,7 +69,15 @@ class DomainGuardSubscriber implements EventSubscriberInterface {
       // whichever project the fallback landed on, taking down a live page
       // belonging to another client.
       QuantEvent::UNPUBLISH => ['onOutput', 100],
+      // Files and media go to the same project by the same route, so a
+      // misdirected run would upload one client's assets into another's.
+      QuantFileEvent::OUTPUT => ['onOutput', 100],
     ];
+
+    // Every event the API publisher listens to must appear above. A new one
+    // added there and missed here would publish unguarded, and nothing would
+    // fail loudly.
+    // @see \Drupal\quant\Tests\Unit\DomainGuardSubscriberTest
   }
 
   /**
@@ -91,12 +100,33 @@ class DomainGuardSubscriber implements EventSubscriberInterface {
     }
 
     \Drupal::logger('quant')->error('Refused to publish @path: the host @host matches no domain, so the Domain module fell back to the default and this content would be published to project @project. Add a domain for @host, or correct the Host header reaching Drupal.', [
-      '@path' => $event instanceof QuantEvent ? $event->getLocation() : $event->getSourceUrl(),
+      '@path' => self::describe($event),
       '@host' => $host,
       '@project' => \Drupal::config('quant_api.settings')->get('api_project') ?: 'unknown',
     ]);
 
     $event->stopPropagation();
+  }
+
+  /**
+   * Names the thing being published, for the log message.
+   *
+   * @param object $event
+   *   A content, file or redirect event.
+   *
+   * @return string
+   *   The path or url the event concerns.
+   */
+  protected static function describe($event) : string {
+    if ($event instanceof QuantEvent) {
+      return $event->getLocation();
+    }
+
+    if ($event instanceof QuantFileEvent) {
+      return $event->getUrl();
+    }
+
+    return $event->getSourceUrl();
   }
 
   /**

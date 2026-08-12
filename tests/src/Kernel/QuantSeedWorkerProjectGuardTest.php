@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\quant\Kernel;
 
+use Drupal\Core\Queue\DelayedRequeueException;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\quant\CliDomainContext;
 use Drupal\quant\Plugin\QueueItem\QuantQueueItemInterface;
@@ -168,9 +169,31 @@ class QuantSeedWorkerProjectGuardTest extends KernelTestBase {
     $this->setActiveProject('project-a');
     $item = $this->recordingItem('project-b');
 
-    $this->worker->processItem($item);
+    try {
+      $this->worker->processItem($item);
+      $this->fail('A mismatched item should be requeued, not consumed.');
+    }
+    catch (DelayedRequeueException $e) {
+      $this->assertGreaterThan(0, $e->getDelay(), 'The item is held before it can be claimed again.');
+    }
 
     $this->assertFalse($item->sent, 'The item was not published to the wrong project.');
+  }
+
+  /**
+   * A mismatched item is put back rather than dropped.
+   *
+   * A worker that returns normally has its item deleted. Declining to send
+   * without requeueing would consume another domain's work, and that content
+   * would never be published at all.
+   *
+   * @covers ::assertTargetsActiveProject
+   */
+  public function testMismatchedItemIsRequeuedNotConsumed() {
+    $this->setActiveProject('project-a');
+
+    $this->expectException(DelayedRequeueException::class);
+    $this->worker->processItem($this->recordingItem('project-b'));
   }
 
   /**
@@ -199,7 +222,12 @@ class QuantSeedWorkerProjectGuardTest extends KernelTestBase {
     $this->setActiveProject(NULL);
     $item = $this->recordingItem('project-a');
 
-    $this->worker->processItem($item);
+    try {
+      $this->worker->processItem($item);
+    }
+    catch (DelayedRequeueException $e) {
+      // Expected: held for a worker that knows where it belongs.
+    }
 
     $this->assertFalse($item->sent, 'The item was not published without a target.');
   }

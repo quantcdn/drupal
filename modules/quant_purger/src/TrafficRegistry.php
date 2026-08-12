@@ -93,7 +93,16 @@ class TrafficRegistry implements TrafficRegistryInterface {
    * {@inheritdoc}
    */
   public function clear() {
-    $this->connection->delete('purge_queuer_quant')->execute();
+    $delete = $this->connection->delete('purge_queuer_quant');
+
+    // Scoped to the active domain, to match add() and remove(). An
+    // administrator working on one client's domain would otherwise wipe the
+    // registry for every other client, and each would silently stop purging
+    // until its content was re-seeded. On a single-domain site the active
+    // domain is the empty string, which is every row, so nothing changes.
+    $delete->condition('domain', $this->getActiveDomainId());
+
+    $delete->execute();
   }
 
   /**

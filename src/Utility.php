@@ -314,13 +314,30 @@ class Utility {
    * path correctly; this is the backstop that keeps a malformed one off the
    * wire.
    *
+   * An absolute url is returned untouched. Redirect destinations may point at
+   * another host, and the // in a scheme is not a stray slash: collapsing it
+   * turns https://example.com into https:/example.com and publishes a broken
+   * redirect.
+   *
+   * A protocol-relative url is normalised rather than preserved. It cannot be
+   * told apart from a malformed path by inspection — //fr/node/1 and
+   * //example.com/x have the same shape — and within this module a bare //
+   * is always the malformed path. Nothing here generates protocol-relative
+   * urls: an external redirect destination arrives from
+   * Url::toString() with its scheme intact.
+   *
    * @param string $path
    *   The path, which may carry a query string.
    *
    * @return string
-   *   The path with repeated slashes collapsed.
+   *   The path with repeated slashes collapsed, or the input unchanged if it
+   *   is an absolute url.
    */
   public static function normalizePath(string $path) : string {
+    if (!empty(parse_url($path, PHP_URL_SCHEME))) {
+      return $path;
+    }
+
     // Only the path can pick up stray slashes. A query string may legitimately
     // contain them, in an oEmbed url for instance, so it is left alone.
     $parts = explode('?', $path, 2);

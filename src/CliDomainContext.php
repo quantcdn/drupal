@@ -52,6 +52,9 @@ class CliDomainContext {
       return static::$domainId;
     }
 
+    // Set before the early returns below. A process that asks before the
+    // container has domain.negotiator caches a NULL and keeps it, which is
+    // correct here: a CLI process serves one domain for its whole life.
     static::$initialized = TRUE;
 
     $moduleHandler = \Drupal::moduleHandler();

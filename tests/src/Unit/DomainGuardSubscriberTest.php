@@ -13,6 +13,7 @@ use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\quant\EventSubscriber\DomainGuardSubscriber;
+use Drupal\quant_api\EventSubscriber\QuantApi;
 use Drupal\Tests\UnitTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -125,6 +126,59 @@ class DomainGuardSubscriberTest extends UnitTestCase {
       ->onOutput($event);
 
     $this->assertFalse($event->isPropagationStopped());
+  }
+
+  /**
+   * Unpublishing is guarded, on the same terms as publishing.
+   *
+   * This is the irreversible one: a delete on an unrecognised host withdraws
+   * the matching URL from whichever project the fallback landed on, taking a
+   * live page down on another client's site.
+   *
+   * @covers ::getSubscribedEvents
+   * @covers ::onOutput
+   */
+  public function testUnpublishIsGuarded() {
+    $events = DomainGuardSubscriber::getSubscribedEvents();
+    $this->assertArrayHasKey(QuantEvent::UNPUBLISH, $events);
+
+    $event = new QuantEvent('', '/node/1', [], NULL);
+    $this->subscriber(TRUE, ['clienta' => 'x', 'clientb' => 'y'], 'clienta.example', 'unregistered.example')
+      ->onOutput($event);
+
+    $this->assertTrue($event->isPropagationStopped());
+  }
+
+  /**
+   * An unpublish on a recognised host proceeds.
+   *
+   * @covers ::onOutput
+   */
+  public function testUnpublishPassesOnKnownHost() {
+    $event = new QuantEvent('', '/node/1', [], NULL);
+    $this->subscriber(TRUE, ['clienta' => 'x', 'clientb' => 'y'], 'clientb.example', 'clientb.example')
+      ->onOutput($event);
+
+    $this->assertFalse($event->isPropagationStopped());
+  }
+
+  /**
+   * The guard covers every event the API publisher listens to.
+   *
+   * Each of these was unguarded until a test exercised that verb. A fourth
+   * would go unguarded too, and nothing would fail loudly, so this asserts
+   * the two sets stay in step.
+   *
+   * @covers ::getSubscribedEvents
+   */
+  public function testGuardCoversEveryPublishingEvent() {
+    $guarded = array_keys(DomainGuardSubscriber::getSubscribedEvents());
+    $published = array_keys(QuantApi::getSubscribedEvents());
+
+    $this->assertEmpty(
+      array_diff($published, $guarded),
+      'Every event QuantApi publishes on must also be guarded.'
+    );
   }
 
   /**
