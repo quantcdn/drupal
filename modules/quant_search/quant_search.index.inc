@@ -132,7 +132,9 @@ function quant_search_node_terms($node, $langcode) {
  * @return array
  *   Map of {field_name} => array of integer timestamps. Multi-value and
  *   recurring date fields yield multiple timestamps so a date-range facet
- *   matches if any occurrence falls within range.
+ *   matches if any occurrence falls within range. Date fields with an end
+ *   date (value2) index both endpoints, so a range facet also matches
+ *   events that are already underway (any value within range).
  */
 function quant_search_node_dates($node, $date_fields) {
   $out = array();
@@ -151,8 +153,18 @@ function quant_search_node_dates($node, $date_fields) {
           $stamps[] = $ts;
         }
       }
+      // Date fields with an end date store it in 'value2'; index both
+      // endpoints so range filters match events already underway.
+      if (isset($item['value2']) && $item['value2'] !== $item['value']) {
+        $ts = is_numeric($item['value2']) ? (int) $item['value2'] : strtotime($item['value2']);
+        if ($ts) {
+          $stamps[] = $ts;
+        }
+      }
     }
     if ($stamps) {
+      $stamps = array_values(array_unique($stamps));
+      sort($stamps);
       $out[$field_name] = $stamps;
     }
   }
