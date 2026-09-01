@@ -56,6 +56,28 @@ Then:
 It prints a pass or fail line per case and exits non-zero on any failure. It
 sets up and tears down its own domains, so it is safe to re-run.
 
+## Run it against both Domain lines
+
+Domain 2.0.x and 3.0.x both support Drupal 11 and both are stable, and they
+store `domain_config` overrides differently. A run against one proves nothing
+about the other. This was found the hard way: the per-domain purge resolution
+named a service that exists only in 3.x, so on 2.x it silently returned the
+base project for every domain, and a full green run on 3.0.1 said nothing
+about it.
+
+The harness writes overrides in both layouts, so it runs unchanged on either.
+Switch version and repeat:
+
+```
+ddev drush pmu domain_config domain -y
+ddev composer require "drupal/domain:^2.0"     # or ^3.0
+ddev drush en domain domain_config -y
+./regression.sh
+```
+
+Delete the domain records before switching, or the entities outlive the schema
+that created them.
+
 ## Why a mock rather than the live API
 
 The mock records the `Quant-Project` header of every request, which is the

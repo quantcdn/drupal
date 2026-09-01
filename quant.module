@@ -237,13 +237,17 @@ function quant_shutdown(array $context = []) {
  * The error surfaces only in the PHP log, because the shutdown handler cannot
  * reach the logger, so the page silently never reaches Quant.
  *
- * The globals still describe the request that triggered the save, including
- * its host, so the rebuilt request also keeps the correct domain in scope.
+ * The hooks capture the live request and pass it here, so the host that
+ * decides the destination project is the one Drupal already validated.
+ * Rebuilding from globals is a fallback for callers that have none, and is
+ * only reachable under CLI where no attacker supplies a Host header.
  *
  * @param callable $callback
  *   The seed callback to run.
  * @param mixed $args
  *   The argument to pass to it.
+ * @param \Symfony\Component\HttpFoundation\Request $request
+ *   The request captured when the work was queued, if there was one.
  */
 function _quant_run_with_request(callable $callback, $args, ?Request $request = NULL) {
   $stack = \Drupal::service('request_stack');

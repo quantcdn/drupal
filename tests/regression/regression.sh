@@ -132,9 +132,13 @@ foreach ([["clienta_ddev_site","clienta.ddev.site:33000","Client A",1,1],["clien
 }
 $base = \Drupal::service("config.storage");
 foreach (["clienta_ddev_site"=>["PROJECT-CLIENT-A","token-a","clienta.ddev.site:33000"],"clientb_ddev_site"=>["PROJECT-CLIENT-B","token-b","clientb.ddev.site:33000"]] as $id=>[$p,$t,$h]) {
+  // Domain 3.x reads a config collection; Domain 2.x reads a prefixed config
+  // object. Write both so this runs on either supported line.
   $c = $base->createCollection("domain.$id");
   $c->write("quant_api.settings", ["api_project"=>$p,"api_token"=>$t]);
   $c->write("quant.settings", ["host_domain"=>$h]);
+  $base->write("domain.config.$id.quant_api.settings", ["api_project"=>$p,"api_token"=>$t]);
+  $base->write("domain.config.$id.quant.settings", ["host_domain"=>$h]);
 }' >/dev/null 2>&1
   ddev drush cr >/dev/null 2>&1
 }
@@ -192,9 +196,13 @@ foreach ([["clienta_ddev_site","clienta.ddev.site:33000","Client A",1,1],["clien
 }
 $base = \Drupal::service("config.storage");
 foreach (["clienta_ddev_site"=>["PROJECT-CLIENT-A","token-a","clienta.ddev.site:33000"],"clientb_ddev_site"=>["PROJECT-CLIENT-B","token-b","clientb.ddev.site:33000"]] as $id=>[$p,$t,$h]) {
+  // Domain 3.x reads a config collection; Domain 2.x reads a prefixed config
+  // object. Write both so this runs on either supported line.
   $c = $base->createCollection("domain.$id");
   $c->write("quant_api.settings", ["api_project"=>$p,"api_token"=>$t]);
   $c->write("quant.settings", ["host_domain"=>$h]);
+  $base->write("domain.config.$id.quant_api.settings", ["api_project"=>$p,"api_token"=>$t]);
+  $base->write("domain.config.$id.quant.settings", ["host_domain"=>$h]);
 }' >/dev/null 2>&1
 ddev drush cr >/dev/null 2>&1
 
@@ -284,6 +292,41 @@ print(len([r for r in rows if r.get('has_search_record') and r['quant_project'] 
   check "delete as $D withdraws all languages from PROJECT-$UP" "$(unpublishes_to "PROJECT-$UP")" "2"
   check "  nothing withdrawn from another project" "$(unpublishes_total)" "2"
 done
+
+echo
+echo "================ PURGE FAN-OUT ================"
+# A page served by several domains must be purged on each, addressed to that
+# domain's own project. The resolution reads the override storage, which the
+# Domain module lays out differently between its 2.x and 3.x lines, so this
+# is the case that silently regressed once already.
+setup_domains
+
+# The traffic registry only records requests carrying a Quant token, and the
+# crawl only sends one when content drafts are enabled.
+ddev drush php:eval '\Drupal::configFactory()->getEditable("quant.settings")->set("disable_content_drafts", FALSE)->save(); \Drupal::database()->truncate("purge_queuer_quant")->execute();' >/dev/null 2>&1
+ddev drush cr >/dev/null 2>&1
+
+for D in clienta clientb; do
+  ddev drush --uri="http://$D.ddev.site:33000" quant:seed-queue >/dev/null 2>&1
+  ddev drush --uri="http://$D.ddev.site:33000" quant:run-queue --threads=2 >/dev/null 2>&1
+done
+
+registered=$(ddev drush php:eval 'print \Drupal::database()->select("purge_queuer_quant","q")->condition("url","/node/2")->countQuery()->execute()->fetchField();' 2>/dev/null | tr -d "[:space:]")
+check "the page is registered on both domains" "$registered" "2"
+
+ddev drush quant:clear-queue >/dev/null 2>&1
+stamps=$(ddev drush --uri=http://clienta.ddev.site:33000 php:eval '
+\Drupal\Core\Cache\Cache::invalidateTags(["node:2"]);
+$q = \Drupal\quant\QuantQueueFactory::getInstance()->get("quant_seed_worker");
+$out = [];
+while ($i = $q->claimItem()) { $out[] = (string) $i->data->getTargetProject(); $q->deleteItem($i); }
+sort($out);
+print implode(",", $out);' 2>/dev/null | tr -d "[:space:]")
+
+# Both projects, each once. Before the fix this was the current domain twice.
+check "each domain gets its own project stamped" "$stamps" "PROJECT-CLIENT-A,PROJECT-CLIENT-B"
+
+ddev drush php:eval '\Drupal::configFactory()->getEditable("quant.settings")->set("disable_content_drafts", TRUE)->save();' >/dev/null 2>&1
 
 echo
 echo "================ RESULT ================"

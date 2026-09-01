@@ -145,7 +145,7 @@ class QuantSeedWorkerProjectGuardTest extends KernelTestBase {
    * An item is sent when its stamp matches the active project.
    *
    * @covers ::processItem
-   * @covers ::targetsActiveProject
+   * @covers ::assertTargetsActiveProject
    */
   public function testSendsWhenProjectMatches() {
     $this->setActiveProject('project-a');
@@ -163,7 +163,7 @@ class QuantSeedWorkerProjectGuardTest extends KernelTestBase {
    * client's domain.
    *
    * @covers ::processItem
-   * @covers ::targetsActiveProject
+   * @covers ::assertTargetsActiveProject
    */
   public function testWithholdsWhenProjectDiffers() {
     $this->setActiveProject('project-a');
@@ -202,7 +202,7 @@ class QuantSeedWorkerProjectGuardTest extends KernelTestBase {
    * Queues survive a module update, and a single-domain site has no stamp to
    * compare, so an absent stamp must not block publishing.
    *
-   * @covers ::targetsActiveProject
+   * @covers ::assertTargetsActiveProject
    */
   public function testSendsUnstampedLegacyItem() {
     $this->setActiveProject('project-a');
@@ -216,7 +216,7 @@ class QuantSeedWorkerProjectGuardTest extends KernelTestBase {
   /**
    * An item is withheld when the worker has no project configured at all.
    *
-   * @covers ::targetsActiveProject
+   * @covers ::assertTargetsActiveProject
    */
   public function testWithholdsWhenNoActiveProject() {
     $this->setActiveProject(NULL);

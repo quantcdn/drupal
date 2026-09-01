@@ -46,11 +46,15 @@ class RouteItem implements QuantQueueItemInterface {
       throw new \UnexpectedValueException(self::class . ' requires a string value.');
     }
 
-    // Ensure route starts with a slash and has no empty spaces.
-    if (substr($route, 0, 1) != '/') {
+    // Normalise before the slash is prepended. The other way round, an
+    // absolute route becomes /https://example.com/page, which no longer looks
+    // absolute to parse_url(), so normalizePath() collapses its scheme.
+    $route = Utility::normalizePath(trim($route));
+
+    // Ensure route starts with a slash, unless it is an absolute url.
+    if (substr($route, 0, 1) != '/' && empty(parse_url($route, PHP_URL_SCHEME))) {
       $route = "/{$route}";
     }
-    $route = Utility::normalizePath(trim($route));
 
     $this->route = $route;
     $this->uri = $data['uri'] ?? strtok($route, '?');
