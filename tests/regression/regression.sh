@@ -329,6 +329,77 @@ check "each domain gets its own project stamped" "$stamps" "PROJECT-CLIENT-A,PRO
 ddev drush php:eval '\Drupal::configFactory()->getEditable("quant.settings")->set("disable_content_drafts", TRUE)->save();' >/dev/null 2>&1
 
 echo
+echo "================ STALE DOMAIN ACCESS GRANTS ================"
+# Domain Access decides which domain serves which node through node grants.
+# Enabling it leaves them stale until someone rebuilds, and until then every
+# domain serves every page. A seed then collects all of it and publishes one
+# client's content into another client's project, correctly routed, so
+# nothing else reports a problem. Only runs where domain_access is installed.
+ddev drush en domain_access -y >/dev/null 2>&1
+# The domain fields are attached on install; their definitions have to be
+# visible before content can be assigned to a domain.
+ddev drush cr >/dev/null 2>&1
+
+if ddev drush pm:list --status=enabled 2>/dev/null | grep -qi "domain_access"; then
+  # Content has to belong to a domain before straying content is meaningful.
+  # Nodes are named "A page 1", "B page 1" and so on by the fixture.
+  ddev drush php:eval '
+$map = ["A" => "clienta_ddev_site", "B" => "clientb_ddev_site"];
+foreach (\Drupal::entityTypeManager()->getStorage("node")->loadMultiple() as $node) {
+  if (!preg_match("/^([AB]) page /", $node->label(), $m)) { continue; }
+  if (!$node->hasField("field_domain_access")) { continue; }
+  $node->set("field_domain_access", [["target_id" => $map[$m[1]]]]);
+  $node->set("field_domain_all_affiliates", 0);
+  $node->save();
+}
+node_access_rebuild();' >/dev/null 2>&1
+  ddev drush cr >/dev/null 2>&1
+
+  reset_log
+
+  # Replicate the unrebuilt state exactly: one fallback row granting all.
+  ddev drush php:eval '
+$db = \Drupal::database();
+$db->truncate("node_access")->execute();
+$db->insert("node_access")->fields(["nid"=>0,"langcode"=>"","fallback"=>1,"gid"=>0,"realm"=>"all","grant_view"=>1,"grant_update"=>0,"grant_delete"=>0])->execute();
+\Drupal::moduleHandler()->loadInclude("node","module");
+node_access_needs_rebuild(TRUE);' >/dev/null 2>&1
+  ddev drush cr >/dev/null 2>&1
+
+  ddev drush --uri=http://clienta.ddev.site:33000 quant:seed-queue >/dev/null 2>&1
+  ddev drush --uri=http://clienta.ddev.site:33000 quant:run-queue --threads=3 >/dev/null 2>&1
+
+  foreign=$(python3 -c "
+import json
+rows=[json.loads(l) for l in open('$LOG') if l.strip()]
+pub=[r['pushed_url'] for r in rows if r.get('path')=='/v1' and r.get('pushed_url')]
+print(len([u for u in pub if u.startswith('/b-')]))")
+  check "no other domain's pages published while grants are stale" "$foreign" "0"
+
+  own=$(python3 -c "
+import json
+rows=[json.loads(l) for l in open('$LOG') if l.strip()]
+pub=[r['pushed_url'] for r in rows if r.get('path')=='/v1' and r.get('pushed_url')]
+print(len([u for u in pub if u.startswith('/a-')]))")
+  if [ "$own" -gt 0 ]; then
+    echo "  PASS  its own pages still publish (got $own)"
+    PASS=$((PASS+1))
+  else
+    echo "  FAIL  its own pages still publish (got $own)"
+    FAIL=$((FAIL+1))
+  fi
+
+  # Rebuild, and confirm publishing returns to normal with no refusals.
+  ddev drush php:eval 'node_access_rebuild();' >/dev/null 2>&1
+  ddev drush cr >/dev/null 2>&1
+  reset_log
+  refusals=$(ddev drush --uri=http://clienta.ddev.site:33000 quant:seed-queue >/dev/null 2>&1; ddev drush --uri=http://clienta.ddev.site:33000 quant:run-queue --threads=3 2>&1 | grep -ci "Domain Access assigns")
+  check "no refusals once grants are rebuilt" "$refusals" "0"
+else
+  echo "  SKIP  domain_access is not installed"
+fi
+
+echo
 echo "================ RESULT ================"
 echo "  passed: $PASS   failed: $FAIL"
 [ "$FAIL" -eq 0 ] || exit 1

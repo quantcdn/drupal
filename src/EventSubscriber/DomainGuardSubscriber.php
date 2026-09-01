@@ -96,6 +96,21 @@ class DomainGuardSubscriber implements EventSubscriberInterface {
     // The call is cached per process, so this costs nothing after the first.
     CliDomainContext::initialize();
 
+    // Refuse content that demonstrably belongs to another domain. Stale
+    // Domain Access grants let a seed collect every client's pages, and each
+    // is then published to the project of whichever domain is being seeded.
+    // The routing is correct, so nothing else here notices.
+    if ($event instanceof QuantEvent && PublishGuard::belongsToAnotherDomain($event->getEntity(), $owners)) {
+      \Drupal::logger('quant')->error('Refused to publish @path: Domain Access assigns it to @owners, not to the domain being published. Rebuild node permissions at /admin/reports/status, then seed each domain again.', [
+        '@path' => self::describe($event),
+        '@owners' => $owners,
+      ]);
+
+      $event->stopPropagation();
+
+      return;
+    }
+
     if (!PublishGuard::refuses($host, $this->requestStack)) {
       return;
     }

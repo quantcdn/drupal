@@ -2,6 +2,7 @@
 
 namespace Drupal\quant;
 
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -140,6 +141,94 @@ class PublishGuard {
     $moduleHandler->loadInclude('node', 'module');
 
     return function_exists('node_access_needs_rebuild') && node_access_needs_rebuild();
+  }
+
+  /**
+   * Determines whether a node belongs to a domain other than the active one.
+   *
+   * This is proof rather than suspicion. Domain Access records which domains
+   * serve a node, so a node that names other domains and not this one is
+   * being published to the wrong project, whatever the reason. Stale grants
+   * are the usual cause, but a bypassed access check or a query that forgets
+   * to apply one would land here too.
+   *
+   * Silent on anything it cannot be certain about: no Domain Access, fewer
+   * than two domains, no active domain, an entity with no assignment, or one
+   * marked for all affiliates. Publishing is only refused on evidence.
+   *
+   * @param mixed $entity
+   *   The entity being published, if the event carries one.
+   * @param string|null $owners
+   *   Set to the domains that do own it, for the log message.
+   *
+   * @return bool
+   *   TRUE when the entity demonstrably belongs elsewhere.
+   */
+  public static function belongsToAnotherDomain($entity, &$owners = NULL) : bool {
+    $owners = NULL;
+
+    if (!$entity instanceof FieldableEntityInterface) {
+      return FALSE;
+    }
+
+    if (!$entity->hasField('field_domain_access')) {
+      return FALSE;
+    }
+
+    // Content marked for every affiliate is legitimately on all domains.
+    if ($entity->hasField('field_domain_all_affiliates') && !empty($entity->get('field_domain_all_affiliates')->value)) {
+      return FALSE;
+    }
+
+    $assigned = array_column($entity->get('field_domain_access')->getValue(), 'target_id');
+
+    // No assignment means no claim about where it belongs.
+    if (empty($assigned)) {
+      return FALSE;
+    }
+
+    $active = static::activeDomainId();
+
+    if ($active === NULL) {
+      return FALSE;
+    }
+
+    if (in_array($active, $assigned, TRUE)) {
+      return FALSE;
+    }
+
+    $owners = implode(', ', $assigned);
+
+    return TRUE;
+  }
+
+  /**
+   * Returns the active domain id, where the site has more than one.
+   *
+   * @return string|null
+   *   The domain id, or NULL when nothing can be concluded from it.
+   */
+  protected static function activeDomainId() : ?string {
+    if (!\Drupal::hasContainer() || !\Drupal::hasService('module_handler')) {
+      return NULL;
+    }
+
+    $moduleHandler = \Drupal::moduleHandler();
+
+    if (!$moduleHandler->moduleExists('domain_access') || !\Drupal::hasService('domain.negotiator')) {
+      return NULL;
+    }
+
+    $storage = \Drupal::entityTypeManager()->getStorage('domain');
+
+    // One domain has nowhere else to send anything.
+    if (count($storage->loadMultiple()) < 2) {
+      return NULL;
+    }
+
+    $domain = \Drupal::service('domain.negotiator')->getActiveDomain();
+
+    return $domain ? $domain->id() : NULL;
   }
 
 }

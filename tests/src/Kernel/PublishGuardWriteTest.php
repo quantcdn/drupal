@@ -3,6 +3,7 @@
 namespace Drupal\Tests\quant\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\node\Entity\Node;
 use Drupal\quant\PublishGuard;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -134,6 +135,61 @@ class PublishGuardWriteTest extends KernelTestBase {
     node_access_needs_rebuild(TRUE);
 
     $this->assertFalse(PublishGuard::nodeGrantsAreStale());
+  }
+
+  /**
+   * Nothing is refused without Domain Access to say where content belongs.
+   *
+   * The check is proof-based. Every branch that cannot prove a page belongs
+   * elsewhere has to let it through, or a single-domain site stops
+   * publishing.
+   *
+   * @covers ::belongsToAnotherDomain
+   */
+  public function testNothingRefusedWithoutDomainAccess() {
+    $this->assertFalse(\Drupal::moduleHandler()->moduleExists('domain_access'));
+
+    $node = $this->createNode();
+
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain($node));
+  }
+
+  /**
+   * An entity with no domain field makes no claim and is published.
+   *
+   * @covers ::belongsToAnotherDomain
+   */
+  public function testEntityWithoutTheFieldIsPublished() {
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain($this->createNode()));
+  }
+
+  /**
+   * Anything that is not a fieldable entity is ignored rather than fatal.
+   *
+   * Redirect and file events carry no entity at all.
+   *
+   * @covers ::belongsToAnotherDomain
+   */
+  public function testNonEntityIsIgnored() {
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain(NULL));
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain('not an entity'));
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain(new \stdClass()));
+  }
+
+  /**
+   * Creates a node to test against.
+   *
+   * @return \Drupal\node\NodeInterface
+   *   The node.
+   */
+  protected function createNode() {
+    // Unsaved on purpose. The check reads field values off the entity, so it
+    // needs no storage, and this keeps the test free of entity schema setup.
+    return Node::create([
+      'type' => 'page',
+      'title' => 'Test',
+      'status' => 1,
+    ]);
   }
 
 }
