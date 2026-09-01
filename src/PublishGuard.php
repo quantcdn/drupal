@@ -97,4 +97,49 @@ class PublishGuard {
     ]);
   }
 
+  /**
+   * Determines whether node grants are stale on a multi-domain site.
+   *
+   * Domain Access decides which domain serves which node, through node
+   * grants.
+   * Enabling it sets Drupal's needs-rebuild flag, and until someone rebuilds,
+   * every node is visible on every domain. A seed then collects all of it and
+   * publishes one client's pages into another client's project — correctly
+   * routed, but scoped wrongly, so nothing here notices.
+   *
+   * Reported rather than enforced. The flag means grants may be stale, not
+   * that they are, and it stays set until an administrator acts, which on a
+   * large site can be a while. Refusing to publish for that whole window
+   * would be worse than saying so loudly.
+   *
+   * @return bool
+   *   TRUE when a rebuild is outstanding and it could mis-scope content.
+   */
+  public static function nodeGrantsAreStale() : bool {
+    if (!\Drupal::hasContainer() || !\Drupal::hasService('module_handler')) {
+      return FALSE;
+    }
+
+    $moduleHandler = \Drupal::moduleHandler();
+
+    if (!$moduleHandler->moduleExists('domain_access') || !$moduleHandler->moduleExists('node')) {
+      return FALSE;
+    }
+
+    // With one domain there is nowhere else for content to go.
+    if (!\Drupal::hasService('entity_type.manager')) {
+      return FALSE;
+    }
+
+    $domains = \Drupal::entityTypeManager()->getStorage('domain')->loadMultiple();
+
+    if (count($domains) < 2) {
+      return FALSE;
+    }
+
+    $moduleHandler->loadInclude('node', 'module');
+
+    return function_exists('node_access_needs_rebuild') && node_access_needs_rebuild();
+  }
+
 }

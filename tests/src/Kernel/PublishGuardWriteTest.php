@@ -116,4 +116,24 @@ class PublishGuardWriteTest extends KernelTestBase {
     }
   }
 
+  /**
+   * Stale node grants are only reported where they can mis-scope content.
+   *
+   * Without domain_access there is nothing deciding which domain serves what,
+   * so a pending rebuild cannot send one client's pages to another. The
+   * positive case needs domain_access and two domains, and is covered by the
+   * end-to-end harness rather than here.
+   *
+   * @covers ::nodeGrantsAreStale
+   */
+  public function testGrantsCheckIsQuietWithoutDomainAccess() {
+    $this->assertFalse(\Drupal::moduleHandler()->moduleExists('domain_access'));
+
+    // True in core terms, but harmless without per-domain content.
+    \Drupal::moduleHandler()->loadInclude('node', 'module');
+    node_access_needs_rebuild(TRUE);
+
+    $this->assertFalse(PublishGuard::nodeGrantsAreStale());
+  }
+
 }

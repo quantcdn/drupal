@@ -6,6 +6,7 @@ use Drush\Commands\DrushCommands;
 use Drush\Drush;
 use Drupal\Core\Form\FormState;
 use Drupal\quant\CliDomainContext;
+use Drupal\quant\PublishGuard;
 use Drupal\quant\Seed;
 use Drupal\quant\Event\CollectEntitiesEvent;
 use Drupal\quant\Event\CollectFilesEvent;
@@ -209,6 +210,13 @@ class QuantDrushCommands extends DrushCommands {
     if ($domainId) {
       $project = CliDomainContext::getActiveProject();
       $this->output()->writeln("Active domain: {$domainId}. Target project: {$project}.");
+    }
+
+    // Stale node grants make every domain serve every page, so this seed
+    // would collect another client's content and publish it here. It is
+    // routed correctly, so nothing downstream reports a problem.
+    if (PublishGuard::nodeGrantsAreStale()) {
+      $this->output()->writeln('<error>Domain Access grants are out of date. Every domain currently serves every page, so this seed will publish other sites\' content into this project. Rebuild permissions at /admin/reports/status first.</error>');
     }
 
     $config = \Drupal::config('quant.settings');
