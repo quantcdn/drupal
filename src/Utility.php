@@ -248,6 +248,10 @@ class Utility {
       $client = \Drupal::service('quant_api.client');
       $response = $client->getUrlMeta($urls);
 
+      // A page that has never been synced has no records, and the method is
+      // declared to return a string, so start from one.
+      $output = '';
+
       if (isset($response['global_meta']['records'])) {
         // Show meta information for the pages in Quant.
         $found_urls = [];
@@ -277,12 +281,14 @@ class Utility {
           else {
             $output .= '<strong>' . t('Page info could not be found for the following URLs:') . '</strong>';
           }
+
           $output .= '<ul>';
-        }
-        foreach ($urls as $url) {
-          if (!in_array($url, $found_urls)) {
-            $output .= '<li>' . $url . '</li>';
+          foreach ($urls as $url) {
+            if (!in_array($url, $found_urls)) {
+              $output .= '<li>' . $url . '</li>';
+            }
           }
+          // Closing the list inside the loop repeated it once per URL.
           $output .= '</ul>';
         }
 
@@ -299,14 +305,60 @@ class Utility {
   }
 
   /**
-   * Unpublish the given URL and optionally log a message.
+   * Collapses repeated slashes in a path.
+   *
+   * Paths are assembled from language prefixes, base paths and aliases, and
+   * any of those can be empty, which leaves a stray slash behind. A path like
+   * //fr/node/1 is published as a distinct resource from /fr/node/1, so the
+   * project accumulates duplicates nobody asked for. Callers should build the
+   * path correctly; this is the backstop that keeps a malformed one off the
+   * wire.
+   *
+   * An absolute url is returned untouched. Redirect destinations may point at
+   * another host, and the // in a scheme is not a stray slash: collapsing it
+   * turns https://example.com into https:/example.com and publishes a broken
+   * redirect.
+   *
+   * A protocol-relative url is normalised rather than preserved. It cannot be
+   * told apart from a malformed path by inspection — //fr/node/1 and
+   * //example.com/x have the same shape — and within this module a bare //
+   * is always the malformed path. Nothing here generates protocol-relative
+   * urls: an external redirect destination arrives from
+   * Url::toString() with its scheme intact.
+   *
+   * @param string $path
+   *   The path, which may carry a query string.
+   *
+   * @return string
+   *   The path with repeated slashes collapsed, or the input unchanged if it
+   *   is an absolute url.
+   */
+  public static function normalizePath(string $path) : string {
+    if (!empty(parse_url($path, PHP_URL_SCHEME))) {
+      return $path;
+    }
+
+    // Only the path can pick up stray slashes. A query string may legitimately
+    // contain them, in an oEmbed url for instance, so it is left alone.
+    $parts = explode('?', $path, 2);
+    $parts[0] = preg_replace('#/{2,}#', '/', $parts[0]);
+
+    if ($parts[0] === '') {
+      $parts[0] = '/';
+    }
+
+    return implode('?', $parts);
+  }
+
+  /**
+   * Unpublishes a url from Quant.
    *
    * @param string $url
-   *   The URL to unpublish.
+   *   The url to unpublish.
    * @param string $message
-   *   The message to log.
+   *   Message to log.
    * @param bool $log
-   *   Whether or not to log the message.
+   *   Whether to log the action.
    */
   public static function unpublishUrl(string $url, string $message = '', bool $log = TRUE) : void {
     if (!trim($url)) {
@@ -314,6 +366,8 @@ class Utility {
 
       return;
     }
+
+    $url = self::normalizePath($url);
 
     \Drupal::service('event_dispatcher')->dispatch(new QuantEvent('', $url, [], NULL), QuantEvent::UNPUBLISH);
 

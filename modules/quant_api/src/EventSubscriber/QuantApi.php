@@ -79,8 +79,11 @@ class QuantApi implements EventSubscriberInterface {
    *   The redirect event.
    */
   public function onRedirect(QuantRedirectEvent $event) {
-    $source = $event->getSourceUrl();
-    $dest = $event->getDestinationUrl();
+    // Normalise before the self-redirect check, so that a malformed source
+    // like //fr/node/1 is recognised as the same path as its destination
+    // rather than published as a redirect to itself.
+    $source = Utility::normalizePath($event->getSourceUrl());
+    $dest = Utility::normalizePath($event->getDestinationUrl());
     $statusCode = $event->getStatusCode();
 
     if ($source == $dest) {
@@ -114,7 +117,10 @@ class QuantApi implements EventSubscriberInterface {
   public function onOutput(QuantEvent $event) {
 
     $config = \Drupal::config('quant.settings');
-    $path = $event->getLocation();
+    // Last line of defence: a path assembled from an empty prefix or base
+    // must not reach the API as //fr/node/1, which would publish a duplicate
+    // resource alongside the real one.
+    $path = Utility::normalizePath($event->getLocation());
     $content = $event->getContents();
     $meta = $event->getMetadata();
 
@@ -151,7 +157,17 @@ class QuantApi implements EventSubscriberInterface {
       return FALSE;
     }
 
-    $media = array_merge($res['attachments']['js'], $res['attachments']['css'], $res['attachments']['media']['images'], $res['attachments']['media']['documents'], $res['attachments']['media']['video']);
+    // A refused write returns an empty array, and the API is entitled to
+    // answer without attachments, so none of these keys can be assumed.
+    // array_merge() fatals on a NULL argument.
+    $attachments = $res['attachments'] ?? [];
+    $media = array_merge(
+      $attachments['js'] ?? [],
+      $attachments['css'] ?? [],
+      $attachments['media']['images'] ?? [],
+      $attachments['media']['documents'] ?? [],
+      $attachments['media']['video'] ?? []
+    );
 
     $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');

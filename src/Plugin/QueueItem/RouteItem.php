@@ -4,6 +4,7 @@ namespace Drupal\quant\Plugin\QueueItem;
 
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Seed;
+use Drupal\quant\Utility;
 
 /**
  * A Quant queue item for a redirect.
@@ -11,6 +12,8 @@ use Drupal\quant\Seed;
  * @ingroup quant
  */
 class RouteItem implements QuantQueueItemInterface {
+
+  use TargetProjectTrait;
 
   /**
    * A Drupal entity.
@@ -43,15 +46,22 @@ class RouteItem implements QuantQueueItemInterface {
       throw new \UnexpectedValueException(self::class . ' requires a string value.');
     }
 
-    // Ensure route starts with a slash and has no empty spaces.
-    if (substr($route, 0, 1) != '/') {
+    // Normalise before the slash is prepended. The other way round, an
+    // absolute route becomes /https://example.com/page, which no longer looks
+    // absolute to parse_url(), so normalizePath() collapses its scheme.
+    $route = Utility::normalizePath(trim($route));
+
+    // Ensure route starts with a slash, unless it is an absolute url.
+    if (substr($route, 0, 1) != '/' && empty(parse_url($route, PHP_URL_SCHEME))) {
       $route = "/{$route}";
     }
-    $route = trim($route);
 
     $this->route = $route;
     $this->uri = $data['uri'] ?? strtok($route, '?');
     $this->filePath = $data['file_path'] ?? DRUPAL_ROOT . strtok($route, '?');
+
+    // Record the project this item is destined for.
+    $this->stampTargetProject($data);
   }
 
   /**
@@ -90,7 +100,7 @@ class RouteItem implements QuantQueueItemInterface {
     [$markup, $content_type] = $response;
 
     $config = \Drupal::config('quant.settings');
-    $proxy_override = boolval($config->get('proxy_override', FALSE));
+    $proxy_override = boolval($config->get('proxy_override') ?? FALSE);
 
     $meta = [
       'info' => [

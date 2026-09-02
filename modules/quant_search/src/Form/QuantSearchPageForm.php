@@ -261,6 +261,10 @@ class QuantSearchPageForm extends EntityForm {
       $existingFacets[] = [];
     }
 
+    // The "Add facet" button below attaches to the last row, so this has to
+    // hold a value even when the page has no facets configured yet.
+    $i = 0;
+
     // Configuration fields for all the facets.
     foreach ($existingFacets as $i => $facet) {
 

@@ -11,6 +11,8 @@ use Drupal\quant\Event\QuantRedirectEvent;
  */
 class RedirectItem implements QuantQueueItemInterface {
 
+  use TargetProjectTrait;
+
   /**
    * The source path.
    *
@@ -39,6 +41,9 @@ class RedirectItem implements QuantQueueItemInterface {
     $this->source = $data['source'];
     $this->destination = $data['destination'];
     $this->statusCode = $data['status_code'];
+
+    // Record the project this item is destined for.
+    $this->stampTargetProject($data);
   }
 
   /**

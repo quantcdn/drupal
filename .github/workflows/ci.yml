@@ -35,8 +35,16 @@ jobs:
         run: drush si --db-url=mysql://root:drupal@mariadb:3306/drupal11 -y
         working-directory: /var/www/drupal
 
+      # token is required by quant_search. purge is required by quant_purger,
+      # whose kernel tests install it, so the suite cannot run without it.
       - name: Install module dependencies
-        run: composer --no-interaction --no-progress require drupal/token
+        run: composer --no-interaction --no-progress require drupal/token drupal/purge
+        working-directory: /var/www/drupal
+
+      # The image ships phpunit globally, but its bootstrap needs the test
+      # dependencies that core-dev pulls in.
+      - name: Install test dependencies
+        run: composer --no-interaction --no-progress require --dev -W drupal/core-dev:^11
         working-directory: /var/www/drupal
 
       - name: Set up custom module
@@ -51,4 +59,18 @@ jobs:
 
       - name: Enable quant
         run: drush en quant -y
+        working-directory: /var/www/drupal
+
+      - name: Prepare test output directory
+        run: mkdir -p /var/www/drupal/web/sites/simpletest/browser_output
+        working-directory: /var/www/drupal
+
+      # Runs every unit and kernel test in the module and its submodules.
+      # Previously this job installed the module and stopped, so a broken
+      # test file went unnoticed.
+      - name: Run tests
+        env:
+          SIMPLETEST_DB: mysql://root:drupal@mariadb:3306/drupal11
+          BROWSERTEST_OUTPUT_DIRECTORY: /var/www/drupal/web/sites/simpletest/browser_output
+        run: vendor/bin/phpunit -c web/core --display-deprecations web/modules/custom/quant
         working-directory: /var/www/drupal

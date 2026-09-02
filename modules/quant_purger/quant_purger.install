@@ -23,6 +23,13 @@ function quant_purger_schema() {
         'length' => 255,
         'not null' => TRUE,
       ],
+      'domain' => [
+        'description' => 'The domain the URL was requested on, empty on single-domain sites',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ],
       'tags' => [
         'description' => 'Space-separated list of cache tag IDs for this entry',
         'type' => 'text',
@@ -31,6 +38,11 @@ function quant_purger_schema() {
       ],
     ],
     'primary key' => ['urlid'],
+    // The same path exists on every domain, so a URL is only unique when
+    // paired with the domain it was served from.
+    'unique keys' => [
+      'url_domain' => ['url', 'domain'],
+    ],
   ];
   return $schema;
 }
@@ -98,4 +110,107 @@ function quant_purger_update_9102(&$sandbox) {
   $config->set('tag_allowlist', ['']);
   $config->set('path_allowlist', ['']);
   $config->save();
+}
+
+/**
+ * Record the domain each tracked URL was served from.
+ *
+ * The table never had a unique key, so a site can hold several rows for the
+ * same URL. Adding the key on top of those fails with an integrity
+ * constraint and leaves the update half applied, so the duplicates are
+ * merged first. Their tags are combined rather than discarded: a tag lost
+ * here is a page that stops being purged when its content changes.
+ *
+ * Done in phases over batches, because this table grows with traffic and can
+ * be large.
+ */
+function quant_purger_update_9103(&$sandbox) {
+  $database = \Drupal::database();
+  $schema = $database->schema();
+
+  if (!isset($sandbox['phase'])) {
+    $sandbox['phase'] = 'add_column';
+    $sandbox['merged'] = 0;
+  }
+
+  if ($sandbox['phase'] === 'add_column') {
+    if (!$schema->fieldExists('purge_queuer_quant', 'domain')) {
+      $schema->addField('purge_queuer_quant', 'domain', [
+        'description' => 'The domain the URL was requested on, empty on single-domain sites',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ]);
+    }
+
+    // Existing rows keep an empty domain, which is how a single-domain site
+    // continues to behave. A multi-domain site repopulates as traffic
+    // arrives.
+    $sandbox['phase'] = 'dedupe';
+    $sandbox['#finished'] = 0;
+    return t('Added the domain column to the Quant purger traffic registry.');
+  }
+
+  if ($sandbox['phase'] === 'dedupe') {
+    $duplicates = $database->select('purge_queuer_quant', 'q')
+      ->fields('q', ['url', 'domain'])
+      ->groupBy('q.url')
+      ->groupBy('q.domain')
+      ->havingCondition('total', 1, '>')
+      ->range(0, 50);
+    $duplicates->addExpression('COUNT(*)', 'total');
+    $rows = $duplicates->execute()->fetchAll();
+
+    if (empty($rows)) {
+      $sandbox['phase'] = 'add_key';
+      $sandbox['#finished'] = 0;
+      return NULL;
+    }
+
+    foreach ($rows as $row) {
+      $records = $database->select('purge_queuer_quant', 'q')
+        ->fields('q', ['urlid', 'tags'])
+        ->condition('url', $row->url)
+        ->condition('domain', $row->domain)
+        ->orderBy('urlid')
+        ->execute()
+        ->fetchAll();
+
+      $keep = array_shift($records);
+      $tags = [];
+
+      foreach (array_merge([$keep], $records) as $record) {
+        foreach (explode(';', (string) $record->tags) as $tag) {
+          if ($tag !== '') {
+            $tags[$tag] = $tag;
+          }
+        }
+      }
+
+      $database->update('purge_queuer_quant')
+        ->fields(['tags' => ';' . implode(';', $tags) . ';'])
+        ->condition('urlid', $keep->urlid)
+        ->execute();
+
+      $database->delete('purge_queuer_quant')
+        ->condition('urlid', array_column($records, 'urlid'), 'IN')
+        ->execute();
+
+      $sandbox['merged'] += count($records);
+    }
+
+    $sandbox['#finished'] = 0;
+    return NULL;
+  }
+
+  if (!$schema->indexExists('purge_queuer_quant', 'url_domain')) {
+    $schema->addUniqueKey('purge_queuer_quant', 'url_domain', ['url', 'domain']);
+  }
+
+  $sandbox['#finished'] = 1;
+
+  return t('Quant purger traffic registry is now per domain. Merged @count duplicate rows.', [
+    '@count' => $sandbox['merged'],
+  ]);
 }

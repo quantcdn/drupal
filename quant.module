@@ -10,6 +10,9 @@ use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Queue\DelayableQueueInterface;
+use Drupal\Core\Queue\DelayedRequeueException;
+use Drupal\Core\Queue\RequeueException;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Site\Settings;
 use Drupal\Core\Url;
@@ -19,6 +22,7 @@ use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\QuantQueueFactory;
 use Drupal\quant\Seed;
 use Drupal\quant\Utility;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Implements hook_menu_local_tasks_alter().
@@ -53,6 +57,10 @@ function quant_node_insert(EntityInterface $entity) {
   $context = [
     'callback' => '_quant_entity_update_op',
     'args' => $entity,
+    // Capture the live request while it is still on the stack. Rebuilding one
+    // from globals after the response has gone bypasses Drupal's trusted host
+    // checking, and the host is what decides which project this publishes to.
+    'request' => \Drupal::requestStack()->getCurrentRequest(),
   ];
 
   drupal_register_shutdown_function('quant_shutdown', $context);
@@ -84,6 +92,10 @@ function quant_node_update(EntityInterface $entity) {
   $context = [
     'callback' => '_quant_entity_update_op',
     'args' => $entity,
+    // Capture the live request while it is still on the stack. Rebuilding one
+    // from globals after the response has gone bypasses Drupal's trusted host
+    // checking, and the host is what decides which project this publishes to.
+    'request' => \Drupal::requestStack()->getCurrentRequest(),
   ];
 
   drupal_register_shutdown_function('quant_shutdown', $context);
@@ -109,6 +121,10 @@ function quant_taxonomy_term_insert(EntityInterface $entity) {
   $context = [
     'callback' => '_quant_entity_update_op',
     'args' => $entity,
+    // Capture the live request while it is still on the stack. Rebuilding one
+    // from globals after the response has gone bypasses Drupal's trusted host
+    // checking, and the host is what decides which project this publishes to.
+    'request' => \Drupal::requestStack()->getCurrentRequest(),
   ];
 
   drupal_register_shutdown_function('quant_shutdown', $context);
@@ -140,6 +156,10 @@ function quant_taxonomy_term_update(EntityInterface $entity) {
   $context = [
     'callback' => '_quant_entity_update_op',
     'args' => $entity,
+    // Capture the live request while it is still on the stack. Rebuilding one
+    // from globals after the response has gone bypasses Drupal's trusted host
+    // checking, and the host is what decides which project this publishes to.
+    'request' => \Drupal::requestStack()->getCurrentRequest(),
   ];
 
   drupal_register_shutdown_function('quant_shutdown', $context);
@@ -196,7 +216,58 @@ function quant_shutdown(array $context = []) {
   }
 
   if (is_callable($context['callback'])) {
-    drupal_register_shutdown_function($context['callback'], $context['args']);
+    drupal_register_shutdown_function('_quant_run_with_request', $context['callback'], $context['args'], $context['request'] ?? NULL);
+  }
+}
+
+/**
+ * Runs a seed callback with a request on the stack.
+ *
+ * Drupal pops the request once the response has been sent, so by the time
+ * these callbacks run \Drupal::request() is NULL. Anything that then asks the
+ * request for something fails.
+ *
+ * The known case is the contrib token module, which quant_search depends on.
+ * It collects token info during a replacement, and the site:base-path token
+ * describes itself by calling \Drupal::request()->getBasePath(). The Info
+ * metadata plugin replaces [user:name] by default, so on a site with
+ * quant_search installed every entity save hit this. Core's token service
+ * alone does not, which is why sites without quant_search were unaffected.
+ *
+ * The error surfaces only in the PHP log, because the shutdown handler cannot
+ * reach the logger, so the page silently never reaches Quant.
+ *
+ * The hooks capture the live request and pass it here, so the host that
+ * decides the destination project is the one Drupal already validated.
+ * Rebuilding from globals is a fallback for callers that have none, and is
+ * only reachable under CLI where no attacker supplies a Host header.
+ *
+ * @param callable $callback
+ *   The seed callback to run.
+ * @param mixed $args
+ *   The argument to pass to it.
+ * @param \Symfony\Component\HttpFoundation\Request $request
+ *   The request captured when the work was queued, if there was one.
+ */
+function _quant_run_with_request(callable $callback, $args, ?Request $request = NULL) {
+  $stack = \Drupal::service('request_stack');
+  $pushed = FALSE;
+
+  if ($stack->getCurrentRequest() === NULL) {
+    // Prefer the request the hook captured: it went through Drupal's trusted
+    // host checking. createFromGlobals() reads $_SERVER['HTTP_HOST'] verbatim,
+    // and that host decides which project the work publishes to.
+    $stack->push($request ?: Request::createFromGlobals());
+    $pushed = TRUE;
+  }
+
+  try {
+    $callback($args);
+  }
+  finally {
+    if ($pushed) {
+      $stack->pop();
+    }
   }
 }
 
@@ -360,8 +431,24 @@ function quant_process_queue(array &$context) {
     return FALSE;
   }
 
-  $worker->processItem($item->data);
-  $queue->deleteItem($item);
+  // Drush and cron both understand a requeue; this batch runner has to be
+  // told, or an item belonging to another domain would be deleted here after
+  // the worker declined to send it.
+  try {
+    $worker->processItem($item->data);
+    $queue->deleteItem($item);
+  }
+  catch (DelayedRequeueException $e) {
+    if ($queue instanceof DelayableQueueInterface) {
+      $queue->delayItem($item, $e->getDelay());
+    }
+    else {
+      $queue->releaseItem($item);
+    }
+  }
+  catch (RequeueException) {
+    $queue->releaseItem($item);
+  }
 
   $context['sandbox']['progress']++;
   $context['message'] = t('Processed @i of @t', [

@@ -11,6 +11,8 @@ use Drupal\quant\Event\QuantFileEvent;
  */
 class FileItem implements QuantQueueItemInterface {
 
+  use TargetProjectTrait;
+
   /**
    * The file path.
    *
@@ -47,6 +49,9 @@ class FileItem implements QuantQueueItemInterface {
     $this->url = $data['url'] ?? NULL;
     $this->fullPath = $data['full_path'] ?? NULL;
     $this->originalPath = $data['original_path'] ?? NULL;
+
+    // Record the project this item is destined for.
+    $this->stampTargetProject($data);
   }
 
   /**

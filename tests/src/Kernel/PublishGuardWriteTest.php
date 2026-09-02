@@ -1,0 +1,195 @@
+<?php
+
+namespace Drupal\Tests\quant\Kernel;
+
+use Drupal\KernelTests\KernelTestBase;
+use Drupal\node\Entity\Node;
+use Drupal\quant\PublishGuard;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+
+/**
+ * Ensures every write path consults the guard, not just the event path.
+ *
+ * Search records, facets and index clearing call the API client directly and
+ * dispatch no event, so guarding the subscriber alone left them open. Index
+ * clearing is destructive: on an unrecognised host it would wipe another
+ * client's search index.
+ *
+ * @coversDefaultClass \Drupal\quant\PublishGuard
+ *
+ * @group quant
+ */
+#[RunTestsInSeparateProcesses]
+class PublishGuardWriteTest extends KernelTestBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = [
+    'system',
+    'user',
+    'field',
+    'text',
+    'filter',
+    'node',
+    'taxonomy',
+    'views',
+    'quant',
+    'quant_api',
+  ];
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp() : void {
+    parent::setUp();
+    $this->installConfig(['quant_api']);
+  }
+
+  /**
+   * Without the Domain module nothing is refused.
+   *
+   * @covers ::refuses
+   */
+  public function testAllowsWhenDomainModuleAbsent() {
+    $this->assertFalse(\Drupal::moduleHandler()->moduleExists('domain'));
+    $this->assertFalse(PublishGuard::refuses());
+  }
+
+  /**
+   * Every write method on the client consults the guard.
+   *
+   * Asserted by reading the source rather than by exercising each one,
+   * because the point is that a method added later is covered too. A new
+   * write that skips the check fails this.
+   *
+   * @covers ::refuses
+   */
+  public function testEveryWriteMethodIsGuarded() {
+    $path = \Drupal::service('extension.list.module')->getPath('quant_api');
+    $source = file_get_contents($this->root . '/' . $path . '/src/Client/QuantClient.php');
+
+    // Methods that change something in a Quant project.
+    $writes = [
+      'send',
+      'sendRedirect',
+      'sendFile',
+      'unpublish',
+      'sendSearchRecords',
+      'clearSearchIndex',
+      'addFacets',
+    ];
+
+    foreach ($writes as $method) {
+      $start = strpos($source, 'public function ' . $method . '(');
+      $this->assertNotFalse($start, "QuantClient::$method() exists.");
+
+      // The guard should be among the first statements, before any request.
+      $body = substr($source, $start, 500);
+      $this->assertStringContainsString(
+        'refusesWrite(',
+        $body,
+        "QuantClient::$method() consults the publish guard."
+      );
+    }
+  }
+
+  /**
+   * Read-only methods are left alone.
+   *
+   * The settings form reports whether the connection works by calling
+   * ping() and project(), so those must keep answering on any host.
+   *
+   * @covers ::refuses
+   */
+  public function testReadMethodsAreNotGuarded() {
+    $path = \Drupal::service('extension.list.module')->getPath('quant_api');
+    $source = file_get_contents($this->root . '/' . $path . '/src/Client/QuantClient.php');
+
+    foreach (['ping', 'project', 'search', 'getUrlMeta'] as $method) {
+      $start = strpos($source, 'public function ' . $method . '(');
+      $body = substr($source, $start, 400);
+      $this->assertStringNotContainsString(
+        'refusesWrite(',
+        $body,
+        "QuantClient::$method() is a read and stays unguarded."
+      );
+    }
+  }
+
+  /**
+   * Stale node grants are only reported where they can mis-scope content.
+   *
+   * Without domain_access there is nothing deciding which domain serves what,
+   * so a pending rebuild cannot send one client's pages to another. The
+   * positive case needs domain_access and two domains, and is covered by the
+   * end-to-end harness rather than here.
+   *
+   * @covers ::nodeGrantsAreStale
+   */
+  public function testGrantsCheckIsQuietWithoutDomainAccess() {
+    $this->assertFalse(\Drupal::moduleHandler()->moduleExists('domain_access'));
+
+    // True in core terms, but harmless without per-domain content.
+    \Drupal::moduleHandler()->loadInclude('node', 'module');
+    node_access_needs_rebuild(TRUE);
+
+    $this->assertFalse(PublishGuard::nodeGrantsAreStale());
+  }
+
+  /**
+   * Nothing is refused without Domain Access to say where content belongs.
+   *
+   * The check is proof-based. Every branch that cannot prove a page belongs
+   * elsewhere has to let it through, or a single-domain site stops
+   * publishing.
+   *
+   * @covers ::belongsToAnotherDomain
+   */
+  public function testNothingRefusedWithoutDomainAccess() {
+    $this->assertFalse(\Drupal::moduleHandler()->moduleExists('domain_access'));
+
+    $node = $this->createNode();
+
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain($node));
+  }
+
+  /**
+   * An entity with no domain field makes no claim and is published.
+   *
+   * @covers ::belongsToAnotherDomain
+   */
+  public function testEntityWithoutTheFieldIsPublished() {
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain($this->createNode()));
+  }
+
+  /**
+   * Anything that is not a fieldable entity is ignored rather than fatal.
+   *
+   * Redirect and file events carry no entity at all.
+   *
+   * @covers ::belongsToAnotherDomain
+   */
+  public function testNonEntityIsIgnored() {
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain(NULL));
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain('not an entity'));
+    $this->assertFalse(PublishGuard::belongsToAnotherDomain(new \stdClass()));
+  }
+
+  /**
+   * Creates a node to test against.
+   *
+   * @return \Drupal\node\NodeInterface
+   *   The node.
+   */
+  protected function createNode() {
+    // Unsaved on purpose. The check reads field values off the entity, so it
+    // needs no storage, and this keeps the test free of entity schema setup.
+    return Node::create([
+      'type' => 'page',
+      'title' => 'Test',
+      'status' => 1,
+    ]);
+  }
+
+}

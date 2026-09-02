@@ -3,7 +3,10 @@
 namespace Drupal\quant\Commands;
 
 use Drush\Commands\DrushCommands;
+use Drush\Drush;
 use Drupal\Core\Form\FormState;
+use Drupal\quant\CliDomainContext;
+use Drupal\quant\PublishGuard;
 use Drupal\quant\Seed;
 use Drupal\quant\Event\CollectEntitiesEvent;
 use Drupal\quant\Event\CollectFilesEvent;
@@ -29,10 +32,40 @@ class QuantDrushCommands extends DrushCommands {
 
   /**
    * Returns lock file location (project specific).
+   *
+   * Reads through the overridable config factory. getEditable() returns the
+   * base values only, which on a multi-domain site gives every domain the
+   * same lock file: the first seed run blocks all the others.
    */
   private function getLockFileLocation() {
-    $config = \Drupal::configFactory()->getEditable('quant_api.settings');
+    $config = \Drupal::config('quant_api.settings');
     return sys_get_temp_dir() . '/' . $config->get('api_project') . '_quant_seed_worker.lock';
+  }
+
+  /**
+   * Returns the options forked workers must inherit from this process.
+   *
+   * Forked workers start as bare drush processes that share nothing with
+   * their parent. Without --uri the worker boots on the default domain, so
+   * per-domain config overrides resolve to the base project and every
+   * domain's content is published there.
+   *
+   * @return string
+   *   Options to append to the forked command, escaped for the shell.
+   */
+  private function getForkOptions() : string {
+    $options = [];
+    $bootstrapManager = Drush::bootstrapManager();
+
+    if ($uri = $bootstrapManager->getUri()) {
+      $options[] = '--uri=' . escapeshellarg($uri);
+    }
+
+    if ($root = $bootstrapManager->getRoot()) {
+      $options[] = '--root=' . escapeshellarg($root);
+    }
+
+    return $options ? ' ' . implode(' ', $options) : '';
   }
 
   /**
@@ -82,11 +115,19 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:run-queue --threads=5
    */
   public function message($options = ['threads' => 5]) {
+    // Resolve per-domain config before anything reads the project name.
+    $domainId = CliDomainContext::initialize();
+
     $this->output()->writeln("<info>Forking seed worker.</info>");
     $drushPath = $this->getDrushPath();
     $lockFilePath = $this->getLockFileLocation();
-    $cmd = $drushPath . ' queue:run quant_seed_worker';
+    $cmd = $drushPath . ' queue:run quant_seed_worker' . $this->getForkOptions();
     $this->output()->writeln("<comment>Using drush binary at $drushPath. Override with \$DRUSH_PATH if required.</comment>");
+
+    $project = CliDomainContext::getActiveProject();
+    if ($domainId) {
+      $this->output()->writeln("<info>Active domain: {$domainId}. Publishing to project: {$project}.</info>");
+    }
 
     // Bail if another run is in progress.
     if (file_exists($lockFilePath)) {
@@ -127,6 +168,9 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:unlock-queue
    */
   public function unlock($options = []) {
+    // The lock file is named after the resolved project, so the domain must
+    // be negotiated before the path can be built.
+    CliDomainContext::initialize();
     $lockFilePath = $this->getLockFileLocation();
     unlink($lockFilePath);
 
@@ -157,9 +201,25 @@ class QuantDrushCommands extends DrushCommands {
    * @usage quant:seed-queue
    */
   public function prepare($options = ['reset' => 'true']) {
+    // Resolve per-domain config before the seed settings are read, so that
+    // each domain seeds with its own bundles, routes and file paths.
+    $domainId = CliDomainContext::initialize();
+
     $this->output()->writeln("Preparing seed...");
 
-    $config = \Drupal::configFactory()->getEditable('quant.settings');
+    if ($domainId) {
+      $project = CliDomainContext::getActiveProject();
+      $this->output()->writeln("Active domain: {$domainId}. Target project: {$project}.");
+    }
+
+    // Stale node grants make every domain serve every page, so this seed
+    // would collect another client's content and publish it here. It is
+    // routed correctly, so nothing downstream reports a problem.
+    if (PublishGuard::nodeGrantsAreStale()) {
+      $this->output()->writeln('<error>Domain Access grants are out of date. Every domain currently serves every page, so this seed will publish other sites\' content into this project. Rebuild permissions at /admin/reports/status first.</error>');
+    }
+
+    $config = \Drupal::config('quant.settings');
 
     $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');

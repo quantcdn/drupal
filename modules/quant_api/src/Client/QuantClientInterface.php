@@ -16,6 +16,17 @@ interface QuantClientInterface {
   public function ping();
 
   /**
+   * Returns the Quant project this client currently targets.
+   *
+   * Resolved at call time, because a multi-domain site changes the target
+   * project once the active domain is negotiated.
+   *
+   * @return string|null
+   *   The project machine name, or NULL when none is configured.
+   */
+  public function getProject() : ?string;
+
+  /**
    * Retrieves project data.
    *
    * @return mixed

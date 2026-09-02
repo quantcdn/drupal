@@ -6,6 +6,7 @@ use Drupal\Core\Batch\BatchBuilder;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Queue\QueueFactory;
+use Drupal\quant\CliDomainContext;
 use Drupal\quant\Plugin\QueueItem\RedirectItem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant_api\Client\QuantClient;
@@ -142,6 +143,12 @@ class QuantTomeBatch {
    *   The batch context.
    */
   public function checkRequiredFiles(&$context) {
+    // Items are stamped with their destination project as they are created,
+    // and this runs as a batch operation, which drush may hand to a separate
+    // process that never negotiated a domain. Resolve it here, where the
+    // items are built, rather than only where they are sent.
+    CliDomainContext::initialize();
+
     $file_hashes = $context['results']['files'];
 
     $queue = $this->queueFactory->get('quant_seed_worker');
@@ -200,10 +207,17 @@ class QuantTomeBatch {
   /**
    * Deploy a file to Quant.
    *
-   * @var \Drupal\quant\Plugin\QueueItem $item
+   * @param \Drupal\quant\Plugin\QueueItem\QuantQueueItemInterface $item
    *   The file item to send to Quant API.
+   * @param array $context
+   *   The batch context.
    */
   public function deploy($item, array &$context) {
+    // Batch operations may run in a forked process that never negotiated a
+    // domain, so resolve it here rather than relying on the caller. The call
+    // is cached per process and costs nothing after the first item.
+    CliDomainContext::initialize();
+
     \Drupal::logger('quant_tome')->notice('Sending %s', [
       '%s' => $item->log(),
     ]);

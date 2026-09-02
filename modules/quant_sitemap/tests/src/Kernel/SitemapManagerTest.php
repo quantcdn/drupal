@@ -1,8 +1,9 @@
 <?php
 
-namespace Drupal\Tests\quant_sitemap\Unit;
+namespace Drupal\Tests\quant_sitemap\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\quant_sitemap\SitemapManager;
 use Drupal\simple_sitemap\Manager\EntityManager as SimpleSitemapManager;
 
@@ -16,6 +17,7 @@ use Drupal\Core\Extension\ModuleHandler;
  * @group quant
  * @coversDefaultClass Drupal\quant_sitemap\SitemapManager
  */
+#[RunTestsInSeparateProcesses]
 class SitemapManagerTest extends KernelTestBase {
 
   /**
@@ -174,6 +176,12 @@ class SitemapManagerTest extends KernelTestBase {
    * Test that simple sitemap items generate as expected.
    */
   public function testSimpleSitemapListItems() {
+    // This case doubles a simple_sitemap class, so it can only run where that
+    // optional module is installed.
+    if (!class_exists(SimpleSitemapManager::class)) {
+      $this->markTestSkipped('The simple_sitemap module is not installed.');
+    }
+
     $module_handler_mock = $this->createMock(ModuleHandler::class);
     $module_handler_mock->expects($this->once())
       ->method('moduleExists')

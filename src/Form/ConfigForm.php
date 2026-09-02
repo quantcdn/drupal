@@ -54,7 +54,7 @@ class ConfigForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Track content change'),
       '#description' => $this->t('Automatically push content changes to Quant (recommended).'),
-      '#default_value' => $config->get('quant_enabled', TRUE),
+      '#default_value' => $config->get('quant_enabled') ?? TRUE,
     ];
 
     $form['tracking_fieldset'] = [

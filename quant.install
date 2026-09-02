@@ -6,8 +6,35 @@
  */
 
 use Drupal\Core\Database\Database;
+use Drupal\quant\PublishGuard;
 use Drupal\views\Entity\View;
 use Symfony\Component\Yaml\Yaml;
+
+/**
+ * Implements hook_requirements().
+ */
+function quant_requirements($phase) {
+  $requirements = [];
+
+  if ($phase !== 'runtime') {
+    return $requirements;
+  }
+
+  if (!PublishGuard::nodeGrantsAreStale()) {
+    return $requirements;
+  }
+
+  $requirements['quant_node_grants'] = [
+    'title' => t('Quant content scoping'),
+    'value' => t('Node grants need rebuilding'),
+    'severity' => REQUIREMENT_WARNING,
+    'description' => t('Domain Access decides which domain serves which content, and its grants are out of date. Until they are rebuilt every domain serves every page, so a Quant seed publishes one site\'s content into another site\'s project. The pages reach the right project for the domain that was seeded, so nothing reports an error. Rebuild permissions on the <a href=":url">status report</a>, then re-seed each domain.', [
+      ':url' => '/admin/reports/status',
+    ]),
+  ];
+
+  return $requirements;
+}
 
 /**
  * Perform setup tasks for Quant.

@@ -5,6 +5,7 @@
  * Add cron support for Quant processing.
  */
 
+use Drupal\quant\CliDomainContext;
 use Drupal\quant\Seed;
 use Drupal\Core\Form\FormState;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
@@ -22,6 +23,19 @@ function quant_cron_cron() {
   // Quant cron only supported via CLI.
   if (PHP_SAPI != 'cli') {
     return;
+  }
+
+  // This hook sends content synchronously rather than queueing it, so the
+  // target project must be resolved before the first send. Drush dispatches
+  // no kernel.request, so on a multi-domain site the domain has not been
+  // negotiated yet and every domain would publish to the base project.
+  $domainId = CliDomainContext::initialize();
+
+  if ($domainId) {
+    \Drupal::logger('quant_cron')->notice('Running for domain @domain, publishing to project @project.', [
+      '@domain' => $domainId,
+      '@project' => CliDomainContext::getActiveProject(),
+    ]);
   }
 
   // Load the settings form.
@@ -270,9 +284,11 @@ function quant_cron_get_views_routes() {
 
         $paths[] = $path;
 
-        // Language negotiation may also provide path prefixes.
+        // Language negotiation may also provide path prefixes. The default
+        // language usually has an empty one, which would otherwise produce
+        // //path.
         if ($prefixes = \Drupal::config('language.negotiation')->get('url.prefixes')) {
-          foreach ($prefixes as $prefix) {
+          foreach (array_filter($prefixes) as $prefix) {
             $paths[] = "/{$prefix}/{$path}";
           }
         }

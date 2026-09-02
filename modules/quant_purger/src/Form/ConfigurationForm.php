@@ -170,7 +170,7 @@ class ConfigurationForm extends QueuerConfigFormBase {
     if (!$form_state->getErrors()) {
       \Drupal::service('quant_purger.registry')->clear();
       $status = 'status';
-      $message = $this->t('Successfully cleared the traffic registry. All content must be re-seeded so the database reflects the configuration.');
+      $message = $this->t('Successfully cleared the traffic registry for this domain. All content must be re-seeded so the database reflects the configuration.');
     }
     else {
       $status = 'error';

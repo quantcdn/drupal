@@ -53,7 +53,7 @@ class ProxyOverride extends MetadataBase implements ContainerFactoryPluginInterf
     // Proxies are created manually and usually not something you want to
     // replace. This is a globally configurable to allow override just in case.
     $config = \Drupal::config('quant.settings');
-    $proxy_override = boolval($config->get('proxy_override', TRUE));
+    $proxy_override = boolval($config->get('proxy_override') ?? TRUE);
     return ['proxy_override' => $proxy_override];
   }
 

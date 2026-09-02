@@ -75,7 +75,7 @@ class SettingsForm extends ConfigFormBase {
       '#type' => 'textfield',
       '#title' => $this->t('API Endpoint'),
       '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code>, shown on the <code>Integrations</code> page. Update via drush or settings.php if necessary.'),
-      '#default_value' => $config->get('api_endpoint', 'https://api.quantcdn.io'),
+      '#default_value' => $config->get('api_endpoint') ?? 'https://api.quantcdn.io',
       '#required' => TRUE,
       '#disabled' => TRUE,
     ];
@@ -109,7 +109,7 @@ class SettingsForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Disable TLS verification'),
       '#description' => $this->t('You can optionally disable TLS verification for all Quant API requests. This is <strong>not recommended</strong>, but may be necessary in some configurations. For example, old web servers may have issues validating modern TSL/SSL certificates.'),
-      '#default_value' => $config->get('api_tls_disabled', FALSE),
+      '#default_value' => $config->get('api_tls_disabled') ?? FALSE,
     ];
 
     // API values might be overridden in the settings file.

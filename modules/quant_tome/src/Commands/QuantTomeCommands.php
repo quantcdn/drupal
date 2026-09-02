@@ -3,6 +3,7 @@
 namespace Drupal\quant_tome\Commands;
 
 use Drush\Commands\DrushCommands;
+use Drupal\quant\CliDomainContext;
 use Drupal\quant\Commands\QuantDrushCommands;
 use Drupal\quant_tome\QuantTomeBatch;
 
@@ -34,7 +35,16 @@ class QuantTomeCommands extends DrushCommands {
    * @command quant:tome:deploy
    */
   public function deploy(array $options = ['threads' => 5]) {
+    // Resolve the domain before checkConfig() reads the API settings,
+    // otherwise the connection test and the whole deploy target the base
+    // project rather than this domain's.
+    $domainId = CliDomainContext::initialize();
+
     $this->io()->writeln('Preparing Tome output for Quant...');
+
+    if ($domainId) {
+      $this->io()->writeln(sprintf('Active domain: %s. Target project: %s.', $domainId, CliDomainContext::getActiveProject()));
+    }
 
     if (!$this->batch->checkConfig()) {
       $this->io()->error('Cannot connect to the Quant API. Please check the Quant configuration.');
