@@ -6,4 +6,4 @@ type: module
 core_version_requirement: ^11
 configure: quant_api.settings_form
 dependencies:
-  - quant:quant
+  - quantcdn:quant
