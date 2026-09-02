@@ -6,5 +6,5 @@ type: module
 core_version_requirement: ^11
 
 dependencies:
-  - quant:quant
+  - quantcdn:quant
   - purge:purge

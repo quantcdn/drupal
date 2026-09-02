@@ -8,4 +8,4 @@ configure: quant.config
 dependencies:
   - drupal:taxonomy
   - drupal:views
-  - quant:quant_api
+  - quantcdn:quant_api
