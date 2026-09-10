@@ -37,8 +37,12 @@
                 searchClient: client,
                 queries: [{
                   indexName: cfg.index,
+                  // The query goes in both places on purpose. Algolia reads
+                  // the sibling `query`; typesense-instantsearch-adapter only
+                  // reads `params.query` and falls back to '*' without it,
+                  // which returned arbitrary records for every keystroke.
                   query: params.query,
-                  params: { filters: cfg.filters || '' }
+                  params: { query: params.query, filters: cfg.filters || '' }
                 }]
               });
             },
