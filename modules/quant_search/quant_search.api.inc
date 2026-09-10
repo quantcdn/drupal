@@ -149,6 +149,9 @@ function quant_search_api_backend_resolve() {
     'index' => isset($index->algolia_index) ? $index->algolia_index : '',
     'endpoint' => '',
     'custom_ranking' => $ranking,
+    // Empty means "not known"; Algolia ignores an unconfigured facet rather
+    // than failing, so its facets are never filtered.
+    'facets_declared' => array(),
   );
 }
 
@@ -163,6 +166,14 @@ function quant_search_api_typesense_backend(array $ranking) {
   if ($collection === '' && $stats && isset($stats->index->name)) {
     $collection = $stats->index->name;
   }
+  // The collection's facetable fields. Typesense rejects a query that facets
+  // on anything else, so the renderer uses this to drop unknown facets
+  // (see quant_search_filter_declared_facets). Reported with duplicates when
+  // a field is auto-typed, hence array_unique.
+  $declared = array();
+  if ($stats && isset($stats->settings->attributesForFaceting)) {
+    $declared = array_values(array_unique((array) $stats->settings->attributesForFaceting));
+  }
   return array(
     'backend' => 'typesense',
     'app_id' => '',
@@ -170,6 +181,7 @@ function quant_search_api_typesense_backend(array $ranking) {
     'index' => $collection,
     'endpoint' => '',
     'custom_ranking' => $ranking,
+    'facets_declared' => $declared,
   );
 }
 
@@ -242,6 +254,37 @@ function quant_search_api_delete_record($url) {
 }
 
 /**
+ * Registers every facet used by every enabled search page.
+ *
+ * A page registers its own facets when it is saved, so a site built on one
+ * backend has them already. Moving a project to another backend (Algolia to
+ * Typesense) creates an empty index that nobody re-saves the pages against,
+ * and on Typesense an unregistered facet fails the whole query. Re-indexing
+ * calls this so the index matches the pages.
+ *
+ * @return array
+ *   The facet keys that were registered.
+ */
+function quant_search_api_register_page_facets() {
+  module_load_include('inc', 'quant_search', 'quant_search.theme');
+  module_load_include('inc', 'quant_search', 'quant_search.pages');
+  $keys = array();
+  foreach (quant_search_page_load_all() as $page) {
+    if (empty($page['status'])) {
+      continue;
+    }
+    foreach (quant_search_compute_facet_keys($page['facets']) as $facet) {
+      $keys[$facet['facet_key']] = $facet['facet_key'];
+    }
+  }
+  $keys = array_values($keys);
+  if ($keys) {
+    quant_search_api_add_facets($keys);
+  }
+  return $keys;
+}
+
+/**
  * Registers facetable attribute names with the search backend.
  *
  * @param array $keys
@@ -251,7 +294,14 @@ function quant_search_api_delete_record($url) {
 function quant_search_api_add_facets(array $keys) {
   $unique = array_values(array_unique(array_merge(array('lang_code', 'content_type'), $keys)));
   $response = quant_search_api_request('/search/facet', 'POST', $unique);
-  return $response->code == 200;
+  if ($response->code == 200) {
+    // The resolved backend carries the declared facet list; drop it so the
+    // newly registered facets are visible on the next render rather than
+    // after the cache expires.
+    cache_clear_all('quant_search_backend:', 'cache', TRUE);
+    return TRUE;
+  }
+  return FALSE;
 }
 
 /**

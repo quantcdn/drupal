@@ -134,6 +134,49 @@ function quant_search_filter_equals($field, $value, $typesense) {
 }
 
 /**
+ * Removes facets the search backend cannot facet on.
+ *
+ * Typesense answers a query that facets on an undeclared field with a 404,
+ * which fails the whole batched request and leaves the listing empty; Algolia
+ * ignores it and returns results. Dropping the facet degrades one dropdown
+ * instead of the page. Date facets are never dropped: the date widget filters
+ * by range and never asks the backend to facet, and its container has to
+ * exist for the presets to render.
+ *
+ * @param array $facets
+ *   Facets from quant_search_compute_facet_keys().
+ * @param array $backend
+ *   As returned by quant_search_api_backend().
+ *
+ * @return array
+ *   The facets that are safe to render.
+ */
+function quant_search_filter_declared_facets(array $facets, array $backend) {
+  if (empty($backend['facets_declared'])) {
+    return $facets;
+  }
+  $declared = array_flip($backend['facets_declared']);
+  $kept = array();
+  $skipped = array();
+  foreach ($facets as $facet) {
+    $is_date = (isset($facet['widget']) && $facet['widget'] === 'date')
+      || (isset($facet['type']) && $facet['type'] === 'date_range');
+    if ($is_date || isset($declared[$facet['facet_key']])) {
+      $kept[] = $facet;
+    }
+    else {
+      $skipped[] = $facet['facet_key'];
+    }
+  }
+  if ($skipped) {
+    watchdog('quant_search',
+      'Skipped facet(s) not registered with the search index: @keys. Re-index or save the search page to register them.',
+      array('@keys' => implode(', ', $skipped)), WATCHDOG_WARNING);
+  }
+  return $kept;
+}
+
+/**
  * The vendor client script plus the module's client factory, for a backend.
  *
  * @param array $backend
@@ -167,7 +210,7 @@ function quant_search_render($page) {
   if (!$backend) {
     return array('#markup' => '<p>' . t('Search is not currently available.') . '</p>');
   }
-  $facets = quant_search_compute_facet_keys($page['facets']);
+  $facets = quant_search_filter_declared_facets(quant_search_compute_facet_keys($page['facets']), $backend);
   $instance = $page['machine_name'];
 
   $settings = array(

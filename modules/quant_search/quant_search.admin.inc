@@ -210,6 +210,16 @@ function quant_search_index_form_submit($form, &$form_state) {
     drupal_set_message(t('No content types are configured for indexing.'), 'warning');
     return;
   }
+  // Register the facets the search pages use before indexing. On Typesense an
+  // unregistered facet fails every query on the page, and a project moved
+  // between backends starts with none registered.
+  module_load_include('inc', 'quant_search', 'quant_search.api');
+  $facet_keys = quant_search_api_register_page_facets();
+  if ($facet_keys) {
+    drupal_set_message(t('Registered @n facet(s) with the search index: @keys',
+      array('@n' => count($facet_keys), '@keys' => implode(', ', $facet_keys))));
+  }
+
   $nids = db_select('node', 'n')
     ->fields('n', array('nid'))
     ->condition('status', 1)
