@@ -104,16 +104,24 @@ Drupal.quantSearch.renderHit = function (hit, cfg) {
 A project runs on Algolia (public cloud) or Typesense (QuantGov cloud). The
 module resolves the backend from the Quant API (`platform_mode`) and ships
 the same settings to the browser either way: `backend`, `read_key`, `index`,
-`endpoint`, `custom_ranking`. `js/quant-search-client.js` hides the
-difference: `Drupal.quantSearch.createSearchClient(cfg)` returns an
-InstantSearch client for either backend, `Drupal.quantSearch.filtersFor(cfg)`
-returns the page filter in the syntax that backend expects, and
-`Drupal.quantSearch.sortBy(cfg)` turns the project's custom ranking into a
-Typesense `sort_by`. Themes that override `Drupal.quantSearch.build` must use
-those three helpers instead of calling `algoliasearch()` directly.
+`endpoint`, `custom_ranking`. Filter strings are built server-side in the
+backend's own syntax (`quant_search_build_filters()`), so the browser gets a
+string it can use as-is. `js/quant-search-client.js` covers the rest:
+`Drupal.quantSearch.createSearchClient(cfg)` returns an InstantSearch client
+for either backend, and `Drupal.quantSearch.sortBy(cfg)` turns the project's
+custom ranking into a Typesense `sort_by`. Themes that override
+`Drupal.quantSearch.build` must use those two helpers instead of calling
+`algoliasearch()` directly.
 
+A search page's *manual filter string* is passed through verbatim, so it must
+be written in the syntax the project's backend expects (Algolia
+`field:'value'`, Typesense ``field:=`value```).
+
+The resolved backend is cached for 60 seconds (30 seconds when the API is
+unreachable or search is disabled) under a cache id keyed by the Quant API
+settings, so a project change resolves afresh; `drush cc all` clears it.
 The Typesense endpoint is configurable under *Configure indexing → Backend*
-(default `https://search.quantgov.cloud`). For local testing against a
+(default `https://search.quantgov.cloud`) and is read live, not cached. For local testing against a
 private Typesense, set in settings.php:
 
 ```php

@@ -77,6 +77,61 @@ function quant_search_api_backend() {
   if (!empty($override['backend'])) {
     return $override + array('app_id' => '', 'read_key' => '', 'index' => '', 'endpoint' => '', 'custom_ranking' => array());
   }
+  // Two API round-trips per resolution; memoise per request and cache
+  // briefly so a page render does not pay them. The id carries the Quant API
+  // settings, so a project change resolves afresh. A complete result is
+  // cached for QUANT_SEARCH_BACKEND_CACHE_TTL; an unavailable backend (API
+  // down, search disabled) is cached for a shorter window so a failing API
+  // costs one round trip per window rather than one per request. An
+  // incomplete result (partial API failure) is not cached and retries next
+  // request. The endpoint is a local setting merged at read time.
+  $static = &drupal_static(__FUNCTION__);
+  if (isset($static)) {
+    return quant_search_api_backend_with_endpoint($static);
+  }
+  $cid = quant_search_api_backend_cid();
+  $cached = cache_get($cid);
+  if ($cached && $cached->expire > REQUEST_TIME) {
+    $static = $cached->data;
+    return quant_search_api_backend_with_endpoint($static);
+  }
+  $backend = quant_search_api_backend_resolve();
+  if ($backend === FALSE) {
+    cache_set($cid, FALSE, 'cache', REQUEST_TIME + QUANT_SEARCH_BACKEND_NEGATIVE_TTL);
+  }
+  elseif ($backend['read_key'] !== '' && $backend['index'] !== '') {
+    cache_set($cid, $backend, 'cache', REQUEST_TIME + QUANT_SEARCH_BACKEND_CACHE_TTL);
+  }
+  $static = $backend;
+  return quant_search_api_backend_with_endpoint($backend);
+}
+
+/**
+ * Adds the locally configured Typesense endpoint to a resolved backend.
+ */
+function quant_search_api_backend_with_endpoint($backend) {
+  if ($backend && $backend['backend'] === 'typesense') {
+    $backend['endpoint'] = variable_get('quant_search_typesense_endpoint', QUANT_SEARCH_TYPESENSE_ENDPOINT_DEFAULT);
+  }
+  return $backend;
+}
+
+/**
+ * Cache id for the resolved backend, keyed by everything that selects it.
+ */
+function quant_search_api_backend_cid() {
+  $parts = array(
+    variable_get('quant_api_endpoint', ''),
+    variable_get('quant_api_customer', ''),
+    variable_get('quant_api_project', ''),
+  );
+  return 'quant_search_backend:' . md5(implode('|', $parts));
+}
+
+/**
+ * Uncached half of quant_search_api_backend().
+ */
+function quant_search_api_backend_resolve() {
   $project = quant_search_api_project();
   if (!$project || empty($project->config->search_enabled)) {
     return FALSE;
@@ -113,7 +168,7 @@ function quant_search_api_typesense_backend(array $ranking) {
     'app_id' => '',
     'read_key' => $key,
     'index' => $collection,
-    'endpoint' => variable_get('quant_search_typesense_endpoint', QUANT_SEARCH_TYPESENSE_ENDPOINT_DEFAULT),
+    'endpoint' => '',
     'custom_ranking' => $ranking,
   );
 }

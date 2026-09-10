@@ -84,26 +84,53 @@ function quant_search_compute_facet_keys($facets) {
 /**
  * Builds the search-backend filter string for a page.
  */
-function quant_search_build_filters($page) {
+function quant_search_build_filters($page, $backend) {
+  $typesense = $backend['backend'] === 'typesense';
   $clauses = array();
-  if (!empty($page['languages'])) {
-    $parts = array();
-    foreach ($page['languages'] as $lang) {
-      $parts[] = "lang_code:'" . $lang . "'";
+  foreach (array('lang_code' => 'languages', 'content_type' => 'bundles') as $field => $key) {
+    if (empty($page[$key])) {
+      continue;
     }
-    $clauses[] = '(' . implode(' OR ', $parts) . ')';
-  }
-  if (!empty($page['bundles'])) {
     $parts = array();
-    foreach ($page['bundles'] as $bundle) {
-      $parts[] = "content_type:'" . $bundle . "'";
+    foreach ($page[$key] as $value) {
+      $parts[] = quant_search_filter_equals($field, $value, $typesense);
     }
-    $clauses[] = '(' . implode(' OR ', $parts) . ')';
+    $clauses[] = '(' . implode($typesense ? ' || ' : ' OR ', $parts) . ')';
   }
+  // The manual filter is documented as passed through verbatim, so it must
+  // already be written in the syntax the project's backend expects.
   if (!empty($page['manual_filters'])) {
     $clauses[] = $page['manual_filters'];
   }
-  return implode(' AND ', $clauses);
+  return implode($typesense ? ' && ' : ' AND ', $clauses);
+}
+
+/**
+ * One equality clause, in Algolia or Typesense syntax.
+ *
+ * Typesense quotes string values with backticks, so a value containing one
+ * cannot be expressed and is dropped; these values are machine names
+ * (language codes, bundle names), so this is unreachable in practice and
+ * exists to keep an injected value from changing the filter's meaning.
+ *
+ * @param string $field
+ *   The attribute name.
+ * @param string $value
+ *   The value to match.
+ * @param bool $typesense
+ *   TRUE for Typesense syntax, FALSE for Algolia.
+ *
+ * @return string
+ *   The clause, or '' when the value cannot be expressed.
+ */
+function quant_search_filter_equals($field, $value, $typesense) {
+  if (!$typesense) {
+    return $field . ":'" . str_replace("'", '', $value) . "'";
+  }
+  if (strpos($value, '`') !== FALSE) {
+    return '';
+  }
+  return $field . ':=`' . $value . '`';
 }
 
 /**
@@ -147,7 +174,7 @@ function quant_search_render($page) {
     'quantSearch' => array(
       $instance => $backend + array(
         'instance' => $instance,
-        'filters' => quant_search_build_filters($page),
+        'filters' => quant_search_build_filters($page, $backend),
         'facets' => $facets,
         'display' => $page['display'],
       ),

@@ -79,7 +79,9 @@ function quant_search_schema() {
  * Implements hook_uninstall().
  */
 function quant_search_uninstall() {
+  cache_clear_all('quant_search_backend:', 'cache', TRUE);
   variable_del('quant_search_entities');
+  variable_del('quant_search_typesense_endpoint');
   variable_del('quant_search_autocomplete_page');
   variable_del('quant_search_autocomplete_placeholder');
   variable_del('quant_search_autocomplete_summary');

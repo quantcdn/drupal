@@ -41,6 +41,16 @@ function quant_search_theme($existing, $type, $theme, $path) {
 define('QUANT_SEARCH_TYPESENSE_ENDPOINT_DEFAULT', 'https://search.quantgov.cloud');
 
 /**
+ * Seconds to cache the resolved search backend (see quant_search_api_backend()).
+ */
+define('QUANT_SEARCH_BACKEND_CACHE_TTL', 60);
+
+/**
+ * Seconds to cache an unavailable backend (API down or search disabled).
+ */
+define('QUANT_SEARCH_BACKEND_NEGATIVE_TTL', 30);
+
+/**
  * Implements hook_menu().
  */
 function quant_search_menu() {
@@ -232,7 +242,7 @@ function quant_search_block_view($delta = '') {
               'placeholder' => variable_get('quant_search_autocomplete_placeholder', t('Search')),
               'show_summary' => (bool) variable_get('quant_search_autocomplete_summary', FALSE),
               'search_path' => '/' . $page['route'],
-              'filters' => quant_search_build_filters($page),
+              'filters' => quant_search_build_filters($page, $backend),
             ))),
           )),
           'css' => array(

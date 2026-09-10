@@ -210,7 +210,7 @@
     });
 
     widgets.push(instantsearch.widgets.configure({
-      filters: Drupal.quantSearch.filtersFor(cfg),
+      filters: cfg.filters || '',
       hitsPerPage: pagination.per_page || 20,
       attributesToSnippet: ['summary:50']
     }));

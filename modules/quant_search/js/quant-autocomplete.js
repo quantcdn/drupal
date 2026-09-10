@@ -20,7 +20,6 @@
       var autocomplete = window['@algolia/autocomplete-js'].autocomplete;
       var getAlgoliaResults = window['@algolia/autocomplete-js'].getAlgoliaResults;
       var client = Drupal.quantSearch.createSearchClient(cfg);
-      var filters = Drupal.quantSearch.filtersFor(cfg);
 
       autocomplete({
         container: '#quant-search-autocomplete',
@@ -39,7 +38,7 @@
                 queries: [{
                   indexName: cfg.index,
                   query: params.query,
-                  params: { filters: filters }
+                  params: { filters: cfg.filters || '' }
                 }]
               });
             },
