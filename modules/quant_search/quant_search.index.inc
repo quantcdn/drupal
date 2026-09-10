@@ -130,11 +130,17 @@ function quant_search_node_terms($node, $langcode) {
  *   Comma-separated date field machine names.
  *
  * @return array
- *   Map of {field_name} => array of integer timestamps. Multi-value and
- *   recurring date fields yield multiple timestamps so a date-range facet
- *   matches if any occurrence falls within range. Date fields with an end
- *   date (value2) index both endpoints, so a range facet also matches
- *   events that are already underway (any value within range).
+ *   Three attributes per date field that has a value:
+ *   - {field_name}: array of integer timestamps. Multi-value and recurring
+ *     date fields yield multiple timestamps, and a date field with an end
+ *     date (value2) contributes both endpoints. Renderers use this list to
+ *     show the sessions that fall inside the active date filter.
+ *   - {field_name}_start: the earliest start timestamp.
+ *   - {field_name}_end: the latest end timestamp (falls back to the start
+ *     when the field has no end date).
+ *   A date filter uses the scalar pair as an overlap test
+ *   (start <= filter end AND end >= filter start), so an exhibition that
+ *   opened last year and closes next year still matches "today".
  */
 function quant_search_node_dates($node, $date_fields) {
   $out = array();
@@ -145,30 +151,66 @@ function quant_search_node_dates($node, $date_fields) {
       continue;
     }
     $stamps = array();
+    $starts = array();
+    $ends = array();
     foreach ($items as $item) {
-      // Date fields store ISO strings or timestamps in 'value'.
-      if (isset($item['value'])) {
-        $ts = is_numeric($item['value']) ? (int) $item['value'] : strtotime($item['value']);
-        if ($ts) {
-          $stamps[] = $ts;
-        }
+      $range = quant_search_date_item_range($item);
+      if (!$range) {
+        continue;
       }
-      // Date fields with an end date store it in 'value2'; index both
-      // endpoints so range filters match events already underway.
-      if (isset($item['value2']) && $item['value2'] !== $item['value']) {
-        $ts = is_numeric($item['value2']) ? (int) $item['value2'] : strtotime($item['value2']);
-        if ($ts) {
-          $stamps[] = $ts;
-        }
-      }
+      $starts[] = $range[0];
+      $ends[] = $range[1];
+      $stamps[] = $range[0];
+      $stamps[] = $range[1];
     }
     if ($stamps) {
       $stamps = array_values(array_unique($stamps));
       sort($stamps);
       $out[$field_name] = $stamps;
+      $out[$field_name . '_start'] = min($starts);
+      $out[$field_name . '_end'] = max($ends);
     }
   }
   return $out;
+}
+
+/**
+ * Returns the [start, end] timestamps of one date field item.
+ *
+ * Date fields store ISO strings or timestamps in 'value' and, for fields
+ * with an end date, in 'value2'. The end falls back to the start when the
+ * item has no usable end date.
+ *
+ * @param array $item
+ *   A single date field item.
+ *
+ * @return array|null
+ *   Array of two integer timestamps, or NULL when the item has no start.
+ */
+function quant_search_date_item_range(array $item) {
+  $start = isset($item['value']) ? quant_search_date_to_timestamp($item['value']) : 0;
+  if (!$start) {
+    return NULL;
+  }
+  $end = isset($item['value2']) ? quant_search_date_to_timestamp($item['value2']) : 0;
+  return array($start, $end ? $end : $start);
+}
+
+/**
+ * Converts a date field value (ISO string or numeric) to a Unix timestamp.
+ *
+ * @param mixed $value
+ *   The raw field value.
+ *
+ * @return int
+ *   The timestamp, or 0 when the value cannot be parsed.
+ */
+function quant_search_date_to_timestamp($value) {
+  if (is_numeric($value)) {
+    return (int) $value;
+  }
+  $ts = strtotime((string) $value);
+  return $ts ? $ts : 0;
 }
 
 /**

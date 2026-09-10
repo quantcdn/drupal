@@ -8,7 +8,7 @@
   Drupal.behaviors.quantSearchAutocomplete = {
     attach: function (context, settings) {
       var cfg = settings.quantSearchAutocomplete;
-      if (!cfg || typeof algoliasearch === 'undefined' || !window['@algolia/autocomplete-js']) {
+      if (!cfg || !Drupal.quantSearch || !Drupal.quantSearch.createSearchClient || !window['@algolia/autocomplete-js']) {
         return;
       }
       var mount = document.getElementById('quant-search-autocomplete');
@@ -19,7 +19,8 @@
 
       var autocomplete = window['@algolia/autocomplete-js'].autocomplete;
       var getAlgoliaResults = window['@algolia/autocomplete-js'].getAlgoliaResults;
-      var client = algoliasearch(cfg.app_id, cfg.read_key);
+      var client = Drupal.quantSearch.createSearchClient(cfg);
+      var filters = Drupal.quantSearch.filtersFor(cfg);
 
       autocomplete({
         container: '#quant-search-autocomplete',
@@ -38,7 +39,7 @@
                 queries: [{
                   indexName: cfg.index,
                   query: params.query,
-                  params: { filters: cfg.filters || '' }
+                  params: { filters: filters }
                 }]
               });
             },

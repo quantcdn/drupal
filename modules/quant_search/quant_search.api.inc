@@ -54,6 +54,71 @@ function quant_search_api_project() {
 }
 
 /**
+ * Resolves the search backend the browser must talk to.
+ *
+ * A project runs on Algolia (public cloud) or Typesense (QuantGov cloud,
+ * platform_mode 'aws'). Both return the same keys so the JS stays
+ * backend-agnostic:
+ *   - backend:        'algolia' | 'typesense'
+ *   - app_id:         Algolia application id ('' on Typesense)
+ *   - read_key:       public search key
+ *   - index:          Algolia index name or Typesense collection
+ *   - endpoint:       Typesense URL ('' on Algolia)
+ *   - custom_ranking: the project's sort rules, e.g. ['asc(field)']
+ *
+ * For local testing against a private Typesense set
+ * $conf['quant_search_backend_override'] in settings.php with the same keys.
+ *
+ * @return array|false
+ *   The backend description, or FALSE when search is unavailable.
+ */
+function quant_search_api_backend() {
+  $override = variable_get('quant_search_backend_override', array());
+  if (!empty($override['backend'])) {
+    return $override + array('app_id' => '', 'read_key' => '', 'index' => '', 'endpoint' => '', 'custom_ranking' => array());
+  }
+  $project = quant_search_api_project();
+  if (!$project || empty($project->config->search_enabled)) {
+    return FALSE;
+  }
+  $config = $project->config;
+  $ranking = isset($config->search_config->algolia->custom_ranking) ? (array) $config->search_config->algolia->custom_ranking : array();
+  if (isset($config->platform_mode) && $config->platform_mode === 'aws') {
+    return quant_search_api_typesense_backend($ranking);
+  }
+  $index = isset($config->search_index) ? $config->search_index : new stdClass();
+  return array(
+    'backend' => 'algolia',
+    'app_id' => isset($index->algolia_application_id) ? $index->algolia_application_id : '',
+    'read_key' => isset($index->algolia_read_key) ? $index->algolia_read_key : '',
+    'index' => isset($index->algolia_index) ? $index->algolia_index : '',
+    'endpoint' => '',
+    'custom_ranking' => $ranking,
+  );
+}
+
+/**
+ * Typesense half of quant_search_api_backend(): the read-only key and the
+ * collection come from the index stats call, the endpoint from a setting.
+ */
+function quant_search_api_typesense_backend(array $ranking) {
+  $stats = quant_search_api_stats();
+  $key = ($stats && isset($stats->readOnlyKey->value)) ? $stats->readOnlyKey->value : '';
+  $collection = ($stats && !empty($stats->readOnlyKey->collections[0])) ? $stats->readOnlyKey->collections[0] : '';
+  if ($collection === '' && $stats && isset($stats->index->name)) {
+    $collection = $stats->index->name;
+  }
+  return array(
+    'backend' => 'typesense',
+    'app_id' => '',
+    'read_key' => $key,
+    'index' => $collection,
+    'endpoint' => variable_get('quant_search_typesense_endpoint', QUANT_SEARCH_TYPESENSE_ENDPOINT_DEFAULT),
+    'custom_ranking' => $ranking,
+  );
+}
+
+/**
  * Returns TRUE when hosted search is enabled for the project.
  */
 function quant_search_api_enabled() {

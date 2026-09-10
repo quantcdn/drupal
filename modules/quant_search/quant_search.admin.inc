@@ -28,6 +28,13 @@ function quant_search_admin_overview() {
       }
     }
   }
+  $backend = quant_search_api_backend();
+  if ($backend) {
+    $rows[] = array(t('Backend'), $backend['backend'] === 'typesense'
+      ? t('Typesense (@endpoint)', array('@endpoint' => $backend['endpoint']))
+      : t('Algolia'));
+    $rows[] = array(t('Custom ranking'), $backend['custom_ranking'] ? check_plain(implode(', ', $backend['custom_ranking'])) : t('None (title)'));
+  }
   $rows[] = array(t('Search pages'), count(quant_search_page_load_all()));
 
   return array(
@@ -126,6 +133,19 @@ function quant_search_entities_form($form, &$form_state) {
     );
   }
 
+  $form['backend'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Backend'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['backend']['typesense_endpoint'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Typesense endpoint'),
+    '#description' => t('Public search endpoint used by the browser on QuantGov cloud (Typesense) projects. Ignored on Algolia projects.'),
+    '#default_value' => variable_get('quant_search_typesense_endpoint', QUANT_SEARCH_TYPESENSE_ENDPOINT_DEFAULT),
+  );
+
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Save configuration'));
   return $form;
@@ -136,6 +156,7 @@ function quant_search_entities_form($form, &$form_state) {
  */
 function quant_search_entities_form_submit($form, &$form_state) {
   $v = $form_state['values'];
+  variable_set('quant_search_typesense_endpoint', rtrim(trim($v['backend']['typesense_endpoint']), '/'));
   $config = array(
     'node' => array(
       'enabled' => (bool) $v['node']['enabled'],

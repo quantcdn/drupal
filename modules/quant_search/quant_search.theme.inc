@@ -107,6 +107,25 @@ function quant_search_build_filters($page) {
 }
 
 /**
+ * The vendor client script plus the module's client factory, for a backend.
+ *
+ * @param array $backend
+ *   As returned by quant_search_api_backend().
+ *
+ * @return array
+ *   #attached js entries, in load order.
+ */
+function quant_search_client_scripts(array $backend) {
+  $vendor = $backend['backend'] === 'typesense'
+    ? 'https://cdn.jsdelivr.net/npm/typesense-instantsearch-adapter@2/dist/typesense-instantsearch-adapter.min.js'
+    : 'https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js';
+  return array(
+    array('type' => 'external', 'data' => $vendor),
+    drupal_get_path('module', 'quant_search') . '/js/quant-search-client.js',
+  );
+}
+
+/**
  * Builds the render array for a search page (route or block).
  *
  * @param array $page
@@ -117,21 +136,17 @@ function quant_search_build_filters($page) {
  */
 function quant_search_render($page) {
   module_load_include('inc', 'quant_search', 'quant_search.api');
-  $project = quant_search_api_project();
-  if (!$project || empty($project->config->search_enabled)) {
+  $backend = quant_search_api_backend();
+  if (!$backend) {
     return array('#markup' => '<p>' . t('Search is not currently available.') . '</p>');
   }
-  $index = $project->config->search_index;
   $facets = quant_search_compute_facet_keys($page['facets']);
   $instance = $page['machine_name'];
 
   $settings = array(
     'quantSearch' => array(
-      $instance => array(
+      $instance => $backend + array(
         'instance' => $instance,
-        'app_id' => $index->algolia_application_id,
-        'read_key' => $index->algolia_read_key,
-        'index' => $index->algolia_index,
         'filters' => quant_search_build_filters($page),
         'facets' => $facets,
         'display' => $page['display'],
@@ -151,12 +166,11 @@ function quant_search_render($page) {
     '#facets' => $facets,
     '#instance' => $instance,
     '#attached' => array(
-      'js' => array(
-        array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js'),
+      'js' => array_merge(quant_search_client_scripts($backend), array(
         array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/instantsearch.js@4'),
         $module_path . '/js/quant-search.js',
         array('type' => 'setting', 'data' => $settings),
-      ),
+      )),
       'css' => array(
         $module_path . '/css/quant-search.css',
         array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/instantsearch.css@7/themes/algolia-min.css'),

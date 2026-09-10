@@ -128,7 +128,7 @@
 
     var search = instantsearch({
       indexName: cfg.index,
-      searchClient: algoliasearch(cfg.app_id, cfg.read_key),
+      searchClient: Drupal.quantSearch.createSearchClient(cfg),
       routing: false
     });
 
@@ -210,7 +210,7 @@
     });
 
     widgets.push(instantsearch.widgets.configure({
-      filters: cfg.filters || '',
+      filters: Drupal.quantSearch.filtersFor(cfg),
       hitsPerPage: pagination.per_page || 20,
       attributesToSnippet: ['summary:50']
     }));
@@ -308,35 +308,75 @@
   };
 
   /**
-   * A date-range facet widget built on connectRange + native date inputs.
+   * Converts a date input value (YYYY-MM-DD) to a Unix timestamp, or
+   * undefined when empty. `endOfDay` picks 23:59:59 instead of 00:00:00.
+   */
+  Drupal.quantSearch.dateInputToTimestamp = function (value, endOfDay) {
+    if (!value) { return undefined; }
+    var time = endOfDay ? 'T23:59:59' : 'T00:00:00';
+    return Math.floor(new Date(value + time).getTime() / 1000);
+  };
+
+  /**
+   * A date-range facet widget built on native date inputs.
    *
-   * The indexed attribute is a numeric Unix timestamp (or array of them for
-   * recurring dates); the search backend matches a numeric range against any
-   * value in the array.
+   * The indexer writes three attributes per date field: the list of session
+   * timestamps ({attribute}), plus the scalar {attribute}_start (earliest
+   * start) and {attribute}_end (latest end). The widget filters with an
+   * overlap test on the scalar pair:
+   *
+   *   {attribute}_start <= to   AND   {attribute}_end >= from
+   *
+   * so an event that is already underway matches a range that falls inside
+   * it (an exhibition open all year matches "today"). Either bound may be
+   * omitted. The filters are plain numeric refinements, which both Algolia
+   * and the Typesense InstantSearch adapter understand.
    */
   Drupal.quantSearch.dateRangeWidget = function (container, attribute, onChange) {
-    var render = function (renderOptions, isFirstRender) {
-      var node = document.querySelector(container);
-      if (!node) { return; }
-      if (isFirstRender) {
-        node.innerHTML =
-          '<div class="quant-search-date-range">' +
-          '<label>' + Drupal.t('From') + '<input type="date" class="qs-date-from" /></label>' +
-          '<label>' + Drupal.t('To') + '<input type="date" class="qs-date-to" /></label>' +
-          '</div>';
-        var apply = function () {
-          var from = node.querySelector('.qs-date-from').value;
-          var to = node.querySelector('.qs-date-to').value;
-          var min = from ? Math.floor(new Date(from + 'T00:00:00').getTime() / 1000) : undefined;
-          var max = to ? Math.floor(new Date(to + 'T23:59:59').getTime() / 1000) : undefined;
-          if (typeof onChange === 'function') { onChange(min, max); }
-          renderOptions.refine([min, max]);
-        };
-        node.querySelector('.qs-date-from').addEventListener('change', apply);
-        node.querySelector('.qs-date-to').addEventListener('change', apply);
+    var startAttr = attribute + '_start';
+    var endAttr = attribute + '_end';
+
+    var applyRefinement = function (helper, min, max) {
+      helper.removeNumericRefinement(startAttr);
+      helper.removeNumericRefinement(endAttr);
+      if (max !== undefined) { helper.addNumericRefinement(startAttr, '<=', max); }
+      if (min !== undefined) { helper.addNumericRefinement(endAttr, '>=', min); }
+      if (typeof onChange === 'function') { onChange(min, max); }
+      helper.search();
+    };
+
+    var renderInputs = function (node, helper) {
+      node.innerHTML =
+        '<div class="quant-search-date-range">' +
+        '<label>' + Drupal.t('From') + '<input type="date" class="qs-date-from" /></label>' +
+        '<label>' + Drupal.t('To') + '<input type="date" class="qs-date-to" /></label>' +
+        '</div>';
+      var apply = function () {
+        var min = Drupal.quantSearch.dateInputToTimestamp(node.querySelector('.qs-date-from').value, false);
+        var max = Drupal.quantSearch.dateInputToTimestamp(node.querySelector('.qs-date-to').value, true);
+        applyRefinement(helper, min, max);
+      };
+      node.querySelector('.qs-date-from').addEventListener('change', apply);
+      node.querySelector('.qs-date-to').addEventListener('change', apply);
+    };
+
+    return {
+      $$type: 'quantSearch.dateRange',
+      init: function (options) {
+        var node = document.querySelector(container);
+        if (node) { renderInputs(node, options.helper); }
+      },
+      render: function () {},
+      dispose: function (options) {
+        // SearchParameters is immutable: each call returns a new object.
+        return options.state
+          .removeNumericRefinement(startAttr)
+          .removeNumericRefinement(endAttr);
+      },
+      getWidgetSearchParameters: function (searchParameters) {
+        return searchParameters;
       }
     };
-    return instantsearch.connectors.connectRange(render)({ attribute: attribute });
   };
 
 }(Drupal));

@@ -36,6 +36,11 @@ function quant_search_theme($existing, $type, $theme, $path) {
 }
 
 /**
+ * Public Typesense endpoint for QuantGov cloud projects.
+ */
+define('QUANT_SEARCH_TYPESENSE_ENDPOINT_DEFAULT', 'https://search.quantgov.cloud');
+
+/**
  * Implements hook_menu().
  */
 function quant_search_menu() {
@@ -210,31 +215,26 @@ function quant_search_block_view($delta = '') {
     module_load_include('inc', 'quant_search', 'quant_search.api');
     $page_name = variable_get('quant_search_autocomplete_page', '');
     $page = $page_name ? quant_search_page_load_by_name($page_name) : FALSE;
-    $project = quant_search_api_project();
-    if (!$page || empty($page['status']) || empty($page['route']) || !$project || empty($project->config->search_enabled)) {
+    $backend = quant_search_api_backend();
+    if (!$page || empty($page['status']) || empty($page['route']) || !$backend) {
       return NULL;
     }
-    $index = $project->config->search_index;
     $module_path = drupal_get_path('module', 'quant_search');
     return array(
       'subject' => '',
       'content' => array(
         '#markup' => '<div id="quant-search-autocomplete"></div>',
         '#attached' => array(
-          'js' => array(
-            array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js'),
+          'js' => array_merge(quant_search_client_scripts($backend), array(
             array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js'),
             $module_path . '/js/quant-autocomplete.js',
-            array('type' => 'setting', 'data' => array('quantSearchAutocomplete' => array(
-              'app_id' => $index->algolia_application_id,
-              'read_key' => $index->algolia_read_key,
-              'index' => $index->algolia_index,
+            array('type' => 'setting', 'data' => array('quantSearchAutocomplete' => $backend + array(
               'placeholder' => variable_get('quant_search_autocomplete_placeholder', t('Search')),
               'show_summary' => (bool) variable_get('quant_search_autocomplete_summary', FALSE),
               'search_path' => '/' . $page['route'],
               'filters' => quant_search_build_filters($page),
             ))),
-          ),
+          )),
           'css' => array(
             array('type' => 'external', 'data' => 'https://cdn.jsdelivr.net/npm/@algolia/autocomplete-theme-classic'),
           ),

@@ -71,6 +71,14 @@ JS — use the "Additional JS to attach" textarea on the search page or attach
 from your own module). Every indexed field on the hit is available; the active
 date-facet state is on `cfg._dateFacetKeys` and `cfg._dateRefinements`.
 
+Each configured date field is indexed as three attributes: `{field}` (the
+list of session start/end timestamps), `{field}_start` (earliest start) and
+`{field}_end` (latest end). The date-range widget filters with an overlap
+test on the scalar pair (`{field}_start <= to AND {field}_end >= from`), so
+an event already underway matches a range inside it. Sort the index by
+`{field}_start` (ascending) for a "soonest first" listing that keeps
+ongoing exhibitions at the top.
+
 ```js
 Drupal.quantSearch.renderHit = function (hit, cfg) {
   var url = Drupal.quantSearch.safeUrl(hit.url);
@@ -90,6 +98,35 @@ Drupal.quantSearch.renderHit = function (hit, cfg) {
     sessions + cost + '</a>';
 };
 ```
+
+## Backends
+
+A project runs on Algolia (public cloud) or Typesense (QuantGov cloud). The
+module resolves the backend from the Quant API (`platform_mode`) and ships
+the same settings to the browser either way: `backend`, `read_key`, `index`,
+`endpoint`, `custom_ranking`. `js/quant-search-client.js` hides the
+difference: `Drupal.quantSearch.createSearchClient(cfg)` returns an
+InstantSearch client for either backend, `Drupal.quantSearch.filtersFor(cfg)`
+returns the page filter in the syntax that backend expects, and
+`Drupal.quantSearch.sortBy(cfg)` turns the project's custom ranking into a
+Typesense `sort_by`. Themes that override `Drupal.quantSearch.build` must use
+those three helpers instead of calling `algoliasearch()` directly.
+
+The Typesense endpoint is configurable under *Configure indexing → Backend*
+(default `https://search.quantgov.cloud`). For local testing against a
+private Typesense, set in settings.php:
+
+```php
+$conf['quant_search_backend_override'] = array(
+  'backend' => 'typesense',
+  'endpoint' => 'http://localhost:8108',
+  'read_key' => 'localkey',
+  'index' => 'my_collection',
+  'custom_ranking' => array('asc(field_event_session_start)', 'asc(title)'),
+);
+```
+
+JS unit tests: `node --test modules/quant_search/tests/js/quant-search-client.test.js`.
 
 Other helpers available on `Drupal.quantSearch`: `safeUrl(url)`, `formatSessionInfo(hit, keys, refinements)`, `applyLayout(instance, layout)`, `dateRangeWidget(container, attribute, onChange)`, `radioWidget(container, attribute, limit)`.
 
