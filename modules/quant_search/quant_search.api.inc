@@ -256,11 +256,11 @@ function quant_search_api_delete_record($url) {
 /**
  * Registers every facet used by every enabled search page.
  *
- * A page registers its own facets when it is saved, so a site built on one
- * backend has them already. Moving a project to another backend (Algolia to
- * Typesense) creates an empty index that nobody re-saves the pages against,
- * and on Typesense an unregistered facet fails the whole query. Re-indexing
- * calls this so the index matches the pages.
+ * A page registers its own facets when it is saved, so a site keeps working
+ * as long as its pages and its index were built together. Pointing a site at
+ * a different Quant project gives it an empty index that nobody re-saves the
+ * pages against, and on Typesense an unregistered facet fails the whole
+ * query. Re-indexing calls this so the index matches the pages.
  *
  * @return array
  *   The facet keys that were registered.

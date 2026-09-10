@@ -211,8 +211,8 @@ function quant_search_index_form_submit($form, &$form_state) {
     return;
   }
   // Register the facets the search pages use before indexing. On Typesense an
-  // unregistered facet fails every query on the page, and a project moved
-  // between backends starts with none registered.
+  // unregistered facet fails every query on the page, and a site pointed at a
+  // newly provisioned project starts with none registered.
   module_load_include('inc', 'quant_search', 'quant_search.api');
   $facet_keys = quant_search_api_register_page_facets();
   if ($facet_keys) {
