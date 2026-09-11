@@ -99,6 +99,16 @@ Drupal.quantSearch.renderHit = function (hit, cfg) {
 };
 ```
 
+## Coexisting with the quant module's page pushes
+
+The quant module pushes each rendered page to Quant, and the platform indexes
+that page with the project's search extractors, keyed by URL, the same key
+this module uses. For every node this module indexes, it marks the page push
+with `search_record.skip`, so the platform leaves that URL's record to this
+module. Without that, a page push after a re-index replaces the rich record
+with an extractor record, and the node silently drops out of date filters and
+facets. Pages this module does not index keep the platform's page record.
+
 ## Backends
 
 A project runs on Algolia (public cloud) or Typesense (QuantGov cloud). The

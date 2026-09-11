@@ -51,6 +51,30 @@ define('QUANT_SEARCH_BACKEND_CACHE_TTL', 60);
 define('QUANT_SEARCH_BACKEND_NEGATIVE_TTL', 30);
 
 /**
+ * Implements hook_quant_meta_TYPE_alter() for nodes.
+ *
+ * The quant module pushes every rendered page to Quant for static hosting,
+ * and the platform builds a search record from that page with the project's
+ * extractors. It keys that record by URL, the same key this module uses, so
+ * whichever write lands last replaces the other. For a node this module
+ * indexes, the page record lacks every attribute the search pages filter and
+ * facet on (the date range, the taxonomy facets), so the node drops out of the
+ * date presets and facet counts until the next re-index. Marking the push as
+ * search-skipped leaves the record to this module; the platform honours
+ * search_record.skip on both of its indexing paths. Nodes this module does not
+ * index keep the platform's page record.
+ */
+function quant_search_quant_meta_node_alter(&$meta, $context) {
+  if (empty($context['entity'])) {
+    return;
+  }
+  module_load_include('inc', 'quant_search', 'quant_search.index');
+  if (quant_search_node_is_indexable($context['entity'])) {
+    $meta['search_record']['skip'] = TRUE;
+  }
+}
+
+/**
  * Implements hook_menu().
  */
 function quant_search_menu() {
