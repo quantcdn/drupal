@@ -203,7 +203,7 @@
               } else {
                 dateRefinements[key] = { min: min, max: max };
               }
-            }));
+            }, cfg));
           }(facet.facet_key));
           break;
       }
@@ -329,10 +329,14 @@
    *
    * so an event that is already underway matches a range that falls inside
    * it (an exhibition open all year matches "today"). Either bound may be
-   * omitted. The filters are plain numeric refinements, which both Algolia
-   * and the Typesense InstantSearch adapter understand.
+   * omitted. The overlap test is plain numeric refinements, which both
+   * Algolia and the Typesense InstantSearch adapter understand. A range with
+   * both bounds also sets the schedule clause in the filters parameter, so an
+   * event that runs on some days only matches when one of its days is in the
+   * range (see Drupal.quantSearch.scheduleClause).
    */
-  Drupal.quantSearch.dateRangeWidget = function (container, attribute, onChange) {
+  Drupal.quantSearch.dateRangeWidget = function (container, attribute, onChange, cfg) {
+    cfg = cfg || {};
     var startAttr = attribute + '_start';
     var endAttr = attribute + '_end';
 
@@ -341,6 +345,7 @@
       helper.removeNumericRefinement(endAttr);
       if (max !== undefined) { helper.addNumericRefinement(startAttr, '<=', max); }
       if (min !== undefined) { helper.addNumericRefinement(endAttr, '>=', min); }
+      helper.setQueryParameter('filters', Drupal.quantSearch.dateFilters(cfg, attribute, min, max));
       if (typeof onChange === 'function') { onChange(min, max); }
       helper.search();
     };
@@ -366,12 +371,15 @@
         var node = document.querySelector(container);
         if (node) { renderInputs(node, options.helper); }
       },
-      render: function () {},
+      render: function (options) {
+        Drupal.quantSearch.syncDateFilters(options.helper, cfg, attribute);
+      },
       dispose: function (options) {
         // SearchParameters is immutable: each call returns a new object.
         return options.state
           .removeNumericRefinement(startAttr)
-          .removeNumericRefinement(endAttr);
+          .removeNumericRefinement(endAttr)
+          .setQueryParameter('filters', Drupal.quantSearch.dateFilters(cfg, attribute));
       },
       getWidgetSearchParameters: function (searchParameters) {
         return searchParameters;

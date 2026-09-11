@@ -126,6 +126,18 @@ function quant_search_entities_form($form, &$form_state) {
     '#description' => t('Comma-separated machine names of date fields to index as numeric timestamps (for date-range facets), e.g. field_event_session.'),
     '#default_value' => isset($config['node']['date_fields']) ? $config['node']['date_fields'] : '',
   );
+  $form['node']['daily_field'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Daily flag field'),
+    '#description' => t('Optional: a boolean field machine name. When the field is set, the event is on every day between its start and end dates. Example: field_is_daily'),
+    '#default_value' => isset($config['node']['daily_field']) ? $config['node']['daily_field'] : '',
+  );
+  $form['node']['schedule_fields'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Schedule text fields'),
+    '#description' => t('Optional: comma-separated text field machine names. When an event has a date item longer than a week, the indexer reads a rule such as "every Tuesday" or "first and third Monday of the month" from these fields. Events with no rule are shown for date ranges longer than one day only. Example: field_teaser, body'),
+    '#default_value' => isset($config['node']['schedule_fields']) ? $config['node']['schedule_fields'] : '',
+  );
   if (module_exists('token')) {
     $form['node']['token_help'] = array(
       '#theme' => 'token_tree_link',
@@ -168,6 +180,8 @@ function quant_search_entities_form_submit($form, &$form_state) {
       'image_field' => trim($v['node']['image_field']),
       'index_fields' => trim($v['node']['index_fields']),
       'date_fields' => trim($v['node']['date_fields']),
+      'daily_field' => trim($v['node']['daily_field']),
+      'schedule_fields' => trim($v['node']['schedule_fields']),
     ),
   );
   variable_set('quant_search_entities', $config);

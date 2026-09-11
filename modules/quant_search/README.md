@@ -71,13 +71,35 @@ JS — use the "Additional JS to attach" textarea on the search page or attach
 from your own module). Every indexed field on the hit is available; the active
 date-facet state is on `cfg._dateFacetKeys` and `cfg._dateRefinements`.
 
-Each configured date field is indexed as three attributes: `{field}` (the
-list of session start/end timestamps), `{field}_start` (earliest start) and
-`{field}_end` (latest end). The date-range widget filters with an overlap
-test on the scalar pair (`{field}_start <= to AND {field}_end >= from`), so
-an event already underway matches a range inside it. Sort the index by
-`{field}_start` (ascending) for a "soonest first" listing that keeps
-ongoing exhibitions at the top.
+Each configured date field is indexed as five attributes: `{field}` (the
+list of session start/end timestamps), `{field}_start` (earliest start),
+`{field}_end` (latest end), `{field}_schedule` and `{field}_days`. The
+date-range widget filters with an overlap test on the scalar pair
+(`{field}_start <= to AND {field}_end >= from`), so an event already underway
+matches a range inside it. Sort the index by `{field}_start` (ascending) for a
+"soonest first" listing that keeps ongoing exhibitions at the top.
+
+The overlap test alone shows an event on every day between its first and last
+date. Many events are not: a storytime on the first and third Monday from
+February to December has one date item that spans the year. So the indexer
+also records which days an event is on:
+
+| `{field}_schedule` | Meaning | `{field}_days` |
+|---|---|---|
+| `1` daily | The *Daily flag field* is set, or the schedule text says "every day". | `[0]` |
+| `2` listed days | Every date item is a week or shorter, or the *Schedule text fields* state a rule ("every Tuesday", "first and third Monday of the month", "last Friday"). | The days, as `YYYYMMDD` integers in the site time zone, from today up to two years ahead (at most 400). |
+| `3` unknown | A date item is longer than a week and no rule is found (or the text is ambiguous, e.g. "every other Tuesday"). | `[0]` |
+
+A range with both bounds adds a schedule clause to the filters: the event is
+daily, or one of its days is in the range, or, for a range longer than one day,
+its schedule is unknown. So "today" and a specific date show only what is on
+that day, and "next 7 days" and "this month" also show events with unknown
+days. An open-ended range ("coming up") adds no clause. Configure the two
+settings under *Configure indexing → Nodes*; editors change nothing. The day
+list covers two years from the day of indexing, so an event with a rule that
+runs longer than that needs a re-index (or a save) within two years. After an
+upgrade to this version, re-index when the new JS goes live: records without
+`{field}_schedule` do not match a bounded range.
 
 ```js
 Drupal.quantSearch.renderHit = function (hit, cfg) {
@@ -145,8 +167,9 @@ $conf['quant_search_backend_override'] = array(
 ```
 
 JS unit tests: `node --test modules/quant_search/tests/js/quant-search-client.test.js`.
+Schedule parser tests: `php modules/quant_search/tests/php/schedule_test.php`.
 
-Other helpers available on `Drupal.quantSearch`: `safeUrl(url)`, `formatSessionInfo(hit, keys, refinements)`, `applyLayout(instance, layout)`, `dateRangeWidget(container, attribute, onChange)`, `radioWidget(container, attribute, limit)`.
+Other helpers available on `Drupal.quantSearch`: `safeUrl(url)`, `formatSessionInfo(hit, keys, refinements)`, `applyLayout(instance, layout)`, `dateRangeWidget(container, attribute, onChange, cfg)`, `radioWidget(container, attribute, limit)`, `scheduleClause(cfg, attribute, from, to)`, `dateFilters(cfg, attribute, from, to)`, `syncDateFilters(helper, cfg, attribute)`. A theme that overrides `dateRangeWidget` must set `filters` to `dateFilters(...)` with its numeric refinements, and call `syncDateFilters` from `render()`.
 
 ### 2. Server-side settings mutation — `hook_quant_search_settings_alter`
 
