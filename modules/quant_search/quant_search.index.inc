@@ -84,7 +84,7 @@ function quant_search_generate_record($node) {
 
   // Date fields as numeric timestamps.
   $date_fields = isset($config['node']['date_fields']) ? $config['node']['date_fields'] : '';
-  $record += quant_search_node_dates($node, $date_fields, isset($config['node']) ? $config['node'] : array());
+  $record += quant_search_node_dates($node, $date_fields);
 
   // Index arbitrary configured fields.
   $extra = isset($config['node']['index_fields']) ? $config['node']['index_fields'] : '';
@@ -128,11 +128,9 @@ function quant_search_node_terms($node, $langcode) {
  *   The node.
  * @param string $date_fields
  *   Comma-separated date field machine names.
- * @param array $config
- *   The node entity settings (daily_field, schedule_fields).
  *
  * @return array
- *   Attributes per date field that has a value:
+ *   Three attributes per date field that has a value:
  *   - {field_name}: array of integer timestamps. Multi-value and recurring
  *     date fields yield multiple timestamps, and a date field with an end
  *     date (value2) contributes both endpoints. Renderers use this list to
@@ -140,176 +138,40 @@ function quant_search_node_terms($node, $langcode) {
  *   - {field_name}_start: the earliest start timestamp.
  *   - {field_name}_end: the latest end timestamp (falls back to the start
  *     when the field has no end date).
- *   - {field_name}_schedule: 1 daily, 2 on listed days, 3 unknown days.
- *   - {field_name}_days: YYYYMMDD integers the event is on from today, or
- *     array(0) when there are none.
  *   A date filter uses the scalar pair as an overlap test
  *   (start <= filter end AND end >= filter start), so an exhibition that
- *   opened last year and closes next year still matches "today". A bounded
- *   range then also requires the event to be daily, or on a listed day, or,
- *   for ranges longer than one day, of unknown schedule.
+ *   opened last year and closes next year still matches "today".
  */
-function quant_search_node_dates($node, $date_fields, array $config = array()) {
+function quant_search_node_dates($node, $date_fields) {
   $out = array();
-  foreach (array_filter(array_map('trim', explode(',', (string) $date_fields))) as $field_name) {
-    $ranges = quant_search_node_date_ranges($node, $field_name);
-    if (!$ranges) {
+  $fields = array_filter(array_map('trim', explode(',', (string) $date_fields)));
+  foreach ($fields as $field_name) {
+    $items = field_get_items('node', $node, $field_name);
+    if (!$items) {
       continue;
     }
     $stamps = array();
-    foreach ($ranges as $range) {
+    $starts = array();
+    $ends = array();
+    foreach ($items as $item) {
+      $range = quant_search_date_item_range($item);
+      if (!$range) {
+        continue;
+      }
+      $starts[] = $range[0];
+      $ends[] = $range[1];
       $stamps[] = $range[0];
       $stamps[] = $range[1];
     }
-    $stamps = array_values(array_unique($stamps));
-    sort($stamps);
-    $out[$field_name] = $stamps;
-    $out[$field_name . '_start'] = min(array_column($ranges, 0));
-    $out[$field_name . '_end'] = max(array_column($ranges, 1));
-    list($schedule, $days) = quant_search_node_schedule($node, $ranges, $config);
-    $out[$field_name . '_schedule'] = $schedule;
-    // Never empty: Typesense declares a field from its first non-empty
-    // numeric value, and a filter on an undeclared field fails the query.
-    // 0 is no calendar day, so it never matches a range.
-    $out[$field_name . '_days'] = $days ? $days : array(0);
+    if ($stamps) {
+      $stamps = array_values(array_unique($stamps));
+      sort($stamps);
+      $out[$field_name] = $stamps;
+      $out[$field_name . '_start'] = min($starts);
+      $out[$field_name . '_end'] = max($ends);
+    }
   }
   return $out;
-}
-
-/**
- * Returns the [start, end] timestamp pairs of a node's date field items.
- */
-function quant_search_node_date_ranges($node, $field_name) {
-  $ranges = array();
-  foreach ((array) field_get_items('node', $node, $field_name) as $item) {
-    $range = is_array($item) ? quant_search_date_item_range($item) : NULL;
-    if ($range) {
-      $ranges[] = $range;
-    }
-  }
-  return $ranges;
-}
-
-/**
- * Longest single date item, in seconds, still read as "on every day of it".
- *
- * A one-off event or a weekend or week-long program is on each of its days.
- * Anything longer that is not daily is almost always a schedule summary
- * ("Feb to Dec") whose real days live in the text or nowhere.
- */
-define('QUANT_SEARCH_SCHEDULE_SHORT_SPAN', 7 * 86400);
-
-/**
- * Most days written to {field}_days, so no record grows unbounded.
- */
-define('QUANT_SEARCH_SCHEDULE_MAX_DAYS', 400);
-
-/**
- * Returns the schedule type and the days a node is on.
- *
- * A daily event (the configured flag is set) is on every day of its range.
- * Otherwise a short date item is on each of its days, and a long item is on
- * the days of the rule its text states ("every Tuesday", "first and third
- * Monday"). When a long item has no rule, the schedule is unknown. Days
- * before today are dropped, and days are listed at most two years ahead,
- * because every date filter looks forward from today.
- *
- * @return array
- *   array(schedule type, YYYYMMDD integers).
- */
-function quant_search_node_schedule($node, array $ranges, array $config) {
-  module_load_include('inc', 'quant_search', 'quant_search.schedule');
-  if (quant_search_node_is_daily($node, $config)) {
-    return array(QUANT_SEARCH_SCHEDULE_DAILY, array());
-  }
-  $tz = new DateTimeZone(variable_get('date_default_timezone', date_default_timezone_get()));
-  $long = array_filter($ranges, 'quant_search_range_is_long');
-  $days = quant_search_ranges_days(array_diff_key($ranges, $long), $tz);
-  if (!$long) {
-    return array(QUANT_SEARCH_SCHEDULE_DAYS, $days);
-  }
-  $rule = quant_search_schedule_parse(quant_search_node_schedule_text($node, $config));
-  if (!$rule) {
-    return array(QUANT_SEARCH_SCHEDULE_UNKNOWN, array());
-  }
-  if (count($rule['weekdays']) === 7 && !$rule['ordinals']) {
-    return array(QUANT_SEARCH_SCHEDULE_DAILY, array());
-  }
-  foreach ($long as $range) {
-    $clamped = quant_search_schedule_clamp($range, $tz);
-    if ($clamped) {
-      $days = array_merge($days, quant_search_schedule_expand($rule, $clamped[0], $clamped[1], $tz, QUANT_SEARCH_SCHEDULE_MAX_DAYS));
-    }
-  }
-  return array(QUANT_SEARCH_SCHEDULE_DAYS, array_slice(quant_search_schedule_unique($days), 0, QUANT_SEARCH_SCHEDULE_MAX_DAYS));
-}
-
-/**
- * TRUE when a date item is longer than QUANT_SEARCH_SCHEDULE_SHORT_SPAN.
- */
-function quant_search_range_is_long(array $range) {
-  return $range[1] - $range[0] > QUANT_SEARCH_SCHEDULE_SHORT_SPAN;
-}
-
-/**
- * Returns every day covered by a list of ranges, from today onwards.
- */
-function quant_search_ranges_days(array $ranges, DateTimeZone $tz) {
-  $days = array();
-  foreach ($ranges as $range) {
-    $clamped = quant_search_schedule_clamp($range, $tz);
-    if ($clamped) {
-      $days = array_merge($days, quant_search_schedule_all_days($clamped[0], $clamped[1], $tz, QUANT_SEARCH_SCHEDULE_MAX_DAYS));
-    }
-  }
-  return array_slice(quant_search_schedule_unique($days), 0, QUANT_SEARCH_SCHEDULE_MAX_DAYS);
-}
-
-/**
- * Clamps a range to [today, today + 2 years], or NULL when nothing is left.
- */
-function quant_search_schedule_clamp(array $range, DateTimeZone $tz) {
-  $today = new DateTime('today', $tz);
-  $until = clone $today;
-  $until->modify('+2 years');
-  $start = max($range[0], $today->getTimestamp());
-  $end = min($range[1], $until->getTimestamp());
-  return $start <= $end ? array($start, $end) : NULL;
-}
-
-/**
- * TRUE when the configured daily flag field is set on a node.
- *
- * A term-based rule is deliberately absent: sites tag talks and tours with
- * an "Exhibitions" event type, so a term does not mean "open every day".
- */
-function quant_search_node_is_daily($node, array $config) {
-  if (empty($config['daily_field'])) {
-    return FALSE;
-  }
-  $items = field_get_items('node', $node, $config['daily_field']);
-  return $items && !empty($items[0]['value']);
-}
-
-/**
- * Returns the text of the configured schedule fields, for rule parsing.
- */
-function quant_search_node_schedule_text($node, array $config) {
-  $text = '';
-  foreach (quant_search_split_list(isset($config['schedule_fields']) ? $config['schedule_fields'] : '') as $field) {
-    foreach ((array) field_get_items('node', $node, $field) as $item) {
-      $text .= ' ' . (isset($item['value']) ? $item['value'] : '');
-    }
-  }
-  // A non-breaking space between "every" and the weekday must still match.
-  return str_replace("\xC2\xA0", ' ', html_entity_decode(strip_tags($text), ENT_QUOTES, 'UTF-8'));
-}
-
-/**
- * Splits a comma-separated setting into trimmed, non-empty values.
- */
-function quant_search_split_list($value) {
-  return array_values(array_filter(array_map('trim', explode(',', (string) $value))));
 }
 
 /**
