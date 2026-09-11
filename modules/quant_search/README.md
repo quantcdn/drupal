@@ -166,7 +166,26 @@ function mymodule_quant_search_settings_alter(array &$settings, array $page) {
 }
 ```
 
-### 3. Per-page attached assets
+### 3. Site-specific record attributes — `hook_quant_search_record_alter`
+
+Implement the hook to add or change attributes on a node's search record
+before it is sent, on save and during a re-index. Use it for rules that the
+indexing settings cannot express. See `quant_search.api.php`.
+
+```php
+function mymodule_quant_search_record_alter(array &$record, $node) {
+  if ($node->type === 'event') {
+    $items = field_get_items('node', $node, 'field_featured');
+    $record['featured'] = !empty($items[0]['value']) ? 1 : 0;
+  }
+}
+```
+
+On Typesense, the platform declares a new numeric attribute from the first
+record that carries a non-empty value. A filter on an attribute that no
+record carries fails the query, so always write the attribute.
+
+### 4. Per-page attached assets
 
 The search-page admin form has two textareas — "Additional JS to attach" and
 "Additional CSS to attach" — accepting one path or URL per line. Use them to

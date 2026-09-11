@@ -90,6 +90,9 @@ function quant_search_generate_record($node) {
   $extra = isset($config['node']['index_fields']) ? $config['node']['index_fields'] : '';
   $record += quant_search_node_extra_fields($node, $extra);
 
+  // Let site modules add or change attributes before the record is sent.
+  drupal_alter('quant_search_record', $record, $node);
+
   return $record;
 }
 

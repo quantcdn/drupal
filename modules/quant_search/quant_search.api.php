@@ -40,3 +40,31 @@
  */
 function hook_quant_search_settings_alter(array &$settings, array $page) {
 }
+
+/**
+ * Alter a node's search record before it is sent to the search backend.
+ *
+ * Invoked from quant_search_generate_record() for every node this module
+ * indexes, on save and during a re-index. Use it for site-specific
+ * attributes that the indexing settings cannot express. Any attribute added
+ * here can be used as a filter, a facet, or a sort key.
+ *
+ * @param array &$record
+ *   The record. Keys include title, summary, content, url, image,
+ *   content_type, lang_code, the taxonomy and date attributes, and the
+ *   configured additional fields.
+ * @param object $node
+ *   The node (read-only context).
+ *
+ * Example: flag featured events so a facet or a filter can use them.
+ * @code
+ * function mymodule_quant_search_record_alter(array &$record, $node) {
+ *   if ($node->type === 'event') {
+ *     $items = field_get_items('node', $node, 'field_featured');
+ *     $record['featured'] = !empty($items[0]['value']) ? 1 : 0;
+ *   }
+ * }
+ * @endcode
+ */
+function hook_quant_search_record_alter(array &$record, $node) {
+}
