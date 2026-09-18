@@ -256,6 +256,25 @@ function quant_search_index_batch_op($nids, &$context) {
     quant_search_api_send_records($records);
   }
   $context['results']['count'] = (isset($context['results']['count']) ? $context['results']['count'] : 0) + count($records);
+  quant_search_index_reset_caches();
+}
+
+/**
+ * Frees the caches a chunk of rendered nodes fills.
+ *
+ * Each batch operation is its own request in the browser, so memory resets
+ * between chunks. A programmatic run (drush, drupal_form_submit) does every
+ * chunk in one process, where the entity static caches and the path alias
+ * cache grow until PHP's memory limit stops the re-index part way.
+ */
+function quant_search_index_reset_caches() {
+  foreach (array('node', 'taxonomy_term', 'file', 'user') as $entity_type) {
+    $controller = entity_get_controller($entity_type);
+    if ($controller) {
+      $controller->resetCache();
+    }
+  }
+  drupal_static_reset('drupal_lookup_path');
 }
 
 /**
