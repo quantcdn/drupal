@@ -30,6 +30,8 @@ class EndpointValidatorTest extends UnitTestCase {
   }
 
   /**
+   * Each endpoint gets the expected validation result.
+   *
    * @dataProvider endpoints
    */
   public function testValidate($endpoint, $expected) {
