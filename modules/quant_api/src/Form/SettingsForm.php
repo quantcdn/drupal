@@ -5,6 +5,7 @@ namespace Drupal\quant_api\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\quant_api\Client\QuantClientInterface;
+use Drupal\quant_api\EndpointValidator;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -74,10 +75,9 @@ class SettingsForm extends ConfigFormBase {
     $form['api_endpoint'] = [
       '#type' => 'textfield',
       '#title' => $this->t('API Endpoint'),
-      '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code>, shown on the <code>Integrations</code> page. Update via drush or settings.php if necessary.'),
-      '#default_value' => $config->get('api_endpoint', 'https://api.quantcdn.io'),
+      '#description' => $this->t('The fully-qualified domain name for the API endpoint, e.g. <code>https://api.quantcdn.io</code> or the QuantGov endpoint from the <code>Integrations</code> page. Use https and do not add <code>/v1</code>; the module adds it.'),
+      '#default_value' => $config->get('api_endpoint') ?: 'https://api.quantcdn.io',
       '#required' => TRUE,
-      '#disabled' => TRUE,
     ];
 
     // @todo Switch from 'api_account' to 'api_organization'.
@@ -143,12 +143,28 @@ class SettingsForm extends ConfigFormBase {
   /**
    * {@inheritdoc}
    */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $messages = [
+      'not_https' => $this->t('The API endpoint must be an https URL, for example https://api.quantcdn.io.'),
+      'not_origin' => $this->t('The API endpoint must contain only the scheme and host, for example https://api.quantcdn.io.'),
+      'has_v1' => $this->t('Remove /v1 from the API endpoint. The module adds it.'),
+    ];
+    $error = EndpointValidator::validate($form_state->getValue('api_endpoint'));
+    if ($error !== NULL) {
+      $form_state->setErrorByName('api_endpoint', $messages[$error]);
+    }
+    parent::validateForm($form, $form_state);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
     // Retrieve the configuration.
     // @todo Switch from 'api_account' to 'api_organization'.
     $this->configFactory->getEditable(self::SETTINGS)
-      ->set('api_endpoint', $form_state->getValue('api_endpoint'))
+      ->set('api_endpoint', EndpointValidator::normalise($form_state->getValue('api_endpoint')))
       ->set('api_token', $form_state->getValue('api_token'))
       ->set('api_project', $form_state->getValue('api_project'))
       ->set('api_account', $form_state->getValue('api_account'))
