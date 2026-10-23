@@ -1,6 +1,6 @@
 # QuantCDN Drupal module
 
-This module acts as a static site generator for Drupal and integrates with the [QuantCDN static edge](https://www.quantcdn.io), and is compatible with Drupal 9.x and 10.x.
+This module acts as a static site generator for Drupal and integrates with the [QuantCDN static edge](https://www.quantcdn.io), and is compatible with Drupal 10 (module 1.x, `^10`) and Drupal 11 (module 2.x, `^11`). Drupal 9 is not supported.
 
 QuantCDN is a global CDN engineered specifically for the static web and Jamstack.
 
