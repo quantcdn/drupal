@@ -80,6 +80,8 @@ class QuantApiFilesTest extends UnitTestCase {
     file_put_contents(DRUPAL_ROOT . $this->dir . '/Terms (legacy).pdf', '%PDF');
     file_put_contents(DRUPAL_ROOT . $this->dir . '/oembed_thumbnails/abc.jpg', 'jpg');
     file_put_contents(DRUPAL_ROOT . '/sites/default/quant-secret.php', '<?php');
+    file_put_contents(DRUPAL_ROOT . $this->dir . '/nick+w1.png', 'png');
+    file_put_contents(DRUPAL_ROOT . $this->dir . '/what-is-cpq?.png', 'png');
 
     // The editing domain is one of this site's hosts; other.example.org is
     // another website.
@@ -127,6 +129,8 @@ class QuantApiFilesTest extends UnitTestCase {
     @rmdir(DRUPAL_ROOT . $this->dir . '/oembed_thumbnails');
     @rmdir(DRUPAL_ROOT . $this->dir);
     @unlink(DRUPAL_ROOT . '/sites/default/quant-secret.php');
+    @unlink(DRUPAL_ROOT . $this->dir . '/nick+w1.png');
+    @unlink(DRUPAL_ROOT . $this->dir . '/what-is-cpq?.png');
     parent::tearDown();
   }
 
@@ -275,6 +279,112 @@ class QuantApiFilesTest extends UnitTestCase {
         'original_path' => 'https://editing.example.com' . $escape,
       ],
     ]);
+
+    $this->assertSame([], $this->pushed);
+  }
+
+  /**
+   * Returns a protected property of a queued item.
+   *
+   * @param object $item
+   *   The queue item.
+   * @param string $name
+   *   The property name.
+   *
+   * @return mixed
+   *   The property value.
+   */
+  protected function itemProperty(object $item, string $name) {
+    $property = new \ReflectionProperty($item, $name);
+    $property->setAccessible(TRUE);
+    return $property->getValue($item);
+  }
+
+  /**
+   * A "+" or an encoded "?" in a file name survives the API's decoding.
+   *
+   * The API sends path already decoded ("+" as a space, "%3F" as "?"), so the
+   * name comes from the raw full_path.
+   *
+   * @covers ::onOutput
+   */
+  public function testSpecialCharacterNamesUseFullPath() {
+    $this->queue->expects($this->never())->method('createItem');
+
+    $this->pushPage('<html><body></body></html>', [
+      [
+        'path' => $this->dir . '/nick w1.png?itok=abc',
+        'full_path' => $this->dir . '/nick%2Bw1.png?itok=abc',
+        'original_path' => $this->dir . '/nick%2Bw1.png?itok=abc',
+      ],
+      [
+        'path' => $this->dir . '/what-is-cpq?.png?itok=def',
+        'full_path' => $this->dir . '/what-is-cpq%3F.png?itok=def',
+        'original_path' => $this->dir . '/what-is-cpq%3F.png?itok=def',
+      ],
+    ]);
+
+    $this->assertSame([
+      $this->dir . '/nick%2Bw1.png?itok=abc',
+      $this->dir . '/what-is-cpq%3F.png?itok=def',
+    ], $this->pushed);
+  }
+
+  /**
+   * Preload imagesrcset files are pushed, or queued for generation.
+   *
+   * @covers ::onOutput
+   */
+  public function testPreloadImageSrcsetFiles() {
+    $style = $this->dir . '/styles/small_hq/public/image/a.png.webp';
+    $queued = [];
+    $this->queue->method('createItem')->willReturnCallback(function ($item) use (&$queued) {
+      $queued[] = $item;
+      return TRUE;
+    });
+
+    $srcset = 'https://' . self::HOST . $this->dir . '/oembed_thumbnails/abc.jpg 640w, '
+      . 'https://' . self::HOST . $style . '?itok=Ie-YtCdi 768w';
+    $this->pushPage('<html><head><link rel="preload" as="image" imagesrcset="' . $srcset . '"></head><body></body></html>');
+
+    $this->assertSame([$this->dir . '/oembed_thumbnails/abc.jpg'], $this->pushed);
+    $this->assertCount(1, $queued);
+    $this->assertSame($style, $this->itemProperty($queued[0], 'file'));
+    $this->assertSame($style . '?itok=Ie-YtCdi', $this->itemProperty($queued[0], 'fullPath'));
+  }
+
+  /**
+   * A JSON-LD image style that is not generated yet is queued with its itok.
+   *
+   * @covers ::onOutput
+   */
+  public function testStructuredDataStyleIsQueued() {
+    $style = $this->dir . '/styles/large/public/image/2026-03/Conga%20main.png';
+    $queued = [];
+    $this->queue->method('createItem')->willReturnCallback(function ($item) use (&$queued) {
+      $queued[] = $item;
+      return TRUE;
+    });
+
+    $json = json_encode(['@type' => 'ImageObject', 'url' => 'https://' . self::HOST . $style . '?itok=oyDPMs0U']);
+    $this->pushPage('<html><head><script type="application/ld+json">' . $json . '</script></head><body></body></html>');
+
+    $this->assertSame([], $this->pushed);
+    $this->assertCount(1, $queued);
+    $this->assertSame(rawurldecode($style), $this->itemProperty($queued[0], 'file'));
+    $this->assertSame($style . '?itok=oyDPMs0U', $this->itemProperty($queued[0], 'fullPath'));
+  }
+
+  /**
+   * A queued style path that climbs out with ".." is refused.
+   *
+   * @covers ::onOutput
+   */
+  public function testStyleWithDotDotIsNotQueued() {
+    $this->queue->expects($this->never())->method('createItem');
+    $json = json_encode(['url' => 'https://' . self::HOST . '/sites/default/files/styles/../../quant-secret.php?itok=x']);
+
+    $this->pushPage('<html><head><script type="application/ld+json">' . $json . '</script></head><body></body></html>');
 
     $this->assertSame([], $this->pushed);
   }
