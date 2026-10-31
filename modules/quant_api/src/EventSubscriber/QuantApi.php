@@ -325,7 +325,26 @@ class QuantApi implements EventSubscriberInterface {
 
     // Content often links a file by another of this site's hostnames, such
     // as the editing domain. Those are local files, provided they are on disk.
-    return Utility::isTrustedHostUrl($item['original_path']) && is_file($fileOnDisk);
+    return Utility::isTrustedHostUrl($item['original_path']) && $this->isPublicFile($fileOnDisk);
+  }
+
+  /**
+   * Checks that a path is a file inside the public files directory.
+   *
+   * Paths from content and API responses can contain "..". Resolve the path
+   * first, so that a link such as /sites/default/files/../settings.php
+   * cannot publish a file from outside the public files directory.
+   *
+   * @param string $fileOnDisk
+   *   The absolute path on disk.
+   *
+   * @return bool
+   *   TRUE if the resolved path is a file in the public files directory.
+   */
+  protected function isPublicFile(string $fileOnDisk) : bool {
+    $real = realpath($fileOnDisk);
+    $public = realpath(DRUPAL_ROOT . '/' . PublicStream::basePath());
+    return $real !== FALSE && $public !== FALSE && is_file($real) && str_starts_with($real, $public . DIRECTORY_SEPARATOR);
   }
 
   /**
@@ -391,7 +410,7 @@ class QuantApi implements EventSubscriberInterface {
       }
 
       $external = Utility::isExternalUrl($url) && !Utility::isTrustedHostUrl($url);
-      if (!$external && is_file(DRUPAL_ROOT . $file)) {
+      if (!$external && $this->isPublicFile(DRUPAL_ROOT . $file)) {
         $pushed[$file] = TRUE;
         $this->eventDispatcher->dispatch(new QuantFileEvent(DRUPAL_ROOT . $file, $file), QuantFileEvent::OUTPUT);
       }

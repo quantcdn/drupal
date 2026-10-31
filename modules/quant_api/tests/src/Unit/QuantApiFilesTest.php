@@ -79,6 +79,7 @@ class QuantApiFilesTest extends UnitTestCase {
     mkdir(DRUPAL_ROOT . $this->dir . '/oembed_thumbnails', 0775, TRUE);
     file_put_contents(DRUPAL_ROOT . $this->dir . '/Terms (legacy).pdf', '%PDF');
     file_put_contents(DRUPAL_ROOT . $this->dir . '/oembed_thumbnails/abc.jpg', 'jpg');
+    file_put_contents(DRUPAL_ROOT . '/sites/default/quant-secret.php', '<?php');
 
     // The editing domain is one of this site's hosts; other.example.org is
     // another website.
@@ -125,6 +126,7 @@ class QuantApiFilesTest extends UnitTestCase {
     @unlink(DRUPAL_ROOT . $this->dir . '/oembed_thumbnails/abc.jpg');
     @rmdir(DRUPAL_ROOT . $this->dir . '/oembed_thumbnails');
     @rmdir(DRUPAL_ROOT . $this->dir);
+    @unlink(DRUPAL_ROOT . '/sites/default/quant-secret.php');
     parent::tearDown();
   }
 
@@ -255,6 +257,26 @@ class QuantApiFilesTest extends UnitTestCase {
     ]);
 
     $this->assertSame([$thumbnail], $this->pushed);
+  }
+
+  /**
+   * A path that climbs out of the public files directory is never pushed.
+   *
+   * @covers ::onOutput
+   */
+  public function testPathOutsidePublicFilesIsNotPushed() {
+    $escape = '/sites/default/files/../quant-secret.php';
+    $json = json_encode(['image' => 'https://' . self::HOST . $escape]);
+    $this->queue->expects($this->never())->method('createItem');
+
+    $this->pushPage('<html><head><script type="application/ld+json">' . $json . '</script></head><body></body></html>', [
+      [
+        'path' => $escape,
+        'original_path' => 'https://editing.example.com' . $escape,
+      ],
+    ]);
+
+    $this->assertSame([], $this->pushed);
   }
 
 }
