@@ -275,7 +275,8 @@ class QuantApi implements EventSubscriberInterface {
       : (string) strtok($url, '?');
     $fileOnDisk = $this->diskPath($file);
 
-    if (!$this->isLocalAttachment($item, $url, $fileOnDisk)) {
+    // A path that climbs out of the web root is never a page asset.
+    if (preg_match('#(^|/)\.\.(/|$)#', $file) || !$this->isLocalAttachment($item, $url, $fileOnDisk)) {
       return NULL;
     }
 
@@ -408,7 +409,7 @@ class QuantApi implements EventSubscriberInterface {
       $pushed[$file] = TRUE;
 
       if ($this->isPublicFile(DRUPAL_ROOT . $file)) {
-        $this->eventDispatcher->dispatch(new QuantFileEvent(DRUPAL_ROOT . $file, $file), QuantFileEvent::OUTPUT);
+        $this->eventDispatcher->dispatch(new QuantFileEvent(DRUPAL_ROOT . $file, Utility::encodePath($file)), QuantFileEvent::OUTPUT);
       }
       elseif (str_contains($file, '/styles/')) {
         // FileItem requests the full URL, including itok, to generate it.

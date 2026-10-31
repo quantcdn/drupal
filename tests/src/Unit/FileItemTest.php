@@ -200,4 +200,29 @@ class FileItemTest extends UnitTestCase {
     $this->assertEquals(self::PROJECT, $item->getTargetProject());
   }
 
+  /**
+   * The dispatched URL is percent-encoded per segment.
+   *
+   * The API decodes a literal "+" to a space and the module cuts the query at
+   * the first "?", so a decoded name such as "a+b (1)?.png" must be sent as
+   * the page links it.
+   *
+   * @covers ::send
+   */
+  public function testSendEncodesFileNameInUrl() {
+    $dir = '/sites/default/files/enc-' . uniqid();
+    $file = $dir . '/nick+w1 (2)?.png';
+    mkdir(DRUPAL_ROOT . $dir, 0775, TRUE);
+    file_put_contents(DRUPAL_ROOT . $file, 'png');
+
+    $this->eventDispatcher->dispatch(Argument::that(function ($event) use ($dir) {
+      return $event instanceof QuantFileEvent && $event->getUrl() === $dir . '/nick%2Bw1%20%282%29%3F.png';
+    }), QuantFileEvent::OUTPUT)->willReturnArgument(0)->shouldBeCalledOnce();
+
+    (new FileItem(['file' => $file, 'url' => $file]))->send();
+
+    unlink(DRUPAL_ROOT . $file);
+    rmdir(DRUPAL_ROOT . $dir);
+  }
+
 }
