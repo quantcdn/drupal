@@ -6,4 +6,4 @@ type: module
 core_version_requirement: ^11
 
 dependencies:
-  - quant:quant_api
+  - quantcdn:quant_api

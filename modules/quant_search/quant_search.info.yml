@@ -6,6 +6,6 @@ type: module
 core_version_requirement: ^11
 configure: quant_search.main
 dependencies:
-  - quant:quant
-  - quant:quant_api
+  - quantcdn:quant
+  - quantcdn:quant_api
   - token:token
