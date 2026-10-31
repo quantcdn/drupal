@@ -172,7 +172,7 @@ class SeedMediaTest extends UnitTestCase {
 
     Seed::seedMedia($media);
 
-    $this->assertSame([$this->dir . '/Terms (legacy).pdf'], $this->pushed);
+    $this->assertSame([$this->dir . '/Terms%20%28legacy%29.pdf'], $this->pushed);
   }
 
   /**
