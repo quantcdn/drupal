@@ -163,6 +163,24 @@ class Utility {
   }
 
   /**
+   * Encodes a decoded file path for use as a Quant URL.
+   *
+   * The API decodes the URL it receives: a literal "+" becomes a space before
+   * "%xx" sequences are decoded, and the module cuts the query at the first
+   * "?". A name that contains "+", "?" or a space must therefore be sent with
+   * each path segment percent-encoded, as the page itself links it.
+   *
+   * @param string $path
+   *   A decoded, root-relative path such as "/sites/default/files/a+b (1).png".
+   *
+   * @return string
+   *   The path with every segment rawurlencoded; slashes are kept.
+   */
+  public static function encodePath(string $path) : string {
+    return implode('/', array_map('rawurlencode', explode('/', $path)));
+  }
+
+  /**
    * Checks if a URL names a host that this Drupal site answers to.
    *
    * Content often links to files by a hostname other than host_domain, such

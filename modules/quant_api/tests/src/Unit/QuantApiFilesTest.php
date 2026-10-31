@@ -389,4 +389,33 @@ class QuantApiFilesTest extends UnitTestCase {
     $this->assertSame([], $this->pushed);
   }
 
+  /**
+   * A JSON-LD file name with "+" and a space is pushed percent-encoded.
+   *
+   * @covers ::onOutput
+   */
+  public function testStructuredDataNameIsEncoded() {
+    $json = json_encode(['image' => 'https://' . self::HOST . $this->dir . '/nick%2Bw1.png']);
+
+    $this->pushPage('<html><head><script type="application/ld+json">' . $json . '</script></head><body></body></html>');
+
+    $this->assertSame([$this->dir . '/nick%2Bw1.png'], $this->pushed);
+  }
+
+  /**
+   * A relative attachment that climbs out of the web root is refused.
+   *
+   * @covers ::onOutput
+   */
+  public function testRelativeAttachmentWithDotDotIsRefused() {
+    $this->queue->expects($this->never())->method('createItem');
+    $escape = '/sites/default/files/../quant-secret.php';
+
+    $this->pushPage('<html><body></body></html>', [
+      ['path' => $escape, 'original_path' => $escape],
+    ]);
+
+    $this->assertSame([], $this->pushed);
+  }
+
 }

@@ -3,6 +3,7 @@
 namespace Drupal\quant\Plugin\QueueItem;
 
 use Drupal\quant\Event\QuantFileEvent;
+use Drupal\quant\Utility;
 
 /**
  * A Quant queue file item.
@@ -94,7 +95,7 @@ class FileItem implements QuantQueueItemInterface {
     }
 
     if (file_exists(DRUPAL_ROOT . $this->file)) {
-      \Drupal::service('event_dispatcher')->dispatch(new QuantFileEvent(DRUPAL_ROOT . $this->file, $this->file), QuantFileEvent::OUTPUT);
+      \Drupal::service('event_dispatcher')->dispatch(new QuantFileEvent(DRUPAL_ROOT . $this->file, Utility::encodePath($this->file)), QuantFileEvent::OUTPUT);
     }
     else {
       \Drupal::logger('quant')->warning("Unable to send file that does not exist on disk: {$this->file}");
