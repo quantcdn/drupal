@@ -3,6 +3,8 @@
 namespace Drupal\quant_api\EventSubscriber;
 
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Queue\QueueInterface;
+use Drupal\Core\StreamWrapper\PublicStream;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
@@ -116,7 +118,6 @@ class QuantApi implements EventSubscriberInterface {
    */
   public function onOutput(QuantEvent $event) {
 
-    $config = \Drupal::config('quant.settings');
     // Last line of defence: a path assembled from an empty prefix or base
     // must not reach the API as //fr/node/1, which would publish a duplicate
     // resource alongside the real one.
@@ -157,112 +158,16 @@ class QuantApi implements EventSubscriberInterface {
       return FALSE;
     }
 
-    // A refused write returns an empty array, and the API is entitled to
-    // answer without attachments, so none of these keys can be assumed.
-    // array_merge() fatals on a NULL argument.
-    $attachments = $res['attachments'] ?? [];
-    $media = array_merge(
-      $attachments['js'] ?? [],
-      $attachments['css'] ?? [],
-      $attachments['media']['images'] ?? [],
-      $attachments['media']['documents'] ?? [],
-      $attachments['media']['video'] ?? []
-    );
-
     $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
 
-    foreach ($media as $item) {
-      // @todo Configurable to disallow remote files.
-      // @todo Strip base domain.
-      // Do not include external items.
-      if (Utility::isExternalUrl($item['original_path'])) {
-        continue;
-      }
-
-      $url = urldecode($item['path']);
-
-      if ($url == '/css') {
-        continue;
-      }
-
-      // Ignore anything that isn't relative for now.
-      if (substr($url, 0, 1) != '/' || substr($url, 0, 2) == '//') {
-        continue;
-      }
-
-      // Strip query params.
-      $file = strtok($url, '?');
-
-      // Resolve to a path on disk.
-      $fileOnDisk = DRUPAL_ROOT . $file;
-
-      // Override if this looks like a private file.
-      if (strpos($file, '/system/files/') !== FALSE) {
-        $privatePath = \Drupal::service('file_system')->realpath("private://");
-        $fileOnDisk = str_replace('/system/files', $privatePath, $file);
-      }
-
-      // Check if the file has changed.
-      if (isset($item['existing_md5'])) {
-        if (file_exists($fileOnDisk) && md5_file($fileOnDisk) == $item['existing_md5']) {
-          continue;
-        }
-      }
-
-      // Since Drupal 10.1, CSS/JS aggregates are generated on demand and may
-      // not exist on disk. Generate from the original path, which carries
-      // the query parameters the asset controller requires. The aggregate is
-      // persisted under the exact filename the markup references, even when
-      // library definitions have changed and core would only write it under
-      // a corrected filename.
-      // Only process internal CSS/JS files.
-      $check_file = (str_ends_with($file, 'css') || str_ends_with($file, 'js')) && !str_starts_with($item['original_path'], 'http');
-      if (!file_exists($fileOnDisk) && $check_file) {
-        if (!\Drupal::service('quant.asset_generator')->generate($item['original_path'], $fileOnDisk)) {
-          $this->logger->error("Error generating asset: " . $item['original_path']);
-        }
-      }
-
-      // If the file exists, send it directly to Quant; otherwise, add it to the
-      // queue to generate assets on the next run.
-      if (file_exists($fileOnDisk)) {
-        $this->eventDispatcher->dispatch(new QuantFileEvent($fileOnDisk, $item['full_path'] ?? $file), QuantFileEvent::OUTPUT);
-      }
-      else {
-        $file_item = new FileItem([
-          'file' => $file,
-          'url' => $url,
-          'full_path' => $item['full_path'] ?? NULL,
-          'original_path' => $item['original_path'] ?? NULL,
-        ]);
-        $queue->createItem($file_item);
-      }
-    }
+    $pushed = $this->pushAttachments($res, $queue);
 
     // Pagination support.
     $document = new \DOMDocument();
     @$document->loadHTML($content);
     $xpath = new \DOMXPath($document);
-
-    $xpath_selectors = [];
-    $links_config = $config->get('xpath_selectors');
-
-    foreach (explode(PHP_EOL, $links_config) as $links_line) {
-      $xpath_selectors[] = trim($links_line);
-    }
-
-    foreach ($xpath_selectors as $xpath_query) {
-      /** @var \DOMElement $node */
-      foreach ($xpath->query($xpath_query) as $node) {
-        $original_href = $new_href = $node->getAttribute('href');
-        if ($original_href[0] === '?') {
-          $new_href = strtok($path, '?') . $original_href;
-        }
-
-        $queue->createItem(new RouteItem(['route' => $new_href]));
-      }
-    }
+    $this->queuePaginationLinks($xpath, $path, $queue);
 
     // Media oEmbed support.
     // Core media may be embedded via iFrame not included by the seed process.
@@ -279,7 +184,237 @@ class QuantApi implements EventSubscriberInterface {
       }
     }
 
+    // Files named only in structured data, such as a media oEmbed thumbnail.
+    $this->pushStructuredDataFiles($xpath, $pushed);
+
     // @todo Report on forms that need proxying (attachments.forms).
+  }
+
+  /**
+   * Pushes, or queues, the attachments the API found in page markup.
+   *
+   * @param array $res
+   *   The API response to the page push.
+   * @param \Drupal\Core\Queue\QueueInterface $queue
+   *   The queue for files that must be generated first.
+   *
+   * @return array
+   *   The local paths of the files handled, as keys.
+   */
+  protected function pushAttachments(array $res, QueueInterface $queue) : array {
+    // A refused write returns an empty array, and the API is entitled to
+    // answer without attachments, so none of these keys can be assumed.
+    // array_merge() fatals on a NULL argument.
+    $attachments = $res['attachments'] ?? [];
+    $media = array_merge(
+      $attachments['js'] ?? [],
+      $attachments['css'] ?? [],
+      $attachments['media']['images'] ?? [],
+      $attachments['media']['documents'] ?? [],
+      $attachments['media']['video'] ?? []
+    );
+
+    $pushed = [];
+    foreach ($media as $item) {
+      $file = $this->pushAttachment($item, $queue);
+      if ($file) {
+        $pushed[$file] = TRUE;
+      }
+    }
+
+    return $pushed;
+  }
+
+  /**
+   * Queues the pagination links that the xpath_selectors setting selects.
+   *
+   * @param \DOMXPath $xpath
+   *   The page document.
+   * @param string $path
+   *   The page path.
+   * @param \Drupal\Core\Queue\QueueInterface $queue
+   *   The seed queue.
+   */
+  protected function queuePaginationLinks(\DOMXPath $xpath, string $path, QueueInterface $queue) : void {
+    $links_config = \Drupal::config('quant.settings')->get('xpath_selectors');
+
+    foreach (explode(PHP_EOL, (string) $links_config) as $links_line) {
+      /** @var \DOMElement $node */
+      foreach ($xpath->query(trim($links_line)) as $node) {
+        $original_href = $new_href = $node->getAttribute('href');
+        if ($original_href[0] === '?') {
+          $new_href = strtok($path, '?') . $original_href;
+        }
+
+        $queue->createItem(new RouteItem(['route' => $new_href]));
+      }
+    }
+  }
+
+  /**
+   * Pushes, or queues, one attachment the API found in page markup.
+   *
+   * @param array $item
+   *   The attachment, with path, original_path and optionally full_path and
+   *   existing_md5.
+   * @param \Drupal\Core\Queue\QueueInterface $queue
+   *   The queue for files that must be generated first.
+   *
+   * @return string|null
+   *   The local path of the file, or NULL if the attachment was skipped.
+   */
+  protected function pushAttachment(array $item, QueueInterface $queue) : ?string {
+    // @todo Configurable to disallow remote files.
+    $url = urldecode($item['path']);
+
+    // Strip query params, and resolve to a path on disk.
+    $file = (string) strtok($url, '?');
+    $fileOnDisk = $this->diskPath($file);
+
+    if (!$this->isLocalAttachment($item, $url, $fileOnDisk)) {
+      return NULL;
+    }
+
+    // Check if the file has changed.
+    if (isset($item['existing_md5']) && file_exists($fileOnDisk) && md5_file($fileOnDisk) == $item['existing_md5']) {
+      return $file;
+    }
+
+    $this->generateAggregate($item, $file, $fileOnDisk);
+
+    // If the file exists, send it directly to Quant; otherwise, add it to the
+    // queue to generate assets on the next run.
+    if (file_exists($fileOnDisk)) {
+      $this->eventDispatcher->dispatch(new QuantFileEvent($fileOnDisk, $item['full_path'] ?? $file), QuantFileEvent::OUTPUT);
+    }
+    else {
+      $queue->createItem(new FileItem([
+        'file' => $file,
+        'url' => $url,
+        'full_path' => $item['full_path'] ?? NULL,
+        'original_path' => $item['original_path'] ?? NULL,
+      ]));
+    }
+
+    return $file;
+  }
+
+  /**
+   * Checks if an attachment is a file of this site.
+   *
+   * @param array $item
+   *   The attachment.
+   * @param string $url
+   *   The decoded attachment path.
+   * @param string $fileOnDisk
+   *   The path on disk the attachment resolves to.
+   *
+   * @return bool
+   *   TRUE if the attachment should be pushed.
+   */
+  protected function isLocalAttachment(array $item, string $url, string $fileOnDisk) : bool {
+    // Ignore anything that isn't relative for now.
+    if ($url == '/css' || !str_starts_with($url, '/') || str_starts_with($url, '//')) {
+      return FALSE;
+    }
+
+    // Do not include external items.
+    if (!Utility::isExternalUrl($item['original_path'])) {
+      return TRUE;
+    }
+
+    // Content often links a file by another of this site's hostnames, such
+    // as the editing domain. Those are local files, provided they are on disk.
+    return Utility::isTrustedHostUrl($item['original_path']) && is_file($fileOnDisk);
+  }
+
+  /**
+   * Generates a missing on-demand CSS/JS aggregate.
+   *
+   * Since Drupal 10.1, CSS/JS aggregates are generated on demand and may
+   * not exist on disk. Generate from the original path, which carries
+   * the query parameters the asset controller requires. The aggregate is
+   * persisted under the exact filename the markup references, even when
+   * library definitions have changed and core would only write it under
+   * a corrected filename.
+   *
+   * @param array $item
+   *   The attachment.
+   * @param string $file
+   *   The attachment path without a query string.
+   * @param string $fileOnDisk
+   *   The path on disk to write the aggregate to.
+   */
+  protected function generateAggregate(array $item, string $file, string $fileOnDisk) : void {
+    // Only process internal CSS/JS files.
+    $check_file = (str_ends_with($file, 'css') || str_ends_with($file, 'js')) && !str_starts_with($item['original_path'], 'http');
+    if (!$check_file || file_exists($fileOnDisk)) {
+      return;
+    }
+
+    if (!\Drupal::service('quant.asset_generator')->generate($item['original_path'], $fileOnDisk)) {
+      $this->logger->error("Error generating asset: " . $item['original_path']);
+    }
+  }
+
+  /**
+   * Pushes local public files that are named only in JSON-LD.
+   *
+   * The API finds attachments in elements such as img and a, but does not
+   * read script content. A file named only in structured data, such as the
+   * media oEmbed thumbnail in a VideoObject thumbnailUrl, never reaches Quant
+   * otherwise.
+   *
+   * @param \DOMXPath $xpath
+   *   The page document.
+   * @param array $pushed
+   *   Local paths already handled from the attachments, as keys.
+   */
+  protected function pushStructuredDataFiles(\DOMXPath $xpath, array $pushed) : void {
+    $urls = [];
+    foreach ($xpath->query('//script[@type="application/ld+json"]') as $node) {
+      $data = json_decode($node->textContent, TRUE);
+      if (is_array($data)) {
+        array_walk_recursive($data, function ($value) use (&$urls) {
+          if (is_string($value)) {
+            $urls[$value] = TRUE;
+          }
+        });
+      }
+    }
+
+    $files_base = '/' . PublicStream::basePath() . '/';
+    foreach (array_keys($urls) as $url) {
+      $file = urldecode((string) parse_url($url, PHP_URL_PATH));
+      if (isset($pushed[$file]) || !str_starts_with($file, $files_base)) {
+        continue;
+      }
+
+      $external = Utility::isExternalUrl($url) && !Utility::isTrustedHostUrl($url);
+      if (!$external && is_file(DRUPAL_ROOT . $file)) {
+        $pushed[$file] = TRUE;
+        $this->eventDispatcher->dispatch(new QuantFileEvent(DRUPAL_ROOT . $file, $file), QuantFileEvent::OUTPUT);
+      }
+    }
+  }
+
+  /**
+   * Resolves a file URL path to its path on disk.
+   *
+   * @param string $file
+   *   The URL path, without a query string.
+   *
+   * @return string
+   *   The path on disk.
+   */
+  protected function diskPath(string $file) : string {
+    // Override if this looks like a private file.
+    if (strpos($file, '/system/files/') !== FALSE) {
+      $privatePath = \Drupal::service('file_system')->realpath("private://");
+      return str_replace('/system/files', $privatePath, $file);
+    }
+
+    return DRUPAL_ROOT . $file;
   }
 
   /**
@@ -311,7 +446,9 @@ class QuantApi implements EventSubscriberInterface {
       return;
     }
     catch (\Exception $error) {
-      if (strpos("MD5 already matches", $error->getMessage()) !== FALSE) {
+      // An unchanged file is not a failure; anything else must be visible,
+      // or the file silently never reaches Quant.
+      if (!str_contains($error->getMessage(), 'MD5 already matches')) {
         $this->logger->error($error->getMessage());
       }
       return;

@@ -4,6 +4,7 @@ namespace Drupal\quant;
 
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Site\Settings;
 use Drupal\Core\Url;
 use Drupal\language\Plugin\LanguageNegotiation\LanguageNegotiationUrl;
 use Drupal\quant\Event\QuantEvent;
@@ -158,6 +159,35 @@ class Utility {
     if (isset($check_url['host']) && $check_url['host'] !== $hostname) {
       return TRUE;
     }
+    return FALSE;
+  }
+
+  /**
+   * Checks if a URL names a host that this Drupal site answers to.
+   *
+   * Content often links to files by a hostname other than host_domain, such
+   * as the editing domain. Drupal serves only the hosts in
+   * trusted_host_patterns, so a URL on one of those hosts is this site's own.
+   *
+   * @param string $url
+   *   The URL.
+   *
+   * @return bool
+   *   TRUE if the URL has a host that matches a trusted host pattern.
+   */
+  public static function isTrustedHostUrl(string $url) : bool {
+    $host = parse_url($url, PHP_URL_HOST);
+    if (empty($host)) {
+      return FALSE;
+    }
+
+    foreach (Settings::get('trusted_host_patterns', []) as $pattern) {
+      // The same delimiters and flags as Request::setTrustedHosts().
+      if (preg_match('{' . $pattern . '}i', $host)) {
+        return TRUE;
+      }
+    }
+
     return FALSE;
   }
 

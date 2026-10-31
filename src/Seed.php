@@ -3,12 +3,16 @@
 namespace Drupal\quant;
 
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Field\EntityReferenceFieldItemListInterface;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Drupal\Core\Url;
+use Drupal\file\FileInterface;
 use Drupal\image\Entity\ImageStyle;
 use Drupal\node\Entity\Node;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
+use Drupal\quant\Plugin\QueueItem\FileItem;
 use Drupal\taxonomy\Entity\Term;
 use Drupal\views\Views;
 use GuzzleHttp\Exception\ConnectException;
@@ -429,6 +433,55 @@ class Seed {
         Utility::unpublishUrl($path, 'Unpublished image style');
       }
     }
+  }
+
+  /**
+   * Push the files of a media entity to Quant.
+   *
+   * Files otherwise reach Quant only when the API finds them in page markup.
+   * A media thumbnail, such as the one an oEmbed source downloads, is often
+   * named only in structured data, and a replaced source file is not pushed
+   * until a page that links it is pushed again.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The media entity.
+   */
+  public static function seedMedia(EntityInterface $entity) {
+    $fields = ['thumbnail'];
+    $source_field = $entity->getSource()->getConfiguration()['source_field'] ?? NULL;
+    if ($source_field) {
+      $fields[] = $source_field;
+    }
+
+    foreach ($fields as $field) {
+      $items = $entity->hasField($field) ? $entity->get($field) : NULL;
+      if (!$items instanceof EntityReferenceFieldItemListInterface) {
+        continue;
+      }
+
+      foreach ($items->referencedEntities() as $file) {
+        if ($file instanceof FileInterface) {
+          self::seedFile($file);
+        }
+      }
+    }
+  }
+
+  /**
+   * Push a public file to Quant.
+   *
+   * @param \Drupal\file\FileInterface $file
+   *   The file entity.
+   */
+  public static function seedFile(FileInterface $file) {
+    // Only a public file is on disk at the path its URL names.
+    if (StreamWrapperManager::getScheme($file->getFileUri()) !== 'public') {
+      return;
+    }
+
+    $path = urldecode((string) parse_url($file->createFileUrl(), PHP_URL_PATH));
+    $item = new FileItem(['file' => $path]);
+    $item->send();
   }
 
   /**
