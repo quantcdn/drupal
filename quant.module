@@ -166,6 +166,47 @@ function quant_taxonomy_term_update(EntityInterface $entity) {
 }
 
 /**
+ * Implements hook_media_insert().
+ */
+function quant_media_insert(EntityInterface $entity) {
+  _quant_media_save($entity);
+}
+
+/**
+ * Implements hook_media_update().
+ */
+function quant_media_update(EntityInterface $entity) {
+  _quant_media_save($entity);
+}
+
+/**
+ * Registers the push of a saved media entity's files.
+ *
+ * @param Drupal\Core\Entity\EntityInterface $entity
+ *   The media entity.
+ */
+function _quant_media_save(EntityInterface $entity) {
+  if (!\Drupal::config('quant.settings')->get('quant_enabled')) {
+    return;
+  }
+
+  // The files of an unpublished media item are not public content.
+  if (!$entity->isPublished()) {
+    return;
+  }
+
+  $context = [
+    'callback' => '_quant_entity_update_op',
+    'args' => $entity,
+    // The host decides which project this publishes to; capture the request
+    // Drupal already validated, as the node and term hooks do.
+    'request' => \Drupal::requestStack()->getCurrentRequest(),
+  ];
+
+  drupal_register_shutdown_function('quant_shutdown', $context);
+}
+
+/**
  * Implements hook_entity_predelete().
  */
 function quant_entity_predelete(EntityInterface $entity) {
@@ -344,6 +385,10 @@ function _quant_entity_update_op(EntityInterface $entity) {
 
     case 'taxonomy_term':
       Seed::seedTaxonomyTerm($entity, $langcode);
+      break;
+
+    case 'media':
+      Seed::seedMedia($entity);
       break;
   }
 
