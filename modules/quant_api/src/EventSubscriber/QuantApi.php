@@ -184,8 +184,8 @@ class QuantApi implements EventSubscriberInterface {
       }
     }
 
-    // Files named only in structured data, such as a media oEmbed thumbnail.
-    $this->pushStructuredDataFiles($xpath, $pushed);
+    // Files the API does not return: structured data and preload links.
+    $this->pushReferencedFiles($xpath, $pushed, $queue);
 
     // @todo Report on forms that need proxying (attachments.forms).
   }
@@ -267,8 +267,12 @@ class QuantApi implements EventSubscriberInterface {
     // @todo Configurable to disallow remote files.
     $url = urldecode($item['path']);
 
-    // Strip query params, and resolve to a path on disk.
-    $file = (string) strtok($url, '?');
+    // The API decodes path itself, so a "%3F" in a file name has become "?"
+    // and a "%2B" has become a space. Take the name from the raw full_path
+    // when there is one: cut the query first, then decode, keeping "+".
+    $file = isset($item['full_path'])
+      ? rawurldecode((string) strtok($item['full_path'], '?'))
+      : (string) strtok($url, '?');
     $fileOnDisk = $this->diskPath($file);
 
     if (!$this->isLocalAttachment($item, $url, $fileOnDisk)) {
@@ -377,19 +381,58 @@ class QuantApi implements EventSubscriberInterface {
   }
 
   /**
-   * Pushes local public files that are named only in JSON-LD.
+   * Pushes local files that the page names where the API does not look.
    *
    * The API finds attachments in elements such as img and a, but does not
-   * read script content. A file named only in structured data, such as the
-   * media oEmbed thumbnail in a VideoObject thumbnailUrl, never reaches Quant
-   * otherwise.
+   * read script content or the imagesrcset of a preload link. A file named
+   * only there never reaches Quant otherwise: the media oEmbed thumbnail in a
+   * VideoObject thumbnailUrl, the image style in an ImageObject url, or the
+   * responsive image candidates a theme preloads.
+   *
+   * A file on disk is pushed now. An image style that Drupal has not yet
+   * generated is queued, so that the queue worker generates it first.
    *
    * @param \DOMXPath $xpath
    *   The page document.
    * @param array $pushed
    *   Local paths already handled from the attachments, as keys.
+   * @param \Drupal\Core\Queue\QueueInterface $queue
+   *   The queue for files that must be generated first.
    */
-  protected function pushStructuredDataFiles(\DOMXPath $xpath, array $pushed) : void {
+  protected function pushReferencedFiles(\DOMXPath $xpath, array $pushed, QueueInterface $queue) : void {
+    foreach ($this->referencedUrls($xpath) as $url) {
+      $file = $this->localFilePath($url);
+      if ($file === NULL || isset($pushed[$file])) {
+        continue;
+      }
+      $pushed[$file] = TRUE;
+
+      if ($this->isPublicFile(DRUPAL_ROOT . $file)) {
+        $this->eventDispatcher->dispatch(new QuantFileEvent(DRUPAL_ROOT . $file, $file), QuantFileEvent::OUTPUT);
+      }
+      elseif (str_contains($file, '/styles/')) {
+        // FileItem requests the full URL, including itok, to generate it.
+        $raw_path = (string) parse_url($url, PHP_URL_PATH);
+        $query = parse_url($url, PHP_URL_QUERY);
+        $queue->createItem(new FileItem([
+          'file' => $file,
+          'url' => $file,
+          'full_path' => $raw_path . ($query ? '?' . $query : ''),
+        ]));
+      }
+    }
+  }
+
+  /**
+   * Collects the URLs named in JSON-LD and in preload link imagesrcset.
+   *
+   * @param \DOMXPath $xpath
+   *   The page document.
+   *
+   * @return string[]
+   *   The URLs, each once.
+   */
+  protected function referencedUrls(\DOMXPath $xpath) : array {
     $urls = [];
     foreach ($xpath->query('//script[@type="application/ld+json"]') as $node) {
       $data = json_decode($node->textContent, TRUE);
@@ -402,19 +445,40 @@ class QuantApi implements EventSubscriberInterface {
       }
     }
 
-    $files_base = '/' . PublicStream::basePath() . '/';
-    foreach (array_keys($urls) as $url) {
-      $file = urldecode((string) parse_url($url, PHP_URL_PATH));
-      if (isset($pushed[$file]) || !str_starts_with($file, $files_base)) {
-        continue;
-      }
-
-      $external = Utility::isExternalUrl($url) && !Utility::isTrustedHostUrl($url);
-      if (!$external && $this->isPublicFile(DRUPAL_ROOT . $file)) {
-        $pushed[$file] = TRUE;
-        $this->eventDispatcher->dispatch(new QuantFileEvent(DRUPAL_ROOT . $file, $file), QuantFileEvent::OUTPUT);
+    /** @var \DOMElement $node */
+    foreach ($xpath->query('//link[@imagesrcset]') as $node) {
+      // "url 640w, url 768w": drop the descriptor after each URL.
+      foreach (explode(',', $node->getAttribute('imagesrcset')) as $candidate) {
+        $candidate = strtok(trim($candidate), ' ');
+        if ($candidate) {
+          $urls[$candidate] = TRUE;
+        }
       }
     }
+
+    return array_keys($urls);
+  }
+
+  /**
+   * Resolves a URL to a local public file path, or NULL.
+   *
+   * @param string $url
+   *   An absolute or root-relative URL.
+   *
+   * @return string|null
+   *   The decoded path under the public files directory, or NULL when the
+   *   URL is off-site, outside the public files directory, or climbs out of
+   *   it with "..".
+   */
+  protected function localFilePath(string $url) : ?string {
+    $file = rawurldecode((string) parse_url($url, PHP_URL_PATH));
+    $files_base = '/' . PublicStream::basePath() . '/';
+    if (!str_starts_with($file, $files_base) || preg_match('#(^|/)\.\.(/|$)#', $file)) {
+      return NULL;
+    }
+
+    $external = Utility::isExternalUrl($url) && !Utility::isTrustedHostUrl($url);
+    return $external ? NULL : $file;
   }
 
   /**
