@@ -60,3 +60,11 @@ quant_search.entities.settings.*:
       type: string
       label: 'View mode rendered into the record body'
       nullable: true
+
+quant_search.settings:
+  type: config_object
+  label: 'Quant search settings'
+  mapping:
+    typesense_endpoint:
+      type: uri
+      label: 'Typesense endpoint for QuantGov projects'

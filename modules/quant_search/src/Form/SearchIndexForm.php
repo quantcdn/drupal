@@ -150,6 +150,10 @@ class SearchIndexForm extends ConfigFormBase {
 
     // @todo Handle taxonomy terms as well.
     if ($process_nodes) {
+      // Register every page's facets first: a project that moved to another
+      // backend has an index with none of them.
+      \Drupal::service('quant_search.backend')->registerAllFacets();
+
       $query = \Drupal::entityQuery('node')
         ->accessCheck(TRUE)
         ->condition('status', 1);

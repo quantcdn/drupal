@@ -9,6 +9,7 @@ use Drupal\node\Entity\Node;
 use Drupal\quant\Seed;
 use Drupal\quant\Utility;
 use Drupal\quant_api\Client\QuantClientInterface;
+use Drupal\quant_search\SearchBackend;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -28,10 +29,18 @@ class Search extends ControllerBase {
   protected $client;
 
   /**
+   * The search backend resolver.
+   *
+   * @var \Drupal\quant_search\SearchBackend
+   */
+  protected $backend;
+
+  /**
    * Build the form.
    */
-  public function __construct(QuantClientInterface $client) {
+  public function __construct(QuantClientInterface $client, SearchBackend $backend) {
     $this->client = $client;
+    $this->backend = $backend;
   }
 
   /**
@@ -39,7 +48,8 @@ class Search extends ControllerBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('quant_api.client')
+      $container->get('quant_api.client'),
+      $container->get('quant_search.backend')
     );
   }
 
@@ -81,52 +91,45 @@ class Search extends ControllerBase {
    * {@inheritdoc}
    */
   public function searchPage($page) {
+    $backend = $this->backend->get();
+    if (!$backend) {
+      return [
+        '#markup' => $this->t('Search is not currently available.'),
+        '#cache' => ['max-age' => 0],
+      ];
+    }
 
-    $project = $this->client->project();
-
-    $languages = $page->get('languages');
-    $bundles = $page->get('bundles');
-    $manualFilters = $page->get('manual_filters');
     $facets = $page->get('facets');
     unset($facets['actions']);
 
-    $facetKeys = self::processTranslatedFacetKeys($facets);
+    $facetKeys = $this->backend->declaredFacets(self::processTranslatedFacetKeys($facets), $backend);
 
-    $filters = [];
-
-    if (!empty($languages)) {
-      $filters[] = "(lang_code:'" . implode('\' OR lang_code:\'', $languages) . "')";
-    }
-
-    if (!empty($bundles)) {
-      $filters[] = "(content_type:'" . implode('\' OR content_type:\'', $bundles) . "')";
-    }
-
-    if (!empty($manualFilters)) {
-      $filters[] = $manualFilters;
-    }
-
-    $filtersString = implode(' AND ', $filters);
+    $filtersString = SearchBackend::buildFilters(
+      (array) $page->get('languages'),
+      (array) $page->get('bundles'),
+      $page->get('manual_filters'),
+      $backend['backend']
+    );
 
     return [
       '#theme' => 'search_page',
       '#attached' => [
-        'library' => [
-          'quant_search/algolia-page',
+        'library' => array_merge(SearchBackend::libraries($backend, 'page'), [
           'quant_search/search-page',
-        ],
+        ]),
         'drupalSettings' => [
-          'quantSearch' => [
-            'algolia_application_id' => $project->config->search_index->algolia_application_id,
-            'algolia_read_key' => $project->config->search_index->algolia_read_key,
-            'algolia_index' => $project->config->search_index->algolia_index,
+          'quantSearch' => SearchBackend::clientSettings($backend) + [
             'filters' => $filtersString,
             'facets' => $facetKeys,
             'display' => $page->get('display'),
           ],
         ],
       ],
-      '#index' => $project->config->search_index,
+      '#index' => (object) [
+        'algolia_application_id' => $backend['app_id'],
+        'algolia_read_key' => $backend['read_key'],
+        'algolia_index' => $backend['index'],
+      ],
       '#page' => $page->toArray(),
       '#facets' => $facetKeys,
     ];

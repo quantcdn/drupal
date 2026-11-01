@@ -4,6 +4,7 @@ namespace Drupal\quant_search\Plugin\Block;
 
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\quant_search\SearchBackend;
 
 /**
  * Provides an 'AutocompleteBlock' block.
@@ -93,8 +94,8 @@ class AutocompleteBlock extends BlockBase {
    */
   public function build() {
 
-    $client = \Drupal::service('quant_api.client');
-    $project = $client->project();
+    $backendService = \Drupal::service('quant_search.backend');
+    $backend = $backendService->get();
     $pageUuid = $this->configuration['page'];
 
     $page = \Drupal::service('entity.repository')->loadEntityByUuid('quant_search_page', $pageUuid);
@@ -105,9 +106,12 @@ class AutocompleteBlock extends BlockBase {
       return [];
     }
 
-    $languages = $page->get('languages');
-    $bundles = $page->get('bundles');
-    $manualFilters = $page->get('manual_filters');
+    // Search is unavailable: the project has search disabled or the API is
+    // down. Render nothing rather than a box that cannot search.
+    if (!$backend) {
+      return ['#cache' => ['max-age' => 0]];
+    }
+
     $route = $page->get('route');
 
     // Ensure route starts with a slash.
@@ -115,21 +119,12 @@ class AutocompleteBlock extends BlockBase {
       $route = "/{$route}";
     }
 
-    $filters = [];
-
-    if (!empty($languages)) {
-      $filters[] = "(lang_code:'" . implode('\' OR lang_code:\'', $languages) . "')";
-    }
-
-    if (!empty($bundles)) {
-      $filters[] = "(content_type:'" . implode('\' OR content_type:\'', $bundles) . "')";
-    }
-
-    if (!empty($manualFilters)) {
-      $filters[] = $manualFilters;
-    }
-
-    $filtersString = implode(' AND ', $filters);
+    $filtersString = SearchBackend::buildFilters(
+      (array) $page->get('languages'),
+      (array) $page->get('bundles'),
+      $page->get('manual_filters'),
+      $backend['backend']
+    );
 
     return [
       '#theme' => 'autocomplete_block',
@@ -138,15 +133,11 @@ class AutocompleteBlock extends BlockBase {
         'tags' => $this->getCacheTags(),
       ],
       '#attached' => [
-        'library' => [
-          'quant_search/algolia-autocomplete',
+        'library' => array_merge(SearchBackend::libraries($backend, 'autocomplete'), [
           'quant_search/autocomplete-block',
-        ],
+        ]),
         'drupalSettings' => [
-          'quantSearchAutocomplete' => [
-            'algolia_application_id' => $project->config->search_index->algolia_application_id,
-            'algolia_read_key' => $project->config->search_index->algolia_read_key,
-            'algolia_index' => $project->config->search_index->algolia_index,
+          'quantSearchAutocomplete' => SearchBackend::clientSettings($backend) + [
             'placeholder' => $this->configuration['placeholder'] ?? 'Search',
             'show_summary' => $this->configuration['show_summary'] ?? FALSE,
             'search_path' => $route,

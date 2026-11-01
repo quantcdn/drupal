@@ -64,3 +64,13 @@ function quant_search_update_8103() {
     $page->save();
   }
 }
+
+/**
+ * Add the Typesense endpoint used by QuantGov search projects.
+ */
+function quant_search_update_8104() {
+  $config = \Drupal::configFactory()->getEditable('quant_search.settings');
+  if ($config->get('typesense_endpoint') === NULL) {
+    $config->set('typesense_endpoint', 'https://search.quantgov.cloud')->save(TRUE);
+  }
+}
