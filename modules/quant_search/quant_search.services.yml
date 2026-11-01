@@ -10,3 +10,11 @@ services:
       - '@event_dispatcher'
     tags:
       - { name: 'event_subscriber' }
+
+  quant_search.backend:
+    class: Drupal\quant_search\SearchBackend
+    arguments:
+      - '@quant_api.client'
+      - '@config.factory'
+      - '@cache.default'
+      - '@logger.factory'

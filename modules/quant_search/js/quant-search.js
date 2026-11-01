@@ -3,18 +3,18 @@
         attach: function(context, settings) {
             once('searchPageInit', 'html', context).forEach(function(element) {
 
-                /* global instantsearch algoliasearch */
+                /* global instantsearch */
                 function getParameterByName(name) {
                     const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search)
                     return match && decodeURIComponent(match[1].replace(/\+/g, ' '))
                 }
 
                 const search = instantsearch({
-                    indexName: drupalSettings.quantSearch.algolia_index,
-                    searchClient: algoliasearch(drupalSettings.quantSearch.algolia_application_id, drupalSettings.quantSearch.algolia_read_key),
+                    indexName: drupalSettings.quantSearch.index,
+                    searchClient: Drupal.quantSearch.createSearchClient(drupalSettings.quantSearch),
                     routing: false,
                     initialUiState: {
-                        [drupalSettings.quantSearch.algolia_index]: {
+                        [drupalSettings.quantSearch.index]: {
                             query: getParameterByName('keys')
                         }
                     }

@@ -7,7 +7,6 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Utility;
-use Drupal\quant_search\Controller\Search;
 use Drupal\taxonomy\Entity\Vocabulary;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -158,7 +157,7 @@ class QuantSearchPageForm extends EntityForm {
       '#title' => $this->t('Manual filters'),
       '#maxlength' => 2048,
       '#default_value' => $this->entity->get('manual_filters'),
-      '#description' => $this->t('Optionally, provide manual filters that can include ANDs and ORs. For example: <code>cost > 10 AND cost < 99.5</code>'),
+      '#description' => $this->t("Optionally, provide manual filters. They are added as written, so use the syntax of the project's search engine. QuantCDN (Algolia): <code>cost > 10 AND cost < 99.5</code>. QuantGov (Typesense): <code>cost:>10 && cost:<99.5</code>."),
     ];
 
     // Get entity display configuration.
@@ -499,27 +498,7 @@ class QuantSearchPageForm extends EntityForm {
     }
 
     // Ensure the API is aware of the facets and enable them as required.
-    $facets = $form_state->getValue(['facets']);
-    unset($facets['actions']);
-
-    $keys = Search::processTranslatedFacetKeys($facets);
-
-    $uniqueKeys = [];
-
-    // Add default filters (lang_code/bundle).
-    $uniqueKeys[] = 'lang_code';
-    $uniqueKeys[] = 'content_type';
-
-    foreach ($keys as $k) {
-      if (!isset($uniqueKeys[$k['facet_key']])) {
-        $uniqueKeys[] = $k['facet_key'];
-      }
-    }
-
-    if (!empty($keys)) {
-      $client = \Drupal::service('quant_api.client');
-      $client->addFacets($uniqueKeys);
-    }
+    \Drupal::service('quant_search.backend')->registerFacets((array) $form_state->getValue(['facets']));
 
     // In case the route is new, rebuild the router, so it is added.
     \Drupal::service('router.builder')->rebuild();

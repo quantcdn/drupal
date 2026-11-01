@@ -21,6 +21,34 @@ algolia-autocomplete:
     https://cdn.jsdelivr.net/algoliasearch/3/algoliasearch.min.js: { type: external, minified: true }
     https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js: { type: external, minified: true }
 
+# The InstantSearch page on QuantGov: the Typesense adapter instead of the
+# Algolia client.
+typesense-page:
+  css:
+    theme:
+      https://cdn.jsdelivr.net/npm/instantsearch.css@7/themes/algolia-min.css: { type: external, minified: true }
+      css/quant_search.algolia.css: {}
+  js:
+    https://cdn.jsdelivr.net/npm/typesense-instantsearch-adapter@2/dist/typesense-instantsearch-adapter.min.js: { type: external, minified: true }
+    https://cdn.jsdelivr.net/npm/instantsearch.js@4: { type: external, minified: true }
+
+typesense-autocomplete:
+  css:
+    theme:
+      https://cdn.jsdelivr.net/npm/@algolia/autocomplete-theme-classic: { type: external, minified: true }
+      css/quant_search.algolia.css: {}
+  js:
+    https://cdn.jsdelivr.net/npm/typesense-instantsearch-adapter@2/dist/typesense-instantsearch-adapter.min.js: { type: external, minified: true }
+    https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js: { type: external, minified: true }
+
+# Drupal.quantSearch.createSearchClient(): the Algolia client or the
+# Typesense adapter, from drupalSettings.
+search-client:
+  js:
+    js/quant-search-client.js: {}
+  dependencies:
+    - core/drupal
+
 search-page:
   css:
     theme:
@@ -28,6 +56,7 @@ search-page:
   js:
     js/quant-search.js: {}
   dependencies:
+    - quant_search/search-client
     - core/drupal
     - core/drupalSettings
     - core/jquery.once
@@ -40,6 +69,7 @@ autocomplete-block:
   js:
     js/quant-autocomplete.js: {}
   dependencies:
+    - quant_search/search-client
     - core/drupal
     - core/drupalSettings
     - core/jquery.once

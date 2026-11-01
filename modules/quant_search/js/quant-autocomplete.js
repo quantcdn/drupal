@@ -3,10 +3,7 @@
         attach: function(context, settings) {
             once('autocompleteBlockInit', 'html', context).forEach(function(element) {
               const { autocomplete, getAlgoliaResults } = window["@algolia/autocomplete-js"];
-              const searchClient = algoliasearch(
-                drupalSettings.quantSearchAutocomplete.algolia_application_id,
-                drupalSettings.quantSearchAutocomplete.algolia_read_key
-              );
+              const searchClient = Drupal.quantSearch.createSearchClient(drupalSettings.quantSearchAutocomplete);
 
               autocomplete({
                   navigator: {
@@ -25,14 +22,15 @@
                     },
                   },
                   onSubmit({ state, event }) {
-                    window.location.href = drupalSettings.quantSearchAutocomplete.search_path + '?' + drupalSettings.quantSearchAutocomplete.algolia_index + '%5Bquery%5D=' + state.query;
+                    // The search page reads its query from `keys`.
+                    window.location.href = drupalSettings.quantSearchAutocomplete.search_path + '?keys=' + encodeURIComponent(state.query);
                   },
                   container: "#quant-search-autocomplete",
                   detachedMediaQuery: "none",
                   placeholder: drupalSettings.quantSearchAutocomplete.placeholder,
                   getSources() {
                       return [{
-                          sourceId: drupalSettings.quantSearchAutocomplete.algolia_index,
+                          sourceId: drupalSettings.quantSearchAutocomplete.index,
                           getItemUrl({ item }) {
                               return item.url;
                           },
@@ -41,9 +39,13 @@
                                   searchClient,
                                   queries: [
                                       {
-                                          indexName: drupalSettings.quantSearchAutocomplete.algolia_index,
+                                          indexName: drupalSettings.quantSearchAutocomplete.index,
                                           query,
+                                          // The query goes in both places. Algolia reads the
+                                          // sibling; the Typesense adapter reads only
+                                          // params.query and otherwise searches '*'.
                                           params: {
+                                            query,
                                             filters: drupalSettings.quantSearchAutocomplete.filters,
                                           }
                                       },
