@@ -288,7 +288,10 @@ class SettingsForm extends ConfigFormBase {
       $this->messenger()->addStatus($this->t('Connected to the Quant project %project.', ['%project' => $this->client->getProject()]));
       return;
     }
-    $this->messenger()->addError($this->t('The Quant API did not accept the connection. Check the platform and the project, or log in to Quant again.'));
+    // The client has already said why when Quant could not be reached.
+    if ($this->messenger()->messagesByType('error') === []) {
+      $this->messenger()->addError($this->t('The Quant API did not accept the connection. Check the platform and the project, or log in to Quant again.'));
+    }
   }
 
   /**
