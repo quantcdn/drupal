@@ -29,6 +29,8 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
 - R12 (controller): Document `POST /v1/form` in item 5.
 - R13 (controller): Use the scratchpad d11 site until the demo site at ~/apps/quant-demo-drupal
   reports ready.
+- R14: The `drupal-quant` redirect patterns cover the module callback at the web root on any
+  host and port. A Drupal site in a subdirectory uses token connect. Same rule as `wordpress-quant`.
 
 ## Follow-ups
 
