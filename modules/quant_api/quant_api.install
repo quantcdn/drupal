@@ -5,7 +5,32 @@
  * Install, update and uninstall functions for the Quant API module.
  */
 
+use Drupal\Core\Url;
 use Drupal\quant_api\OAuth\Platform;
+
+/**
+ * Implements hook_requirements().
+ */
+function quant_api_requirements($phase) {
+  if ($phase !== 'runtime') {
+    return [];
+  }
+  $credentials = \Drupal::service('quant_api.credentials');
+  if (!$credentials->usesOauth() || !$credentials->isCopiedSite()) {
+    return [];
+  }
+  return [
+    'quant_api_copied_site' => [
+      'title' => t('Quant'),
+      'value' => t('Not publishing: this site looks like a copy of the connected site'),
+      'description' => t('Different: @components. Log in to Quant again, or confirm that it is the same site on the <a href=":url">Quant API settings page</a>.', [
+        '@components' => implode(', ', $credentials->copyDifferences()),
+        ':url' => Url::fromRoute('quant_api.settings_form')->toString(),
+      ]),
+      'severity' => REQUIREMENT_ERROR,
+    ],
+  ];
+}
 
 /**
  * Implements hook_uninstall().

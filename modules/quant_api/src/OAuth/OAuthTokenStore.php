@@ -54,6 +54,8 @@ class OAuthTokenStore {
 
   public const SYNCED_AT = 'synced_at';
 
+  public const UNAUTHORIZED_AT = 'unauthorized_at';
+
   protected const NAMES = [
     self::ACCESS_TOKEN,
     self::REFRESH_TOKEN,
@@ -67,6 +69,7 @@ class OAuthTokenStore {
     self::CRON_RETRY_AFTER,
     self::PENDING,
     self::SYNCED_AT,
+    self::UNAUTHORIZED_AT,
   ];
 
   /**

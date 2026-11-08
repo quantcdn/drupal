@@ -144,6 +144,14 @@ class QuantClient implements QuantClientInterface {
     static $logged = FALSE;
     if (!$logged) {
       $logged = TRUE;
+      $copy = $this->credentials && $this->credentials->usesOauth($this->config) ? $this->credentials->copyDifferences() : [];
+      if ($copy !== []) {
+        $this->logger->error('Quant: this site looks like a copy of the connected site (different: @components), so nothing is published (@operation). Log in to Quant again, or confirm it is the same site on the Quant API settings page.', [
+          '@components' => implode(', ', $copy),
+          '@operation' => $operation,
+        ]);
+        return TRUE;
+      }
       $this->logger->warning('Quant API: no project token is set, so the module did not call the API (@operation). Connect the site on the Quant API settings page.', [
         '@operation' => $operation,
       ]);
