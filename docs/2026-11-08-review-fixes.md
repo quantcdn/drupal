@@ -20,3 +20,18 @@
 Also found on Tolmerra in this round: `[webform:title]` in a handler subject was dropped (72cb214).
 Risk not verified: the notification Lambda receives the extra `managed_by` and `managed_form`
 keys in notification_settings; it reads only org_timezone and org_name, but I could not run it.
+
+## Re-review round (drupal-rereview.md: #4 partial, N1 to N9)
+
+| # | Fix | Branch, commit | Test |
+|---|---|---|---|
+| N1 / #4 | OAuthWriteTokenGate guards every write-token response (v2 with_token, v1 project, v1 create and edit) until project_only, and refuses API token creation for clients with the rule (an unlimited drupal-quant token could mint a token without the rule: 201 before the fix) | portal sec/drupal-quant-oauth-client ac720e31c | OAuthClientFlipDrupalQuantTest (2 new) |
+| N2 | Turn-off sends form_config without managed_by (released_by drupal); portal treats a page as managed only while form_enabled | feat/webform-quant-forms 1f9222d; portal feat/forms-managed-in-drupal 95dfd170a | QuantFormsMapperTest, QuantFormsExportTest::testClosedFormIsTurnedOffOnCronWithRetry, FormEditorAuthzTest::test_a_page_drupal_turned_off_is_editable_again |
+| N3 | Copy detection names the differing components in the log, status report and settings page; "This is the same site" re-binds the fingerprint; docblock fixed | feat/oauth-connect f7fa948 | OAuthAuthServiceTest::testSameSiteConfirmationRestoresPublishing, OAuthConnectTest::testCopiedSiteCanBeConfirmed |
+| N4 | Open state stored at registration; cron turns off every registered closed, opted-out or deleted form; a failed turn-off stays registered and retries | 1f9222d | testClosedFormIsTurnedOffOnCronWithRetry |
+| N5 | reCAPTCHA needs a secret key; report warns | 1f9222d | QuantFormsSettingsSectionTest::testSecretsFollowTheSave |
+| N6 | Webform delete deletes its secrets | 1f9222d | QuantFormsMapperTest::testDeleteRemovesSecrets |
+| N7 | Secret changes held from validation, stored in hook_webform_presave; Remove works unticked | 1f9222d | testSecretsFollowTheSave |
+| N8 | Page cache skipped only for a genuine signed token | 1f9222d | QuantFormsExportTest::testOnlyGenuineTokenSkipsThePageCache |
+| N9 | Form editor refuses the save when the managed check fails | portal 95dfd170a | FormEditorAuthzTest::test_a_failed_managed_check_saves_nothing |
+| #11+ | A 401 from the content API re-reads the write token, at most once per 15 minutes | f7fa948 | OAuthAuthServiceTest::testUnauthorizedTriggersOneResync |
