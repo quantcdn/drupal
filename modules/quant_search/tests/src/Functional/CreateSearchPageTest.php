@@ -38,16 +38,6 @@ class CreateSearchPageTest extends BrowserTestBase {
   protected $defaultTheme = 'olivero';
 
   /**
-   * The quant module's metadata views have schema gaps.
-   *
-   * The search page schema itself is checked in
-   * testSavedPageMatchesTheSchema().
-   *
-   * @var bool
-   */
-  protected $strictConfigSchema = FALSE;
-
-  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
