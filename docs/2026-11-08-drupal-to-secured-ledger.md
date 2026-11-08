@@ -96,6 +96,28 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   test, and list submission tokens as a known limitation in the quant_webform README.
 - R36 (controller): Run the livewire-authz-check review over the portal search page changes before
   calling that branch done.
+- R37 (supersedes R24 for forms with a page): On an export render a Webform with its own page posts
+  to that page from every page that embeds it, and Quant Forms is registered only on the page a form
+  posts to. Found on Tolmerra: the footer newsletter is on every page, so the contact and service
+  request pages each showed two forms.
+- R38: "Create a search page" proposes the first free address of search, site-search, search-2...
+  Tolmerra has a Views page at /search, so it proposed /search and then refused it.
+- R39 (R33 result, 2026-11-08): Tested on Tolmerra with the integration branch (local only) against a
+  fake content API on the host (fake token; no real Quant service). Results: the three forms
+  registered on /contact-us, /newsletter and /services/service-request with the right mandatory
+  fields and email; the service request ran in a browser through all steps (conditional business
+  name, address, two files, review, one submit, confirmation in the theme); the footer newsletter
+  posted to /newsletter; Create a search page saved a valid page at /site-search, registered
+  region_en and topic_en, published it and placed the search box. Clean-up: modules uninstalled,
+  package, repository entry and ddev override removed, composer.lock restored, reset.sh run. After
+  that no Quant module is installed or present, config matches the sync folder and git is clean.
+- R40 (R36 result): livewire-authz-check over SearchPageWizard and SearchDashboard. Every server
+  value is locked (projectName, projectId, error, canEdit, searchPageId, facetOptions, liveUrl,
+  savedUrl, hasCustomCss, pendingDelete; searchPages on the dashboard). Inputs bound by wire:model
+  stay unlocked (tested). save, requestDelete, cancelDelete and confirmDelete call
+  authorize('edit_projects') first; confirmDelete re-derives the page in the active project and
+  needs the locked request. Found and fixed: the client-set template named a Blade view and the
+  facet position became a CSS class; both now come from fixed lists (sec(livewire-authz) commit).
 
 ## Follow-ups
 
