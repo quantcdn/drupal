@@ -7,6 +7,7 @@ use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\quant_search\Form\CreateSearchPageForm;
 use Drupal\taxonomy\Entity\Vocabulary;
 use Drupal\Tests\BrowserTestBase;
+use Drupal\views\Entity\View;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
@@ -30,6 +31,7 @@ class CreateSearchPageTest extends BrowserTestBase {
     'quant_api',
     'quant_search',
     'quant_search_test',
+    'views',
   ];
 
   /**
@@ -185,6 +187,76 @@ class CreateSearchPageTest extends BrowserTestBase {
     $this->assertSession()->pageTextContains('Re-index the content');
     $bundles = $this->config('quant_search.entities.settings')->get('quant_search_entity_node_bundles');
     $this->assertEqualsCanonicalizing(['event', 'article'], array_values(array_filter($bundles)));
+  }
+
+  /**
+   * A View page becomes a proposed search page that the editor reviews.
+   */
+  public function testCreateFromView(): void {
+    View::create([
+      'id' => 'news',
+      'label' => 'News',
+      'base_table' => 'node_field_data',
+      'display' => [
+        'default' => [
+          'id' => 'default',
+          'display_plugin' => 'default',
+          'display_options' => [
+            'title' => 'News',
+            'filters' => [
+              'type' => [
+                'id' => 'type',
+                'table' => 'node_field_data',
+                'field' => 'type',
+                'plugin_id' => 'bundle',
+                'value' => ['article' => 'article'],
+              ],
+              'tid' => [
+                'id' => 'tid',
+                'table' => 'taxonomy_index',
+                'field' => 'tid',
+                'plugin_id' => 'taxonomy_index_tid',
+                'vid' => 'topics',
+                'exposed' => TRUE,
+                'expose' => ['label' => 'Topic', 'identifier' => 'topic'],
+              ],
+            ],
+            'sorts' => [
+              'created' => [
+                'id' => 'created',
+                'table' => 'node_field_data',
+                'field' => 'created',
+                'plugin_id' => 'date',
+              ],
+            ],
+            'pager' => ['type' => 'full', 'options' => ['items_per_page' => 12]],
+          ],
+        ],
+        'page_1' => ['id' => 'page_1', 'display_plugin' => 'page', 'display_options' => ['path' => 'news']],
+      ],
+    ])->save();
+    \Drupal::service('router.builder')->rebuild();
+
+    $this->drupalGet('admin/config/development/quant/search/pages');
+    $this->clickLink('Create from a View');
+    $this->submitForm(['view' => 'news:page_1'], 'Propose a search page');
+
+    $session = $this->assertSession();
+    $session->pageTextContains('Proposed from the View News (/news)');
+    $session->pageTextContains('The sort by created is not converted');
+    $session->pageTextContains('The View stays at /news.');
+    $session->fieldValueEquals('title', 'News');
+    $session->fieldValueEquals('route', 'news-search');
+    $session->fieldValueEquals('per_page', '12');
+    $session->checkboxChecked('edit-bundles-article');
+    $session->checkboxNotChecked('edit-bundles-event');
+    $session->checkboxChecked('edit-facets-taxonomytopics');
+    $session->checkboxNotChecked('edit-facets-content-type');
+
+    $this->submitForm(['place_block' => FALSE], 'Create the search page');
+    $page = \Drupal::entityTypeManager()->getStorage('quant_search_page')->load('news_search');
+    $this->assertSame(['article' => 'article'], $page->get('bundles'));
+    $this->assertSame('topics', $page->get('facets')[0]['facet_type_config']['taxonomy_vocabulary']);
   }
 
 }

@@ -44,6 +44,13 @@ class CreateSearchPageForm extends FormBase {
   protected $router;
 
   /**
+   * The View converter.
+   *
+   * @var \Drupal\quant_search\ViewSearchPageConverter
+   */
+  protected $converter;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
@@ -52,6 +59,7 @@ class CreateSearchPageForm extends FormBase {
     $instance->entityTypeManager = $container->get('entity_type.manager');
     $instance->publisher = $container->get('quant_search.page_publisher');
     $instance->router = $container->get('router.no_access_checks');
+    $instance->converter = $container->get('quant_search.view_converter');
     return $instance;
   }
 
@@ -74,17 +82,21 @@ class CreateSearchPageForm extends FormBase {
     $form['intro'] = [
       '#markup' => '<p>' . $this->t('Choose what the page searches. The page publishes to Quant when you save. You can change everything later.') . '</p>',
     ];
+    $proposal = $this->proposalFromQuery($form_state);
+    if ($proposal !== NULL) {
+      $form['from_view'] = $this->buildProposalNotes($proposal);
+    }
     $form['title'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Page title'),
-      '#default_value' => $this->t('Search'),
+      '#default_value' => $proposal['values']['title'] ?? $this->t('Search'),
       '#required' => TRUE,
     ];
     $form['route'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Page address'),
       '#field_prefix' => Url::fromRoute('<front>', [], ['absolute' => TRUE])->toString(),
-      '#default_value' => $this->defaultRoute(),
+      '#default_value' => $this->defaultRoute($proposal['values']['route'] ?? NULL),
       '#required' => TRUE,
       '#size' => 30,
     ];
@@ -92,7 +104,7 @@ class CreateSearchPageForm extends FormBase {
       '#type' => 'checkboxes',
       '#title' => $this->t('Content to search'),
       '#options' => $types,
-      '#default_value' => $indexed ?: array_keys($types),
+      '#default_value' => ($proposal['values']['bundles'] ?? []) ?: ($indexed ?: array_keys($types)),
       '#description' => $this->t('Leave all unchecked to search every content type. A type that is not in the search index yet is added; re-index afterwards.'),
     ];
     $form['facets'] = [
@@ -101,11 +113,15 @@ class CreateSearchPageForm extends FormBase {
       '#options' => [],
       '#default_value' => [],
     ];
-    foreach ($this->proposer->propose([]) as $key => $proposal) {
-      $form['facets']['#options'][$key] = $proposal['label'];
-      if ($proposal['default']) {
+    foreach ($this->proposer->propose([]) as $key => $facet) {
+      $form['facets']['#options'][$key] = $facet['label'];
+      if ($facet['default'] && $proposal === NULL) {
         $form['facets']['#default_value'][] = $key;
       }
+    }
+    foreach ($proposal['values']['facets'] ?? [] as $key) {
+      $form['facets']['#options'] += [$key => $key];
+      $form['facets']['#default_value'][] = $key;
     }
     $form['facet_display'] = [
       '#type' => 'radios',
@@ -120,7 +136,7 @@ class CreateSearchPageForm extends FormBase {
     $form['per_page'] = [
       '#type' => 'number',
       '#title' => $this->t('Results per page'),
-      '#default_value' => 20,
+      '#default_value' => $proposal['values']['per_page'] ?? 20,
       '#min' => 5,
       '#max' => 100,
     ];
@@ -132,6 +148,45 @@ class CreateSearchPageForm extends FormBase {
       '#button_type' => 'primary',
     ];
     return $form;
+  }
+
+  /**
+   * The View proposal named in the query (?view=ID&display=ID), if any.
+   *
+   * Kept in the form state, so that the submit uses the same proposal.
+   */
+  protected function proposalFromQuery(FormStateInterface $form_state): ?array {
+    if ($form_state->has('from_view')) {
+      return $form_state->get('from_view');
+    }
+    $query = $this->getRequest()->query;
+    $view = (string) $query->get('view', '');
+    $display = (string) $query->get('display', '');
+    if ($view === '' || !isset($this->converter->candidates()[$view . ':' . $display])) {
+      return NULL;
+    }
+    $proposal = $this->converter->propose($view, $display);
+    $form_state->set('from_view', $proposal);
+    return $proposal;
+  }
+
+  /**
+   * What the proposal took from the View, and what it could not take.
+   */
+  protected function buildProposalNotes(array $proposal): array {
+    $items = $proposal['notes'];
+    $route = (string) $proposal['values']['route'];
+    $items[] = $this->t('The View stays at /@route. To give that address to the search page, disable the View page first, then edit the search page.', ['@route' => $route]);
+    if ($proposal['values']['manual_filters'] !== '') {
+      $items[] = $this->t('The search page keeps the fixed term filter of the View: @filter', [
+        '@filter' => $proposal['values']['manual_filters'],
+      ]);
+    }
+    return [
+      '#theme' => 'item_list',
+      '#title' => $this->t('Proposed from the View @label', ['@label' => $proposal['label']]),
+      '#items' => $items,
+    ];
   }
 
   /**
@@ -163,9 +218,10 @@ class CreateSearchPageForm extends FormBase {
    * An address is taken when a search page or a Drupal route (for example a
    * Views search page) already uses it.
    */
-  protected function defaultRoute(): string {
+  protected function defaultRoute(?string $preferred = NULL): string {
     $used = array_map(fn ($page) => $page->get('route'), $this->entityTypeManager->getStorage('quant_search_page')->loadMultiple());
-    foreach (array_merge(['search', 'site-search'], array_map(fn ($i) => 'search-' . $i, range(2, 20))) as $route) {
+    $first = $preferred ? [$preferred, $preferred . '-search'] : [];
+    foreach (array_merge($first, ['search', 'site-search'], array_map(fn ($i) => 'search-' . $i, range(2, 20))) as $route) {
       if (!in_array($route, $used, TRUE) && !$this->isDrupalPath($route)) {
         return $route;
       }
@@ -213,15 +269,16 @@ class CreateSearchPageForm extends FormBase {
     $route = (string) $form_state->getValue('route');
     $bundles = array_values(array_filter((array) $form_state->getValue('bundles')));
     $keys = array_values(array_filter((array) $form_state->getValue('facets')));
+    $from_view = $form_state->get('from_view');
     $page = $this->entityTypeManager->getStorage('quant_search_page')->create([
       'id' => self::machineName($route),
       'label' => $form_state->getValue('title'),
       'title' => $form_state->getValue('title'),
       'route' => $route,
       'status' => TRUE,
-      'languages' => [],
+      'languages' => $from_view['values']['languages'] ?? [],
       'bundles' => array_combine($bundles, $bundles) ?: [],
-      'manual_filters' => '',
+      'manual_filters' => (string) ($from_view['values']['manual_filters'] ?? ''),
       'facets' => $this->proposer->facets($keys, (string) $form_state->getValue('facet_display')),
       'display' => [
         'results' => ['display_search' => TRUE, 'display_stats' => TRUE, 'show_clear_refinements' => TRUE],
