@@ -6,6 +6,8 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\Config;
 use Drupal\Core\Config\StorageInterface;
 use Drupal\quant_api\OAuth\OAuthTokenStore;
+use Drupal\quant_api\OAuth\Platform;
+use Drupal\quant_api\OAuth\SiteFingerprint;
 
 /**
  * Resolves the project write token that the content API calls send.
@@ -28,7 +30,34 @@ class Credentials {
     protected ConfigFactoryInterface $configFactory,
     protected OAuthTokenStore $tokenStore,
     protected StorageInterface $configStorage,
+    protected SiteFingerprint $fingerprint,
   ) {}
+
+  /**
+   * Whether the stored login was made on another site (a copied database).
+   *
+   * A copy must not publish with the original site's project token: staging
+   * edits would reach the production project.
+   */
+  public function isCopiedSite(): bool {
+    $stored = $this->tokenStore->get(OAuthTokenStore::FINGERPRINT);
+    return is_array($stored) && $this->fingerprint->differences($stored) !== [];
+  }
+
+  /**
+   * The content API endpoint, without /v1.
+   *
+   * With "Log in to Quant" the endpoint is the chosen platform's official
+   * host, so the hidden write token never goes elsewhere. A settings.php
+   * override still wins.
+   */
+  public function getEndpoint(?Config $config = NULL): string {
+    $config = $config ?? $this->configFactory->get('quant_api.settings');
+    if ($this->usesOauth($config) && !$config->hasOverrides('api_endpoint')) {
+      return Platform::apiEndpoint((string) $config->get('platform'));
+    }
+    return (string) $config->get('api_endpoint');
+  }
 
   /**
    * Whether a domain overrides the Quant API settings (a multi-domain site).
@@ -54,6 +83,9 @@ class Credentials {
       return ((string) $config->get('api_token')) ?: NULL;
     }
     if ($this->usesOauth($config)) {
+      if ($this->isCopiedSite()) {
+        return NULL;
+      }
       return ((string) $this->tokenStore->get(OAuthTokenStore::WRITE_TOKEN)) ?: NULL;
     }
     return ((string) $config->get('api_token')) ?: NULL;
