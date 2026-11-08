@@ -166,7 +166,7 @@ class SettingsForm extends ConfigFormBase {
     }
     $items['change'] = [
       '#type' => 'link',
-      '#title' => $this->t('Change project'),
+      '#title' => $reason === NULL ? $this->t('Change project') : $this->t('Log in to Quant again'),
       '#url' => Url::fromRoute('quant_api.oauth_connect'),
       '#attributes' => ['class' => ['button', 'button--primary']],
     ];

@@ -237,6 +237,9 @@ class OAuthConnectTest extends BrowserTestBase {
     $session = $this->assertSession();
     $session->pageTextNotContains('Connected to the Quant project site-b.');
     $session->elementTextContains('css', '[role="contentinfo"], .messages--warning, [data-drupal-messages]', 'Log in to Quant again');
+    // The button says what the message asks for.
+    $session->linkExists('Log in to Quant again');
+    $session->linkNotExists('Change project');
 
     $this->drupalLogin($this->drupalCreateUser(['configure quant', 'administer site configuration']));
     $this->drupalGet('admin/reports/status');
