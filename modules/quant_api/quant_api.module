@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * @file
+ * Hooks for the Quant API module.
+ */
+
+/**
+ * Implements hook_cron().
+ */
+function quant_api_cron() {
+  // Refresh the "Log in to Quant" token well before it expires. Publishing
+  // does not depend on it: the write token does not expire.
+  if (\Drupal::service('quant_api.credentials')->usesOauth()) {
+    \Drupal::service('quant_api.oauth')->refreshFromCron();
+  }
+}
