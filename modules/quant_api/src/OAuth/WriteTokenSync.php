@@ -22,6 +22,11 @@ class WriteTokenSync {
   public const INTERVAL = 86400;
 
   /**
+   * The least time between two syncs started by a 401, in seconds.
+   */
+  public const UNAUTHORIZED_INTERVAL = 900;
+
+  /**
    * The logger.
    */
   protected LoggerInterface $logger;
@@ -45,6 +50,21 @@ class WriteTokenSync {
     if (!$refreshed && $last > time() - self::INTERVAL) {
       return NULL;
     }
+    return $this->sync();
+  }
+
+  /**
+   * Syncs after the content API refused the write token (a 401).
+   *
+   * At most once every 15 minutes, so a token that stays refused does not
+   * call the dashboard on every request.
+   */
+  public function syncAfterUnauthorized(): ?bool {
+    $last = (int) $this->tokenStore->get(OAuthTokenStore::UNAUTHORIZED_AT);
+    if ($last > time() - self::UNAUTHORIZED_INTERVAL || !$this->credentials->usesOauth()) {
+      return NULL;
+    }
+    $this->tokenStore->set(OAuthTokenStore::UNAUTHORIZED_AT, time());
     return $this->sync();
   }
 

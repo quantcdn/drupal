@@ -155,6 +155,14 @@ class SettingsForm extends ConfigFormBase {
         '#markup' => '<p><strong>' . $this->reconnectMessage($reason) . '</strong></p>',
       ];
     }
+    if ($reason === AuthService::RECONNECT_OTHER_SITE) {
+      $items['same_site'] = [
+        '#type' => 'submit',
+        '#value' => $this->t('This is the same site'),
+        '#submit' => ['::submitSameSite'],
+        '#limit_validation_errors' => [],
+      ];
+    }
     $items['change'] = [
       '#type' => 'link',
       '#title' => $this->t('Change project'),
@@ -178,7 +186,7 @@ class SettingsForm extends ConfigFormBase {
    */
   protected function reconnectMessage(string $reason) {
     return match ($reason) {
-      AuthService::RECONNECT_OTHER_SITE => $this->t('The stored login belongs to another copy of this site (for example a database copied from production). This copy does not publish or refresh with it. Log in to Quant on this copy.'),
+      AuthService::RECONNECT_OTHER_SITE => $this->t('This site looks like a copy of the connected site (for example a database copied from production), so it does not publish or refresh with the stored login. Log in to Quant on this copy. If it is the same site, confirm it below.'),
       AuthService::RECONNECT_REFUSED => $this->t('Quant refused to refresh the login. Content still publishes. Log in to Quant again to keep the connection current.'),
       default => $this->t('The login expired. Content still publishes. Log in to Quant again to keep the connection current.'),
     };
@@ -254,7 +262,9 @@ class SettingsForm extends ConfigFormBase {
    */
   protected function showStatus(): void {
     if ($this->credentials->usesOauth() && $this->credentials->isCopiedSite()) {
-      $this->messenger()->addError($this->t('This database was copied from another site, so this copy does not publish with the Quant login of that site. Log in to Quant on this copy, or connect it with a project token.'));
+      $this->messenger()->addError($this->t('This site looks like a copy of the connected site (different: @components), so nothing is published. Log in to Quant again, or, if this is the same site (for example after a database move), click "This is the same site".', [
+        '@components' => implode(', ', $this->credentials->copyDifferences()),
+      ]));
       return;
     }
     if (!$this->credentials->hasToken()) {
@@ -348,6 +358,19 @@ class SettingsForm extends ConfigFormBase {
     $endpoint = EndpointValidator::normalise($form_state->getValue('api_endpoint'));
     $defaults = array_map([Platform::class, 'apiEndpoint'], Platform::ids());
     return ($endpoint === '' || in_array($endpoint, $defaults, TRUE)) ? Platform::apiEndpoint($platform) : $endpoint;
+  }
+
+  /**
+   * Confirms that this is the connected site, so it publishes again.
+   */
+  public function submitSameSite(array &$form, FormStateInterface $form_state) {
+    $differences = $this->credentials->copyDifferences();
+    $this->credentials->confirmSameSite();
+    $this->logger('quant_api')->notice('Quant: @user confirmed that this is the connected site (was different: @components).', [
+      '@user' => $this->currentUser()->getAccountName(),
+      '@components' => implode(', ', $differences),
+    ]);
+    $this->messenger()->addStatus($this->t('Confirmed. This site publishes with its Quant login again.'));
   }
 
   /**
