@@ -148,7 +148,7 @@ class QuantFormsSettingsForm extends ConfigFormBase {
           'data' => [
             '#theme' => 'item_list',
             '#prefix' => '<span>' . $status . '</span>',
-            '#items' => array_map('strval', $report['notes']),
+            '#items' => $report['notes'],
           ],
         ];
       }
