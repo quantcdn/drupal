@@ -184,3 +184,11 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   form config "notifications": {"channels": ["ch_a", {"id": "ch_b", "cc": true}], "email": {subject, reply_to_field,
   template}}; no org default; the platform accepts both shapes; 2.3.0 keeps the legacy inline path; the migration
   skips "Managed in Drupal" pages.
+
+## 2026-11-09 rehearsal rulings
+
+- Core fixes (renamed alias redirect, delete of internal paths, view schema) go on a fifth branch, `fix/content-paths`, merged first. The stack merges it, so every test runs with strict config schema checks again.
+- Log out revokes the login at the dashboard, except on a copied site (that would log out the original). Replaced and discarded logins are revoked too.
+- A failed push after a save is logged, not shown: the push runs after the response. Kept for 2.3.0; a later release can show the last failure on the page info block.
+- Review findings left open (pre-existing, low): the platform radio can differ from the saved platform with a non-QuantGov dashboard override; export tokens are not bound to one route.
+- Quant Forms submissions through the staging edge return 500 after validation. Release waits until a submission passes on staging.

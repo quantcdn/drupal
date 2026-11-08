@@ -50,3 +50,34 @@ reset.sh left the site with no Quant module, config equal to the sync folder and
 - Portal captures (R29, parked with the controller).
 - Merge timing of the docs and skill branches (R43).
 - Edge bug note F4 for the edge owner.
+
+## Staging rehearsal, 2026-11-09 (Tolmerra against dash.stage.quantgov.cloud)
+
+| Area | Result |
+|---|---|
+| Seed (nodes, terms, theme assets, Views pages, files, robots) | 188 queued, 472 items sent in 65 s with 5 workers; 183 content items in the dashboard; crawl of the preview domain: 172 pages, 200 assets, no broken links except the 3 form pages before opt-in |
+| Save, rename, unpublish, delete | Save live in about 6 s. Rename left a 404 at the old alias (fixed: 301). Unpublish reaches the edge in about 19 s. Delete left /node/N redirecting to a gone page (fixed) |
+| Quant Forms opt-in | 3 Webforms (contact, newsletter, 4-step service_request) registered; pages published with the form config; dashboard lists the 3 forms |
+| Managed in Drupal (portal) | Missing on develop: feat/forms-managed-in-drupal was never merged. Merged and pushed (122062221); 24 form tests pass |
+| Submission through the edge | **Open.** POST with all required fields returns 500 "Internal Server Error" from the staging edge (also with Accept: application/json). Missing fields return the 400 JSON message, so the failure is after validation (notifications or the queue write). Needs the staging edge logs |
+| Search page from a View (News) | Proposal lists what it cannot convert; page created; worked only after the search host fix (staging needs search.stage.quantgov.cloud): 48 results, facets |
+| Search page from the wizard | /site-search with content type, topic and region facets; header box suggestions work after a reseed. A second page added a second box (fixed) |
+| Token refresh on cron | New token, expiry moved, still project-limited (403 on the org list); pushes work after it |
+| Log out | Now also ends the login in the dashboard (portal f609fde95 + module): old token 200 before, 401 after |
+| Revoked login | Detected on cron (invalid_grant), but the page still said "Connected" (fixed: warning, status report entry, "Log in to Quant again" button) |
+| Endpoint unreachable | Settings page crashed (ConnectException) and the error text could show the endpoint URL (fixed) |
+| Wrong platform | Not driven live (no QuantCDN demo account); the platform choice and its copy are covered by OAuthConnectTest |
+| Search index after unpublish | **Not confirmed.** The total result count did not drop within 2 minutes of an unpublish, or of DELETE /search (which answered "Successfully removed search record."). The check used the total count only; a query on the page's own field is still to do |
+
+### Branches and PRs after the rehearsal (pushed 2026-11-09, not merged)
+
+| PR | Branch | Tests (Drupal 11.4, strict schema) |
+|---|---|---|
+| #262 | `fix/content-paths` (new: core fixes) | 141 pass |
+| #263 | `feat/oauth-connect` (includes #262) | 181 pass |
+| #264 | `feat/webform-quant-forms` (on #263) | 204 pass |
+| #265 | `feat/search-page-setup` (on #263) | 187 pass |
+| #266 | `feat/views-search-converter` (on #265) | 192 pass |
+
+Integration branch: 215 pass, 1 skipped (existing). phpcs Drupal and DrupalPractice clean on all changed files.
+Portal (develop): 122062221 merge of feat/forms-managed-in-drupal; f609fde95 POST /api/oauth/revoke.
