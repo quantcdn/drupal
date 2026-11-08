@@ -86,3 +86,7 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
 - F3: `quant` does not declare its `file` dependency (its views need it); tests enable it by hand.
 - F4: Quant edge forms (docker/fastly/src/forms.js): multipart bodies drop repeated field names
   (only the last file of a multi-file field is stored, and `name[]` is not grouped).
+- F5: The module calls the Quant API when no token is set: deleting a search page on an unconnected
+  site sent `PATCH /v1/unpublish` to api.quantcdn.io with empty credentials (403, nothing changed).
+  It happened once on the scratch site on 2026-11-08; the scratch site now points at a closed local
+  port. Proposed fix: QuantClient refuses every call when it has no token.
