@@ -225,13 +225,17 @@ class ViewSearchPageConverterTest extends KernelTestBase {
    * A fixed filter definition for the topic vocabulary.
    */
   protected static function filter(string $field, string $plugin, string $operator, array $value): array {
-    return [
+    $filter = [
       'field' => $field,
       'plugin_id' => $plugin,
-      'vid' => 'topic',
       'operator' => $operator,
       'value' => $value,
     ];
+    // Only the term filter has a vocabulary setting.
+    if ($plugin === 'taxonomy_index_tid') {
+      $filter['vid'] = 'topic';
+    }
+    return $filter;
   }
 
 }
