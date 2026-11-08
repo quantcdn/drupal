@@ -222,4 +222,21 @@ class OAuthConnectTest extends BrowserTestBase {
     $this->assertSession()->elementAttributeExists('css', 'input[name="api_endpoint"]', 'disabled');
   }
 
+  /**
+   * A copied site says so and can be confirmed as the same site.
+   */
+  public function testCopiedSiteCanBeConfirmed(): void {
+    $this->logInAndPick('site-b');
+    $store = \Drupal::service('quant_api.oauth_store');
+    $fingerprint = $store->get(OAuthTokenStore::FINGERPRINT);
+    $fingerprint['database'] = hash('sha256', 'old database');
+    $store->set(OAuthTokenStore::FINGERPRINT, $fingerprint);
+
+    $this->drupalGet('admin/config/development/quant/api');
+    $this->assertSession()->pageTextContains('This site looks like a copy of the connected site (different: database)');
+    $this->submitForm([], 'This is the same site');
+    $this->assertSession()->pageTextContains('Confirmed. This site publishes with its Quant login again.');
+    $this->assertSession()->pageTextContains('Connected to the Quant project site-b.');
+  }
+
 }

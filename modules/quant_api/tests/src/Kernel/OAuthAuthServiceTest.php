@@ -2,6 +2,8 @@
 
 namespace Drupal\Tests\quant_api\Kernel;
 
+use GuzzleHttp\Promise\Create;
+use Drupal\quant_api\Http\UnauthorizedResyncMiddleware;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\quant_api\OAuth\OAuthTokenStore;
 use Drupal\quant_api\OAuth\Platform;
@@ -399,6 +401,60 @@ class OAuthAuthServiceTest extends KernelTestBase {
     $this->store()->set(OAuthTokenStore::EXPIRES_AT, time() + 86400);
     $this->mock->append(self::rotated());
     $this->assertTrue($this->auth()->refreshFromCron());
+  }
+
+  /**
+   * A 401 from the content API re-reads the write token, once per 15 minutes.
+   *
+   * @covers \Drupal\quant_api\Http\UnauthorizedResyncMiddleware
+   * @covers \Drupal\quant_api\OAuth\WriteTokenSync::syncAfterUnauthorized
+   */
+  public function testUnauthorizedTriggersOneResync(): void {
+    $this->connect(86400 * 80);
+    $this->config('quant_api.settings')->set('auth_method', 'oauth')
+      ->set('api_account', 'test-org')->set('api_project', 'site-a')->save();
+    $this->store()->set(OAuthTokenStore::SYNCED_AT, time());
+    $middleware = (new UnauthorizedResyncMiddleware())();
+    $refused = fn () => Create::promiseFor(new Response(401));
+    $call = fn () => $middleware($refused)(new Request('POST', 'https://api.quantcdn.io/v1', ['Quant-Token' => 'old']), [])->wait();
+
+    $this->mock->append(self::json(200, ['machine_name' => 'site-a', 'write_token' => 'rotated-token']));
+    $this->assertSame(401, $call()->getStatusCode());
+    $this->assertSame('rotated-token', $this->store()->get(OAuthTokenStore::WRITE_TOKEN));
+    $this->assertCount(1, $this->history);
+
+    // A second 401 within 15 minutes does not call the dashboard again.
+    $call();
+    $this->assertCount(1, $this->history);
+
+    // A 401 from a call without Quant-Token (the dashboard itself) is ignored.
+    $this->store()->delete([OAuthTokenStore::UNAUTHORIZED_AT]);
+    $middleware($refused)(new Request('GET', 'https://dashboard.quantcdn.io/api/oauth/user'), [])->wait();
+    $this->assertCount(1, $this->history);
+  }
+
+  /**
+   * A copy is explicit, names what differs, and recovers with "same site".
+   *
+   * @covers \Drupal\quant_api\Credentials::confirmSameSite
+   */
+  public function testSameSiteConfirmationRestoresPublishing(): void {
+    $this->connect(86400);
+    $this->config('quant_api.settings')->set('auth_method', 'oauth')->save();
+    $credentials = $this->container->get('quant_api.credentials');
+    $fingerprint = $this->store()->get(OAuthTokenStore::FINGERPRINT);
+    $fingerprint['database'] = hash('sha256', 'old database');
+    $this->store()->set(OAuthTokenStore::FINGERPRINT, $fingerprint);
+    $this->assertSame(['database'], $credentials->copyDifferences());
+    $this->assertNull($credentials->getToken());
+
+    \Drupal::moduleHandler()->loadInclude('quant_api', 'install');
+    $requirements = quant_api_requirements('runtime');
+    $this->assertSame(REQUIREMENT_ERROR, $requirements['quant_api_copied_site']['severity']);
+
+    $credentials->confirmSameSite();
+    $this->assertSame([], $credentials->copyDifferences());
+    $this->assertSame('write-token', $credentials->getToken());
   }
 
 }
