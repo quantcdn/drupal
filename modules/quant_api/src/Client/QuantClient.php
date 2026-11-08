@@ -394,7 +394,7 @@ class QuantClient implements QuantClientInterface {
         'verify' => $this->tlsDisabled ? FALSE : TRUE,
       ]);
     }
-    catch (RequestException $e) {
+    catch (GuzzleException $e) {
       $this->logger->error('Quant Forms: the form config of @url was not sent (@class).', [
         '@url' => $url,
         '@class' => get_class($e),
