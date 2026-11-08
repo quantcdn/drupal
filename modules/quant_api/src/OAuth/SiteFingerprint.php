@@ -14,8 +14,11 @@ use Drupal\Core\Site\Settings;
  * database that refreshed "its" tokens would therefore disconnect production.
  * The stored fingerprint lets the copy see that the tokens are not its own.
  *
- * Only the refresh is blocked. Publishing with the project write token is the
- * same as with a token typed into the form, as before 2.3.
+ * On a copy, the login is neither refreshed nor used to publish
+ * (Credentials::getToken() returns NULL), so staging content never reaches
+ * the production project. An administrator who knows it is the same site (a
+ * new database name, a new hash salt) confirms it with "This is the same
+ * site" on the Quant API settings page, which stores the fingerprint again.
  */
 class SiteFingerprint {
 

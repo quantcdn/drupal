@@ -40,8 +40,26 @@ class Credentials {
    * edits would reach the production project.
    */
   public function isCopiedSite(): bool {
+    return $this->copyDifferences() !== [];
+  }
+
+  /**
+   * The fingerprint components that differ from the connected site.
+   *
+   * @return string[]
+   *   Component names (database, prefix, hash_salt, uuid, env:...), never
+   *   values; empty when this is the connected site.
+   */
+  public function copyDifferences(): array {
     $stored = $this->tokenStore->get(OAuthTokenStore::FINGERPRINT);
-    return is_array($stored) && $this->fingerprint->differences($stored) !== [];
+    return is_array($stored) ? $this->fingerprint->differences($stored) : [];
+  }
+
+  /**
+   * Confirms that this is the connected site: stores its fingerprint again.
+   */
+  public function confirmSameSite(): void {
+    $this->tokenStore->set(OAuthTokenStore::FINGERPRINT, $this->fingerprint->compute());
   }
 
   /**

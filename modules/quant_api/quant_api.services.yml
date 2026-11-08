@@ -62,3 +62,8 @@ services:
       - '@quant_api.credentials'
       - '@config.factory'
       - '@logger.factory'
+
+  quant_api.unauthorized_resync_middleware:
+    class: Drupal\quant_api\Http\UnauthorizedResyncMiddleware
+    tags:
+      - { name: http_client_middleware }
