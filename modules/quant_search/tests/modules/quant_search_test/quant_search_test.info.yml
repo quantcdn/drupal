@@ -1,0 +1,8 @@
+name: 'Quant search test'
+description: 'A fake Quant content API with search enabled, for the search page tests.'
+type: module
+package: Testing
+hidden: true
+core_version_requirement: ^11
+dependencies:
+  - quantcdn:quant_search

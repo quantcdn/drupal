@@ -1,6 +1,13 @@
+quant_search.create_page:
+  route_name: 'quant_search.create_page'
+  title: 'Create a search page'
+  appears_on:
+    - entity.quant_search_page.collection
+    - quant_search.main
+
 entity.quant_search_page.add_form:
   route_name: 'entity.quant_search_page.add_form'
-  title: 'Add Quant search page'
+  title: 'Add a search page (all settings)'
   appears_on:
     - entity.quant_search_page.collection
 

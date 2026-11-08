@@ -30,7 +30,7 @@ class QuantPurgerController extends ControllerBase {
     else {
       $text .= $this->t('Enabling the <a href=":url">Purge UI module</a> will allow you to configure the Quant Purger module through the UI.<br/><br/>', [':url' => 'https://www.drupal.org/project/purge']);
     }
-    $text .= $this->t('For more information about the Quant Purger module, refer to the <a href=":url">documentation</a>.', [':url' => 'https://docs.quantcdn.io/docs/integrations/drupal/purger']);
+    $text .= $this->t('For more information about the Quant Purger module, refer to the <a href=":url">documentation</a>.', [':url' => 'https://docs.quantcdn.io/integrations/drupal/purger/']);
     $build = [
       '#markup' => $text,
     ];

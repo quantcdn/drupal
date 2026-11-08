@@ -5,8 +5,6 @@ namespace Drupal\quant_search\Form;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\quant\Plugin\QueueItem\RouteItem;
-use Drupal\quant\Utility;
 use Drupal\taxonomy\Entity\Vocabulary;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -497,25 +495,7 @@ class QuantSearchPageForm extends EntityForm {
       ]));
     }
 
-    // Ensure the API is aware of the facets and enable them as required.
-    \Drupal::service('quant_search.backend')->registerFacets((array) $form_state->getValue(['facets']));
-
-    // In case the route is new, rebuild the router, so it is added.
-    \Drupal::service('router.builder')->rebuild();
-
-    // Add or remove the route in Quant.
-    $published = $form_state->getValue('status');
-    $route = $form_state->getValue('route');
-
-    // Send route for enabled pages.
-    if ($published) {
-      $item = new RouteItem(['route' => $route]);
-      $item->send();
-    }
-    // Only unpublish if page already exists, so was sent before.
-    elseif ($status !== SAVED_NEW) {
-      Utility::unpublishUrl('/' . $route, 'Unpublished search page');
-    }
+    \Drupal::service('quant_search.page_publisher')->publish($page, $status === SAVED_NEW);
 
     $form_state->setRedirect('entity.quant_search_page.collection');
   }

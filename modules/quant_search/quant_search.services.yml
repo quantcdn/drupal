@@ -1,8 +1,4 @@
 services:
-  quant_search.search_page_repository:
-    class: Drupal\quant_search\SearchPageRepository
-    arguments: ['@config.factory', '@entity_type.manager']
-
   quant_search.output.api:
     class: Drupal\quant_search\EventSubscriber\SearchEventSubscriber
     arguments:
@@ -18,3 +14,17 @@ services:
       - '@config.factory'
       - '@cache.default'
       - '@logger.factory'
+
+  quant_search.page_publisher:
+    class: Drupal\quant_search\SearchPagePublisher
+    arguments:
+      - '@quant_search.backend'
+      - '@router.builder'
+      - '@quant_api.credentials'
+
+  quant_search.facet_proposer:
+    class: Drupal\quant_search\FacetProposer
+    arguments:
+      - '@entity_type.manager'
+      - '@entity_field.manager'
+      - '@language_manager'

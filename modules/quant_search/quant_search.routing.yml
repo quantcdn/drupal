@@ -64,3 +64,13 @@ quant_search.clear_index:
 
 route_callbacks:
     - '\Drupal\quant_search\Routing\QuantSearchRoutes::searchPageRoutes'
+
+quant_search.create_page:
+  path: '/admin/config/development/quant/search/pages/create'
+  defaults:
+    _form: '\Drupal\quant_search\Form\CreateSearchPageForm'
+    _title: 'Create a search page'
+  requirements:
+    _custom_access: '\Drupal\quant_search\Controller\Search::administerAccess'
+  options:
+    _admin_route: TRUE

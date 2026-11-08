@@ -14,7 +14,7 @@ To ensure that queued content is processed in a timely manner, you can set up a
 Quant cron process that is separate from the core cron which just processes the
 Quant queue. This Quant cron can be run more regularly than the core cron.
 
-See [Quant Purger documentation](https://docs.quantcdn.io/docs/integrations/drupal/purger)
+See [Quant Purger documentation](https://docs.quantcdn.io/integrations/drupal/purger/)
 for additional information.
 
 ## Requirements
