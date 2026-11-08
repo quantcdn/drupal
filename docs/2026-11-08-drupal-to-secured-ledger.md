@@ -118,6 +118,21 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   authorize('edit_projects') first; confirmDelete re-derives the page in the active project and
   needs the locked request. Found and fixed: the client-set template named a Blade view and the
   facet position became a CSS class; both now come from fixed lists (sec(livewire-authz) commit).
+- R41: Item 4 (Views converter) maps only what the search index holds: fixed content type filters,
+  exposed content type, language and taxonomy filters, fixed term filters, keyword filters and the
+  pager. Everything else is a note in the proposal. Checked against the demo's four View pages
+  (news, events, publications, site_search) loaded as raw config on the scratch site.
+- R42: Manual search filters go to the engine as written (Algolia on QuantCDN, Typesense on
+  QuantGov). The converter writes its term filter in the project's syntax; the docs say so. I had
+  first written the opposite in the docs; corrected before commit.
+- R43: Item 5 docs and skill describe module 2.3.0 behaviour, which is not released. The skill
+  branch (agent-skills `docs/drupal-oauth-forms-search`) and the docs branch (quant-docs
+  `docs/drupal-oauth-forms-search`) must merge only after the 2.3.0 release, and the version number
+  must be checked then. The docs describe the edge multipart limit (F4) as current behaviour; update
+  them when F4 is fixed.
+- R44: The quant-docs build stopped in the bundling step because the worktree borrowed the main
+  checkout's node_modules through a symlink; content sync passed. A full build needs its own
+  install in CI.
 
 ## Follow-ups
 

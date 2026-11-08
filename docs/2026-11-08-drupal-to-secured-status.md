@@ -1,4 +1,4 @@
-# Drupal site to secured: status after items 1 to 3
+# Drupal site to secured: status after items 1 to 5
 
 Date: 2026-11-08. Nothing is pushed. Rulings: `docs/2026-11-08-drupal-to-secured-ledger.md`.
 
@@ -7,11 +7,15 @@ Date: 2026-11-08. Nothing is pushed. Rulings: `docs/2026-11-08-drupal-to-secured
 | Repo | Branch | Base | Commits |
 |---|---|---|---|
 | quant-drupal | `docs/drupal-to-secured` | origin/2.x e7a1b95 | design, plan, ledger, this file |
-| quant-drupal | `feat/oauth-connect` | docs branch | fa99dd6 credentials service; c5fdcb7 Log in to Quant |
-| quant-drupal | `feat/webform-quant-forms` | feat/oauth-connect | 9fdb01b push keys + signed fetch; bc97901 registration; 12d23ea browser wizard; f03b773 tests |
-| quant-drupal | `feat/search-page-setup` | feat/oauth-connect | 8801540 schema fix; 271cf44 Create a search page |
+| quant-drupal | `feat/oauth-connect` | docs branch | fa99dd6 credentials service; c5fdcb7 Log in to Quant; 7c2edb2 no token, no call (F5) |
+| quant-drupal | `feat/webform-quant-forms` | feat/oauth-connect | 9fdb01b push keys + signed fetch; bc97901 registration; 12d23ea browser wizard; f03b773 tests; F5 copy; 243b63c token limitation; b1ba6d2 embedded forms post to their page |
+| quant-drupal | `feat/search-page-setup` | feat/oauth-connect | 8801540 schema fix; 271cf44 Create a search page; F5 copy; 7051840 free default address |
+| quant-drupal | `feat/views-search-converter` | feat/search-page-setup | b1e0218 converter; 505c398 engine syntax |
+| quant-drupal | `integration/drupal-to-secured` (local only) | merges of the four feature branches | used for the demo run |
+| agent-skills | `docs/drupal-oauth-forms-search` | publish/main | bc8fecd, 30f6d7b, wording fix |
+| quant-docs | `docs/drupal-oauth-forms-search` | origin/develop | d82dbed |
 | portal | `sec/drupal-quant-oauth-client` | origin/develop | a4a44a22c plan; 8348de61e client (approved); docs fix |
-| portal | `feat/search-page-wizard-ux` | origin/develop | 1a915869d render fix + test; ad689d356 one-screen form |
+| portal | `feat/search-page-wizard-ux` | origin/develop | 1a915869d render fix + test; ad689d356 one-screen form; a2e51d6df sec(livewire-authz) template and position lists |
 
 Worktrees: ~/apps/.quant-drupal-wt/{design,oauth-connect,webform-forms,search-setup},
 ~/apps/.portal-wt/{drupal-quant-oauth,search-page-ux}.
@@ -34,9 +38,15 @@ Worktrees: ~/apps/.quant-drupal-wt/{design,oauth-connect,webform-forms,search-se
   WafReportNextTest, StudioCollectionBrowserTest, AutoPublishServiceTest, AiSearch LifecycleTest,
   ShellTest and XssEscapingTest also fail on clean origin/develop (same set, compared).
 
-## Not done in items 1 to 3
+## Demo site (Tolmerra)
 
-- Demo site run (R26): waits for a quiet window; the enable script restarts ddev.
+Run on 2026-11-08 with the integration branch against a fake content API (R39). Forms, the
+wizard in a browser, the footer newsletter and Create a search page all worked. Afterwards
+reset.sh left the site with no Quant module, config equal to the sync folder and a clean git tree.
+
+## Still open
+
 - Live OAuth test against a dashboard with the drupal-quant client (F2).
-- Browser captures of the portal search page views (R29).
-- Item 4 (Views converter) and item 5 (docs and skills) are next.
+- Portal captures (R29, parked with the controller).
+- Merge timing of the docs and skill branches (R43).
+- Edge bug note F4 for the edge owner.
