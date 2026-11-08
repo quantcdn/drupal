@@ -373,8 +373,10 @@ class Seed {
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
    *   The node entity.
+   * @param bool $deleted
+   *   TRUE when the node is being deleted.
    */
-  public static function unpublishNode(EntityInterface $entity) {
+  public static function unpublishNode(EntityInterface $entity, bool $deleted = FALSE) {
 
     $langcode = $entity->language()->getId();
     $nid = $entity->get('nid')->value;
@@ -386,8 +388,14 @@ class Seed {
       Utility::unpublishUrl('/', 'Unpublished home page');
     }
 
-    // Handle internal path redirects.
-    self::handleInternalPathRedirects($entity, $langcode, $url);
+    // A deleted node keeps no /node/N redirect. An unpublished one keeps it
+    // while another translation is still published.
+    if ($deleted) {
+      self::unpublishInternalPaths('node', (int) $nid, $langcode, $entity->isDefaultTranslation());
+    }
+    else {
+      self::handleInternalPathRedirects($entity, $langcode, $url);
+    }
 
     Utility::unpublishUrl($url, 'Unpublished content page');
   }
@@ -397,15 +405,21 @@ class Seed {
    *
    * @param Drupal\Core\Entity\EntityInterface $entity
    *   The term entity.
+   * @param bool $deleted
+   *   TRUE when the term is being deleted.
    */
-  public static function unpublishTaxonomyTerm(EntityInterface $entity) {
+  public static function unpublishTaxonomyTerm(EntityInterface $entity, bool $deleted = FALSE) {
 
     $langcode = $entity->language()->getId();
     $tid = $entity->get('tid')->value;
     $url = Utility::getCanonicalUrl('taxonomy_term', $tid, $langcode);
 
-    // Handle internal path redirects.
-    self::handleInternalPathRedirects($entity, $langcode, $url);
+    if ($deleted) {
+      self::unpublishInternalPaths('taxonomy_term', (int) $tid, $langcode, $entity->isDefaultTranslation());
+    }
+    else {
+      self::handleInternalPathRedirects($entity, $langcode, $url);
+    }
 
     Utility::unpublishUrl($url, 'Unpublished taxonomy term page');
   }
@@ -635,6 +649,30 @@ class Seed {
     $type = $m[1] === 'node' ? 'node' : 'taxonomy_term';
     $entity = \Drupal::entityTypeManager()->getStorage($type)->load($m[2]);
     return $entity && (!method_exists($entity, 'isPublished') || $entity->isPublished());
+  }
+
+  /**
+   * Unpublishes the internal paths of deleted content.
+   *
+   * @param string $type
+   *   The entity type: node or taxonomy_term.
+   * @param int $id
+   *   The entity ID.
+   * @param string $langcode
+   *   The language of the deleted translation.
+   * @param bool $whole
+   *   TRUE when the whole entity is deleted, so the unprefixed internal path
+   *   goes too; FALSE for one translation, which loses only its prefixed path.
+   */
+  protected static function unpublishInternalPaths(string $type, int $id, string $langcode, bool $whole) : void {
+    $internalPath = ($type == 'node') ? "/node/{$id}" : "/taxonomy/term/{$id}";
+    if ($whole) {
+      Utility::unpublishUrl($internalPath, 'Unpublished internal path');
+    }
+    $prefix = Utility::getPathPrefix($langcode);
+    if ($prefix !== '' && $prefix !== '/') {
+      Utility::unpublishUrl("{$prefix}{$internalPath}", 'Unpublished internal path');
+    }
   }
 
   /**

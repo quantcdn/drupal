@@ -226,7 +226,7 @@ function quant_entity_predelete(EntityInterface $entity) {
   // This needs to not be a shutdown hook and also needs to be on
   // the predelete hook as the path alias is removed in the entity
   // delete clean-up.
-  _quant_unpublish_entity($entity);
+  _quant_unpublish_entity($entity, TRUE);
 
   // Handle any translations.
   if (method_exists($entity, 'isTranslatable') && $entity->isTranslatable() && method_exists($entity, 'getTranslationLanguages')) {
@@ -234,7 +234,7 @@ function quant_entity_predelete(EntityInterface $entity) {
       if ($language->getId() != $entity->language()->getId()) {
         $translation = $entity->getTranslation($language->getId());
 
-        _quant_unpublish_entity($translation);
+        _quant_unpublish_entity($translation, TRUE);
       }
     }
   }
@@ -401,14 +401,17 @@ function _quant_entity_update_op(EntityInterface $entity) {
  *
  * @param Drupal\Core\Entity\EntityInterface $entity
  *   The entity.
+ * @param bool $deleted
+ *   TRUE when the entity or translation is being deleted, so its internal
+ *   paths are unpublished instead of redirected.
  */
-function _quant_unpublish_entity(EntityInterface $entity) {
+function _quant_unpublish_entity(EntityInterface $entity, bool $deleted = FALSE) {
 
   // @todo Try to handle entities more generically.
   // @todo Check tracking is enabled for entity first.
   switch ($entity->getEntityTypeId()) {
     case 'node':
-      Seed::unpublishNode($entity);
+      Seed::unpublishNode($entity, $deleted);
       break;
 
     case 'path_alias':
@@ -416,7 +419,7 @@ function _quant_unpublish_entity(EntityInterface $entity) {
       break;
 
     case 'taxonomy_term':
-      Seed::unpublishTaxonomyTerm($entity);
+      Seed::unpublishTaxonomyTerm($entity, $deleted);
       break;
 
     case 'file':
@@ -448,7 +451,7 @@ function quant_entity_translation_delete($entity) {
     return;
   }
 
-  _quant_unpublish_entity($entity);
+  _quant_unpublish_entity($entity, TRUE);
 
 }
 
