@@ -112,6 +112,8 @@ class ProjectSelectForm extends FormBase {
     // A limited login cannot choose another project, so it is never reused.
     $this->tokenStore->deletePendingLogin($uid);
     if ($write_token === NULL) {
+      // The new login is not kept, so it is ended at the dashboard too.
+      $this->auth->revokeToken($access);
       $this->messenger()->addError($this->t('Quant did not give this site access to the project. Log in again, or connect with a project token.'));
       $form_state->setRedirect('quant_api.settings_form');
       return;
@@ -129,6 +131,7 @@ class ProjectSelectForm extends FormBase {
     \Drupal::service('router.builder')->setRebuildNeeded();
 
     $this->messenger()->addStatus($this->t('This site now publishes to the Quant project %project.', ['%project' => $project]));
+    $this->getRequest()->getSession()->set(SettingsForm::REPORTED, TRUE);
     $form_state->setRedirect('quant_api.settings_form');
   }
 

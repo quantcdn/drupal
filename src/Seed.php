@@ -614,7 +614,7 @@ class Seed {
    *   The alias after the change.
    */
   public static function redirectChangedAlias($original, $pathAlias) : void {
-    if (\Drupal::moduleHandler()->moduleExists('redirect') || !self::isPublishedEntityPath((string) $pathAlias->get('path')->value)) {
+    if (\Drupal::moduleHandler()->moduleExists('redirect') || !self::isPublishedEntityPath((string) $pathAlias->get('path')->value, (string) $pathAlias->get('langcode')->value)) {
       return;
     }
     $from = self::aliasUrl($original);
@@ -641,13 +641,18 @@ class Seed {
 
   /**
    * Whether a system path is a published node or taxonomy term.
+   *
+   * The translation in the alias language decides, when it exists.
    */
-  protected static function isPublishedEntityPath(string $path) : bool {
+  protected static function isPublishedEntityPath(string $path, string $langcode) : bool {
     if (!preg_match('#^/(node|taxonomy/term)/(\d+)$#', $path, $m)) {
       return FALSE;
     }
     $type = $m[1] === 'node' ? 'node' : 'taxonomy_term';
     $entity = \Drupal::entityTypeManager()->getStorage($type)->load($m[2]);
+    if ($entity && method_exists($entity, 'hasTranslation') && $entity->hasTranslation($langcode)) {
+      $entity = $entity->getTranslation($langcode);
+    }
     return $entity && (!method_exists($entity, 'isPublished') || $entity->isPublished());
   }
 

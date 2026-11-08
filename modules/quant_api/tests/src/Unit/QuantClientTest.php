@@ -552,6 +552,7 @@ class QuantClientTest extends UnitTestCase {
     $client = $this->client([$down(), $down(), $down()]);
 
     $this->assertFalse($client->ping());
+    $this->assertTrue($client->lastCallUnreachable());
     $this->assertFalse($client->project());
     $this->assertFalse($client->search());
     $this->assertNotEmpty($shown);
