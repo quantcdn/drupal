@@ -415,7 +415,7 @@ class QuantFormsMapper {
       $email = [
         'enabled' => TRUE,
         'to' => $to,
-        'subject' => self::limit(self::convertTokens((string) ($settings['subject'] ?? '')) ?: (string) $this->t('New submission: @form', ['@form' => $webform->label()])),
+        'subject' => self::limit(self::convertTokens(str_replace('[webform:title]', (string) $webform->label(), (string) ($settings['subject'] ?? ''))) ?: (string) $this->t('New submission: @form', ['@form' => $webform->label()])),
         'options' => ['text_only' => empty($settings['html']), 'include_results' => TRUE],
       ];
       foreach (['cc' => 'cc_mail', 'from' => 'from_mail'] as $quant => $drupal) {

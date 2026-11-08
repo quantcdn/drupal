@@ -195,7 +195,7 @@ YAML;
           'to_mail' => 'enquiries@example.com',
           'cc_mail' => '[webform_submission:values:email:raw]',
           'from_mail' => '_default',
-          'subject' => 'Service request SR-[webform_submission:serial] from [webform_submission:values:email]',
+          'subject' => '[webform:title]: request SR-[webform_submission:serial] from [webform_submission:values:email]',
           'reply_to' => '[webform_submission:values:email:raw]',
           'html' => TRUE,
         ],
@@ -208,7 +208,7 @@ YAML;
     $this->assertSame('enquiries@example.com', $email['to']);
     $this->assertSame('site@example.com', $email['from']);
     $this->assertArrayNotHasKey('cc', $email, 'A token address cannot be sent.');
-    $this->assertSame('Service request SR- from {{email}}', $email['subject']);
+    $this->assertSame('Test form: request SR- from {{email}}', $email['subject']);
     $this->assertSame('{{email}}', $email['reply_to']);
     $this->assertFalse($email['options']['text_only']);
     $this->assertSame('Thank you. Your reference is SR-. We reply soon.', $report['config']['success_message']);
