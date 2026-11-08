@@ -60,8 +60,9 @@ The settings page shows the connection state and a "Reconnect" button.
 
 New client `drupal-quant` in `src/config/oauth.php`, modelled on `wordpress-quant` and
 `scriptattest`: public, trusted, `require_pkce`, `allow_project_limit`, scoped tokens with
-`projects:read`, 90d / 365d, `scoped_token_role_checked_at_use`. Redirect URIs: `http(s)://*`
-and `http(s)://*:*` with the path `/admin/config/development/quant/api/oauth/callback`.
+`projects:read`, 90d / 365d, `scoped_token_role_checked_at_use`. Redirect URIs:
+`http(s)://*/admin/config/development/quant/api/oauth/callback` (the `*/` wildcard allows a
+port). A Drupal site in a subdirectory does not match and uses token connect.
 Tests: a client-flip feature test, the consent Authz test (PKCE refused without a challenge),
 and the project-limit test (a limited token can read only its own project write token).
 
