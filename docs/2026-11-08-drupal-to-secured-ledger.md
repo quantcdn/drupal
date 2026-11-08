@@ -77,6 +77,14 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
 - R27: A composite (address, name, contact) posts `key[part]`, never `key`. Quant checks only parts
   that are marked required (`#PART__required`, or `#required` in a custom composite's `#element`).
   Before this fix a required address made every submission fail the mandatory check.
+- R28: Portal search page form: the next view is one screen, so it drops the step methods
+  (`nextStep`, `previousStep`). The parity guard has a reasoned exception that cites R8. The classic
+  view keeps the steps, and every field is still on the screen, so nothing is lost.
+- R29: The portal views were not checked in a browser. Signed-in pages need Stuart's capture
+  helper (agents never forge sessions). Theme and reflow captures are owed for the search page form
+  and list.
+- R30: "Create a search page" needs no new portal API. It saves the Drupal search page entity,
+  extends the index only when the page needs more content types, and publishes only with a token.
 
 ## Follow-ups
 
