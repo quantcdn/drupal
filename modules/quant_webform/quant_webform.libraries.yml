@@ -1,0 +1,11 @@
+static_form:
+  version: VERSION
+  js:
+    js/quant-webform.js: {}
+  css:
+    component:
+      css/quant-webform.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once
