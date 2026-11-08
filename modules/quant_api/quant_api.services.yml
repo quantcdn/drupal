@@ -67,3 +67,8 @@ services:
     class: Drupal\quant_api\Http\UnauthorizedResyncMiddleware
     tags:
       - { name: http_client_middleware }
+
+  quant_api.endpoint_userinfo_middleware:
+    class: Drupal\quant_api\Http\EndpointUserInfoMiddleware
+    tags:
+      - { name: http_client_middleware }

@@ -74,6 +74,19 @@ final class Platform {
   }
 
   /**
+   * The dashboard for server-to-server calls (token, refresh, projects).
+   *
+   * $settings['quant_api_dashboard_internal_url'] wins, for a site whose
+   * server reaches the dashboard at another address than the browser does
+   * (for example a container that reaches the host at host.docker.internal).
+   * The browser redirect always uses dashboardUrl().
+   */
+  public static function internalDashboardUrl(string $platform): string {
+    $internal = (string) Settings::get('quant_api_dashboard_internal_url', '');
+    return $internal !== '' ? rtrim($internal, '/') : self::dashboardUrl($platform);
+  }
+
+  /**
    * The platform of an API endpoint, for sites configured before 2.3.
    *
    * @return string
