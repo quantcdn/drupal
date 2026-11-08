@@ -5,10 +5,9 @@ namespace Drupal\quant_webform;
 /**
  * Tells a Quant export render from a live Drupal render.
  *
- * Quant fetches each page with a "quant-token" header, which the quant
- * module validates on kernel.request (an invalid token never reaches a
- * controller). Only that render gets the static form behaviour: the live
- * Drupal form keeps working as before.
+ * Quant fetches each page with a signed "quant-token" header. Only a render
+ * with a genuine token gets the static form behaviour: the live Drupal form
+ * keeps working as before.
  */
 final class ExportContext {
 
@@ -17,7 +16,16 @@ final class ExportContext {
    */
   public static function isExport(): bool {
     $request = \Drupal::requestStack()->getCurrentRequest();
-    return $request !== NULL && $request->headers->has('quant-token');
+    if ($request === NULL || !$request->headers->has('quant-token')) {
+      return FALSE;
+    }
+    // Only a token this site signed counts: with content drafts off the
+    // token is not validated on kernel.request, so the header alone proves
+    // nothing.
+    if (!$request->attributes->has('_quant_export')) {
+      $request->attributes->set('_quant_export', \Drupal::service('quant.token_manager')->isGenuine($request->headers->get('quant-token')));
+    }
+    return (bool) $request->attributes->get('_quant_export');
   }
 
   /**
@@ -31,7 +39,7 @@ final class ExportContext {
       return FALSE;
     }
     $webform = \Drupal::entityTypeManager()->getStorage('webform')->load($webform_id);
-    return $webform !== NULL && $webform->getThirdPartySetting('quant_webform', 'enabled', TRUE);
+    return $webform !== NULL && QuantFormsRegistry::isOptedIn($webform);
   }
 
 }

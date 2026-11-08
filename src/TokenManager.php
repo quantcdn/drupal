@@ -211,4 +211,25 @@ class TokenManager {
     return TRUE;
   }
 
+  /**
+   * Whether a token is one this site signed and has not expired.
+   *
+   * Unlike validate(), this ignores the drafts and "disable" settings: it
+   * answers "did Quant's own export fetch send this?", for features that
+   * must not switch on a header a visitor can send.
+   */
+  public function isGenuine(?string $token): bool {
+    $secret = (string) $this->settings->get('secret');
+    $parts = explode('.', (string) $token);
+    if ($secret === '' || count($parts) !== 3) {
+      return FALSE;
+    }
+    $signature = self::encode(hash_hmac('sha256', "{$parts[0]}.{$parts[1]}", $secret, TRUE));
+    if (!hash_equals($signature, $parts[2])) {
+      return FALSE;
+    }
+    $payload = self::decode($parts[1]);
+    return !empty($payload['expires']) && (int) $payload['expires'] >= time();
+  }
+
 }
