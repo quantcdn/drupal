@@ -114,6 +114,13 @@ class AuthService {
   }
 
   /**
+   * The dashboard for server-to-server calls.
+   */
+  public function getInternalDashboardUrl(): string {
+    return Platform::internalDashboardUrl($this->getPlatform());
+  }
+
+  /**
    * A new PKCE code verifier: 32 random bytes, base64url.
    */
   public function generatePkceVerifier(): string {
@@ -150,7 +157,7 @@ class AuthService {
    */
   public function exchangeCode(string $code, string $redirect_uri, string $code_verifier): ?array {
     try {
-      $response = $this->httpClient->request('POST', $this->getDashboardUrl() . '/oauth/token', [
+      $response = $this->httpClient->request('POST', $this->getInternalDashboardUrl() . '/oauth/token', [
         'form_params' => [
           'grant_type' => 'authorization_code',
           'client_id' => Platform::CLIENT_ID,
@@ -432,7 +439,7 @@ class AuthService {
    */
   protected function requestRefresh(string $refresh_token): array {
     try {
-      $response = $this->httpClient->request('POST', $this->getDashboardUrl() . '/oauth/token', [
+      $response = $this->httpClient->request('POST', $this->getInternalDashboardUrl() . '/oauth/token', [
         'form_params' => [
           'grant_type' => 'refresh_token',
           'refresh_token' => $refresh_token,
