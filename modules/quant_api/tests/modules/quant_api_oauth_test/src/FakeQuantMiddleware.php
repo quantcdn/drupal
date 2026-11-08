@@ -70,6 +70,7 @@ class FakeQuantMiddleware {
         'email' => 'editor@example.com',
         'organizations' => [['id' => 3, 'machine_name' => 'test-org', 'name' => 'Test Org', 'roles' => []]],
       ])),
+      $method === 'POST' && $path === '/api/oauth/revoke' => $this->bearer($request, self::json(200, ['revoked' => TRUE])),
       $method === 'POST' && $path === '/api/oauth/token/project' => $this->bearer($request, $this->limit($request)),
       $method === 'GET' && preg_match('#^/api/v2/organizations/test-org/projects/([a-z-]+)$#', $path, $m) === 1 => $this->bearer($request, $this->project($m[1])),
       default => self::json(404, ['message' => 'Not found']),

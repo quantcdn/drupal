@@ -103,8 +103,11 @@ class OAuthConnectTest extends BrowserTestBase {
     $session->pageTextContains('Connected to the Quant project site-a.');
     $this->assertSame('fake-write-token-site-a', $this->store()->get(OAuthTokenStore::WRITE_TOKEN));
 
+    \Drupal::state()->delete('quant_api_oauth_test.requests');
     $this->clickLink('Log out of Quant');
     $session->pageTextContains('This site is logged out of Quant.');
+    // The login is ended in the dashboard too, not only deleted here.
+    $this->assertContains('POST /quant-test-dashboard/api/oauth/revoke', \Drupal::state()->get('quant_api_oauth_test.requests', []));
     $this->assertSame('token', $this->config('quant_api.settings')->get('auth_method'));
     $this->assertSame([], array_filter($this->store()->getAll()));
     $session->buttonExists('Log in to Quant');
