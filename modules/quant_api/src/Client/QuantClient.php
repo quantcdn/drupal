@@ -8,7 +8,7 @@ use Drupal\quant\PublishGuard;
 use Drupal\quant_api\Credentials;
 use Drupal\quant_api\Exception\InvalidPayload;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Utils;
@@ -99,6 +99,21 @@ class QuantClient implements QuantClientInterface {
     $this->credentials = $credentials;
 
     $this->refreshCredentials();
+  }
+
+  /**
+   * Tells the editor that Quant could not be reached, and logs the cause.
+   *
+   * The exception text names the request URL, which can carry credentials,
+   * so the editor sees a fixed message and the log gets the class and the
+   * text without any user information in URLs.
+   */
+  protected function reportUnreachable(GuzzleException $e) : void {
+    $this->logger->error('Quant API request failed (@class): @message', [
+      '@class' => get_class($e),
+      '@message' => preg_replace('#(https?://)[^/\s@]+@#i', '$1', $e->getMessage()),
+    ]);
+    \Drupal::messenger()->addError(t('This site could not reach Quant. Check the API endpoint on the Quant API settings page, or try again in a few minutes. After Quant is back, save the changed content again or run a seed.'));
   }
 
   /**
@@ -245,8 +260,8 @@ class QuantClient implements QuantClientInterface {
         'verify' => $this->tlsDisabled ? FALSE : TRUE,
       ]);
     }
-    catch (RequestException $e) {
-      \Drupal::messenger()->addError($e->getMessage());
+    catch (GuzzleException $e) {
+      $this->reportUnreachable($e);
       return FALSE;
     }
 
@@ -288,8 +303,8 @@ class QuantClient implements QuantClientInterface {
         'exceptions' => FALSE,
       ]);
     }
-    catch (RequestException $e) {
-      \Drupal::messenger()->addError($e->getMessage());
+    catch (GuzzleException $e) {
+      $this->reportUnreachable($e);
       return FALSE;
     }
 
@@ -331,8 +346,8 @@ class QuantClient implements QuantClientInterface {
         'exceptions' => FALSE,
       ]);
     }
-    catch (RequestException $e) {
-      \Drupal::messenger()->addError($e->getMessage());
+    catch (GuzzleException $e) {
+      $this->reportUnreachable($e);
       return FALSE;
     }
 

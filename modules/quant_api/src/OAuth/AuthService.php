@@ -206,10 +206,41 @@ class AuthService {
   }
 
   /**
-   * Deletes the local connection. The portal has no revoke endpoint yet.
+   * Ends the login in the dashboard, then deletes the local connection.
+   *
+   * The dashboard call is best effort: an older dashboard without the revoke
+   * endpoint, or one that cannot be reached, leaves the token to expire on
+   * its own. The local connection is deleted in every case.
    */
   public function disconnect(): void {
+    $access = $this->tokenStore->get(OAuthTokenStore::ACCESS_TOKEN);
+    if (is_string($access) && $access !== '') {
+      $this->revokeAtDashboard($access);
+    }
     $this->tokenStore->clear();
+  }
+
+  /**
+   * Asks the dashboard to delete this site's token (POST /api/oauth/revoke).
+   */
+  protected function revokeAtDashboard(string $access_token): void {
+    try {
+      $response = $this->httpClient->request('POST', $this->getInternalDashboardUrl() . '/api/oauth/revoke', [
+        'headers' => [
+          'Authorization' => 'Bearer ' . $access_token,
+          'Accept' => 'application/json',
+        ],
+        'timeout' => 10,
+        'http_errors' => FALSE,
+      ]);
+      $status = $response->getStatusCode();
+    }
+    catch (\Exception $e) {
+      $status = get_class($e);
+    }
+    if ($status !== 200) {
+      $this->logger->notice('The Quant dashboard did not end the login (@status). The token stops working when it expires.', ['@status' => $status]);
+    }
   }
 
   /**
