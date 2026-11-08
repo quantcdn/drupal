@@ -141,6 +141,10 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   (finding 4). Approved by the controller (portal 8e47e4e96). Accepted residual risk: a phished
   approval still gets one project per approval (the consent screen names the attacker's host), the
   same as the wordpress-quant client.
+- R48 (controller, 2026-11-08): portal ac720e31c approved. OAuthWriteTokenGate is a no-op for web
+  requests (no api_token), covers every API response that carries a write token (v2 with_token,
+  v1 project, v1 create and edit), and refuses API token creation for clients with
+  require_project_limit_for_write_token, which closes the minting hole found in the re-review.
 
 ## Follow-ups
 
@@ -170,3 +174,5 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   their code (WordPress reads with_token before any limit today).
 - F7 (routed to Stuart by the controller): The dashboard form editor keeps the reCAPTCHA secret and the Slack webhook in public Livewire
   properties for pages not managed in Drupal (existing; against the portal secrets rule).
+- F8: Portal TokenServiceScopedTest::it_creates_token_with_preset fails on origin/develop with
+  "Unknown preset: deploy" (existing, not from this series).
