@@ -140,12 +140,18 @@ class CreateSearchPageForm extends FormBase {
   protected function buildBlockChoice(): array {
     $theme = $this->config('system.theme')->get('default');
     $regions = system_region_list($theme, REGIONS_VISIBLE);
+    // One search box is enough: a second page does not propose another.
+    $placed = $this->entityTypeManager->getStorage('block')->loadByProperties([
+      'theme' => $theme,
+      'plugin' => 'quant_autocomplete_block',
+    ]);
     return [
       '#type' => 'container',
       'place_block' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Add a search box with suggestions to every page'),
-        '#default_value' => TRUE,
+        '#default_value' => $placed === [],
+        '#description' => $placed === [] ? '' : $this->t('This theme already has a Quant search box. Tick this only to add a second one for this page.'),
       ],
       'region' => [
         '#type' => 'select',
@@ -231,9 +237,7 @@ class CreateSearchPageForm extends FormBase {
     $page->save();
     $added = $this->indexBundles($bundles);
     $this->publisher->publish($page, TRUE);
-    if ($form_state->getValue('place_block')) {
-      $this->placeBlock($page, (string) $form_state->getValue('region'));
-    }
+    $placed = $form_state->getValue('place_block') && $this->placeBlock($page, (string) $form_state->getValue('region'));
 
     $this->messenger()->addStatus($this->t('The search page is at <a href=":url">/@route</a>.', [
       ':url' => Url::fromUserInput('/' . $route)->toString(),
@@ -242,6 +246,11 @@ class CreateSearchPageForm extends FormBase {
     if ($added) {
       $this->messenger()->addWarning($this->t('Content types were added to the search index. <a href=":url">Re-index the content</a> so that the page finds them.', [
         ':url' => Url::fromRoute('quant_search.main.index')->toString(),
+      ]));
+    }
+    if ($placed) {
+      $this->messenger()->addWarning($this->t('The search box is on every page in Drupal now. The static site shows it after its pages are published again: <a href=":url">publish the site again</a> (Seed, then Save and Queue).', [
+        ':url' => Url::fromRoute('quant.seed')->toString(),
       ]));
     }
     $form_state->setRedirect('entity.quant_search_page.collection');
@@ -278,13 +287,16 @@ class CreateSearchPageForm extends FormBase {
 
   /**
    * Places the autocomplete block in the default theme.
+   *
+   * @return bool
+   *   Whether a new block was placed.
    */
-  protected function placeBlock($page, string $region): void {
+  protected function placeBlock($page, string $region): bool {
     $theme = $this->config('system.theme')->get('default');
     $storage = $this->entityTypeManager->getStorage('block');
     $id = $theme . '_quant_search_' . $page->id();
     if ($storage->load($id)) {
-      return;
+      return FALSE;
     }
     $storage->create([
       'id' => $id,
@@ -303,6 +315,7 @@ class CreateSearchPageForm extends FormBase {
       ],
       'visibility' => [],
     ])->save();
+    return TRUE;
   }
 
   /**

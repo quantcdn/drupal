@@ -124,15 +124,21 @@ class CreateSearchPageTest extends BrowserTestBase {
     $session->pageTextNotContains('Re-index the content');
     $block = \Drupal::entityTypeManager()->getStorage('block')->load('olivero_quant_search_search');
     $this->assertSame($page->uuid(), $block->get('settings')['page']);
+    // The static pages show the box only after they are published again.
+    $session->pageTextContains('publish the site again');
+    $session->linkByHrefExists('/admin/config/quant/seed');
 
     // The page renders.
     $this->drupalGet('search');
     $session->statusCodeEquals(200);
     $session->elementExists('css', '#hits, .quant-search-page, [id^="quant-search"]');
 
-    // A second page proposes another address: /search is taken now.
+    // A second page proposes another address: /search is taken now. The
+    // header already has a search box, so a second one is not proposed.
     $this->drupalGet('admin/config/development/quant/search/pages/create');
     $session->fieldValueEquals('route', 'site-search');
+    $session->checkboxNotChecked('edit-place-block');
+    $session->pageTextContains('This theme already has a Quant search box');
   }
 
   /**
