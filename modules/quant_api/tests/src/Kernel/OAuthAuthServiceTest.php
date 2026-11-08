@@ -7,6 +7,7 @@ use Drupal\quant_api\Credentials;
 use GuzzleHttp\Promise\Create;
 use Drupal\quant_api\Http\UnauthorizedResyncMiddleware;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\quant_api\OAuth\AuthService;
 use Drupal\quant_api\OAuth\OAuthTokenStore;
 use Drupal\quant_api\OAuth\Platform;
 use GuzzleHttp\Client;
@@ -501,6 +502,64 @@ class OAuthAuthServiceTest extends KernelTestBase {
     // Without the internal setting, both are the same.
     $this->setSetting('quant_api_dashboard_internal_url', '');
     $this->assertSame('http://localhost:8002', $this->auth()->getInternalDashboardUrl());
+  }
+
+  /**
+   * Log out revokes this site's own login at the dashboard.
+   *
+   * @covers ::disconnect
+   */
+  public function testLogOutRevokesTheLogin(): void {
+    $this->connect(86400 * 60);
+    $this->mock->append(self::json(200, ['revoked' => TRUE]));
+    $this->auth()->disconnect();
+    $this->assertCount(1, $this->history);
+    $this->assertStringEndsWith('/api/oauth/revoke', (string) $this->history[0]['request']->getUri());
+    $this->assertSame([], array_filter($this->store()->getAll()));
+  }
+
+  /**
+   * Log out on a copy of the database never revokes the original's login.
+   *
+   * @covers ::disconnect
+   */
+  public function testLogOutOnCopiedSiteDoesNotRevoke(): void {
+    $this->connect(86400 * 60);
+    $fingerprint = $this->store()->get(OAuthTokenStore::FINGERPRINT);
+    $fingerprint['database'] = hash('sha256', 'production database');
+    $this->store()->set(OAuthTokenStore::FINGERPRINT, $fingerprint);
+    // A call would be answered (and recorded), so silence means no call.
+    $this->mock->append(self::json(200, ['revoked' => TRUE]));
+
+    $this->auth()->disconnect();
+    $this->assertCount(0, $this->history, 'The production login is left alone.');
+    $this->assertSame([], array_filter($this->store()->getAll()));
+  }
+
+  /**
+   * A new connection revokes the login it replaces (Change project).
+   *
+   * @covers ::saveConnection
+   */
+  public function testNewConnectionRevokesTheOldLogin(): void {
+    $this->connect(86400 * 60);
+    $this->mock->append(self::json(200, ['revoked' => TRUE]));
+    $this->auth()->saveConnection(['access_token' => 'qca_next', 'refresh_token' => 'qcr_next', 'expires_in' => 3600], 'write-token-2', ['name' => 'Editor']);
+    $this->assertCount(1, $this->history);
+    $this->assertSame('Bearer qca_old', $this->history[0]['request']->getHeaderLine('Authorization'));
+    $this->assertSame('qca_next', $this->store()->get(OAuthTokenStore::ACCESS_TOKEN));
+  }
+
+  /**
+   * An expired access token with a refresh token is not "needs a new login".
+   *
+   * @covers ::getReconnectReason
+   */
+  public function testExpiredAccessTokenWithRefreshNeedsNoNewLogin(): void {
+    $this->connect(3600, [OAuthTokenStore::EXPIRES_AT => time() - 60]);
+    $this->assertNull($this->auth()->getReconnectReason());
+    $this->store()->delete([OAuthTokenStore::REFRESH_TOKEN]);
+    $this->assertSame(AuthService::RECONNECT_EXPIRED, $this->auth()->getReconnectReason());
   }
 
 }
