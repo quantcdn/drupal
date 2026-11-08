@@ -42,6 +42,28 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   limit succeeds.
 - R18: The existing metadata views of `quant` fail strict config schema checks; new functional tests
   set `$strictConfigSchema = FALSE` with a comment. Not fixed in this series.
+- R19 (R9 study result): Client-side wizards are feasible inside item 2, so the module supports them.
+  Webform hides other pages with `#access = FALSE` (WebformWizardPage::hidePage). On a Quant export
+  request only (validated `quant-token` header), the module swaps that element class for one that
+  renders every page, and a script runs the steps: page validation in the browser, an optional
+  review step built in the browser, one final submit to Quant Forms. Without JavaScript every page
+  shows and the form posts as one page. Size: about 250 lines PHP, 300 lines JS, plus tests.
+- R20: Export requests skip the page cache (a request policy on the `quant-token` header), and the
+  altered form varies by that header, so an export render never reaches live visitors and a live
+  render never reaches Quant.
+- R21: With JavaScript the form submits with `Accept: application/json`. The confirmation types
+  message, inline and page show the confirmation in place of the form; url and url_message redirect
+  in the browser (the cheap "redirect to URL" case, so it is supported). Modal shows in place.
+- R22: Webform tokens cannot run on a static site. The module removes them from Quant messages and
+  maps `[webform_submission:values:KEY]` to Quant `{{KEY}}` only in the email subject. A per-form
+  "Quant Forms" setting on the Webform overrides the message.
+- R23: The edge parses a multipart body field by field: a repeated name keeps only the last value,
+  and `name[]` grouping applies to urlencoded bodies only. The script therefore renames repeated keys
+  (`attachments`, `attachments_1`, ...) and posts urlencoded when the form has no file. Without
+  JavaScript only the last file of a multi-file field is kept (documented limit). Edge finding for
+  the controller: F4.
+- R24: One Quant Forms config exists per URL. A page with two registrable Webforms registers the
+  first and logs a warning.
 
 ## Follow-ups
 
@@ -49,3 +71,5 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   For the controller to schedule.
 - F2: Live end-to-end test of Log in to Quant against a dashboard with the `drupal-quant` client.
 - F3: `quant` does not declare its `file` dependency (its views need it); tests enable it by hand.
+- F4: Quant edge forms (docker/fastly/src/forms.js): multipart bodies drop repeated field names
+  (only the last file of a multi-file field is stored, and `name[]` is not grouped).
