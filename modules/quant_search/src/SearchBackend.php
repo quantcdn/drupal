@@ -173,8 +173,9 @@ class SearchBackend {
   }
 
   /**
-   * The search host of a QuantGov dashboard: dash.<env>.quantgov.cloud gives
-   * search.<env>.quantgov.cloud. NULL for any other host.
+   * The search host of a QuantGov dashboard, or NULL for another host.
+   *
+   * The dashboard dash.<env>.quantgov.cloud gives search.<env>.quantgov.cloud.
    */
   protected static function searchHostForDashboard(string $dashboard) : ?string {
     $host = (string) parse_url($dashboard, PHP_URL_HOST);
