@@ -130,9 +130,9 @@ class CreateSearchPageTest extends BrowserTestBase {
     $session->statusCodeEquals(200);
     $session->elementExists('css', '#hits, .quant-search-page, [id^="quant-search"]');
 
-    // A second page proposes another address.
+    // A second page proposes another address: /search is taken now.
     $this->drupalGet('admin/config/development/quant/search/pages/create');
-    $session->fieldValueEquals('route', 'search-2');
+    $session->fieldValueEquals('route', 'site-search');
   }
 
   /**

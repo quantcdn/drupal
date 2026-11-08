@@ -158,15 +158,19 @@ class CreateSearchPageForm extends FormBase {
   }
 
   /**
-   * The default address: search, or search-2 when a page already uses it.
+   * The default address: search, or the first free of site-search, search-2...
+   *
+   * An address is taken when a search page or a Drupal route (for example a
+   * Views search page) already uses it.
    */
   protected function defaultRoute(): string {
     $used = array_map(fn ($page) => $page->get('route'), $this->entityTypeManager->getStorage('quant_search_page')->loadMultiple());
-    $route = 'search';
-    for ($i = 2; in_array($route, $used, TRUE); $i++) {
-      $route = 'search-' . $i;
+    foreach (array_merge(['search', 'site-search'], array_map(fn ($i) => 'search-' . $i, range(2, 20))) as $route) {
+      if (!in_array($route, $used, TRUE) && !$this->isDrupalPath($route)) {
+        return $route;
+      }
     }
-    return $route;
+    return 'search-' . time();
   }
 
   /**
