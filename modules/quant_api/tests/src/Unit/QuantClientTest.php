@@ -532,7 +532,6 @@ class QuantClientTest extends UnitTestCase {
     $this->assertCount(0, $this->history, 'No request was sent.');
   }
 
-
   /**
    * An unreachable endpoint is a plain message, not a crash or a URL leak.
    *
