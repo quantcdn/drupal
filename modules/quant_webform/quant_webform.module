@@ -65,10 +65,29 @@ function quant_webform_webform_submission_form_alter(array &$form, FormStateInte
   }
 
   $form['#attributes']['data-quant-webform'] = $webform->id();
+  // A Webform with its own page posts there from any page that embeds it (a
+  // footer newsletter, a block), so each form has one Quant Forms config.
+  $target = _quant_webform_target_path($webform);
+  if ($target !== NULL) {
+    $form['#action'] = $target;
+    $form['#attributes']['data-quant-target'] = $target;
+  }
   _quant_webform_add_result_container($form, $webform);
   _quant_webform_static_actions($form, $webform);
   $form['#attached']['library'][] = 'quant_webform/static_form';
   $form['#attached']['drupalSettings']['quantWebform'][$webform->id()] = _quant_webform_settings($webform);
+}
+
+/**
+ * The path a Webform posts to on the static site: its own page, or NULL.
+ *
+ * NULL means the page that shows it (a Webform without a page of its own).
+ */
+function _quant_webform_target_path(WebformInterface $webform) {
+  if (!$webform->getSetting('page')) {
+    return NULL;
+  }
+  return $webform->toUrl('canonical')->toString(TRUE)->getGeneratedUrl();
 }
 
 /**

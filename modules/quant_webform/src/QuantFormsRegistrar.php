@@ -25,19 +25,20 @@ class QuantFormsRegistrar {
   ) {}
 
   /**
-   * The paths of the pages that show a Webform.
+   * The paths of the pages that take a Webform's submissions.
    *
-   * The Webform's own page (when it has one) and every published node whose
-   * Webform field references it.
+   * A Webform with its own page posts there from everywhere, so that page is
+   * the only one. Otherwise every published node whose Webform field
+   * references it.
    *
    * @return string[]
    *   Paths such as /form/contact or /contact-us.
    */
   public function pages(WebformInterface $webform): array {
-    $paths = [];
     if ($webform->getSetting('page')) {
-      $paths[] = $webform->toUrl('canonical')->toString(TRUE)->getGeneratedUrl();
+      return [self::path($webform->toUrl('canonical')->toString(TRUE)->getGeneratedUrl())];
     }
+    $paths = [];
     foreach ($this->referencingNodes($webform) as $node) {
       $paths[] = $node->toUrl('canonical')->toString(TRUE)->getGeneratedUrl();
     }

@@ -35,7 +35,7 @@ class QuantFormsSubscriber implements EventSubscriberInterface {
    * Adds form_enabled and form_config to the event metadata.
    */
   public function onOutput(QuantEvent $event): void {
-    $ids = self::webformIds((string) $event->getContents());
+    $ids = self::webformIds((string) $event->getContents(), $event->getLocation());
     if ($ids === []) {
       return;
     }
@@ -67,11 +67,30 @@ class QuantFormsSubscriber implements EventSubscriberInterface {
   }
 
   /**
-   * The Webform ids marked in the rendered page, in page order.
+   * The Webforms that post to this page, in page order.
+   *
+   * A form marked with data-quant-target posts to that path, so it belongs to
+   * the page at that path only. A form without a target posts to the page
+   * that shows it.
+   *
+   * @param string $html
+   *   The rendered page.
+   * @param string|null $location
+   *   The page path. NULL takes every marked form (no target check).
    */
-  public static function webformIds(string $html): array {
-    preg_match_all('/data-quant-webform="([a-z0-9_]+)"/', $html, $matches);
-    return array_values(array_unique($matches[1]));
+  public static function webformIds(string $html, ?string $location = NULL): array {
+    preg_match_all('/<form\b[^>]*>/i', $html, $tags);
+    $ids = [];
+    foreach ($tags[0] as $tag) {
+      if (!preg_match('/data-quant-webform="([a-z0-9_]+)"/', $tag, $id)) {
+        continue;
+      }
+      $target = preg_match('/data-quant-target="([^"]*)"/', $tag, $t) ? html_entity_decode($t[1]) : NULL;
+      if ($location === NULL || $target === NULL || rtrim($target, '/') === rtrim($location, '/')) {
+        $ids[] = $id[1];
+      }
+    }
+    return array_values(array_unique($ids));
   }
 
 }

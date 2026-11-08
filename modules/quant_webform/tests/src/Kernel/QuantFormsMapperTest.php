@@ -276,6 +276,13 @@ YAML;
     $this->container->get('quant_webform.subscriber')->onOutput($closed);
     $this->assertArrayNotHasKey('form_enabled', $closed->getMetadata());
     $this->assertSame([], QuantFormsSubscriber::webformIds('<form id="search"></form>'));
+
+    // A form that posts to its own page belongs to that page only: a footer
+    // newsletter does not take over the contact page's config.
+    $page = '<form data-quant-webform="contact"></form>'
+      . '<form action="/newsletter" data-quant-webform="newsletter" data-quant-target="/newsletter"></form>';
+    $this->assertSame(['contact'], QuantFormsSubscriber::webformIds($page, '/contact-us'));
+    $this->assertSame(['newsletter'], QuantFormsSubscriber::webformIds('<form data-quant-webform="newsletter" data-quant-target="/newsletter">', '/newsletter'));
   }
 
 }

@@ -8,8 +8,9 @@ each submission and sends the email and Slack notifications.
 - When Quant publishes a page that shows a Webform, the push carries the Quant
   Forms settings of that page (`form_enabled`, `form_config`). Quant then takes
   POST requests to that page.
-- Saving a Webform publishes its pages again: the Webform's own page and every
-  published node whose Webform field references it.
+- Saving a Webform publishes the page that takes its submissions: the Webform's
+  own page, or, for a Webform without one, every published node whose Webform
+  field references it.
 - Closing or deleting a Webform turns Quant Forms off on its pages. The
   submissions stay in Quant.
 - **Register all forms** (Configuration > Quant > Forms) queues the pages of
@@ -31,6 +32,7 @@ each submission and sends the email and Slack notifications.
 | Webform feature | On the static site |
 |---|---|
 | Single-page forms | Supported. |
+| A Webform in a block, a footer or a node (for example a newsletter on every page) | Supported when the Webform has its own page: on the static site it posts to that page from everywhere, so it has one Quant Forms config. A Webform without its own page posts to the page that shows it. |
 | Multi-page wizards | Supported. All pages are in the page; JavaScript shows one step at a time and checks each step before the next. |
 | Preview (review) step | Supported. The browser builds the review from the answers. |
 | Conditional logic (`#states`) | Supported in the browser. Hidden fields are not checked. Pages hidden by conditions are skipped. |
@@ -64,4 +66,4 @@ The report on each Webform and on the Forms settings page lists these.
 | Computed elements | They compute on the server. |
 | Turnstile, hCaptcha, image CAPTCHA | Quant checks reCAPTCHA v2 only. |
 | Submission tokens such as `[webform_submission:serial]` | Not available on static pages: no server renders them. They are removed from messages, so "Your reference is SR-[webform_submission:serial]" becomes "Your reference is SR-". Set a static message in the form's Quant Forms settings. |
-| Two Webforms on one page | Quant has one form config per page. The first Webform is registered and a warning is logged. |
+| Two Webforms without their own pages on one page | Quant has one form config per page. The first is registered and a warning is logged. |
