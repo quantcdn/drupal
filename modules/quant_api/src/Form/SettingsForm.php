@@ -5,6 +5,7 @@ namespace Drupal\quant_api\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Drupal\quant_api\Controller\OAuthController;
 use Drupal\quant_api\Credentials;
 use Drupal\quant_api\EndpointValidator;
 use Drupal\quant_api\OAuth\AuthService;
@@ -177,7 +178,7 @@ class SettingsForm extends ConfigFormBase {
    */
   protected function reconnectMessage(string $reason) {
     return match ($reason) {
-      AuthService::RECONNECT_OTHER_SITE => $this->t('The stored login belongs to another copy of this site (for example a database copied from production). This copy does not refresh it. Log in to Quant again on this copy.'),
+      AuthService::RECONNECT_OTHER_SITE => $this->t('The stored login belongs to another copy of this site (for example a database copied from production). This copy does not publish or refresh with it. Log in to Quant on this copy.'),
       AuthService::RECONNECT_REFUSED => $this->t('Quant refused to refresh the login. Content still publishes. Log in to Quant again to keep the connection current.'),
       default => $this->t('The login expired. Content still publishes. Log in to Quant again to keep the connection current.'),
     };
@@ -224,6 +225,7 @@ class SettingsForm extends ConfigFormBase {
    * The advanced section: a custom endpoint and TLS.
    */
   protected function buildAdvanced($config): array {
+    $oauth = $this->credentials->usesOauth($config);
     return [
       '#type' => 'details',
       '#title' => $this->t('Advanced'),
@@ -231,8 +233,11 @@ class SettingsForm extends ConfigFormBase {
         '#type' => 'textfield',
         '#title' => $this->t('API Endpoint'),
         '#description' => $this->t('Leave the platform default unless Quant support gives you another endpoint. Use https and do not add <code>/v1</code>; the module adds it.'),
-        '#default_value' => $config->get('api_endpoint') ?: Platform::apiEndpoint(Platform::QUANTCDN),
+        '#default_value' => $this->credentials->getEndpoint($config) ?: Platform::apiEndpoint(Platform::QUANTCDN),
         '#parents' => ['api_endpoint'],
+        // A login publishes only to the platform's own host.
+        '#disabled' => $oauth,
+        '#field_suffix' => $oauth ? $this->t('Fixed to the platform while this site is logged in to Quant.') : NULL,
       ],
       'api_tls_disabled' => [
         '#type' => 'checkbox',
@@ -248,6 +253,10 @@ class SettingsForm extends ConfigFormBase {
    * Shows the connection status as a message.
    */
   protected function showStatus(): void {
+    if ($this->credentials->usesOauth() && $this->credentials->isCopiedSite()) {
+      $this->messenger()->addError($this->t('This database was copied from another site, so this copy does not publish with the Quant login of that site. Log in to Quant on this copy, or connect it with a project token.'));
+      return;
+    }
     if (!$this->credentials->hasToken()) {
       return;
     }
@@ -345,7 +354,10 @@ class SettingsForm extends ConfigFormBase {
    * Saves the platform and starts the login.
    */
   public function submitLogin(array &$form, FormStateInterface $form_state) {
-    $this->savePlatform($form_state)->save();
+    // Saved only when the login completes (ProjectSelectForm), so a cancelled
+    // login never re-points a working connection.
+    $platform = (string) $form_state->getValue('platform');
+    $this->getRequest()->getSession()->set(OAuthController::PLATFORM_KEY, Platform::isKnown($platform) ? $platform : Platform::QUANTCDN);
     // A redirect is not rendered, so the CSRF placeholder of a generated URL
     // is never replaced. Add the real token for the route's path.
     $url = Url::fromRoute('quant_api.oauth_connect');
@@ -401,9 +413,11 @@ class SettingsForm extends ConfigFormBase {
    */
   protected function savePlatform(FormStateInterface $form_state) {
     $platform = (string) $form_state->getValue('platform');
+    $platform = Platform::isKnown($platform) ? $platform : Platform::QUANTCDN;
+    $oauth = $this->credentials->usesOauth($this->config(self::SETTINGS));
     return $this->configFactory()->getEditable(self::SETTINGS)
-      ->set('platform', Platform::isKnown($platform) ? $platform : Platform::QUANTCDN)
-      ->set('api_endpoint', $this->resolveEndpoint($form_state));
+      ->set('platform', $platform)
+      ->set('api_endpoint', $oauth ? Platform::apiEndpoint($platform) : $this->resolveEndpoint($form_state));
   }
 
 }

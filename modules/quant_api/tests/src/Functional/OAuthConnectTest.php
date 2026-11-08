@@ -193,4 +193,33 @@ class OAuthConnectTest extends BrowserTestBase {
     $this->assertSame('site-d', $this->config('quant_api.settings')->get('api_project'));
   }
 
+  /**
+   * A cancelled login on another platform leaves the connection as it was.
+   */
+  public function testCancelledLoginKeepsThePlatform(): void {
+    $this->drupalGet('admin/config/development/quant/api');
+    $this->submitForm(['api_account' => 'test-org', 'api_project' => 'site-c', 'api_token' => 'typed-token'], 'Save configuration');
+    \Drupal::state()->set('quant_api_oauth_test.deny', TRUE);
+    $this->submitForm(['platform' => 'quantgov'], 'Log in to Quant');
+    $this->assertSession()->pageTextContains('The login was cancelled');
+    $config = $this->config('quant_api.settings');
+    $this->assertSame('quantcdn', $config->get('platform'));
+    $this->assertSame('https://api.quantcdn.io', $config->get('api_endpoint'));
+    $this->assertSame('typed-token', $config->get('api_token'));
+  }
+
+  /**
+   * A completed login saves the chosen platform and fixes its endpoint.
+   */
+  public function testCompletedLoginSavesThePlatform(): void {
+    $this->drupalGet('admin/config/development/quant/api');
+    $this->submitForm(['platform' => 'quantgov'], 'Log in to Quant');
+    $this->assertSame('quantcdn', $this->config('quant_api.settings')->get('platform'), 'Not saved before the project choice.');
+    $this->submitForm(['project' => 'test-org:site-b'], 'Use this project');
+    $config = $this->config('quant_api.settings');
+    $this->assertSame('quantgov', $config->get('platform'));
+    $this->assertSame('https://api.quantgov.cloud', $config->get('api_endpoint'));
+    $this->assertSession()->elementAttributeExists('css', 'input[name="api_endpoint"]', 'disabled');
+  }
+
 }

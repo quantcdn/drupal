@@ -12,6 +12,8 @@ function quant_api_cron() {
   // Refresh the "Log in to Quant" token well before it expires. Publishing
   // does not depend on it: the write token does not expire.
   if (\Drupal::service('quant_api.credentials')->usesOauth()) {
-    \Drupal::service('quant_api.oauth')->refreshFromCron();
+    $refreshed = \Drupal::service('quant_api.oauth')->refreshFromCron();
+    // A write token rotated in the dashboard recovers without a new login.
+    \Drupal::service('quant_api.write_token_sync')->syncIfDue($refreshed);
   }
 }
