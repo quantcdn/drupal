@@ -9,7 +9,7 @@ quant_webform.settings:
       type: string
       label: 'What to do with spam (discard or keep)'
 
-webform.webform.third_party.quant_webform:
+webform.settings.third_party.quant_webform:
   type: mapping
   label: 'Quant Forms settings of a Webform'
   mapping:
