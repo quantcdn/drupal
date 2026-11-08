@@ -18,3 +18,10 @@
 .quant-webform-status[role="alert"] {
   margin-bottom: 1em;
 }
+.quant-webform-hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

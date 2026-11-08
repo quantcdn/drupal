@@ -15,10 +15,70 @@ webform.webform.third_party.quant_webform:
   mapping:
     enabled:
       type: boolean
-      label: 'Take submissions through Quant Forms'
-    success_message:
-      type: text
-      label: 'Message after a submit on the static site'
+      label: 'Take submissions through Quant Forms (opt-in)'
+    email:
+      type: mapping
+      label: 'Notification email'
+      mapping:
+        mode:
+          type: string
+          label: 'handler, custom or off'
+        to:
+          type: string
+          label: 'To'
+        cc:
+          type: string
+          label: 'Cc'
+        from:
+          type: string
+          label: 'From'
+        reply_to:
+          type: string
+          label: 'Reply to'
+        subject:
+          type: label
+          label: 'Subject'
     slack:
       type: boolean
       label: 'Send a Slack notification'
+    honeypot:
+      type: boolean
+      label: 'Add a hidden honeypot field'
+    recaptcha:
+      type: mapping
+      label: 'reCAPTCHA v2 (the secret is kept outside config)'
+      mapping:
+        enabled:
+          type: boolean
+          label: 'On'
+        site_key:
+          type: string
+          label: 'Site key'
+    spam_threshold:
+      type: string
+      label: 'AI spam threshold: empty for the site setting, 0 off, 1 to 6'
+    blocked_countries:
+      type: sequence
+      label: 'Refused country codes'
+      sequence:
+        type: string
+        label: 'Country code'
+    blocked_ips:
+      type: sequence
+      label: 'Refused IP addresses'
+      sequence:
+        type: string
+        label: 'IP address'
+    confirmation:
+      type: mapping
+      label: 'After a submit'
+      mapping:
+        type:
+          type: string
+          label: 'webform, message or url'
+        url:
+          type: string
+          label: 'Page to show'
+    success_message:
+      type: text
+      label: 'Message after a submit on the static site'

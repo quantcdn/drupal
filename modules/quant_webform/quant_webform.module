@@ -11,6 +11,7 @@ use Drupal\Core\Url;
 use Drupal\quant_webform\ExportContext;
 use Drupal\quant_webform\Plugin\WebformElement\QuantWizardPage;
 use Drupal\quant_webform\QuantFormsMapper;
+use Drupal\quant_webform\QuantFormsRegistry;
 use Drupal\webform\WebformInterface;
 
 /**
@@ -53,14 +54,14 @@ function quant_webform_webform_element_info_alter(array &$definitions) {
 function quant_webform_webform_submission_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
   // The export render and the live render differ, so they must not share a
   // render cache entry. The page cache is handled by ExportRequestPolicy.
-  $form['#cache']['contexts'][] = 'headers:quant-token';
+  $form['#cache']['contexts'][] = 'quant_export';
   if (!ExportContext::isExport()) {
     return;
   }
   /** @var \Drupal\webform\WebformSubmissionInterface $submission */
   $submission = $form_state->getFormObject()->getEntity();
   $webform = $submission->getWebform();
-  if (!$webform->getThirdPartySetting('quant_webform', 'enabled', TRUE)) {
+  if (!QuantFormsRegistry::isOptedIn($webform)) {
     return;
   }
 
@@ -73,6 +74,7 @@ function quant_webform_webform_submission_form_alter(array &$form, FormStateInte
     $form['#attributes']['data-quant-target'] = $target;
   }
   _quant_webform_add_result_container($form, $webform);
+  _quant_webform_add_protection($form, $webform);
   _quant_webform_static_actions($form, $webform);
   $form['#attached']['library'][] = 'quant_webform/static_form';
   $form['#attached']['drupalSettings']['quantWebform'][$webform->id()] = _quant_webform_settings($webform);
@@ -88,6 +90,37 @@ function _quant_webform_target_path(WebformInterface $webform) {
     return NULL;
   }
   return $webform->toUrl('canonical')->toString(TRUE)->getGeneratedUrl();
+}
+
+/**
+ * Adds the honeypot field and the reCAPTCHA v2 widget set in Drupal.
+ */
+function _quant_webform_add_protection(array &$form, WebformInterface $webform) {
+  if ($webform->getThirdPartySetting('quant_webform', 'honeypot', FALSE)) {
+    // Hidden from people and assistive technology; a bot fills it in.
+    $form[QuantFormsMapper::HONEYPOT_FIELD] = [
+      '#type' => 'textfield',
+      '#title' => t('Leave this field empty'),
+      '#attributes' => ['autocomplete' => 'off', 'tabindex' => '-1'],
+      '#wrapper_attributes' => ['class' => ['quant-webform-hp'], 'aria-hidden' => 'true'],
+      '#weight' => 900,
+    ];
+  }
+  $recaptcha = (array) $webform->getThirdPartySetting('quant_webform', 'recaptcha', []);
+  if (!empty($recaptcha['enabled']) && !empty($recaptcha['site_key'])) {
+    $form['quant_recaptcha'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#attributes' => ['class' => ['g-recaptcha'], 'data-sitekey' => $recaptcha['site_key']],
+      '#weight' => 950,
+    ];
+    $form['#attached']['html_head'][] = [[
+      '#type' => 'html_tag',
+      '#tag' => 'script',
+      '#attributes' => ['src' => 'https://www.google.com/recaptcha/api.js', 'async' => TRUE, 'defer' => TRUE],
+    ], 'quant_webform_recaptcha',
+    ];
+  }
 }
 
 /**
@@ -132,6 +165,11 @@ function _quant_webform_static_actions(array &$form, WebformInterface $webform) 
  */
 function _quant_webform_settings(WebformInterface $webform) {
   $type = (string) $webform->getSetting('confirmation_type');
+  $own = (array) $webform->getThirdPartySetting('quant_webform', 'confirmation', []);
+  $own_type = $own['type'] ?? 'webform';
+  if ($own_type !== 'webform') {
+    $type = $own_type === 'url' ? 'url' : 'message';
+  }
   $settings = [
     'wizard' => $webform->hasWizardPages(),
     'preview' => (int) $webform->getSetting('preview') > 0,
@@ -150,7 +188,7 @@ function _quant_webform_settings(WebformInterface $webform) {
       'type' => in_array($type, ['url', 'url_message'], TRUE) ? 'url' : 'message',
       'title' => (string) $webform->getSetting('confirmation_title'),
       'message' => Xss::filterAdmin(_quant_webform_static_message($webform)),
-      'url' => _quant_webform_confirmation_url($webform),
+      'url' => $own_type === 'url' ? (string) ($own['url'] ?? '') : _quant_webform_confirmation_url($webform),
     ],
   ];
   return $settings;
@@ -202,16 +240,22 @@ function quant_webform_webform_update(WebformInterface $webform) {
   }
   /** @var \Drupal\quant_webform\QuantFormsRegistrar $registrar */
   $registrar = \Drupal::service('quant_webform.registrar');
-  $registered = $webform->getThirdPartySetting('quant_webform', 'enabled', TRUE);
-  if (!$webform->isOpen() || !$registered) {
-    // A closed or unregistered form stops taking submissions on Quant.
-    $registrar->disable($registrar->pages($webform));
-    if ($webform->isOpen()) {
-      $registrar->pushNow($webform);
-    }
+  $registered = \Drupal::service('quant_webform.registry')->pagesOf($webform->id());
+  if (QuantFormsRegistry::isOptedIn($webform) && $webform->isOpen()) {
+    $registrar->pushNow($webform);
     return;
   }
-  $registrar->pushNow($webform);
+  if ($registered === []) {
+    // Never registered by this site: leave its pages (and any settings made
+    // by hand in the dashboard) alone.
+    return;
+  }
+  // Opted out or closed: stop taking submissions, then publish the page
+  // again without the static form behaviour.
+  $registrar->disable($webform);
+  if ($webform->isOpen()) {
+    $registrar->pushNow($webform);
+  }
 }
 
 /**
@@ -221,9 +265,32 @@ function quant_webform_webform_predelete(WebformInterface $webform) {
   if (!_quant_webform_can_publish()) {
     return;
   }
-  // The pages are known only while the Webform exists.
+  \Drupal::service('quant_webform.registrar')->disable($webform);
+}
+
+/**
+ * Implements hook_cron().
+ */
+function quant_webform_cron() {
+  // A Webform that opens or closes on a schedule changes with no save.
+  if (!_quant_webform_can_publish()) {
+    return;
+  }
+  $registry = \Drupal::service('quant_webform.registry');
   $registrar = \Drupal::service('quant_webform.registrar');
-  $registrar->disable($registrar->pages($webform));
+  $storage = \Drupal::entityTypeManager()->getStorage('webform');
+  foreach ($storage->loadByProperties(['status' => WebformInterface::STATUS_SCHEDULED]) as $webform) {
+    if (!QuantFormsRegistry::isOptedIn($webform)) {
+      continue;
+    }
+    $open = $registry->openStateChange($webform);
+    if ($open === FALSE) {
+      $registrar->disable($webform);
+    }
+    elseif ($open === TRUE) {
+      $registrar->queue($webform);
+    }
+  }
 }
 
 /**
@@ -238,33 +305,12 @@ function _quant_webform_can_publish() {
 
 /**
  * Implements hook_webform_third_party_settings_form_alter().
+ *
+ * For an opted-in Webform, Drupal is where its Quant Forms settings are made:
+ * the editor never needs the Quant dashboard for it.
  */
 function quant_webform_webform_third_party_settings_form_alter(array &$form, FormStateInterface $form_state) {
   /** @var \Drupal\webform\WebformInterface $webform */
   $webform = $form_state->getFormObject()->getEntity();
-  $form['third_party_settings']['quant_webform'] = [
-    '#type' => 'details',
-    '#title' => t('Quant Forms'),
-    '#open' => TRUE,
-    '#description' => t('On the static site, Quant takes the submissions of this form, stores them and sends the notifications.'),
-    'enabled' => [
-      '#type' => 'checkbox',
-      '#title' => t('Take submissions through Quant Forms'),
-      '#default_value' => $webform->getThirdPartySetting('quant_webform', 'enabled', TRUE),
-    ],
-    'success_message' => [
-      '#type' => 'textarea',
-      '#title' => t('Message after a submit on the static site'),
-      '#description' => t('Leave empty to use the confirmation message without its tokens. Quant shows at most 256 characters of plain text when JavaScript is off.'),
-      '#default_value' => $webform->getThirdPartySetting('quant_webform', 'success_message', ''),
-      '#rows' => 3,
-    ],
-    'slack' => [
-      '#type' => 'checkbox',
-      '#title' => t('Send a Slack notification'),
-      '#description' => t('Uses the Slack webhook on the Quant Forms settings page.'),
-      '#default_value' => $webform->getThirdPartySetting('quant_webform', 'slack', TRUE),
-    ],
-    'report' => \Drupal::service('quant_webform.report')->build($webform),
-  ];
+  $form['third_party_settings']['quant_webform'] = \Drupal::service('quant_webform.settings_section')->build($webform);
 }

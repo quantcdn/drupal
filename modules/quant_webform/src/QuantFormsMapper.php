@@ -29,6 +29,11 @@ class QuantFormsMapper {
   public const SECRETS = 'quant_webform.secrets';
 
   /**
+   * The hidden field the module adds when the form's honeypot is on.
+   */
+  public const HONEYPOT_FIELD = 'quant_hp_website';
+
+  /**
    * Quant limits each message to 256 characters.
    */
   public const MESSAGE_MAX = 256;
@@ -44,20 +49,13 @@ class QuantFormsMapper {
   protected const SERVER_COMPUTED = ['webform_computed_token', 'webform_computed_twig'];
 
   /**
-   * Element types that hold other elements and submit nothing themselves.
+   * Element types that post exactly their own key, with one value.
    */
-  protected const CONTAINERS = [
-    'webform_wizard_page', 'container', 'fieldset', 'details', 'webform_section',
-    'webform_flexbox', 'webform_card', 'item', 'webform_markup', 'webform_message',
-    'processed_text', 'webform_actions', 'webform_horizontal_rule', 'label',
-  ];
-
-  /**
-   * Element types that submit no single name the edge can check.
-   */
-  protected const NO_SINGLE_NAME = [
-    'checkboxes', 'managed_file', 'webform_image_file', 'webform_document_file',
-    'webform_audio_file', 'webform_video_file', 'captcha',
+  public const BARE_KEY = [
+    'textfield', 'textarea', 'email', 'tel', 'url', 'number', 'date', 'search',
+    'range', 'color', 'select', 'radios', 'checkbox', 'hidden',
+    'webform_email_multiple', 'webform_autocomplete', 'webform_rating',
+    'webform_time',
   ];
 
   public function __construct(
@@ -164,14 +162,16 @@ class QuantFormsMapper {
    */
   protected function buildConfig(WebformInterface $webform, array $elements, string $url, array $report): array {
     $settings = $this->configFactory->get('quant_webform.settings');
+    $form = (array) $webform->getThirdPartySettings('quant_webform');
+    $threshold = ($form['spam_threshold'] ?? '') === '' ? (int) $settings->get('spam_threshold') : (int) $form['spam_threshold'];
     $config = [
       'target_url' => $url,
       'mandatory_fields' => $this->mandatoryFields($elements),
-      'remove_fields' => $this->removeFields($elements),
+      'remove_fields' => array_merge($this->removeFields($elements), !empty($form['honeypot']) ? [self::HONEYPOT_FIELD] : []),
       'honeypot_fields' => $this->honeypotFields($webform),
-      'country_is_not' => [],
-      'ip_is_not' => [],
-      'spam_threshold' => (int) $settings->get('spam_threshold'),
+      'country_is_not' => array_values((array) ($form['blocked_countries'] ?? [])),
+      'ip_is_not' => array_values((array) ($form['blocked_ips'] ?? [])),
+      'spam_threshold' => max(0, min(6, $threshold)),
       'spam_detect_action' => $settings->get('spam_detect_action') === 'keep' ? 'keep' : 'discard',
       'success_message' => $this->successMessage($webform),
       'error_message_mandatory' => self::limit((string) $this->t('Please complete all required fields.')),
@@ -179,10 +179,13 @@ class QuantFormsMapper {
       'notification_settings' => [
         'org_timezone' => (string) ($this->configFactory->get('system.date')->get('timezone.default') ?: 'UTC'),
         'org_name' => (string) $this->configFactory->get('system.site')->get('name'),
+        // Read by the Quant dashboard: these settings are edited in Drupal.
+        'managed_by' => 'drupal',
+        'managed_form' => (string) $webform->id(),
       ],
       'notifications' => $this->notifications($webform),
     ];
-    $secret = $this->recaptchaSecret($elements);
+    $secret = !empty($form['recaptcha']['enabled']) ? $this->secret('recaptcha_secret', $webform->id()) : $this->recaptchaSecret($elements);
     if ($secret !== '') {
       $config['recaptcha_secret_key'] = $secret;
     }
@@ -199,12 +202,31 @@ class QuantFormsMapper {
   public function mandatoryFields(array $elements): array {
     $fields = [];
     foreach ($elements as $key => $element) {
-      if (empty($element['#required']) || $this->isConditional($element, $elements)) {
+      if (empty($element['#required']) || $this->isConditional($element, $elements) || !$this->isPublic($element, $elements)) {
         continue;
       }
       $fields = array_merge($fields, $this->submittedNames((string) $key, $element));
     }
     return array_values(array_unique($fields));
+  }
+
+  /**
+   * Whether an anonymous visitor sees the element (and its parents).
+   *
+   * The static page is an anonymous render: a private element, or one that
+   * anonymous users may not fill in, is not on it, so it is never posted.
+   */
+  protected function isPublic(array $element, array $elements): bool {
+    $chain = array_map(fn ($parent) => $elements[$parent] ?? [], $element['#webform_parents'] ?? []);
+    $chain[] = $element;
+    foreach ($chain as $item) {
+      $roles = $item['#access_create_roles'] ?? NULL;
+      if (!empty($item['#private']) || (isset($item['#access']) && $item['#access'] === FALSE)
+        || (is_array($roles) && !in_array('anonymous', $roles, TRUE))) {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**
@@ -224,15 +246,15 @@ class QuantFormsMapper {
    */
   protected function submittedNames(string $key, array $element): array {
     $type = (string) ($element['#type'] ?? '');
-    if (in_array($type, self::CONTAINERS, TRUE) || in_array($type, self::NO_SINGLE_NAME, TRUE)) {
-      return [];
-    }
-    if (!empty($element['#multiple']) && $type !== 'select') {
-      return [];
-    }
     $plugin = $this->elementManager->getElementInstance($element);
-    if ($plugin instanceof WebformCompositeBase) {
+    if ($plugin instanceof WebformCompositeBase && empty($element['#multiple'])) {
       return $this->compositeNames($key, $element, $plugin);
+    }
+    // Only types known to post the bare key. Others post sub-keys (likert,
+    // datetime, email_confirm, select_other, radios_other) or several values;
+    // the browser checks them.
+    if (!in_array($type, self::BARE_KEY, TRUE) || !empty($element['#multiple'])) {
+      return [];
     }
     return [$key];
   }
@@ -280,12 +302,13 @@ class QuantFormsMapper {
    * The Honeypot module field, when Honeypot protects the form.
    */
   protected function honeypotFields(WebformInterface $webform): array {
+    $fields = $webform->getThirdPartySetting('quant_webform', 'honeypot', FALSE) ? [self::HONEYPOT_FIELD] : [];
     if (!$this->moduleHandler->moduleExists('honeypot')) {
-      return [];
+      return $fields;
     }
     $honeypot = $this->configFactory->get('honeypot.settings');
     $protected = $webform->getThirdPartySetting('honeypot', 'honeypot') || $honeypot->get('protect_all_forms');
-    return $protected ? [(string) ($honeypot->get('element_name') ?: 'url')] : [];
+    return $protected ? array_merge($fields, [(string) ($honeypot->get('element_name') ?: 'url')]) : $fields;
   }
 
   /**
@@ -318,11 +341,12 @@ class QuantFormsMapper {
    */
   protected function notifications(WebformInterface $webform): array {
     $notifications = [];
-    $email = $this->emailNotification($webform);
+    $email = $this->emailSettings($webform);
     if ($email !== NULL) {
       $notifications['email'] = $email;
     }
-    $webhook = (string) $this->keyValue->get(self::SECRETS)->get('slack_webhook', '');
+    // The form's own webhook, or the site webhook.
+    $webhook = $this->secret('slack_webhook', $webform->id()) ?: $this->secret('slack_webhook');
     if ($webhook !== '' && $webform->getThirdPartySetting('quant_webform', 'slack', TRUE)) {
       $notifications['slack'] = ['webhook' => $webhook, 'enabled' => TRUE];
     }
@@ -330,9 +354,55 @@ class QuantFormsMapper {
   }
 
   /**
+   * The email notification: from the form's Quant Forms settings, or derived.
+   *
+   * Mode "handler" (default) derives it from the first email handler, mode
+   * "custom" uses the fields set in Drupal, mode "off" sends no email.
+   */
+  public function emailSettings(WebformInterface $webform): ?array {
+    $email = (array) $webform->getThirdPartySetting('quant_webform', 'email', []);
+    $mode = $email['mode'] ?? 'handler';
+    if ($mode === 'off') {
+      return NULL;
+    }
+    if ($mode !== 'custom') {
+      return $this->emailNotification($webform);
+    }
+    $settings = [
+      'enabled' => TRUE,
+      'to' => (string) ($email['to'] ?? ''),
+      'subject' => self::limit((string) ($email['subject'] ?? '') ?: (string) $this->t('New submission: @form', ['@form' => $webform->label()])),
+      'options' => ['text_only' => FALSE, 'include_results' => TRUE],
+    ];
+    foreach (['cc', 'from', 'reply_to'] as $key) {
+      if ((string) ($email[$key] ?? '') !== '') {
+        $settings[$key] = (string) $email[$key];
+      }
+    }
+    return $settings['to'] === '' ? NULL : $settings;
+  }
+
+  /**
+   * A secret kept outside config: the site's, or one Webform's.
+   */
+  public function secret(string $name, ?string $webform_id = NULL): string {
+    $key = $webform_id === NULL ? $name : $name . ':' . $webform_id;
+    return (string) $this->keyValue->get(self::SECRETS)->get($key, '');
+  }
+
+  /**
+   * Stores (or with an empty value, deletes) a secret.
+   */
+  public function setSecret(string $name, ?string $webform_id, string $value): void {
+    $key = $webform_id === NULL ? $name : $name . ':' . $webform_id;
+    $store = $this->keyValue->get(self::SECRETS);
+    $value === '' ? $store->delete($key) : $store->set($key, $value);
+  }
+
+  /**
    * The first enabled email handler that runs on a completed submission.
    */
-  protected function emailNotification(WebformInterface $webform): ?array {
+  public function emailNotification(WebformInterface $webform): ?array {
     foreach ($webform->getHandlers('email', TRUE) as $handler) {
       $settings = $handler->getConfiguration()['settings'] ?? [];
       if (!in_array('completed', (array) ($settings['states'] ?? ['completed']), TRUE)) {

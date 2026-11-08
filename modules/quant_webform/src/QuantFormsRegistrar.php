@@ -22,6 +22,7 @@ class QuantFormsRegistrar {
     protected EntityTypeManagerInterface $entityTypeManager,
     protected EntityFieldManagerInterface $entityFieldManager,
     protected QuantClientInterface $client,
+    protected QuantFormsRegistry $registry,
   ) {}
 
   /**
@@ -42,7 +43,10 @@ class QuantFormsRegistrar {
     foreach ($this->referencingNodes($webform) as $node) {
       $paths[] = $node->toUrl('canonical')->toString(TRUE)->getGeneratedUrl();
     }
-    return array_values(array_unique(array_map([self::class, 'path'], $paths)));
+    $paths = array_map([self::class, 'path'], $paths);
+    // Pages registered when they published: blocks, paragraphs and Layout
+    // Builder placements that no field query finds.
+    return array_values(array_unique(array_merge($paths, $this->registry->pagesOf($webform->id()))));
   }
 
   /**
@@ -75,15 +79,22 @@ class QuantFormsRegistrar {
   }
 
   /**
-   * Turns Quant Forms off on each page. Submissions stay in Quant.
+   * Turns Quant Forms off on every page this site registered for a Webform.
    *
-   * @param string[] $paths
-   *   The pages, from pages() before the Webform changed.
+   * Only pages in the registry: a page set up by hand in the dashboard is
+   * never touched. Submissions stay in Quant.
+   *
+   * @return int
+   *   The number of pages turned off.
    */
-  public function disable(array $paths): void {
+  public function disable(WebformInterface $webform): int {
+    $paths = $this->registry->pagesOf($webform->id());
     foreach ($paths as $path) {
-      $this->client->sendFormConfig($path, FALSE);
+      if ($this->client->sendFormConfig($path, FALSE)) {
+        $this->registry->forget($path);
+      }
     }
+    return count($paths);
   }
 
   /**

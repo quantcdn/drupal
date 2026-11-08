@@ -6,6 +6,8 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant_webform\QuantFormsMapper;
+use Drupal\quant_webform\QuantFormsRegistry;
+use Drupal\webform\WebformInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
@@ -21,6 +23,7 @@ class QuantFormsSubscriber implements EventSubscriberInterface {
     protected EntityTypeManagerInterface $entityTypeManager,
     protected QuantFormsMapper $mapper,
     protected LoggerChannelFactoryInterface $loggerFactory,
+    protected QuantFormsRegistry $registry,
   ) {}
 
   /**
@@ -33,37 +36,65 @@ class QuantFormsSubscriber implements EventSubscriberInterface {
 
   /**
    * Adds form_enabled and form_config to the event metadata.
+   *
+   * A page registered before that no longer has a registrable form (removed,
+   * opted out, closed, unsupported) gets form_enabled FALSE, so it stops
+   * taking submissions. A page this site never registered is left alone.
    */
   public function onOutput(QuantEvent $event): void {
-    $ids = self::webformIds((string) $event->getContents(), $event->getLocation());
-    if ($ids === []) {
+    $path = $event->getLocation();
+    $webform = $this->registrableWebform($event, $path);
+    $meta = $event->getMetadata();
+    if ($webform !== NULL) {
+      $report = $this->mapper->map($webform, $path);
+      $meta['form_enabled'] = TRUE;
+      $meta['form_config'] = $report['config'];
+      $this->registry->record($path, $webform->id());
+      $event->setMetadata($meta);
       return;
     }
+    if ($this->registry->webformAt($path) !== NULL) {
+      $meta['form_enabled'] = FALSE;
+      $this->registry->forget($path);
+      $event->setMetadata($meta);
+      $this->loggerFactory->get('quant_webform')->notice('Quant Forms: @url no longer has a registered Webform, so Quant Forms is turned off there.', ['@url' => $path]);
+    }
+  }
+
+  /**
+   * The first opted-in, open and supported Webform that posts to the page.
+   */
+  protected function registrableWebform(QuantEvent $event, string $path): ?WebformInterface {
     $logger = $this->loggerFactory->get('quant_webform');
-    if (count($ids) > 1) {
-      $logger->warning('Quant Forms: @url shows several Webforms (@ids). Quant takes one form per page; only @first is registered.', [
-        '@url' => $event->getLocation(),
-        '@ids' => implode(', ', $ids),
-        '@first' => $ids[0],
+    $storage = $this->entityTypeManager->getStorage('webform');
+    $found = [];
+    foreach (self::webformIds((string) $event->getContents(), $path) as $id) {
+      $webform = $storage->load($id);
+      if ($webform && QuantFormsRegistry::isOptedIn($webform) && $webform->isOpen()) {
+        $found[] = $webform;
+      }
+    }
+    if (count($found) > 1) {
+      $logger->warning('Quant Forms: @url shows several Webforms that post to it (@ids). Quant takes one form per page; only @first is registered.', [
+        '@url' => $path,
+        '@ids' => implode(', ', array_map(fn ($w) => $w->id(), $found)),
+        '@first' => $found[0]->id(),
       ]);
     }
-    $webform = $this->entityTypeManager->getStorage('webform')->load($ids[0]);
-    if (!$webform || !$webform->getThirdPartySetting('quant_webform', 'enabled', TRUE) || !$webform->isOpen()) {
-      return;
+    $webform = $found[0] ?? NULL;
+    if ($webform === NULL) {
+      return NULL;
     }
-    $report = $this->mapper->map($webform, $event->getLocation());
+    $report = $this->mapper->map($webform, $path);
     if (!$report['supported']) {
       $logger->warning('Quant Forms: the Webform @id on @url is not registered: @reasons', [
         '@id' => $webform->id(),
-        '@url' => $event->getLocation(),
+        '@url' => $path,
         '@reasons' => implode(' ', array_map('strval', $report['blocking'])),
       ]);
-      return;
+      return NULL;
     }
-    $meta = $event->getMetadata();
-    $meta['form_enabled'] = TRUE;
-    $meta['form_config'] = $report['config'];
-    $event->setMetadata($meta);
+    return $webform;
   }
 
   /**

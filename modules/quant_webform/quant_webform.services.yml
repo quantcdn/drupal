@@ -5,7 +5,7 @@ services:
 
   quant_webform.registrar:
     class: Drupal\quant_webform\QuantFormsRegistrar
-    arguments: ['@entity_type.manager', '@entity_field.manager', '@quant_api.client']
+    arguments: ['@entity_type.manager', '@entity_field.manager', '@quant_api.client', '@quant_webform.registry']
 
   quant_webform.report:
     class: Drupal\quant_webform\QuantFormsReport
@@ -13,7 +13,7 @@ services:
 
   quant_webform.subscriber:
     class: Drupal\quant_webform\EventSubscriber\QuantFormsSubscriber
-    arguments: ['@entity_type.manager', '@quant_webform.mapper', '@logger.factory']
+    arguments: ['@entity_type.manager', '@quant_webform.mapper', '@logger.factory', '@quant_webform.registry']
     tags:
       - { name: event_subscriber }
 
@@ -21,3 +21,16 @@ services:
     class: Drupal\quant_webform\PageCache\ExportRequestPolicy
     tags:
       - { name: page_cache_request_policy }
+
+  cache_context.quant_export:
+    class: Drupal\quant_webform\Cache\ExportCacheContext
+    tags:
+      - { name: cache.context }
+
+  quant_webform.registry:
+    class: Drupal\quant_webform\QuantFormsRegistry
+    arguments: ['@keyvalue']
+
+  quant_webform.settings_section:
+    class: Drupal\quant_webform\QuantFormsSettingsSection
+    arguments: ['@quant_webform.mapper', '@quant_webform.report', '@email.validator']

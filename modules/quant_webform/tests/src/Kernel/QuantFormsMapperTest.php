@@ -257,32 +257,141 @@ YAML;
   }
 
   /**
-   * The subscriber adds the config to the push of a page with a Webform.
+   * The subscriber registers only opted-in forms, and turns off only its own.
    *
    * @covers \Drupal\quant_webform\EventSubscriber\QuantFormsSubscriber::onOutput
    */
-  public function testSubscriberAddsTheFormConfigToThePush(): void {
-    $webform = $this->webform("name: { '#type': textfield, '#title': Name, '#required': true }");
+  public function testSubscriberOptInAndTurnOff(): void {
+    $webform = $this->webform("name: { '#type': textfield, '#title': Name, '#required': true }", ['page' => FALSE]);
     $html = '<html><body><form data-quant-webform="' . $webform->id() . '"></form></body></html>';
+    $subscriber = $this->container->get('quant_webform.subscriber');
+    $registry = $this->container->get('quant_webform.registry');
+
+    // Not opted in: a page with settings made by hand is left alone.
     $event = new QuantEvent($html, '/contact', ['published' => TRUE]);
-    $this->container->get('quant_webform.subscriber')->onOutput($event);
+    $subscriber->onOutput($event);
+    $this->assertArrayNotHasKey('form_enabled', $event->getMetadata());
+
+    $webform->setThirdPartySetting('quant_webform', 'enabled', TRUE)->save();
+    $event = new QuantEvent($html, '/contact', ['published' => TRUE]);
+    $subscriber->onOutput($event);
     $meta = $event->getMetadata();
     $this->assertTrue($meta['form_enabled']);
     $this->assertSame(['name'], $meta['form_config']['mandatory_fields']);
+    $this->assertSame('drupal', $meta['form_config']['notification_settings']['managed_by']);
+    $this->assertSame($webform->id(), $registry->webformAt('/contact'));
 
-    // A closed form and a page without a form get nothing.
-    $webform->setStatus(Webform::STATUS_CLOSED)->save();
-    $closed = new QuantEvent($html, '/contact', []);
-    $this->container->get('quant_webform.subscriber')->onOutput($closed);
-    $this->assertArrayNotHasKey('form_enabled', $closed->getMetadata());
+    // The form became unsupported: the page it registered is turned off.
+    $webform->setSetting('ajax', TRUE)->save();
+    $event = new QuantEvent($html, '/contact', []);
+    $subscriber->onOutput($event);
+    $this->assertFalse($event->getMetadata()['form_enabled']);
+    $this->assertNull($registry->webformAt('/contact'));
+
+    // The form was removed from the page: nothing to turn off twice.
+    $event = new QuantEvent('<html></html>', '/contact', []);
+    $subscriber->onOutput($event);
+    $this->assertArrayNotHasKey('form_enabled', $event->getMetadata());
     $this->assertSame([], QuantFormsSubscriber::webformIds('<form id="search"></form>'));
 
-    // A form that posts to its own page belongs to that page only: a footer
-    // newsletter does not take over the contact page's config.
+    // A form that posts to its own page belongs to that page only.
     $page = '<form data-quant-webform="contact"></form>'
       . '<form action="/newsletter" data-quant-webform="newsletter" data-quant-target="/newsletter"></form>';
     $this->assertSame(['contact'], QuantFormsSubscriber::webformIds($page, '/contact-us'));
-    $this->assertSame(['newsletter'], QuantFormsSubscriber::webformIds('<form data-quant-webform="newsletter" data-quant-target="/newsletter">', '/newsletter'));
+  }
+
+  /**
+   * Sub-key elements and elements anonymous visitors do not see are optional.
+   *
+   * @covers ::mandatoryFields
+   */
+  public function testOnlyPostedPublicKeysAreMandatory(): void {
+    $webform = $this->webform(<<<YAML
+plain: { '#type': textfield, '#title': Plain, '#required': true }
+likert:
+  '#type': webform_likert
+  '#title': Likert
+  '#required': true
+  '#questions': { q1: 'Question 1' }
+  '#answers': ['1', '2']
+when: { '#type': datetime, '#title': When, '#required': true }
+confirm: { '#type': webform_email_confirm, '#title': Email, '#required': true }
+select_other:
+  '#type': webform_select_other
+  '#title': Choice
+  '#required': true
+  '#options': { a: A }
+radios_other:
+  '#type': webform_radios_other
+  '#title': Radio
+  '#required': true
+  '#options': { a: A }
+private_field: { '#type': textfield, '#title': Private, '#required': true, '#private': true }
+staff_only:
+  '#type': textfield
+  '#title': Staff
+  '#required': true
+  '#access_create_roles': [authenticated]
+hidden_box:
+  '#type': container
+  '#access_create_roles': [authenticated]
+  inner: { '#type': textfield, '#title': Inner, '#required': true }
+YAML);
+    $this->assertSame(['plain'], $this->mapper()->map($webform, '/x')['config']['mandatory_fields']);
+  }
+
+  /**
+   * The Quant Forms settings made in Drupal win over the derived ones.
+   *
+   * @covers ::map
+   */
+  public function testSettingsMadeInDrupal(): void {
+    $webform = $this->webform("email: { '#type': email, '#title': Email }", [], [
+      'email' => [
+        'id' => 'email',
+        'settings' => ['states' => ['completed'], 'to_mail' => 'handler@example.com', 'subject' => 'From handler'],
+      ],
+    ]);
+    $webform->setThirdPartySetting('quant_webform', 'email', [
+      'mode' => 'custom',
+      'to' => 'a@example.com, b@example.com',
+      'cc' => '',
+      'from' => 'web@example.com',
+      'reply_to' => '{{email}}',
+      'subject' => 'Website enquiry',
+    ])
+      ->setThirdPartySetting('quant_webform', 'honeypot', TRUE)
+      ->setThirdPartySetting('quant_webform', 'recaptcha', [
+        'enabled' => TRUE,
+        'site_key' => 'site-key-placeholder-123456',
+      ])
+      ->setThirdPartySetting('quant_webform', 'spam_threshold', '4')
+      ->setThirdPartySetting('quant_webform', 'blocked_countries', ['KP'])
+      ->setThirdPartySetting('quant_webform', 'blocked_ips', ['203.0.113.9'])
+      ->save();
+    $this->mapper()->setSecret('recaptcha_secret', $webform->id(), 'recaptcha-secret-placeholder');
+    $this->mapper()->setSecret('slack_webhook', $webform->id(), 'https://hooks.slack.com/services/form');
+    \Drupal::keyValue(QuantFormsMapper::SECRETS)->set('slack_webhook', 'https://hooks.slack.com/services/site');
+
+    $config = $this->mapper()->map($webform, '/x')['config'];
+    $this->assertSame('a@example.com, b@example.com', $config['notifications']['email']['to']);
+    $this->assertSame('Website enquiry', $config['notifications']['email']['subject']);
+    $this->assertSame('{{email}}', $config['notifications']['email']['reply_to']);
+    $this->assertArrayNotHasKey('cc', $config['notifications']['email']);
+    $this->assertSame('https://hooks.slack.com/services/form', $config['notifications']['slack']['webhook']);
+    $this->assertContains(QuantFormsMapper::HONEYPOT_FIELD, $config['honeypot_fields']);
+    $this->assertContains(QuantFormsMapper::HONEYPOT_FIELD, $config['remove_fields']);
+    $this->assertSame('recaptcha-secret-placeholder', $config['recaptcha_secret_key']);
+    $this->assertSame(4, $config['spam_threshold']);
+    $this->assertSame(['KP'], $config['country_is_not']);
+    $this->assertSame(['203.0.113.9'], $config['ip_is_not']);
+
+    $webform->setThirdPartySetting('quant_webform', 'email', ['mode' => 'off'])->save();
+    $this->assertArrayNotHasKey('email', $this->mapper()->map($webform, '/x')['config']['notifications']);
+    // No secret is ever in config.
+    $raw = json_encode(\Drupal::config('webform.webform.' . $webform->id())->get());
+    $this->assertStringNotContainsString('recaptcha-secret-placeholder', $raw);
+    $this->assertStringNotContainsString('hooks.slack.com', $raw);
   }
 
 }

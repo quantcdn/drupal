@@ -41,6 +41,11 @@ class QuantFormsReport {
         '#items' => $report['notes'],
       ];
     }
+    if (!$webform->getSetting('page')) {
+      $build['placement'] = [
+        '#markup' => '<p>' . $this->t('This form has no page of its own. A page that shows it in a block, a paragraph or Layout Builder is registered only when that page is published, and saving the form re-publishes only nodes with a Webform field and pages already registered. Give the form its own page to have one address that always takes its submissions.') . '</p>',
+      ];
+    }
     $build['pages'] = [
       '#theme' => 'item_list',
       '#title' => $this->t('Pages that take its submissions'),

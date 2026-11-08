@@ -68,7 +68,8 @@ page_request:
   attachments: { '#type': managed_file, '#title': 'Photos', '#multiple': 3 }
 YAML,
     ]);
-    $this->webform->setSetting('preview', 1)
+    $this->webform->setThirdPartySetting('quant_webform', 'enabled', TRUE)
+      ->setSetting('preview', 1)
       ->setSetting('confirmation_type', 'url')
       ->setSetting('confirmation_url', '/thank-you')
       ->save();
@@ -87,7 +88,7 @@ YAML,
     $session->fieldNotExists('description');
     $session->elementNotExists('css', 'form[data-quant-webform]');
 
-    $this->drupalGet('webform/service_request', [], ['quant-token' => 'test']);
+    $this->drupalGet('webform/service_request', [], ['quant-token' => $this->exportToken()]);
     $session->elementExists('css', 'form[data-quant-webform="service_request"]');
     $session->fieldExists('first_name');
     $session->fieldExists('description');
@@ -115,7 +116,7 @@ YAML,
    */
   public function testFormOffForQuantRendersAsBefore(): void {
     $this->webform->setThirdPartySetting('quant_webform', 'enabled', FALSE)->save();
-    $this->drupalGet('webform/service_request', [], ['quant-token' => 'test']);
+    $this->drupalGet('webform/service_request', [], ['quant-token' => $this->exportToken()]);
     $this->assertSession()->elementNotExists('css', 'form[data-quant-webform]');
     $this->assertSession()->fieldNotExists('description');
   }
@@ -152,6 +153,79 @@ YAML,
     $calls = \Drupal::state()->get('quant_webform_test.calls', []);
     $off = array_values(array_filter($calls, fn ($call) => $call['path'] === '/v1/form'));
     $this->assertSame(['url' => '/webform/service_request', 'form_enabled' => FALSE], $off[0]['body'] ?? NULL);
+  }
+
+  /**
+   * A token this site signed, as the export fetch sends it.
+   */
+  protected function exportToken(): string {
+    return \Drupal::service('quant.token_manager')->create('/webform/service_request');
+  }
+
+  /**
+   * A header that is not a signed token does not switch the render.
+   */
+  public function testForgedHeaderGetsTheLiveRender(): void {
+    $this->drupalGet('webform/service_request', [], ['quant-token' => 'not-a-token']);
+    $this->assertSession()->elementNotExists('css', 'form[data-quant-webform]');
+    $this->assertSession()->fieldNotExists('description');
+  }
+
+  /**
+   * A form that is not opted in is never published or turned off.
+   */
+  public function testFormNotOptedInIsLeftAlone(): void {
+    $this->connectTestProject();
+    $other = Webform::create([
+      'id' => 'feedback',
+      'title' => 'Feedback',
+      'elements' => "name: { '#type': textfield, '#title': Name }",
+    ]);
+    $other->save();
+    \Drupal::state()->delete('quant_webform_test.calls');
+    $other->setSetting('confirmation_message', 'Thanks')->save();
+    $other->setStatus(Webform::STATUS_CLOSED)->save();
+    $other->delete();
+    $this->assertSame([], \Drupal::state()->get('quant_webform_test.calls', []));
+  }
+
+  /**
+   * A scheduled form that closes turns Quant Forms off on cron.
+   */
+  public function testScheduledCloseTurnsQuantFormsOff(): void {
+    $this->connectTestProject();
+    // Registered while open, with a close date that has now passed.
+    \Drupal::service('quant_webform.registry')->record('/webform/service_request', 'service_request');
+    \Drupal::keyValue('quant_webform.open_state')->set('service_request', TRUE);
+    $past = (new \DateTime('-1 hour'))->format('Y-m-d\\TH:i:s');
+    $earlier = (new \DateTime('-1 day'))->format('Y-m-d\\TH:i:s');
+    \Drupal::state()->set('quant_webform_test.calls', []);
+    Webform::load('service_request')->setStatus(Webform::STATUS_SCHEDULED)->set('open', $earlier)->set('close', $past)->save();
+    $this->assertFalse(Webform::load('service_request')->isOpen());
+    \Drupal::state()->set('quant_webform_test.calls', []);
+    \Drupal::keyValue('quant_webform.open_state')->set('service_request', TRUE);
+    \Drupal::service('quant_webform.registry')->record('/webform/service_request', 'service_request');
+
+    quant_webform_cron();
+
+    $off = array_values(array_filter(\Drupal::state()->get('quant_webform_test.calls', []), fn ($call) => $call['path'] === '/v1/form'));
+    $this->assertSame(['url' => '/webform/service_request', 'form_enabled' => FALSE], $off[0]['body'] ?? NULL);
+    $this->assertSame([], \Drupal::service('quant_webform.registry')->pagesOf('service_request'));
+  }
+
+  /**
+   * Points the module at the recording fake.
+   */
+  protected function connectTestProject(): void {
+    $this->config('quant.settings')
+      ->set('local_server', $this->baseUrl)
+      ->set('host_domain', parse_url($this->baseUrl, PHP_URL_HOST) . (parse_url($this->baseUrl, PHP_URL_PORT) ? ':' . parse_url($this->baseUrl, PHP_URL_PORT) : ''))
+      ->save();
+    $this->config('quant_api.settings')
+      ->set('api_account', 'test-org')
+      ->set('api_project', 'test-project')
+      ->set('api_token', 'test-token')
+      ->save();
   }
 
 }

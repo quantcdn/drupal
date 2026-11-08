@@ -3,6 +3,16 @@
 Lets a Webform take submissions on the static Quant site. Quant Forms stores
 each submission and sends the email and Slack notifications.
 
+## Opt-in
+
+Quant Forms is off for every Webform until you tick "Take submissions through
+Quant Forms" in its settings, or on Configuration > Quant > Forms. A form that
+is not ticked is never published with Quant Forms settings and never turned
+off, so settings made by hand in the Quant dashboard stay as they are. For a
+ticked form Drupal is the source of truth: its settings replace those made in
+the dashboard for its page, and the dashboard shows the form as managed in
+Drupal.
+
 ## How it works
 
 - When Quant publishes a page that shows a Webform, the push carries the Quant
@@ -13,16 +23,25 @@ each submission and sends the email and Slack notifications.
   field references it.
 - Closing or deleting a Webform turns Quant Forms off on its pages. The
   submissions stay in Quant.
-- **Register all forms** (Configuration > Quant > Forms) queues the pages of
-  every Webform. `drush quant:webform-register [id]` publishes them at once.
+- **Register the ticked forms** (Configuration > Quant > Forms) opts forms in
+  or out and queues the pages of the ticked ones.
+  `drush quant:webform-register [id] [--opt-in]` publishes them at once.
+- Quant Forms is turned off on a page this site registered when the page no
+  longer has a ticked, open and supported form, when the form is closed
+  (also by its schedule, on cron) or deleted.
 - The live Drupal site is unchanged. Only the render that Quant publishes (the
   request with the signed `quant-token` header) gets the static form.
 
 ## Settings
 
-- Per Webform (Settings > General > Third party settings > Quant Forms): take
-  submissions through Quant Forms (default on), a static message after a submit,
-  and Slack on or off.
+- Per Webform (Settings > General > Third party settings > Quant Forms):
+  the opt-in; the notification email (from the first email handler, set
+  in Drupal, or none); Slack on or off and an optional webhook for the form;
+  a hidden honeypot field; reCAPTCHA v2 (site key, and the secret); the AI
+  spam check; refused countries and IP addresses; what shows after a submit
+  (as the Webform says, a message, or another page). Secrets are kept outside
+  config and shown masked. Features that Quant Forms cannot do are listed,
+  greyed out, with the reason.
 - Site wide (Configuration > Quant > Forms): the AI spam check (off, or a score
   from 1 to 6), what to do with spam, and a Slack incoming webhook. The webhook
   is kept outside config, so a config export never contains it.

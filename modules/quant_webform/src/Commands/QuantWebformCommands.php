@@ -5,6 +5,7 @@ namespace Drupal\quant_webform\Commands;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\quant_webform\QuantFormsMapper;
 use Drupal\quant_webform\QuantFormsRegistrar;
+use Drupal\quant_webform\QuantFormsRegistry;
 use Drush\Commands\DrushCommands;
 
 /**
@@ -25,19 +26,27 @@ class QuantWebformCommands extends DrushCommands {
    *
    * @param string $id
    *   One Webform id, or empty for every open, registered Webform.
+   * @param array $options
+   *   The options.
    *
    * @command quant:webform-register
+   * @option opt-in Opt the named Webform in first (needs an id).
    * @usage drush quant:webform-register
-   *   Register every Webform.
-   * @usage drush quant:webform-register contact
-   *   Register the contact form.
+   *   Register every Webform that is opted in.
+   * @usage drush quant:webform-register contact --opt-in
+   *   Opt the contact form in, then register it.
    */
-  public function register(string $id = '') {
+  public function register(string $id = '', array $options = ['opt-in' => FALSE]) {
     $storage = $this->entityTypeManager->getStorage('webform');
     $webforms = $id !== '' ? array_filter([$storage->load($id)]) : $storage->loadMultiple();
     if ($webforms === []) {
       $this->logger()->error(dt('No Webform @id.', ['@id' => $id]));
       return self::EXIT_FAILURE;
+    }
+    if ($options['opt-in'] && $id !== '') {
+      // Saving publishes the page through hook_webform_update().
+      reset($webforms)->setThirdPartySetting('quant_webform', 'enabled', TRUE)->save();
+      $this->io()->writeln(dt('@id: opted in.', ['@id' => $id]));
     }
     foreach ($webforms as $webform) {
       $this->registerOne($webform);
@@ -49,8 +58,8 @@ class QuantWebformCommands extends DrushCommands {
    * Registers one Webform and prints the outcome.
    */
   protected function registerOne($webform): void {
-    if (!$webform->isOpen() || !$webform->getThirdPartySetting('quant_webform', 'enabled', TRUE)) {
-      $this->io()->writeln(dt('@id: skipped (closed or off for Quant Forms).', ['@id' => $webform->id()]));
+    if (!$webform->isOpen() || !QuantFormsRegistry::isOptedIn($webform)) {
+      $this->io()->writeln(dt('@id: skipped (closed, or not opted in: tick "Take submissions through Quant Forms" on the form, or use --opt-in).', ['@id' => $webform->id()]));
       return;
     }
     $pages = $this->registrar->pages($webform);

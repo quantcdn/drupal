@@ -5,6 +5,7 @@ namespace Drupal\quant_webform\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\quant_webform\QuantFormsMapper;
+use Drupal\quant_webform\QuantFormsRegistry;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -74,7 +75,7 @@ class QuantFormsSettingsForm extends ConfigFormBase {
     $form['forms'] = $this->buildFormsTable();
     $form['register'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Register all forms'),
+      '#value' => $this->t('Register the ticked forms'),
       '#submit' => ['::submitRegisterAll'],
     ];
     $form['spam'] = [
@@ -114,50 +115,66 @@ class QuantFormsSettingsForm extends ConfigFormBase {
       ],
     ];
     $form['help'] = [
-      '#markup' => '<p>' . $this->t('A form is registered when its page is published: the push carries the form settings. Changes to the spam and Slack settings apply after "Register all forms".') . '</p>',
+      '#markup' => '<p>' . $this->t('Quant Forms is off for every form until you tick it. A ticked form replaces Quant Forms settings made by hand in the dashboard for its page. A form is registered when its page is published; changes to the spam and Slack settings apply after "Register the ticked forms".') . '</p>',
     ];
     return parent::buildForm($form, $form_state);
   }
 
   /**
-   * One row for each Webform: does it work on the static site.
+   * One row for each Webform: tick it to take its submissions through Quant.
    */
   protected function buildFormsTable(): array {
     $table = [
-      '#type' => 'table',
-      '#header' => [$this->t('Form'), $this->t('Static site'), $this->t('Pages')],
+      '#type' => 'tableselect',
+      '#header' => [
+        'form' => $this->t('Form'),
+        'status' => $this->t('Static site'),
+        'pages' => $this->t('Pages'),
+      ],
+      '#options' => [],
+      '#default_value' => [],
       '#empty' => $this->t('There are no Webforms.'),
     ];
     foreach ($this->webformStorage->loadMultiple() as $id => $webform) {
       $pages = $this->registrar->pages($webform);
       $report = $this->mapper->map($webform, $pages[0] ?? '/');
       $status = match (TRUE) {
-        !$webform->getThirdPartySetting('quant_webform', 'enabled', TRUE) => $this->t('Off for this form'),
         !$report['supported'] => $this->t('Not supported: @why', ['@why' => implode(' ', array_map('strval', $report['blocking']))]),
         default => $report['notes'] === [] ? $this->t('Works') : $this->t('Works, with @count differences', ['@count' => count($report['notes'])]),
       };
-      $table[$id] = [
-        'form' => ['#type' => 'link', '#title' => $webform->label(), '#url' => $webform->toUrl('settings')],
-        'status' => ['#markup' => $status],
-        'pages' => ['#markup' => $pages ? implode(', ', $pages) : $this->t('No page')],
+      $table['#options'][$id] = [
+        'form' => ['data' => ['#type' => 'link', '#title' => $webform->label(), '#url' => $webform->toUrl('settings')]],
+        'status' => (string) $status,
+        'pages' => $pages ? implode(', ', $pages) : (string) $this->t('No page'),
       ];
+      $table['#default_value'][$id] = QuantFormsRegistry::isOptedIn($webform);
     }
     return $table;
   }
 
   /**
-   * Queues the pages of every registered Webform.
+   * Opts the ticked forms in (and the others out), and registers the ticked.
+   *
+   * A form that changes is saved, which publishes it or turns it off. A form
+   * that stays ticked is queued, so its settings are sent again.
    */
   public function submitRegisterAll(array &$form, FormStateInterface $form_state) {
-    $count = 0;
-    foreach ($this->webformStorage->loadMultiple() as $webform) {
-      if ($webform->isOpen() && $webform->getThirdPartySetting('quant_webform', 'enabled', TRUE)) {
-        $count += $this->registrar->queue($webform);
+    $ticked = array_filter((array) $form_state->getValue('forms'));
+    $queued = 0;
+    foreach ($this->webformStorage->loadMultiple() as $id => $webform) {
+      $want = isset($ticked[$id]);
+      if ($want !== QuantFormsRegistry::isOptedIn($webform)) {
+        $webform->setThirdPartySetting('quant_webform', 'enabled', $want)->save();
+        continue;
+      }
+      if ($want && $webform->isOpen()) {
+        $queued += $this->registrar->queue($webform);
       }
     }
-    $this->messenger()->addStatus($this->formatPlural($count,
-      '1 page is queued. Cron publishes it, or run drush quant:run-queue.',
-      '@count pages are queued. Cron publishes them, or run drush quant:run-queue.'));
+    $this->messenger()->addStatus($this->t('Quant Forms is on for @count form(s). Changed forms were published or turned off now; @queued page(s) are queued for cron or drush quant:run-queue.', [
+      '@count' => count($ticked),
+      '@queued' => $queued,
+    ]));
   }
 
   /**
