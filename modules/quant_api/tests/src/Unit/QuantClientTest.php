@@ -12,6 +12,7 @@ use Drupal\quant_api\Client\QuantClient;
 use Drupal\quant_api\Exception\InvalidPayload;
 use Drupal\Tests\UnitTestCase;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -105,8 +106,17 @@ class QuantClientTest extends UnitTestCase {
     return new QuantClient(
       new Client(['handler' => $stack]),
       $this->configFactory($overrides),
-      $this->createMock(LoggerChannelFactoryInterface::class)
+      $this->loggerFactory()
     );
+  }
+
+  /**
+   * A logger factory whose channel accepts every call.
+   */
+  protected function loggerFactory() : LoggerChannelFactoryInterface {
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($this->createMock(LoggerChannelInterface::class));
+    return $factory;
   }
 
   /**
@@ -520,6 +530,36 @@ class QuantClientTest extends UnitTestCase {
     $this->assertFalse($client->search());
 
     $this->assertCount(0, $this->history, 'No request was sent.');
+  }
+
+
+  /**
+   * An unreachable endpoint is a plain message, not a crash or a URL leak.
+   *
+   * Guzzle's ConnectException is not a RequestException, so a catch of the
+   * latter let it through and the settings page failed with an error page.
+   * The exception text carries the endpoint URL, which can hold credentials.
+   */
+  public function testUnreachableEndpointIsReportedPlainly() : void {
+    $messenger = $this->createMock(MessengerInterface::class);
+    $shown = [];
+    $messenger->method('addError')->willReturnCallback(function ($message) use (&$shown, $messenger) {
+      $shown[] = (string) $message;
+      return $messenger;
+    });
+    \Drupal::getContainer()->set('messenger', $messenger);
+
+    $down = fn () => new ConnectException('cURL error 7: Failed to connect for https://user:secret@uploads.example/ping', new Request('GET', 'https://user:secret@uploads.example/ping'));
+    $client = $this->client([$down(), $down(), $down()]);
+
+    $this->assertFalse($client->ping());
+    $this->assertFalse($client->project());
+    $this->assertFalse($client->search());
+    $this->assertNotEmpty($shown);
+    foreach ($shown as $message) {
+      $this->assertStringContainsString('could not reach Quant', $message);
+      $this->assertStringNotContainsString('secret', $message);
+    }
   }
 
 }

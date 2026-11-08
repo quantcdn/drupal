@@ -74,3 +74,13 @@ function quant_search_update_8104() {
     $config->set('typesense_endpoint', 'https://search.quantgov.cloud')->save(TRUE);
   }
 }
+
+/**
+ * Stop storing the default search host, so a settings.php dashboard can set it.
+ */
+function quant_search_update_8105() {
+  $config = \Drupal::configFactory()->getEditable('quant_search.settings');
+  if ($config->get('typesense_endpoint') === 'https://search.quantgov.cloud') {
+    $config->set('typesense_endpoint', '')->save(TRUE);
+  }
+}

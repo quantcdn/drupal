@@ -64,6 +64,13 @@ class FakeQuantMiddleware {
         ['machine_name' => 'site-a', 'name' => 'Site A'],
         ['machine_name' => 'site-b', 'name' => 'Site B'],
       ])),
+      $method === 'GET' && $path === '/api/oauth/user' => $this->bearer($request, self::json(200, [
+        'id' => 7,
+        'name' => 'Test Editor',
+        'email' => 'editor@example.com',
+        'organizations' => [['id' => 3, 'machine_name' => 'test-org', 'name' => 'Test Org', 'roles' => []]],
+      ])),
+      $method === 'POST' && $path === '/api/oauth/revoke' => $this->bearer($request, self::json(200, ['revoked' => TRUE])),
       $method === 'POST' && $path === '/api/oauth/token/project' => $this->bearer($request, $this->limit($request)),
       $method === 'GET' && preg_match('#^/api/v2/organizations/test-org/projects/([a-z-]+)$#', $path, $m) === 1 => $this->bearer($request, $this->project($m[1])),
       default => self::json(404, ['message' => 'Not found']),
@@ -87,10 +94,12 @@ class FakeQuantMiddleware {
       'token_type' => 'Bearer',
       'expires_in' => 7776000,
       'scope' => 'projects:read',
+      // The real dashboard sends only id, email and name here. The
+      // organisations come from GET /api/oauth/user.
       'user' => [
+        'id' => 7,
         'name' => 'Test Editor',
         'email' => 'editor@example.com',
-        'organizations' => [['machine_name' => 'test-org', 'name' => 'Test Org']],
       ],
     ]);
   }
