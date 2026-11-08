@@ -309,6 +309,50 @@ class QuantClient implements QuantClientInterface {
   /**
    * {@inheritdoc}
    */
+  public function sendFormConfig(string $url, bool $enabled, array $config = []) : bool {
+    $this->refreshCredentials();
+
+    if ($this->refusesWrite('to set the form config of ' . $url)) {
+      return FALSE;
+    }
+
+    $data = ['url' => $url, 'form_enabled' => $enabled];
+    if ($enabled) {
+      $data['form_config'] = $config;
+    }
+    try {
+      $response = $this->client->post($this->endpoint . '/form', [
+        RequestOptions::JSON => $data,
+        'headers' => [
+          'Quant-Customer' => $this->username,
+          'Quant-Project'  => $this->project,
+          'Quant-Token'    => $this->token,
+        ],
+        'http_errors' => FALSE,
+        'verify' => $this->tlsDisabled ? FALSE : TRUE,
+      ]);
+    }
+    catch (RequestException $e) {
+      $this->logger->error('Quant Forms: the form config of @url was not sent (@class).', [
+        '@url' => $url,
+        '@class' => get_class($e),
+      ]);
+      return FALSE;
+    }
+    if ($response->getStatusCode() !== 200) {
+      // The API refuses a page that is not published yet.
+      $this->logger->warning('Quant Forms: the form config of @url was refused with status @status.', [
+        '@url' => $url,
+        '@status' => $response->getStatusCode(),
+      ]);
+      return FALSE;
+    }
+    return TRUE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function send(array $data) : array {
     $this->refreshCredentials();
 

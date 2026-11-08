@@ -681,12 +681,10 @@ class Seed {
 
     $headers['Host'] = $hostname;
 
-    // Generate a signed token and use it in the request. This only applies when
-    // drafts are enabled, as we return neutral access otherwise.
-    $disable_drafts = $config->get('disable_content_drafts');
-    if (!$disable_drafts) {
-      $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
-    }
+    // Generate a signed token and use it in the request. It grants draft
+    // access only when drafts are enabled, but it is always sent: it is how a
+    // render knows it is a Quant export (static Webforms need that).
+    $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
 
     // Support basic auth if enabled (note: will not work via drush/cli).
     $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [
@@ -741,12 +739,10 @@ class Seed {
 
     $headers['Host'] = $hostname;
 
-    // Generate a signed token and use it in the request. This only applies when
-    // drafts are enabled, as we return neutral access otherwise.
-    $disable_drafts = $config->get('disable_content_drafts');
-    if (!$disable_drafts) {
-      $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
-    }
+    // Generate a signed token and use it in the request. It grants draft
+    // access only when drafts are enabled, but it is always sent: it is how a
+    // render knows it is a Quant export (static Webforms need that).
+    $headers['quant-token'] = \Drupal::service('quant.token_manager')->create($route);
 
     // Support basic auth if enabled (note: will not work via drush/cli).
     $auth = !empty($_SERVER['PHP_AUTH_USER']) ? [

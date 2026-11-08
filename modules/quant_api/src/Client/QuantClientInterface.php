@@ -130,4 +130,23 @@ interface QuantClientInterface {
    */
   public function addFacets(array $facets) : array;
 
+  /**
+   * Enables, updates or disables Quant Forms on a published page.
+   *
+   * Quant Forms is a switch on a page, not a form object. A content push can
+   * carry the same keys inline; this call is for a page that is not pushed,
+   * for example to disable the form of a deleted Webform.
+   *
+   * @param string $url
+   *   The page path, for example /form/contact.
+   * @param bool $enabled
+   *   Whether the page takes submissions.
+   * @param array $config
+   *   The form_config, when enabled.
+   *
+   * @return bool
+   *   TRUE when Quant accepted the change.
+   */
+  public function sendFormConfig(string $url, bool $enabled, array $config = []) : bool;
+
 }
