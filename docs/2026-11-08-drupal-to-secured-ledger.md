@@ -138,7 +138,9 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
 - R46: The "Managed in Drupal" marker goes in notification_settings (a free-form table in the
   content API schema), because form_config refuses unknown keys. No API change, so no review gate.
 - R47: require_project_limit_for_write_token is a dedicated client flag on drupal-quant only
-  (finding 4). Pending controller review.
+  (finding 4). Approved by the controller (portal 8e47e4e96). Accepted residual risk: a phished
+  approval still gets one project per approval (the consent screen names the attacker's host), the
+  same as the wordpress-quant client.
 
 ## Follow-ups
 
@@ -164,7 +166,7 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   site sent `PATCH /v1/unpublish` to api.quantcdn.io with empty credentials (403, nothing changed).
   It happened once on the scratch site on 2026-11-08; the scratch site now points at a closed local
   port. Proposed fix: QuantClient refuses every call when it has no token.
-- F6: Apply require_project_limit_for_write_token to wordpress-quant and scriptattest after checking
+- F6 (on the follow-up list): Apply require_project_limit_for_write_token to wordpress-quant and scriptattest after checking
   their code (WordPress reads with_token before any limit today).
-- F7: The dashboard form editor keeps the reCAPTCHA secret and the Slack webhook in public Livewire
+- F7 (routed to Stuart by the controller): The dashboard form editor keeps the reCAPTCHA secret and the Slack webhook in public Livewire
   properties for pages not managed in Drupal (existing; against the portal secrets rule).
