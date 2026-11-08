@@ -239,4 +239,25 @@ class OAuthConnectTest extends BrowserTestBase {
     $this->assertSession()->pageTextContains('Connected to the Quant project site-b.');
   }
 
+  /**
+   * The settings.php endpoint is read-only and never shows its userinfo.
+   */
+  public function testEndpointOverrideIsReadOnly(): void {
+    $this->writeSettings([
+      'settings' => [
+        'quant_api_endpoint_url' => (object) [
+          'value' => 'https://rehearsal:placeholder-pass@uploads.stage.example',
+          'required' => TRUE,
+        ],
+      ],
+    ]);
+    $this->drupalGet('admin/config/development/quant/api');
+    $session = $this->assertSession();
+    $session->elementAttributeExists('css', 'input[name="api_endpoint"]', 'disabled');
+    $session->fieldValueEquals('api_endpoint', 'https://uploads.stage.example');
+    $session->pageTextContains('Set in settings.php');
+    $session->responseNotContains('placeholder-pass');
+    $session->responseNotContains('rehearsal:');
+  }
+
 }

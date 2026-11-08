@@ -34,7 +34,7 @@ class QuantApiAuthCommands extends DrushCommands {
     $oauth = $this->credentials->usesOauth($config) && !$config->hasOverrides('api_token');
     $rows = [
       'Platform' => (string) $config->get('platform'),
-      'API endpoint' => (string) $config->get('api_endpoint'),
+      'API endpoint' => Credentials::redact($this->credentials->getEndpoint($config)) . (Credentials::endpointOverride() !== '' ? ' (settings.php)' : ''),
       'Organization' => (string) $config->get('api_account'),
       'Project' => (string) $config->get('api_project'),
       'Method' => $oauth ? 'Log in to Quant' : ($config->hasOverrides('api_token') ? 'Project token (settings.php)' : 'Project token'),
