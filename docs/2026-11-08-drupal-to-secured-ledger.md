@@ -85,6 +85,17 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   and list.
 - R30: "Create a search page" needs no new portal API. It saves the Drupal search page entity,
   extends the index only when the page needs more content types, and publishes only with a token.
+- R31 (controller, 2026-11-08): F5 is approved. The API client refuses every call when it has no
+  token: fail closed, one clear log line, no network call, with a test.
+- R32 (controller): F4 keeps the script workaround; the bug note below goes to the edge owner.
+- R33 (controller): The demo site window is open (the polish agent finished). Run
+  enable-quant-local.sh and test against Tolmerra. Afterwards ./scripts/reset.sh must return the site
+  to "module not installed". Do not change the site's content or theme.
+- R34 (controller): R29 (portal captures) is parked; the controller schedules them with Stuart.
+- R35 (controller): Set a Quant Forms message override on the demo's service_request form for the
+  test, and list submission tokens as a known limitation in the quant_webform README.
+- R36 (controller): Run the livewire-authz-check review over the portal search page changes before
+  calling that branch done.
 
 ## Follow-ups
 
@@ -92,8 +103,20 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   For the controller to schedule.
 - F2: Live end-to-end test of Log in to Quant against a dashboard with the `drupal-quant` client.
 - F3: `quant` does not declare its `file` dependency (its views need it); tests enable it by hand.
-- F4: Quant edge forms (docker/fastly/src/forms.js): multipart bodies drop repeated field names
-  (only the last file of a multi-file field is stored, and `name[]` is not grouped).
+- F4: Quant edge forms: multipart bodies drop repeated field names. Bug note for the edge owner:
+  - File: quant repo, `docker/fastly/src/forms.js` (develop), the multipart branch of the
+    submission parser (`for (const part of parts)`, about lines 300-320). The urlencoded branch uses
+    `groupParamsByKey()` (lines 6-24), which the multipart branch does not call.
+  - Repro: POST to a page with Quant Forms on, `Content-Type: multipart/form-data`, with two parts
+    named `files[attachments][]` (two files) and two parts named `colours[]` (values red, blue).
+  - Expected: both files stored and referenced (for example `attachments`, `attachments_1`), and
+    `colours`, `colours_1` as in an urlencoded body.
+  - Actual: `submissionData['files'][fieldName] = path` and `submissionData[fieldName] = part.data`
+    overwrite, so only the last file and the last value are kept, under the raw name with brackets.
+  - Also: `submissionData['files']` starts as an array but is used with string keys.
+  - Impact: a Drupal Webform with a multi-file field loses files when JavaScript is off. With
+    JavaScript the Quant module renames the parts first, so nothing is lost.
+  - I did not copy any value from that file; it holds hard-coded credentials (reported separately).
 - F5: The module calls the Quant API when no token is set: deleting a search page on an unconnected
   site sent `PATCH /v1/unpublish` to api.quantcdn.io with empty credentials (403, nothing changed).
   It happened once on the scratch site on 2026-11-08; the scratch site now points at a closed local
