@@ -107,8 +107,11 @@ class OAuthController extends ControllerBase {
       return $this->redirectToSettings();
     }
 
-    $user = is_array($tokens['user'] ?? NULL) ? $tokens['user'] : $this->portal->getUser($tokens['access_token']);
+    // The token response names the user but not the organisations; only
+    // GET /api/oauth/user lists the organisations the editor approved.
+    $token_user = is_array($tokens['user'] ?? NULL) ? $tokens['user'] : [];
     unset($tokens['user']);
+    $user = $this->portal->getUser($tokens['access_token']) ?? $token_user;
     $this->tokenStore->savePendingLogin((int) $this->currentUser()->id(), [
       'tokens' => $tokens,
       'user' => ['name' => (string) ($user['name'] ?? ''), 'email' => (string) ($user['email'] ?? '')],

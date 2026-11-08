@@ -4,6 +4,7 @@ namespace Drupal\quant_api\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Site\Settings;
 use Drupal\Core\Url;
 use Drupal\quant_api\Controller\OAuthController;
 use Drupal\quant_api\Credentials;
@@ -85,7 +86,11 @@ class SettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config(self::SETTINGS);
-    $this->showStatus();
+    // Only on a page view: a build during a submit runs before the submit
+    // handler, so its message would show stale after the redirect.
+    if ($this->getRequest()->isMethod('GET')) {
+      $this->showStatus();
+    }
 
     $form['platform'] = [
       '#type' => 'radios',
@@ -94,7 +99,7 @@ class SettingsForm extends ConfigFormBase {
         Platform::QUANTCDN => $this->t('QuantCDN'),
         Platform::QUANTGOV => $this->t('QuantGov (Australian government)'),
       ],
-      '#default_value' => Platform::isKnown($config->get('platform')) ? $config->get('platform') : Platform::fromEndpoint($config->get('api_endpoint')),
+      '#default_value' => $this->defaultPlatform($config->get('platform'), (string) $config->get('api_endpoint')),
       '#description' => $this->t('Your Quant account is on one platform. QuantGov accounts sign in at dash.quantgov.cloud.'),
     ];
 
@@ -149,12 +154,8 @@ class SettingsForm extends ConfigFormBase {
         '%org' => $config->get('api_account'),
       ]) . '</p>',
     ];
+    // A connection that needs a new login is shown as the page message.
     $reason = $this->auth->getReconnectReason();
-    if ($reason !== NULL) {
-      $items['reconnect'] = [
-        '#markup' => '<p><strong>' . $this->reconnectMessage($reason) . '</strong></p>',
-      ];
-    }
     if ($reason === AuthService::RECONNECT_OTHER_SITE) {
       $items['same_site'] = [
         '#type' => 'submit',
@@ -165,7 +166,7 @@ class SettingsForm extends ConfigFormBase {
     }
     $items['change'] = [
       '#type' => 'link',
-      '#title' => $this->t('Change project'),
+      '#title' => $reason === NULL ? $this->t('Change project') : $this->t('Log in to Quant again'),
       '#url' => Url::fromRoute('quant_api.oauth_connect'),
       '#attributes' => ['class' => ['button', 'button--primary']],
     ];
@@ -274,11 +275,23 @@ class SettingsForm extends ConfigFormBase {
     if (!$this->credentials->hasToken()) {
       return;
     }
+    $reason = $this->credentials->usesOauth() ? $this->auth->getReconnectReason() : NULL;
+    if ($reason !== NULL) {
+      $this->messenger()->addWarning($this->reconnectMessage($reason));
+      return;
+    }
     if ($this->client->ping()) {
+      // After a project pick, the pick already said where the site publishes.
+      if ($this->messenger()->messagesByType('status') !== []) {
+        return;
+      }
       $this->messenger()->addStatus($this->t('Connected to the Quant project %project.', ['%project' => $this->client->getProject()]));
       return;
     }
-    $this->messenger()->addError($this->t('The Quant API did not accept the connection. Check the platform and the project, or log in to Quant again.'));
+    // The client has already said why when Quant could not be reached.
+    if ($this->messenger()->messagesByType('error') === []) {
+      $this->messenger()->addError($this->t('The Quant API did not accept the connection. Check the platform and the project, or log in to Quant again.'));
+    }
   }
 
   /**
@@ -449,6 +462,20 @@ class SettingsForm extends ConfigFormBase {
     return $this->configFactory()->getEditable(self::SETTINGS)
       ->set('platform', $platform)
       ->set('api_endpoint', $oauth ? Platform::apiEndpoint($platform) : $this->resolveEndpoint($form_state));
+  }
+
+  /**
+   * The platform the form starts on.
+   *
+   * A dashboard fixed in settings.php decides it, because logins go there
+   * whatever the editor picks. Otherwise the saved platform, then the endpoint.
+   */
+  protected function defaultPlatform(?string $saved, string $endpoint): string {
+    $dashboard = (string) Settings::get('quant_api_dashboard_url', '');
+    if ($dashboard !== '') {
+      return Platform::fromEndpoint($dashboard);
+    }
+    return Platform::isKnown($saved) ? $saved : Platform::fromEndpoint($endpoint);
   }
 
 }
