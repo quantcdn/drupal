@@ -125,6 +125,33 @@ class QuantClient implements QuantClientInterface {
   }
 
   /**
+   * Refuses any call when no project token is set: no request leaves Drupal.
+   *
+   * An unconnected site used to send requests with empty credentials (for
+   * example an unpublish when a search page was deleted). Fail closed and say
+   * why, once per process.
+   *
+   * @param string $operation
+   *   What is being attempted, for the log.
+   *
+   * @return bool
+   *   TRUE when the caller must not proceed.
+   */
+  protected function refusesWithoutToken(string $operation) : bool {
+    if (!empty($this->token)) {
+      return FALSE;
+    }
+    static $logged = FALSE;
+    if (!$logged) {
+      $logged = TRUE;
+      $this->logger->warning('Quant API: no project token is set, so the module did not call the API (@operation). Connect the site on the Quant API settings page.', [
+        '@operation' => $operation,
+      ]);
+    }
+    return TRUE;
+  }
+
+  /**
    * Refuses a write the current context cannot be trusted to address.
    *
    * The event subscriber stops most work earlier, and more cheaply. This
@@ -139,6 +166,9 @@ class QuantClient implements QuantClientInterface {
    *   TRUE when the caller must not proceed.
    */
   protected function refusesWrite(string $operation) : bool {
+    if ($this->refusesWithoutToken($operation)) {
+      return TRUE;
+    }
     if (!PublishGuard::refuses($host)) {
       return FALSE;
     }
@@ -190,6 +220,9 @@ class QuantClient implements QuantClientInterface {
    */
   public function ping() {
     $this->refreshCredentials();
+    if ($this->refusesWithoutToken('to check the connection')) {
+      return FALSE;
+    }
 
     try {
       // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
@@ -231,6 +264,9 @@ class QuantClient implements QuantClientInterface {
    */
   public function project() {
     $this->refreshCredentials();
+    if ($this->refusesWithoutToken('to read the project')) {
+      return FALSE;
+    }
 
     try {
       // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
@@ -271,6 +307,9 @@ class QuantClient implements QuantClientInterface {
    */
   public function search() {
     $this->refreshCredentials();
+    if ($this->refusesWithoutToken('to read the search index')) {
+      return FALSE;
+    }
 
     try {
       // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
@@ -486,6 +525,9 @@ class QuantClient implements QuantClientInterface {
    */
   public function getUrlMeta(array $urls) : array {
     $this->refreshCredentials();
+    if ($this->refusesWithoutToken('to read page metadata')) {
+      return [];
+    }
     // Format array if it's not already.
     if (!array_key_exists('Quant-Url', $urls)) {
       $urls = [
