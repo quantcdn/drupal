@@ -31,6 +31,7 @@ class ViewSearchPageConverter {
   public function __construct(
     protected EntityTypeManagerInterface $entityTypeManager,
     protected LanguageManagerInterface $languageManager,
+    protected SearchBackend $backend,
   ) {}
 
   /**
@@ -156,9 +157,14 @@ class ViewSearchPageConverter {
     if ($terms === []) {
       return;
     }
-    $langcode = $this->languageManager->getDefaultLanguage()->getId();
-    $names = array_map(fn ($term) => $vid . '_' . $langcode . ':"' . str_replace('"', '', $term->label()) . '"', $terms);
-    $result['values']['manual_filters'][] = count($names) > 1 ? '(' . implode(' OR ', $names) . ')' : reset($names);
+    // Manual filters go to the search engine as written, so use its syntax.
+    $resolved = $this->backend->get();
+    $engine = is_array($resolved) && ($resolved['backend'] ?? '') === SearchBackend::TYPESENSE ? SearchBackend::TYPESENSE : SearchBackend::ALGOLIA;
+    $field = $vid . '_' . $this->languageManager->getDefaultLanguage()->getId();
+    $filter = SearchBackend::anyOf($field, array_map(fn ($term) => $term->label(), $terms), $engine);
+    if ($filter !== '') {
+      $result['values']['manual_filters'][] = $filter;
+    }
   }
 
   /**

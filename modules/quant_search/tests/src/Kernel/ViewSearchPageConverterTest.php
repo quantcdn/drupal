@@ -3,6 +3,7 @@
 namespace Drupal\Tests\quant_search\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\quant_search\SearchBackend;
 use Drupal\taxonomy\Entity\Term;
 use Drupal\taxonomy\Entity\Vocabulary;
 use Drupal\views\Entity\View;
@@ -159,7 +160,12 @@ class ViewSearchPageConverterTest extends KernelTestBase {
     ], [], ['arguments' => ['nid' => ['field' => 'nid']]]);
 
     $proposal = $this->converter()->propose('alerts', 'page_1');
-    $this->assertSame('topic_en:"Water quality"', $proposal['values']['manual_filters']);
+    // No project is connected here, so the filter uses the Algolia syntax.
+    $this->assertSame("topic_en:'Water quality'", $proposal['values']['manual_filters']);
+    $this->assertSame(
+      '(topic_en:=`Water quality` || topic_en:=`Drought`)',
+      SearchBackend::anyOf('topic_en', ['Water quality', 'Drought'], 'typesense'),
+    );
     $this->assertSame(['content_type'], $proposal['values']['facets']);
     $this->assertSame([], $proposal['values']['bundles']);
     $notes = implode(' ', array_map(fn ($note) => strip_tags((string) $note), $proposal['notes']));
