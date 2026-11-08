@@ -67,4 +67,4 @@ quant_search.settings:
   mapping:
     typesense_endpoint:
       type: uri
-      label: 'Typesense endpoint for QuantGov projects'
+      label: 'Typesense endpoint for QuantGov projects (empty: from the dashboard setting, else search.quantgov.cloud)'

@@ -8,6 +8,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
+use Drupal\Core\Site\Settings;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Drupal\quant_search\SearchBackend;
 use Drupal\Tests\UnitTestCase;
@@ -145,6 +146,29 @@ class SearchBackendTest extends UnitTestCase {
     $this->assertSame('from_index', $backend['index']);
     $this->assertSame('https://search.quantgov.cloud', $backend['endpoint']);
     $this->assertSame([], $backend['facets_declared']);
+  }
+
+  /**
+   * A QuantGov dashboard in settings.php points search at the same environment.
+   *
+   * @covers ::typesenseEndpoint
+   */
+  public function testTheDashboardOverrideSetsTheSearchHost() {
+    $project = $this->project(['search_enabled' => TRUE, 'platform_mode' => 'aws']);
+    $stats = json_decode(json_encode(['readOnlyKey' => ['value' => 'K', 'collections' => ['c']]]));
+    try {
+      new Settings(['quant_api_dashboard_url' => 'https://dash.stage.quantgov.cloud/']);
+      $this->assertSame('https://search.stage.quantgov.cloud', $this->backend($project, $stats)->typesenseEndpoint());
+      // The explicit setting still wins.
+      $this->assertSame('https://search.example.test', $this->backend($project, $stats, 'https://search.example.test/')->typesenseEndpoint());
+
+      // A dashboard that is not a QuantGov one (a local portal) keeps the default.
+      new Settings(['quant_api_dashboard_url' => 'http://localhost:8001']);
+      $this->assertSame('https://search.quantgov.cloud', $this->backend($project, $stats)->typesenseEndpoint());
+    }
+    finally {
+      new Settings([]);
+    }
   }
 
   /**
