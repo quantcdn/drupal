@@ -133,6 +133,12 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
 - R44: The quant-docs build stopped in the bundling step because the worktree borrowed the main
   checkout's node_modules through a symlink; content sync passed. A full build needs its own
   install in CI.
+- R45 (controller, review round): all 14 review findings and Stuart's per-form settings fixed;
+  mapping in docs/2026-11-08-review-fixes.md. R24 and R37 now apply only to opted-in forms.
+- R46: The "Managed in Drupal" marker goes in notification_settings (a free-form table in the
+  content API schema), because form_config refuses unknown keys. No API change, so no review gate.
+- R47: require_project_limit_for_write_token is a dedicated client flag on drupal-quant only
+  (finding 4). Pending controller review.
 
 ## Follow-ups
 
@@ -158,3 +164,7 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   site sent `PATCH /v1/unpublish` to api.quantcdn.io with empty credentials (403, nothing changed).
   It happened once on the scratch site on 2026-11-08; the scratch site now points at a closed local
   port. Proposed fix: QuantClient refuses every call when it has no token.
+- F6: Apply require_project_limit_for_write_token to wordpress-quant and scriptattest after checking
+  their code (WordPress reads with_token before any limit today).
+- F7: The dashboard form editor keeps the reCAPTCHA secret and the Slack webhook in public Livewire
+  properties for pages not managed in Drupal (existing; against the portal secrets rule).
