@@ -176,3 +176,11 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   properties for pages not managed in Drupal (existing; against the portal secrets rule).
 - F8: Portal TokenServiceScopedTest::it_creates_token_with_preset fails on origin/develop with
   "Unknown preset: deploy" (existing, not from this series).
+
+- 2026-11-08 (controller): Portal branches sec/drupal-quant-oauth-client and feat/search-page-wizard-ux merged to
+  portal develop at ed6bc7cc7. quant_webform 2.4 plan from the alert-channels session (spec
+  quant-govt-architecture docs/superpowers/specs/2026-11-08-alert-channels-design.md, 7c27a645): org-wide channels
+  (email | slack); list via GET /api/v3/organizations/{org}/alert-channels with a new read scope (name to come);
+  form config "notifications": {"channels": ["ch_a", {"id": "ch_b", "cc": true}], "email": {subject, reply_to_field,
+  template}}; no org default; the platform accepts both shapes; 2.3.0 keeps the legacy inline path; the migration
+  skips "Managed in Drupal" pages.
