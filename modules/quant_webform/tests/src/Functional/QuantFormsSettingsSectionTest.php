@@ -105,4 +105,41 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
     $this->assertSame('https://hooks.slack.com/services/T000/B000/abcd1234', \Drupal::keyValue(QuantFormsMapper::SECRETS)->get('slack_webhook:contact_us'));
   }
 
+  /**
+   * Secrets are stored only by a successful save; Remove works when unticked.
+   */
+  public function testSecretsFollowTheSave(): void {
+    $kv = \Drupal::keyValue(QuantFormsMapper::SECRETS);
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    // Another field is invalid: the valid webhook is not stored.
+    $this->submitForm([
+      'third_party_settings[quant_webform][enabled]' => TRUE,
+      'third_party_settings[quant_webform][email][mode]' => 'custom',
+      'third_party_settings[quant_webform][email][to]' => 'not an address',
+      'quant_webform_secrets[slack_webhook]' => 'https://hooks.slack.com/services/T1/B1/keep5678',
+    ], 'Save');
+    $this->assertSession()->pageTextContains('To: enter valid email addresses');
+    $this->assertNull($kv->get('slack_webhook:contact_us'));
+
+    // reCAPTCHA needs its secret.
+    $this->submitForm([
+      'third_party_settings[quant_webform][enabled]' => TRUE,
+      'third_party_settings[quant_webform][email][mode]' => 'handler',
+      'third_party_settings[quant_webform][protection][recaptcha][enabled]' => TRUE,
+      'third_party_settings[quant_webform][protection][recaptcha][site_key]' => 'site-key-0123456789abcdef',
+    ], 'Save');
+    $this->assertSession()->pageTextContains('Enter the reCAPTCHA v2 secret key.');
+
+    // A save on an unticked form stores the webhook, and Remove deletes it.
+    $this->submitForm([
+      'third_party_settings[quant_webform][enabled]' => FALSE,
+      'third_party_settings[quant_webform][protection][recaptcha][enabled]' => FALSE,
+      'quant_webform_secrets[slack_webhook]' => 'https://hooks.slack.com/services/T1/B1/keep5678',
+    ], 'Save');
+    $this->assertSame('https://hooks.slack.com/services/T1/B1/keep5678', $kv->get('slack_webhook:contact_us'));
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    $this->submitForm(['quant_webform_secrets[slack_webhook_remove]' => TRUE], 'Save');
+    $this->assertNull($kv->get('slack_webhook:contact_us'));
+  }
+
 }

@@ -259,9 +259,20 @@ function quant_webform_webform_update(WebformInterface $webform) {
 }
 
 /**
+ * Implements hook_webform_presave().
+ */
+function quant_webform_webform_presave(WebformInterface $webform) {
+  // Secrets from the Quant Forms section, stored only when the save happens
+  // and before hook_webform_update() publishes with them.
+  \Drupal::service('quant_webform.settings_section')->storePending($webform);
+}
+
+/**
  * Implements hook_webform_predelete().
  */
 function quant_webform_webform_predelete(WebformInterface $webform) {
+  // A new Webform with the same id must not inherit the secrets.
+  \Drupal::service('quant_webform.settings_section')->deleteSecrets($webform->id());
   if (!_quant_webform_can_publish()) {
     return;
   }
@@ -272,22 +283,24 @@ function quant_webform_webform_predelete(WebformInterface $webform) {
  * Implements hook_cron().
  */
 function quant_webform_cron() {
-  // A Webform that opens or closes on a schedule changes with no save.
   if (!_quant_webform_can_publish()) {
     return;
   }
   $registry = \Drupal::service('quant_webform.registry');
   $registrar = \Drupal::service('quant_webform.registrar');
   $storage = \Drupal::entityTypeManager()->getStorage('webform');
+  // Every Webform with registered pages: closed (by schedule or by hand with
+  // no save), deleted or opted out means Quant Forms goes off. A failed
+  // turn-off stays registered and runs again on the next cron.
+  foreach ($registry->webformIds() as $id) {
+    $webform = $storage->load($id);
+    if (!$webform || !$webform->isOpen() || !QuantFormsRegistry::isOptedIn($webform)) {
+      $registrar->disablePaths($id);
+    }
+  }
+  // A scheduled Webform that opens again is published again.
   foreach ($storage->loadByProperties(['status' => WebformInterface::STATUS_SCHEDULED]) as $webform) {
-    if (!QuantFormsRegistry::isOptedIn($webform)) {
-      continue;
-    }
-    $open = $registry->openStateChange($webform);
-    if ($open === FALSE) {
-      $registrar->disable($webform);
-    }
-    elseif ($open === TRUE) {
+    if (QuantFormsRegistry::isOptedIn($webform) && $registry->openStateChange($webform) === TRUE) {
       $registrar->queue($webform);
     }
   }

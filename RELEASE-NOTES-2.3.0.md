@@ -24,8 +24,11 @@
 Connect a site by approving it in the Quant dashboard and choosing its project,
 instead of copying a token. The login is limited to that project, kept outside
 configuration and refreshed on cron, and a write token rotated in the
-dashboard is re-read automatically. A copy of the database does not publish
-with the original site's login. Sites that publish several domains to several
+dashboard is re-read automatically (after a 401, at most every 15 minutes,
+and daily). A copy of the database does not publish with the original site's
+login: the status report, the log and the API settings page say so and name
+what differs. If it is the same site (for example after a database move or a
+new hash salt), click "This is the same site" on the API settings page. Sites that publish several domains to several
 projects, and sites in a subdirectory, keep using project tokens.
 `drush quant:auth-status` shows the connection.
 

@@ -286,6 +286,7 @@ YAML;
     $event = new QuantEvent($html, '/contact', []);
     $subscriber->onOutput($event);
     $this->assertFalse($event->getMetadata()['form_enabled']);
+    $this->assertArrayNotHasKey('managed_by', $event->getMetadata()['form_config']['notification_settings']);
     $this->assertNull($registry->webformAt('/contact'));
 
     // The form was removed from the page: nothing to turn off twice.
@@ -392,6 +393,21 @@ YAML);
     $raw = json_encode(\Drupal::config('webform.webform.' . $webform->id())->get());
     $this->assertStringNotContainsString('recaptcha-secret-placeholder', $raw);
     $this->assertStringNotContainsString('hooks.slack.com', $raw);
+  }
+
+  /**
+   * Deleting a Webform deletes its secrets.
+   *
+   * @covers \Drupal\quant_webform\QuantFormsSettingsSection::deleteSecrets
+   */
+  public function testDeleteRemovesSecrets(): void {
+    $this->installSchema('user', ['users_data']);
+    $webform = $this->webform("name: { '#type': textfield, '#title': Name }");
+    $this->mapper()->setSecret('slack_webhook', $webform->id(), 'https://hooks.slack.com/services/old');
+    $this->mapper()->setSecret('recaptcha_secret', $webform->id(), 'old-secret');
+    $webform->delete();
+    $this->assertSame('', $this->mapper()->secret('slack_webhook', $webform->id()));
+    $this->assertSame('', $this->mapper()->secret('recaptcha_secret', $webform->id()));
   }
 
 }

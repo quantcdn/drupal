@@ -41,6 +41,12 @@ class QuantFormsReport {
         '#items' => $report['notes'],
       ];
     }
+    $recaptcha = (array) $webform->getThirdPartySetting('quant_webform', 'recaptcha', []);
+    if (!empty($recaptcha['enabled']) && $this->mapper->secret('recaptcha_secret', $webform->id()) === '') {
+      $build['recaptcha'] = [
+        '#markup' => '<p><strong>' . $this->t('reCAPTCHA is on but has no secret key, so Quant does not check it.') . '</strong></p>',
+      ];
+    }
     if (!$webform->getSetting('page')) {
       $build['placement'] = [
         '#markup' => '<p>' . $this->t('This form has no page of its own. A page that shows it in a block, a paragraph or Layout Builder is registered only when that page is published, and saving the form re-publishes only nodes with a Webform field and pages already registered. Give the form its own page to have one address that always takes its submissions.') . '</p>',

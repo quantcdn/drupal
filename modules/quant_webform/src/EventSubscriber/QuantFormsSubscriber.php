@@ -6,6 +6,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant_webform\QuantFormsMapper;
+use Drupal\quant_webform\QuantFormsRegistrar;
 use Drupal\quant_webform\QuantFormsRegistry;
 use Drupal\webform\WebformInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -50,11 +51,14 @@ class QuantFormsSubscriber implements EventSubscriberInterface {
       $meta['form_enabled'] = TRUE;
       $meta['form_config'] = $report['config'];
       $this->registry->record($path, $webform->id());
+      $this->registry->rememberOpenState($webform);
       $event->setMetadata($meta);
       return;
     }
     if ($this->registry->webformAt($path) !== NULL) {
       $meta['form_enabled'] = FALSE;
+      // Without the marker: the dashboard may manage this page again.
+      $meta['form_config'] = QuantFormsRegistrar::releasedConfig($path);
       $this->registry->forget($path);
       $event->setMetadata($meta);
       $this->loggerFactory->get('quant_webform')->notice('Quant Forms: @url no longer has a registered Webform, so Quant Forms is turned off there.', ['@url' => $path]);

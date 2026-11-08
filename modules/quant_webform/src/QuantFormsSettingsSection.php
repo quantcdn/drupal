@@ -24,6 +24,13 @@ class QuantFormsSettingsSection {
   public const SECRET_PARENTS = ['quant_webform_secrets'];
 
   /**
+   * Secret changes held from validation until the Webform is saved.
+   *
+   * @var array<string, array>
+   */
+  protected static array $pending = [];
+
+  /**
    * The stored keys of the notification email.
    */
   protected const EMAIL_KEYS = ['mode', 'to', 'cc', 'from', 'reply_to', 'subject'];
@@ -272,20 +279,47 @@ class QuantFormsSettingsSection {
   public function validate(array &$element, FormStateInterface $form_state): void {
     $base = ['third_party_settings', 'quant_webform'];
     $values = (array) $form_state->getValue($base);
-    if (empty($values['enabled'])) {
-      $form_state->setValue($base, ['enabled' => FALSE] + $this->flatten($values));
+    /** @var \Drupal\webform\WebformInterface $webform */
+    $webform = $form_state->getFormObject()->getEntity();
+    // Secrets are checked and held whether or not the form is ticked, so
+    // "Remove the saved Slack webhook" always works.
+    $this->validateSecrets($element, $form_state);
+    if (!empty($values['enabled'])) {
+      $this->validateEmail($values, $element, $form_state);
+      $this->validateProtection($values, $element, $form_state, $webform);
+      $this->validateAfter($values, $element, $form_state);
+    }
+    $form_state->setValue($base, (empty($values['enabled']) ? ['enabled' => FALSE] : []) + $this->flatten($values));
+    // Stored by hook_webform_presave(), so only when the Webform is saved.
+    self::$pending[$webform->id()] = (array) $form_state->getValue(self::SECRET_PARENTS);
+  }
+
+  /**
+   * Stores the secrets held for a Webform that is being saved.
+   */
+  public function storePending(WebformInterface $webform): void {
+    if (!isset(self::$pending[$webform->id()])) {
       return;
     }
-    $this->validateEmail($values, $element, $form_state);
-    $this->validateSecrets($element, $form_state);
-    $this->validateProtection($values, $element, $form_state);
-    $this->validateAfter($values, $element, $form_state);
-    $form_state->setValue($base, $this->flatten($values));
-    // Webform adds its buttons after this section, so there is no submit
-    // handler to join. Store the secrets now, before the save publishes.
-    if (!$form_state->hasAnyErrors()) {
-      $this->storeSecrets($form_state->getFormObject()->getEntity(), $form_state);
+    $secrets = self::$pending[$webform->id()];
+    unset(self::$pending[$webform->id()]);
+    if (!empty($secrets['slack_webhook_remove'])) {
+      $this->mapper->setSecret('slack_webhook', $webform->id(), '');
     }
+    elseif (trim((string) ($secrets['slack_webhook'] ?? '')) !== '') {
+      $this->mapper->setSecret('slack_webhook', $webform->id(), trim($secrets['slack_webhook']));
+    }
+    if (trim((string) ($secrets['recaptcha_secret'] ?? '')) !== '') {
+      $this->mapper->setSecret('recaptcha_secret', $webform->id(), trim($secrets['recaptcha_secret']));
+    }
+  }
+
+  /**
+   * Deletes the secrets of a Webform (when it is deleted).
+   */
+  public function deleteSecrets(string $webform_id): void {
+    $this->mapper->setSecret('slack_webhook', $webform_id, '');
+    $this->mapper->setSecret('recaptcha_secret', $webform_id, '');
   }
 
   /**
@@ -379,10 +413,17 @@ class QuantFormsSettingsSection {
   /**
    * Checks reCAPTCHA, the country codes and the IP addresses.
    */
-  protected function validateProtection(array $values, array $element, FormStateInterface $form_state): void {
+  protected function validateProtection(array $values, array $element, FormStateInterface $form_state, WebformInterface $webform): void {
     $protection = (array) ($values['protection'] ?? []);
-    if (!empty($protection['recaptcha']['enabled']) && !preg_match('/^[A-Za-z0-9_-]{20,64}$/', trim((string) ($protection['recaptcha']['site_key'] ?? '')))) {
-      $form_state->setError($element['protection']['recaptcha']['site_key'], $this->t('Enter the reCAPTCHA v2 site key.'));
+    if (!empty($protection['recaptcha']['enabled'])) {
+      if (!preg_match('/^[A-Za-z0-9_-]{20,64}$/', trim((string) ($protection['recaptcha']['site_key'] ?? '')))) {
+        $form_state->setError($element['protection']['recaptcha']['site_key'], $this->t('Enter the reCAPTCHA v2 site key.'));
+      }
+      // Without the secret the widget shows but Quant checks nothing.
+      $new_secret = trim((string) $form_state->getValue(array_merge(self::SECRET_PARENTS, ['recaptcha_secret'])));
+      if ($new_secret === '' && $this->mapper->secret('recaptcha_secret', $webform->id()) === '') {
+        $form_state->setError($element['secrets']['recaptcha_secret'], $this->t('Enter the reCAPTCHA v2 secret key. Without it Quant cannot check the reCAPTCHA.'));
+      }
     }
     foreach (self::split((string) ($protection['blocked_countries'] ?? ''), '/[\s,]+/', 'strtoupper') as $code) {
       if (!preg_match('/^[A-Z]{2}$/', $code)) {
@@ -404,22 +445,6 @@ class QuantFormsSettingsSection {
     $url = trim((string) ($after['confirmation_url'] ?? ''));
     if (($after['confirmation_type'] ?? '') === 'url' && !preg_match('#^(/(?!/)|https://)\S*$#', $url)) {
       $form_state->setError($element['after']['confirmation_url'], $this->t('Enter a path on this site, such as /thank-you, or an https address.'));
-    }
-  }
-
-  /**
-   * Stores the secrets of the form (submit handler).
-   */
-  public function storeSecrets(WebformInterface $webform, FormStateInterface $form_state): void {
-    $secrets = (array) $form_state->getValue(self::SECRET_PARENTS);
-    if (!empty($secrets['slack_webhook_remove'])) {
-      $this->mapper->setSecret('slack_webhook', $webform->id(), '');
-    }
-    elseif (trim((string) ($secrets['slack_webhook'] ?? '')) !== '') {
-      $this->mapper->setSecret('slack_webhook', $webform->id(), trim($secrets['slack_webhook']));
-    }
-    if (trim((string) ($secrets['recaptcha_secret'] ?? '')) !== '') {
-      $this->mapper->setSecret('recaptcha_secret', $webform->id(), trim($secrets['recaptcha_secret']));
     }
   }
 

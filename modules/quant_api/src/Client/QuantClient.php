@@ -364,7 +364,7 @@ class QuantClient implements QuantClientInterface {
     }
 
     $data = ['url' => $url, 'form_enabled' => $enabled];
-    if ($enabled) {
+    if ($enabled || $config !== []) {
       $data['form_config'] = $config;
     }
     try {

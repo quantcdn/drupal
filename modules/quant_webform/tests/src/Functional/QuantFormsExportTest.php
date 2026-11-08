@@ -152,7 +152,9 @@ YAML,
     $this->webform->setStatus(Webform::STATUS_CLOSED)->save();
     $calls = \Drupal::state()->get('quant_webform_test.calls', []);
     $off = array_values(array_filter($calls, fn ($call) => $call['path'] === '/v1/form'));
-    $this->assertSame(['url' => '/webform/service_request', 'form_enabled' => FALSE], $off[0]['body'] ?? NULL);
+    $this->assertSame('/webform/service_request', $off[0]['body']['url'] ?? NULL);
+    $this->assertFalse($off[0]['body']['form_enabled']);
+    $this->assertSame(['released_by' => 'drupal'], $off[0]['body']['form_config']['notification_settings']);
   }
 
   /**
@@ -190,27 +192,47 @@ YAML,
   }
 
   /**
-   * A scheduled form that closes turns Quant Forms off on cron.
+   * A form closed with no save goes off on cron; a failure is tried again.
    */
-  public function testScheduledCloseTurnsQuantFormsOff(): void {
+  public function testClosedFormIsTurnedOffOnCronWithRetry(): void {
     $this->connectTestProject();
-    // Registered while open, with a close date that has now passed.
+    // Registered while open; cron never saw it open.
     \Drupal::service('quant_webform.registry')->record('/webform/service_request', 'service_request');
-    \Drupal::keyValue('quant_webform.open_state')->set('service_request', TRUE);
     $past = (new \DateTime('-1 hour'))->format('Y-m-d\\TH:i:s');
     $earlier = (new \DateTime('-1 day'))->format('Y-m-d\\TH:i:s');
-    \Drupal::state()->set('quant_webform_test.calls', []);
+    \Drupal::state()->set('quant_webform_test.fail_form', TRUE);
     Webform::load('service_request')->setStatus(Webform::STATUS_SCHEDULED)->set('open', $earlier)->set('close', $past)->save();
-    $this->assertFalse(Webform::load('service_request')->isOpen());
-    \Drupal::state()->set('quant_webform_test.calls', []);
-    \Drupal::keyValue('quant_webform.open_state')->set('service_request', TRUE);
     \Drupal::service('quant_webform.registry')->record('/webform/service_request', 'service_request');
+    \Drupal::state()->set('quant_webform_test.calls', []);
 
+    // Quant fails: the page stays registered.
     quant_webform_cron();
+    $this->assertSame(['/webform/service_request'], \Drupal::service('quant_webform.registry')->pagesOf('service_request'));
 
+    // Next cron, Quant answers: the page is turned off and released.
+    \Drupal::state()->set('quant_webform_test.fail_form', FALSE);
+    \Drupal::state()->set('quant_webform_test.calls', []);
+    quant_webform_cron();
     $off = array_values(array_filter(\Drupal::state()->get('quant_webform_test.calls', []), fn ($call) => $call['path'] === '/v1/form'));
-    $this->assertSame(['url' => '/webform/service_request', 'form_enabled' => FALSE], $off[0]['body'] ?? NULL);
+    $this->assertSame('/webform/service_request', $off[0]['body']['url'] ?? NULL);
+    $this->assertFalse($off[0]['body']['form_enabled']);
+    // The dashboard may manage the page again: no "managed in Drupal" marker.
+    $this->assertArrayNotHasKey('managed_by', $off[0]['body']['form_config']['notification_settings']);
     $this->assertSame([], \Drupal::service('quant_webform.registry')->pagesOf('service_request'));
+  }
+
+  /**
+   * A made-up header is served from the page cache; a genuine token is not.
+   */
+  public function testOnlyGenuineTokenSkipsThePageCache(): void {
+    $this->drupalGet('webform/service_request', [], ['quant-token' => 'made-up']);
+    $this->drupalGet('webform/service_request', [], ['quant-token' => 'made-up']);
+    $this->assertSession()->responseHeaderEquals('X-Drupal-Cache', 'HIT');
+
+    $this->getSession()->restart();
+    $this->drupalGet('webform/service_request', [], ['quant-token' => $this->exportToken()]);
+    $this->assertSession()->responseHeaderNotEquals('X-Drupal-Cache', 'HIT');
+    $this->assertSession()->elementExists('css', 'form[data-quant-webform]');
   }
 
   /**

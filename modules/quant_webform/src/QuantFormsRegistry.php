@@ -88,6 +88,25 @@ class QuantFormsRegistry {
   }
 
   /**
+   * Stores the open state of a Webform when one of its pages registers.
+   *
+   * So a later reopen is seen on cron even when cron never saw the form open.
+   */
+  public function rememberOpenState(WebformInterface $webform): void {
+    $this->openState->set($webform->id(), $webform->isOpen());
+  }
+
+  /**
+   * The ids of the Webforms that have registered pages.
+   *
+   * @return string[]
+   *   Webform ids.
+   */
+  public function webformIds(): array {
+    return array_values(array_unique($this->pages->getAll()));
+  }
+
+  /**
    * Forgets everything (uninstall).
    */
   public function clear(): void {

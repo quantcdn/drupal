@@ -30,7 +30,8 @@ class RecordingMiddleware {
           'body' => json_decode((string) $request->getBody(), TRUE),
         ];
         $this->state->set('quant_webform_test.calls', $log);
-        return Create::promiseFor(new Response(200, ['Content-Type' => 'application/json'], '{}'));
+        $fail = $request->getUri()->getPath() === '/v1/form' && $this->state->get('quant_webform_test.fail_form');
+        return Create::promiseFor(new Response($fail ? 500 : 200, ['Content-Type' => 'application/json'], '{}'));
       };
     };
   }

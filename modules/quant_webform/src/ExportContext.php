@@ -2,6 +2,8 @@
 
 namespace Drupal\quant_webform;
 
+use Symfony\Component\HttpFoundation\Request;
+
 /**
  * Tells a Quant export render from a live Drupal render.
  *
@@ -16,7 +18,17 @@ final class ExportContext {
    */
   public static function isExport(): bool {
     $request = \Drupal::requestStack()->getCurrentRequest();
-    if ($request === NULL || !$request->headers->has('quant-token')) {
+    return $request !== NULL && self::isExportRequest($request);
+  }
+
+  /**
+   * Whether a request carries a genuine export token.
+   *
+   * Takes the request, so the page cache policy can use it before the
+   * request is on the request stack.
+   */
+  public static function isExportRequest(Request $request): bool {
+    if (!$request->headers->has('quant-token')) {
       return FALSE;
     }
     // Only a token this site signed counts: with content drafts off the

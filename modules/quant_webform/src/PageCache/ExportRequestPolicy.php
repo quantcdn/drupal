@@ -3,6 +3,7 @@
 namespace Drupal\quant_webform\PageCache;
 
 use Drupal\Core\PageCache\RequestPolicyInterface;
+use Drupal\quant_webform\ExportContext;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -18,7 +19,8 @@ class ExportRequestPolicy implements RequestPolicyInterface {
    * {@inheritdoc}
    */
   public function check(Request $request) {
-    return $request->headers->has('quant-token') ? static::DENY : NULL;
+    // Only a genuine signed token: a made-up header must not skip the cache.
+    return ExportContext::isExportRequest($request) ? static::DENY : NULL;
   }
 
 }
