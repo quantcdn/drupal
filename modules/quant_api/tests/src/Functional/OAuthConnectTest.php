@@ -231,7 +231,10 @@ class OAuthConnectTest extends BrowserTestBase {
    */
   public function testRefusedLoginIsShownToTheEditor(): void {
     $this->logInAndPick('site-b');
-    \Drupal::service('quant_api.oauth_store')->set(OAuthTokenStore::REFUSAL, ['error' => 'invalid_grant', 'at' => time()]);
+    \Drupal::service('quant_api.oauth_store')->set(OAuthTokenStore::REFUSAL, [
+      'error' => 'invalid_grant',
+      'at' => time(),
+    ]);
 
     $this->drupalGet('admin/config/development/quant/api');
     $session = $this->assertSession();
