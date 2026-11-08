@@ -114,3 +114,14 @@ quant.token_settings:
     strict:
       type: boolean
       label: 'Reject requests whose token does not match the route'
+
+views.field.quant_metadata:
+  type: views_field
+  label: 'Quant metadata'
+  mapping:
+    quant_metadata:
+      type: sequence
+      label: 'Metadata to show'
+      sequence:
+        type: string
+        label: 'Metadata key'
