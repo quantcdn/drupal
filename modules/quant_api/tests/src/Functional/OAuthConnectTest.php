@@ -25,13 +25,6 @@ class OAuthConnectTest extends BrowserTestBase {
   protected $defaultTheme = 'stark';
 
   /**
-   * The quant module's shipped metadata views have schema gaps (before 2.3).
-   *
-   * @var bool
-   */
-  protected $strictConfigSchema = FALSE;
-
-  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
