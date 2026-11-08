@@ -72,6 +72,9 @@ class QuantFormsSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('quant_webform.settings');
+    $form['help'] = [
+      '#markup' => '<p>' . $this->t('Quant Forms is off for every form until you tick it. A ticked form takes its submissions on the static site, and replaces Quant Forms settings made by hand in the dashboard for its page. Changes to the spam and Slack settings apply after "Register the ticked forms".') . '</p>',
+    ];
     $form['forms'] = $this->buildFormsTable();
     $form['register'] = [
       '#type' => 'submit',
@@ -114,9 +117,6 @@ class QuantFormsSettingsForm extends ConfigFormBase {
         '#access' => $has_webhook,
       ],
     ];
-    $form['help'] = [
-      '#markup' => '<p>' . $this->t('Quant Forms is off for every form until you tick it. A ticked form replaces Quant Forms settings made by hand in the dashboard for its page. A form is registered when its page is published; changes to the spam and Slack settings apply after "Register the ticked forms".') . '</p>',
-    ];
     return parent::buildForm($form, $form_state);
   }
 
@@ -140,11 +140,21 @@ class QuantFormsSettingsForm extends ConfigFormBase {
       $report = $this->mapper->map($webform, $pages[0] ?? '/');
       $status = match (TRUE) {
         !$report['supported'] => $this->t('Not supported: @why', ['@why' => implode(' ', array_map('strval', $report['blocking']))]),
-        default => $report['notes'] === [] ? $this->t('Works') : $this->t('Works, with @count differences', ['@count' => count($report['notes'])]),
+        default => $report['notes'] === [] ? $this->t('Works') : $this->formatPlural(count($report['notes']), 'Works, with 1 difference:', 'Works, with @count differences:'),
       };
+      $status_cell = (string) $status;
+      if ($report['supported'] && $report['notes'] !== []) {
+        $status_cell = [
+          'data' => [
+            '#theme' => 'item_list',
+            '#prefix' => '<span>' . $status . '</span>',
+            '#items' => array_map('strval', $report['notes']),
+          ],
+        ];
+      }
       $table['#options'][$id] = [
         'form' => ['data' => ['#type' => 'link', '#title' => $webform->label(), '#url' => $webform->toUrl('settings')]],
-        'status' => (string) $status,
+        'status' => $status_cell,
         'pages' => $pages ? implode(', ', $pages) : (string) $this->t('No page'),
       ];
       $table['#default_value'][$id] = QuantFormsRegistry::isOptedIn($webform);
@@ -171,10 +181,11 @@ class QuantFormsSettingsForm extends ConfigFormBase {
         $queued += $this->registrar->queue($webform);
       }
     }
-    $this->messenger()->addStatus($this->t('Quant Forms is on for @count form(s). Changed forms were published or turned off now; @queued page(s) are queued for cron or drush quant:run-queue.', [
-      '@count' => count($ticked),
-      '@queued' => $queued,
-    ]));
+    $message = $this->formatPlural(count($ticked), 'Quant Forms is on for 1 form.', 'Quant Forms is on for @count forms.');
+    if ($queued > 0) {
+      $message .= ' ' . $this->formatPlural($queued, '1 page is queued to publish again on the next cron run (or drush quant:run-queue).', '@count pages are queued to publish again on the next cron run (or drush quant:run-queue).');
+    }
+    $this->messenger()->addStatus($message);
   }
 
   /**
