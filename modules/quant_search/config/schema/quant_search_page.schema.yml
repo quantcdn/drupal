@@ -1,6 +1,9 @@
-quant_search.quant_search_page.*:
+# The entity's config_prefix is "quant_search", so its config names are
+# quant_search.quant_search.ID. Before 2.3 this schema was keyed
+# quant_search.quant_search_page.* and never applied.
+quant_search.quant_search.*:
   type: config_entity
-  label: 'Quant search page config'
+  label: 'Quant search page'
   mapping:
     id:
       type: string
@@ -8,3 +11,106 @@ quant_search.quant_search_page.*:
     label:
       type: label
       label: 'Label'
+    description:
+      type: text
+      label: 'Description'
+    route:
+      type: string
+      label: 'Path, without a leading slash'
+    title:
+      type: label
+      label: 'Page title'
+    languages:
+      type: sequence
+      label: 'Languages to search'
+      sequence:
+        type: string
+        label: 'Language code'
+    bundles:
+      type: sequence
+      label: 'Content types to search'
+      sequence:
+        type: string
+        label: 'Content type'
+    manual_filters:
+      type: string
+      label: 'Filters in the search backend syntax'
+    facets:
+      type: sequence
+      label: 'Facets'
+      sequence:
+        type: quant_search.facet
+    display:
+      type: mapping
+      label: 'Display'
+      mapping:
+        results:
+          type: mapping
+          label: 'Results'
+          mapping:
+            display_search:
+              type: boolean
+              label: 'Show the keyword box'
+            display_stats:
+              type: boolean
+              label: 'Show the result count'
+            show_clear_refinements:
+              type: boolean
+              label: 'Show "clear filters"'
+        pagination:
+          type: mapping
+          label: 'Pagination'
+          mapping:
+            pagination_enabled:
+              type: boolean
+              label: 'Paginate results'
+            per_page:
+              type: integer
+              label: 'Results per page'
+
+quant_search.facet:
+  type: mapping
+  label: 'Search page facet'
+  mapping:
+    facet_display:
+      type: string
+      label: 'Display (checkbox, select or menu)'
+    facet_type_config:
+      type: mapping
+      label: 'Facet source'
+      mapping:
+        facet_type:
+          type: string
+          label: 'Type (taxonomy, content_type, language or custom)'
+        taxonomy_vocabulary:
+          type: string
+          label: 'Vocabulary'
+        custom_key:
+          type: string
+          label: 'Custom key'
+    facet_heading:
+      type: label
+      label: 'Heading'
+    facet_language:
+      type: string
+      label: 'Language'
+    facet_limit:
+      type: integer
+      label: 'Number of values shown'
+    weight:
+      type: integer
+      label: 'Weight'
+
+block.settings.quant_autocomplete_block:
+  type: block_settings
+  label: 'Quant search autocomplete block'
+  mapping:
+    page:
+      type: string
+      label: 'Search page UUID'
+    placeholder:
+      type: label
+      label: 'Placeholder'
+    show_summary:
+      type: boolean
+      label: 'Show the summary'
