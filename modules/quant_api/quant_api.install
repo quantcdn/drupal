@@ -16,8 +16,24 @@ function quant_api_requirements($phase) {
     return [];
   }
   $credentials = \Drupal::service('quant_api.credentials');
-  if (!$credentials->usesOauth() || !$credentials->isCopiedSite()) {
+  if (!$credentials->usesOauth()) {
     return [];
+  }
+  if (!$credentials->isCopiedSite()) {
+    $reason = \Drupal::service('quant_api.oauth')->getReconnectReason();
+    if ($reason === NULL) {
+      return [];
+    }
+    return [
+      'quant_api_login' => [
+        'title' => t('Quant'),
+        'value' => t('The Quant login needs renewing'),
+        'description' => t('Content still publishes. Log in to Quant again on the <a href=":url">Quant API settings page</a> to keep the connection current.', [
+          ':url' => Url::fromRoute('quant_api.settings_form')->toString(),
+        ]),
+        'severity' => REQUIREMENT_WARNING,
+      ],
+    ];
   }
   return [
     'quant_api_copied_site' => [

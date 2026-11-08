@@ -78,7 +78,8 @@ class OAuthConnectTest extends BrowserTestBase {
 
     $session = $this->assertSession();
     $session->pageTextContains('This site now publishes to the Quant project site-b.');
-    $session->pageTextContains('Connected to the Quant project site-b.');
+    // One success message, not the same news twice.
+    $session->pageTextNotContains('Connected to the Quant project site-b.');
     $session->pageTextContains('it can reach only that project');
     $session->linkExists('Change project');
 
@@ -100,7 +101,7 @@ class OAuthConnectTest extends BrowserTestBase {
     $this->clickLink('Change project');
     $this->assertSame('site-b', $this->config('quant_api.settings')->get('api_project'));
     $this->submitForm(['project' => 'test-org:site-a'], 'Use this project');
-    $session->pageTextContains('Connected to the Quant project site-a.');
+    $session->pageTextContains('This site now publishes to the Quant project site-a.');
     $this->assertSame('fake-write-token-site-a', $this->store()->get(OAuthTokenStore::WRITE_TOKEN));
 
     \Drupal::state()->delete('quant_api_oauth_test.requests');
@@ -226,6 +227,23 @@ class OAuthConnectTest extends BrowserTestBase {
   }
 
   /**
+   * A refused refresh is not shown as "Connected", and the status report says so.
+   */
+  public function testRefusedLoginIsShownToTheEditor(): void {
+    $this->logInAndPick('site-b');
+    \Drupal::service('quant_api.oauth_store')->set(OAuthTokenStore::REFUSAL, ['error' => 'invalid_grant', 'at' => time()]);
+
+    $this->drupalGet('admin/config/development/quant/api');
+    $session = $this->assertSession();
+    $session->pageTextNotContains('Connected to the Quant project site-b.');
+    $session->elementTextContains('css', '[role="contentinfo"], .messages--warning, [data-drupal-messages]', 'Log in to Quant again');
+
+    $this->drupalLogin($this->drupalCreateUser(['configure quant', 'administer site configuration']));
+    $this->drupalGet('admin/reports/status');
+    $session->pageTextContains('The Quant login needs renewing');
+  }
+
+  /**
    * A copied site says so and can be confirmed as the same site.
    */
   public function testCopiedSiteCanBeConfirmed(): void {
@@ -239,7 +257,7 @@ class OAuthConnectTest extends BrowserTestBase {
     $this->assertSession()->pageTextContains('This site looks like a copy of the connected site (different: database)');
     $this->submitForm([], 'This is the same site');
     $this->assertSession()->pageTextContains('Confirmed. This site publishes with its Quant login again.');
-    $this->assertSession()->pageTextContains('Connected to the Quant project site-b.');
+    $this->assertSession()->pageTextNotContains('This site looks like a copy');
   }
 
   /**

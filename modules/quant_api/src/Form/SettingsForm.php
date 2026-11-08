@@ -86,7 +86,11 @@ class SettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config(self::SETTINGS);
-    $this->showStatus();
+    // Only on a page view: a build during a submit runs before the submit
+    // handler, so its message would show stale after the redirect.
+    if ($this->getRequest()->isMethod('GET')) {
+      $this->showStatus();
+    }
 
     $form['platform'] = [
       '#type' => 'radios',
@@ -150,12 +154,8 @@ class SettingsForm extends ConfigFormBase {
         '%org' => $config->get('api_account'),
       ]) . '</p>',
     ];
+    // A connection that needs a new login is shown as the page message.
     $reason = $this->auth->getReconnectReason();
-    if ($reason !== NULL) {
-      $items['reconnect'] = [
-        '#markup' => '<p><strong>' . $this->reconnectMessage($reason) . '</strong></p>',
-      ];
-    }
     if ($reason === AuthService::RECONNECT_OTHER_SITE) {
       $items['same_site'] = [
         '#type' => 'submit',
@@ -275,7 +275,16 @@ class SettingsForm extends ConfigFormBase {
     if (!$this->credentials->hasToken()) {
       return;
     }
+    $reason = $this->credentials->usesOauth() ? $this->auth->getReconnectReason() : NULL;
+    if ($reason !== NULL) {
+      $this->messenger()->addWarning($this->reconnectMessage($reason));
+      return;
+    }
     if ($this->client->ping()) {
+      // After a project pick, the pick already said where the site publishes.
+      if ($this->messenger()->messagesByType('status') !== []) {
+        return;
+      }
       $this->messenger()->addStatus($this->t('Connected to the Quant project %project.', ['%project' => $this->client->getProject()]));
       return;
     }
