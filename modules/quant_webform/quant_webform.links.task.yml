@@ -1,0 +1,4 @@
+quant_webform.settings:
+  route_name: quant_webform.settings
+  title: 'Forms'
+  base_route: quant.config

@@ -1,0 +1,6 @@
+services:
+  quant_webform.commands:
+    class: \Drupal\quant_webform\Commands\QuantWebformCommands
+    arguments: ['@entity_type.manager', '@quant_webform.registrar', '@quant_webform.mapper']
+    tags:
+      - { name: drush.command }

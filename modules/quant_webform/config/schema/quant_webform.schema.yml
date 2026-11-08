@@ -1,0 +1,24 @@
+quant_webform.settings:
+  type: config_object
+  label: 'Quant Forms settings'
+  mapping:
+    spam_threshold:
+      type: integer
+      label: 'Spam score threshold (0 is off, 1 to 6)'
+    spam_detect_action:
+      type: string
+      label: 'What to do with spam (discard or keep)'
+
+webform.webform.third_party.quant_webform:
+  type: mapping
+  label: 'Quant Forms settings of a Webform'
+  mapping:
+    enabled:
+      type: boolean
+      label: 'Take submissions through Quant Forms'
+    success_message:
+      type: text
+      label: 'Message after a submit on the static site'
+    slack:
+      type: boolean
+      label: 'Send a Slack notification'

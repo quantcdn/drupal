@@ -1,0 +1,2 @@
+spam_threshold: 0
+spam_detect_action: discard

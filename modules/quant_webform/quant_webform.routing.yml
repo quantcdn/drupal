@@ -1,0 +1,9 @@
+quant_webform.settings:
+  path: '/admin/config/development/quant/forms'
+  defaults:
+    _form: '\Drupal\quant_webform\Form\QuantFormsSettingsForm'
+    _title: 'Quant Forms'
+  requirements:
+    _permission: 'configure quant'
+  options:
+    _admin_route: TRUE
