@@ -63,5 +63,5 @@ The report on each Webform and on the Forms settings page lists these.
 | Handlers other than email (remote post, scripts, and so on) | They run in Drupal. Quant stores the submission instead. |
 | Computed elements | They compute on the server. |
 | Turnstile, hCaptcha, image CAPTCHA | Quant checks reCAPTCHA v2 only. |
-| Per-submission tokens (serial number, submission URL) | No server renders them. |
+| Submission tokens such as `[webform_submission:serial]` | Not available on static pages: no server renders them. They are removed from messages, so "Your reference is SR-[webform_submission:serial]" becomes "Your reference is SR-". Set a static message in the form's Quant Forms settings. |
 | Two Webforms on one page | Quant has one form config per page. The first Webform is registered and a warning is logged. |
