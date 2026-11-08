@@ -320,6 +320,27 @@ class SearchBackend {
   }
 
   /**
+   * A filter for "the field has all of these values", in the backend syntax.
+   */
+  public static function allOf(string $field, array $values, string $backend): string {
+    $typesense = $backend === self::TYPESENSE;
+    $parts = array_values(array_filter(array_map(fn ($value) => self::equals($field, (string) $value, $typesense), $values)));
+    return count($parts) < 2 ? ($parts[0] ?? '') : '(' . implode($typesense ? ' && ' : ' AND ', $parts) . ')';
+  }
+
+  /**
+   * A filter for "the field has none of these values", in the backend syntax.
+   */
+  public static function noneOf(string $field, array $values, string $backend): string {
+    if ($backend === self::TYPESENSE) {
+      $values = array_values(array_filter(array_map('strval', $values), fn ($value) => strpos($value, '`') === FALSE));
+      return $values === [] ? '' : $field . ':!=[' . implode(',', array_map(fn ($value) => '`' . $value . '`', $values)) . ']';
+    }
+    $parts = array_values(array_map(fn ($value) => 'NOT ' . self::equals($field, (string) $value, FALSE), $values));
+    return count($parts) < 2 ? ($parts[0] ?? '') : '(' . implode(' AND ', $parts) . ')';
+  }
+
+  /**
    * One equality clause in the backend's syntax.
    *
    * Typesense quotes values with backticks, so a value that contains one is

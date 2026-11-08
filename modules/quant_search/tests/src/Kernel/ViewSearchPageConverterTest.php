@@ -3,6 +3,7 @@
 namespace Drupal\Tests\quant_search\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\node\Entity\NodeType;
 use Drupal\quant_search\SearchBackend;
 use Drupal\taxonomy\Entity\Term;
 use Drupal\taxonomy\Entity\Vocabulary;
@@ -184,6 +185,53 @@ class ViewSearchPageConverterTest extends KernelTestBase {
     $this->assertSame([], $this->converter()->candidates());
     $this->assertStringContainsString('does not list content items', (string) $this->converter()->propose('people', 'page_1')['notes'][0]);
     $this->assertNull($this->converter()->propose('missing', 'page_1'));
+  }
+
+  /**
+   * Operators: "none of", "all of", "is empty" are honoured or noted.
+   *
+   * @covers ::propose
+   */
+  public function testOperators(): void {
+    foreach (['article' => 'Article', 'event' => 'Event', 'page' => 'Page'] as $type => $name) {
+      NodeType::create(['type' => $type, 'name' => $name])->save();
+    }
+    $water = Term::create(['vid' => 'topic', 'name' => 'Water']);
+    $water->save();
+    $drought = Term::create(['vid' => 'topic', 'name' => 'Drought']);
+    $drought->save();
+    $tids = [$water->id() => $water->id(), $drought->id() => $drought->id()];
+    $this->view('notpages', [
+      'type' => self::filter('type', 'bundle', 'not in', ['page' => 'page']),
+      'all' => self::filter('tid', 'taxonomy_index_tid', 'and', $tids),
+      'none' => self::filter('tid', 'taxonomy_index_tid', 'not', [$drought->id() => $drought->id()]),
+      'empty' => self::filter('tid', 'taxonomy_index_tid', 'empty', []),
+    ]);
+
+    $proposal = $this->converter()->propose('notpages', 'page_1');
+    $this->assertEqualsCanonicalizing(['article', 'event'], $proposal['values']['bundles']);
+    $this->assertSame("(topic_en:'Water' AND topic_en:'Drought') AND NOT topic_en:'Drought'", $proposal['values']['manual_filters']);
+    $notes = implode(' ', array_map(fn ($note) => strip_tags((string) $note), $proposal['notes']));
+    $this->assertStringContainsString('The condition "empty" on tid is not converted', $notes);
+
+    $this->assertSame('topic_en:!=[`Water`,`Drought`]', SearchBackend::noneOf('topic_en', ['Water', 'Drought'], 'typesense'));
+    $this->assertSame(
+      '(topic_en:=`Water` && topic_en:=`Drought`)',
+      SearchBackend::allOf('topic_en', ['Water', 'Drought'], 'typesense'),
+    );
+  }
+
+  /**
+   * A fixed filter definition for the topic vocabulary.
+   */
+  protected static function filter(string $field, string $plugin, string $operator, array $value): array {
+    return [
+      'field' => $field,
+      'plugin_id' => $plugin,
+      'vid' => 'topic',
+      'operator' => $operator,
+      'value' => $value,
+    ];
   }
 
 }

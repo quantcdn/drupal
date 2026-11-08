@@ -137,7 +137,24 @@ class ViewSearchPageConverter {
       $result['values']['facets'][] = 'content_type';
       return;
     }
-    $result['values']['bundles'] = array_values(array_filter((array) ($filter['value'] ?? [])));
+    $values = array_values(array_filter((array) ($filter['value'] ?? [])));
+    $all = array_keys($this->entityTypeManager->getStorage('node_type')->loadMultiple());
+    match ($filter['operator'] ?? 'in') {
+      'in' => $result['values']['bundles'] = $values,
+      // "None of": every other content type.
+      'not in' => $result['values']['bundles'] = array_values(array_diff($all, $values)),
+      default => $this->notConverted($filter, $result),
+    };
+  }
+
+  /**
+   * Notes a filter whose operator the search page cannot express.
+   */
+  protected function notConverted(array $filter, array &$result): void {
+    $result['notes'][] = $this->t('The condition "@operator" on %label is not converted.', [
+      '@operator' => (string) ($filter['operator'] ?? ''),
+      '%label' => (string) ($filter['expose']['label'] ?? $filter['field'] ?? ''),
+    ]);
   }
 
   /**
@@ -153,6 +170,10 @@ class ViewSearchPageConverter {
       $result['values']['facets'][] = 'taxonomy:' . $vid;
       return;
     }
+    if (in_array($filter['operator'] ?? 'or', ['empty', 'not empty'], TRUE)) {
+      $this->notConverted($filter, $result);
+      return;
+    }
     $terms = $this->entityTypeManager->getStorage('taxonomy_term')->loadMultiple(array_filter((array) ($filter['value'] ?? [])));
     if ($terms === []) {
       return;
@@ -161,9 +182,19 @@ class ViewSearchPageConverter {
     $resolved = $this->backend->get();
     $engine = is_array($resolved) && ($resolved['backend'] ?? '') === SearchBackend::TYPESENSE ? SearchBackend::TYPESENSE : SearchBackend::ALGOLIA;
     $field = $vid . '_' . $this->languageManager->getDefaultLanguage()->getId();
-    $filter = SearchBackend::anyOf($field, array_map(fn ($term) => $term->label(), $terms), $engine);
-    if ($filter !== '') {
-      $result['values']['manual_filters'][] = $filter;
+    $names = array_map(fn ($term) => $term->label(), $terms);
+    $built = match ($filter['operator'] ?? 'or') {
+      'or' => SearchBackend::anyOf($field, $names, $engine),
+      'and' => SearchBackend::allOf($field, $names, $engine),
+      'not' => SearchBackend::noneOf($field, $names, $engine),
+      default => NULL,
+    };
+    if ($built === NULL) {
+      $this->notConverted($filter, $result);
+      return;
+    }
+    if ($built !== '') {
+      $result['values']['manual_filters'][] = $built;
     }
   }
 
@@ -175,8 +206,12 @@ class ViewSearchPageConverter {
       $result['values']['facets'][] = 'language';
       return;
     }
-    $codes = array_filter((array) ($filter['value'] ?? []), fn ($code) => !str_starts_with((string) $code, '***'));
-    $result['values']['languages'] = array_values($codes);
+    $codes = array_values(array_filter((array) ($filter['value'] ?? []), fn ($code) => !str_starts_with((string) $code, '***')));
+    match ($filter['operator'] ?? 'in') {
+      'in' => $result['values']['languages'] = $codes,
+      'not in' => $result['values']['languages'] = array_values(array_diff(array_keys($this->languageManager->getLanguages()), $codes)),
+      default => $this->notConverted($filter, $result),
+    };
   }
 
   /**
