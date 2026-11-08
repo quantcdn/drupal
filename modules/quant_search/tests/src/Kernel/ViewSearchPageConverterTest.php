@@ -29,13 +29,6 @@ class ViewSearchPageConverterTest extends KernelTestBase {
   ];
 
   /**
-   * The test Views are minimal: the converter reads their config only.
-   *
-   * @var bool
-   */
-  protected $strictConfigSchema = FALSE;
-
-  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
