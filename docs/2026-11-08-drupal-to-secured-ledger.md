@@ -31,8 +31,21 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   reports ready.
 - R14: The `drupal-quant` redirect patterns cover the module callback at the web root on any
   host and port. A Drupal site in a subdirectory uses token connect. Same rule as `wordpress-quant`.
+- R15: Item 1 is tested against a fake dashboard (test module `quant_api_oauth_test`) that checks
+  PKCE, the bearer and the project limit like the portal. A live test against a local dashboard
+  waits until the `drupal-quant` client is integrated: the local portal runs from the shared main
+  checkout, which other sessions use.
+- R16 (controller, 2026-11-08): The demo site ~/apps/quant-demo-drupal is the test target from now
+  on (do not edit its content or theme; reset with reset.sh). R13 is closed.
+- R17: Tokens of a pending login (between the callback and the project choice) are kept for 15
+  minutes in an expirable store keyed by user, and never become the connection until the project
+  limit succeeds.
+- R18: The existing metadata views of `quant` fail strict config schema checks; new functional tests
+  set `$strictConfigSchema = FALSE` with a comment. Not fixed in this series.
 
 ## Follow-ups
 
 - F1: Portal OAuth revoke endpoint (RFC 7009), so that disconnect also revokes the tokens.
   For the controller to schedule.
+- F2: Live end-to-end test of Log in to Quant against a dashboard with the `drupal-quant` client.
+- F3: `quant` does not declare its `file` dependency (its views need it); tests enable it by hand.
