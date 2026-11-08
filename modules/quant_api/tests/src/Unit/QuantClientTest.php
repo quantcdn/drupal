@@ -6,6 +6,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\quant_api\Client\QuantClient;
 use Drupal\quant_api\Exception\InvalidPayload;
@@ -489,6 +490,36 @@ class QuantClientTest extends UnitTestCase {
     );
 
     $this->assertEquals(['api_project' => 'overridden-project'], $client->getOverrides());
+  }
+
+  /**
+   * With no token the client sends nothing at all (fail closed).
+   *
+   * An unconnected site sent an unpublish with empty credentials when a
+   * search page was deleted. No call may leave Drupal without a token.
+   */
+  public function testNoTokenMeansNoRequest() : void {
+    $logger = $this->createMock(LoggerChannelInterface::class);
+    $logger->expects($this->atMost(1))->method('warning')
+      ->with($this->stringContains('no project token is set'));
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($logger);
+    $stack = HandlerStack::create(new MockHandler([]));
+    $stack->push(Middleware::history($this->history));
+    $client = new QuantClient(new Client(['handler' => $stack]), $this->configFactory(['api_token' => '']), $factory);
+
+    $this->assertSame([], $client->send(['url' => '/x', 'content' => 'x']));
+    $this->assertSame([], $client->sendRedirect(['url' => '/a', 'redirect_url' => '/b']));
+    $this->assertSame([], $client->unpublish('/x'));
+    $this->assertSame([], $client->sendSearchRecords([['url' => '/x']]));
+    $this->assertSame([], $client->clearSearchIndex());
+    $this->assertSame([], $client->addFacets(['tags_en']));
+    $this->assertSame([], $client->getUrlMeta(['/x']));
+    $this->assertFalse($client->ping());
+    $this->assertFalse($client->project());
+    $this->assertFalse($client->search());
+
+    $this->assertCount(0, $this->history, 'No request was sent.');
   }
 
 }
