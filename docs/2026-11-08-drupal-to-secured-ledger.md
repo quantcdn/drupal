@@ -64,6 +64,11 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   the controller: F4.
 - R24: One Quant Forms config exists per URL. A page with two registrable Webforms registers the
   first and logs a warning.
+- R25: The export fetch (Seed::markupFromRoute) now always sends the signed `quant-token`; before,
+  it sent it only with content drafts on. A render knows it is an export only from that header.
+  With drafts off the token is not validated, so a visitor who sends the header gets the static form
+  render and skips the page cache. Both are harmless (the same as a query string). Export fetches are
+  POST requests, so the page cache never stored them; the request policy of R20 stays as a guard.
 
 ## Follow-ups
 
