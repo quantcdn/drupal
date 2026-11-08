@@ -69,6 +69,14 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
   With drafts off the token is not validated, so a visitor who sends the header gets the static form
   render and skips the page cache. Both are harmless (the same as a query string). Export fetches are
   POST requests, so the page cache never stored them; the request policy of R20 stays as a guard.
+- R26: I did not run the demo site's `enable-quant-local.sh` yet. It runs `ddev restart` and changes
+  the demo's composer files while another agent polishes that site, and the films install the module
+  on camera. Item 2 is tested on the scratch site with a copy of the demo's real `service_request`
+  Webform config (read only): the export render, a browser run of all steps against a fake edge, and
+  the mapped config. The demo run waits for a quiet window from the controller.
+- R27: A composite (address, name, contact) posts `key[part]`, never `key`. Quant checks only parts
+  that are marked required (`#PART__required`, or `#required` in a custom composite's `#element`).
+  Before this fix a required address made every submission fail the mandatory check.
 
 ## Follow-ups
 
