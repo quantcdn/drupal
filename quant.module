@@ -555,7 +555,7 @@ function quant_modules_uninstalled($modules) {
 }
 
 /**
- * Unpublish old alias if it changes.
+ * Unpublish an old alias when it changes, and redirect it to the new one.
  *
  * @param Drupal\Core\Entity\EntityInterface $pathAlias
  *   The path alias.
@@ -575,9 +575,11 @@ function quant_path_alias_presave(EntityInterface $pathAlias) {
   $alias = $pathAlias->get('alias')->value;
   $langcode = $pathAlias->get('langcode')->value;
 
-  // Unpublish original alias if it changed.
+  // Unpublish the original alias if it changed, and send a 301 from it to
+  // the new alias so links and search results to the old URL keep working.
   if ($original_path == $path && $langcode == $original_langcode && $original_alias != $alias) {
     Seed::unpublishPathAlias($pathAlias->original);
+    Seed::redirectChangedAlias($pathAlias->original, $pathAlias);
   }
 }
 

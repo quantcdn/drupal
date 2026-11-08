@@ -585,7 +585,36 @@ class Seed {
    * Unpublish path alias via API request.
    */
   public static function unpublishPathAlias($pathAlias) {
+    Utility::unpublishUrl(self::aliasUrl($pathAlias), 'Unpublished path alias');
+  }
 
+  /**
+   * Sends a 301 from an old alias to the new one, so old links keep working.
+   *
+   * Only for published content and only when the Redirect module is off:
+   * with Redirect on, its own redirect entity is pushed instead.
+   *
+   * @param \Drupal\path_alias\PathAliasInterface $original
+   *   The alias before the change.
+   * @param \Drupal\path_alias\PathAliasInterface $pathAlias
+   *   The alias after the change.
+   */
+  public static function redirectChangedAlias($original, $pathAlias) : void {
+    if (\Drupal::moduleHandler()->moduleExists('redirect') || !self::isPublishedEntityPath((string) $pathAlias->get('path')->value)) {
+      return;
+    }
+    $from = self::aliasUrl($original);
+    $to = self::aliasUrl($pathAlias);
+    if ($from === $to || !trim($to)) {
+      return;
+    }
+    \Drupal::service('event_dispatcher')->dispatch(new QuantRedirectEvent($from, $to, 301), QuantRedirectEvent::UPDATE);
+  }
+
+  /**
+   * The public URL of a path alias, with the language prefix if any.
+   */
+  protected static function aliasUrl($pathAlias) : string {
     $langcode = $pathAlias->get('langcode')->value;
     $alias = Utility::getUrl($pathAlias->get('alias')->value, $langcode);
 
@@ -593,8 +622,19 @@ class Seed {
     if ($langcode == LanguageInterface::LANGCODE_NOT_SPECIFIED) {
       $alias = str_replace("/{$langcode}", '', $alias);
     }
+    return $alias;
+  }
 
-    Utility::unpublishUrl($alias, 'Unpublished path alias');
+  /**
+   * Whether a system path is a published node or taxonomy term.
+   */
+  protected static function isPublishedEntityPath(string $path) : bool {
+    if (!preg_match('#^/(node|taxonomy/term)/(\d+)$#', $path, $m)) {
+      return FALSE;
+    }
+    $type = $m[1] === 'node' ? 'node' : 'taxonomy_term';
+    $entity = \Drupal::entityTypeManager()->getStorage($type)->load($m[2]);
+    return $entity && (!method_exists($entity, 'isPublished') || $entity->isPublished());
   }
 
   /**
