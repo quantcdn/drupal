@@ -52,6 +52,8 @@ class OAuthTokenStore {
 
   public const PENDING = 'pending';
 
+  public const SYNCED_AT = 'synced_at';
+
   protected const NAMES = [
     self::ACCESS_TOKEN,
     self::REFRESH_TOKEN,
@@ -64,6 +66,7 @@ class OAuthTokenStore {
     self::RETRY_AFTER,
     self::CRON_RETRY_AFTER,
     self::PENDING,
+    self::SYNCED_AT,
   ];
 
   /**

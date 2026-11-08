@@ -25,6 +25,11 @@ class OAuthController extends ControllerBase {
   public const SESSION_KEY = 'quant_api_oauth';
 
   /**
+   * The session key of the platform chosen before the login starts.
+   */
+  public const PLATFORM_KEY = 'quant_api_oauth_platform';
+
+  /**
    * How long the dashboard approval may take, in seconds.
    */
   protected const STATE_TTL = 600;
@@ -63,11 +68,16 @@ class OAuthController extends ControllerBase {
     $state = bin2hex(random_bytes(16));
     $verifier = $this->auth->generatePkceVerifier();
     $redirect_uri = self::callbackUrl();
+    // The platform chosen on the settings form, saved only when the login
+    // completes; "Change project" keeps the current one.
+    $platform = (string) $request->getSession()->remove(self::PLATFORM_KEY);
+    $this->auth->usePlatform($platform ?: NULL);
     $request->getSession()->set(self::SESSION_KEY, [
       'state' => $state,
       'verifier' => $verifier,
       'uid' => (int) $this->currentUser()->id(),
       'created' => time(),
+      'platform' => $this->auth->getPlatform(),
     ]);
     $url = $this->auth->getAuthorizationUrl($state, $redirect_uri, $this->auth->computePkceChallenge($verifier));
     $response = new TrustedRedirectResponse($url);
@@ -90,6 +100,7 @@ class OAuthController extends ControllerBase {
       return $this->redirectToSettings();
     }
 
+    $this->auth->usePlatform($login['platform'] ?? NULL);
     $tokens = $this->auth->exchangeCode((string) $request->query->get('code'), self::callbackUrl(), $login['verifier']);
     if ($tokens === NULL) {
       $this->messenger()->addError($this->t('Quant did not accept the login. Try again. If it fails again, connect with a project token.'));
@@ -102,6 +113,7 @@ class OAuthController extends ControllerBase {
       'tokens' => $tokens,
       'user' => ['name' => (string) ($user['name'] ?? ''), 'email' => (string) ($user['email'] ?? '')],
       'organizations' => self::organizations($user['organizations'] ?? []),
+      'platform' => $this->auth->getPlatform(),
     ]);
     return new RedirectResponse(Url::fromRoute('quant_api.oauth_project')->toString());
   }
