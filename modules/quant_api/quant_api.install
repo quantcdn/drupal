@@ -1,0 +1,32 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Quant API module.
+ */
+
+use Drupal\quant_api\OAuth\Platform;
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_api_uninstall() {
+  // The OAuth connection is outside config, so config removal leaves it.
+  $store = \Drupal::service('quant_api.oauth_store');
+  $store->clear();
+  $store->deleteAllPendingLogins();
+}
+
+/**
+ * Add the platform and the connection method to the Quant API settings.
+ */
+function quant_api_update_11001() {
+  $config = \Drupal::configFactory()->getEditable('quant_api.settings');
+  if (!Platform::isKnown($config->get('platform'))) {
+    $config->set('platform', Platform::fromEndpoint($config->get('api_endpoint')));
+  }
+  if (!in_array($config->get('auth_method'), ['token', 'oauth'], TRUE)) {
+    $config->set('auth_method', 'token');
+  }
+  $config->save();
+}

@@ -21,3 +21,9 @@ quant_api.settings:
     api_tls_disabled:
       type: boolean
       label: 'Disable TLS verification'
+    platform:
+      type: string
+      label: 'Platform (quantcdn or quantgov)'
+    auth_method:
+      type: string
+      label: 'Connection method (token or oauth)'

@@ -1,1 +1,3 @@
 api_endpoint: https://api.quantcdn.io
+platform: quantcdn
+auth_method: token

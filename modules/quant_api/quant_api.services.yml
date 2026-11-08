@@ -5,6 +5,43 @@ services:
       - '@http_client'
       - '@config.factory'
       - '@logger.factory'
+      - '@quant_api.credentials'
+
+  quant_api.credentials:
+    class: Drupal\quant_api\Credentials
+    arguments:
+      - '@config.factory'
+      - '@quant_api.oauth_store'
+      - '@config.storage'
+
+  quant_api.oauth_store:
+    class: Drupal\quant_api\OAuth\OAuthTokenStore
+    arguments:
+      - '@keyvalue'
+      - '@keyvalue.expirable'
+
+  quant_api.site_fingerprint:
+    class: Drupal\quant_api\OAuth\SiteFingerprint
+    arguments:
+      - '@config.factory'
+
+  quant_api.oauth:
+    class: Drupal\quant_api\OAuth\AuthService
+    arguments:
+      - '@http_client'
+      - '@config.factory'
+      - '@quant_api.oauth_store'
+      - '@quant_api.site_fingerprint'
+      - '@lock'
+      - '@database'
+      - '@logger.factory'
+
+  quant_api.portal:
+    class: Drupal\quant_api\OAuth\PortalClient
+    arguments:
+      - '@http_client'
+      - '@quant_api.oauth'
+      - '@logger.factory'
 
   quant.output.api:
     class: Drupal\quant_api\EventSubscriber\QuantApi

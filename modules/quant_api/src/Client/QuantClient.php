@@ -5,6 +5,7 @@ namespace Drupal\quant_api\Client;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant\PublishGuard;
+use Drupal\quant_api\Credentials;
 use Drupal\quant_api\Exception\InvalidPayload;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
@@ -82,12 +83,20 @@ class QuantClient implements QuantClientInterface {
   protected $configFactory;
 
   /**
+   * Resolves the write token (settings.php, OAuth connection or config).
+   *
+   * @var \Drupal\quant_api\Credentials|null
+   */
+  protected $credentials;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(Client $client, ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory) {
+  public function __construct(Client $client, ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory, ?Credentials $credentials = NULL) {
     $this->configFactory = $config_factory;
     $this->client = $client;
     $this->logger = $logger_factory->get('quant_api');
+    $this->credentials = $credentials;
 
     $this->refreshCredentials();
   }
@@ -108,7 +117,8 @@ class QuantClient implements QuantClientInterface {
     $this->config = $this->configFactory->get('quant_api.settings');
 
     $this->username = $this->config->get('api_account');
-    $this->token = $this->config->get('api_token');
+    // An OAuth connection keeps its token outside config.
+    $this->token = $this->credentials ? $this->credentials->getToken($this->config) : $this->config->get('api_token');
     $this->project = $this->config->get('api_project');
     $this->endpoint = $this->config->get('api_endpoint') . '/v1';
     $this->tlsDisabled = $this->config->get('api_tls_disabled');
