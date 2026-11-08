@@ -4,6 +4,7 @@ namespace Drupal\quant_api\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Site\Settings;
 use Drupal\Core\Url;
 use Drupal\quant_api\Controller\OAuthController;
 use Drupal\quant_api\Credentials;
@@ -94,7 +95,7 @@ class SettingsForm extends ConfigFormBase {
         Platform::QUANTCDN => $this->t('QuantCDN'),
         Platform::QUANTGOV => $this->t('QuantGov (Australian government)'),
       ],
-      '#default_value' => Platform::isKnown($config->get('platform')) ? $config->get('platform') : Platform::fromEndpoint($config->get('api_endpoint')),
+      '#default_value' => $this->defaultPlatform($config->get('platform'), (string) $config->get('api_endpoint')),
       '#description' => $this->t('Your Quant account is on one platform. QuantGov accounts sign in at dash.quantgov.cloud.'),
     ];
 
@@ -449,6 +450,20 @@ class SettingsForm extends ConfigFormBase {
     return $this->configFactory()->getEditable(self::SETTINGS)
       ->set('platform', $platform)
       ->set('api_endpoint', $oauth ? Platform::apiEndpoint($platform) : $this->resolveEndpoint($form_state));
+  }
+
+  /**
+   * The platform the form starts on.
+   *
+   * A dashboard fixed in settings.php decides it, because logins go there
+   * whatever the editor picks. Otherwise the saved platform, then the endpoint.
+   */
+  protected function defaultPlatform(?string $saved, string $endpoint): string {
+    $dashboard = (string) Settings::get('quant_api_dashboard_url', '');
+    if ($dashboard !== '') {
+      return Platform::fromEndpoint($dashboard);
+    }
+    return Platform::isKnown($saved) ? $saved : Platform::fromEndpoint($endpoint);
   }
 
 }

@@ -260,4 +260,20 @@ class OAuthConnectTest extends BrowserTestBase {
     $session->responseNotContains('rehearsal:');
   }
 
+  /**
+   * A QuantGov dashboard in settings.php makes QuantGov the starting platform.
+   */
+  public function testDashboardOverrideSetsTheDefaultPlatform(): void {
+    $this->writeSettings([
+      'settings' => [
+        'quant_api_dashboard_url' => (object) [
+          'value' => 'https://dash.stage.quantgov.cloud',
+          'required' => TRUE,
+        ],
+      ],
+    ]);
+    $this->drupalGet('admin/config/development/quant/api');
+    $this->assertSession()->checkboxChecked('edit-platform-quantgov');
+  }
+
 }
