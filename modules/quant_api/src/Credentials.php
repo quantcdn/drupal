@@ -5,6 +5,7 @@ namespace Drupal\quant_api;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\Config;
 use Drupal\Core\Config\StorageInterface;
+use Drupal\Core\Site\Settings;
 use Drupal\quant_api\OAuth\OAuthTokenStore;
 use Drupal\quant_api\OAuth\Platform;
 use Drupal\quant_api\OAuth\SiteFingerprint;
@@ -63,6 +64,29 @@ class Credentials {
   }
 
   /**
+   * The endpoint from $settings['quant_api_endpoint_url'], or an empty string.
+   *
+   * Set only in settings.php, never in the UI. It may carry basic-auth
+   * userinfo (https://user:password@host); the HTTP client moves that into a
+   * header, and redact() keeps it off every page.
+   */
+  public static function endpointOverride(): string {
+    return rtrim(trim((string) Settings::get('quant_api_endpoint_url', '')), '/');
+  }
+
+  /**
+   * An endpoint without its userinfo, for display.
+   */
+  public static function redact(string $endpoint): string {
+    $parts = parse_url($endpoint);
+    if (!is_array($parts) || empty($parts['host'])) {
+      return '';
+    }
+    $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+    return ($parts['scheme'] ?? 'https') . '://' . $parts['host'] . $port . ($parts['path'] ?? '');
+  }
+
+  /**
    * The content API endpoint, without /v1.
    *
    * With "Log in to Quant" the endpoint is the chosen platform's official
@@ -70,6 +94,10 @@ class Credentials {
    * override still wins.
    */
   public function getEndpoint(?Config $config = NULL): string {
+    $override = self::endpointOverride();
+    if ($override !== '') {
+      return $override;
+    }
     $config = $config ?? $this->configFactory->get('quant_api.settings');
     if ($this->usesOauth($config) && !$config->hasOverrides('api_endpoint')) {
       return Platform::apiEndpoint((string) $config->get('platform'));

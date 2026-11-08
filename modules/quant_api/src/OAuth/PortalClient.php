@@ -121,7 +121,7 @@ class PortalClient {
       $options['json'] = $json;
     }
     try {
-      $response = $this->httpClient->request($method, $this->auth->getDashboardUrl() . $path, $options);
+      $response = $this->httpClient->request($method, $this->auth->getInternalDashboardUrl() . $path, $options);
     }
     catch (\Exception $e) {
       $this->logger->error('The Quant dashboard call @method @path failed (@class).', [

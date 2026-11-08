@@ -2,6 +2,8 @@
 
 namespace Drupal\Tests\quant_api\Kernel;
 
+use Drupal\quant_api\Http\EndpointUserInfoMiddleware;
+use Drupal\quant_api\Credentials;
 use GuzzleHttp\Promise\Create;
 use Drupal\quant_api\Http\UnauthorizedResyncMiddleware;
 use Drupal\KernelTests\KernelTestBase;
@@ -455,6 +457,50 @@ class OAuthAuthServiceTest extends KernelTestBase {
     $credentials->confirmSameSite();
     $this->assertSame([], $credentials->copyDifferences());
     $this->assertSame('write-token', $credentials->getToken());
+  }
+
+  /**
+   * The settings.php endpoint wins in every mode and is shown without userinfo.
+   *
+   * @covers \Drupal\quant_api\Credentials::getEndpoint
+   * @covers \Drupal\quant_api\Credentials::redact
+   * @covers \Drupal\quant_api\Http\EndpointUserInfoMiddleware
+   */
+  public function testEndpointOverrideWithUserInfo(): void {
+    $this->setSetting('quant_api_endpoint_url', 'https://rehearsal:placeholder-pass@uploads.stage.example/');
+    $credentials = $this->container->get('quant_api.credentials');
+    $this->config('quant_api.settings')->set('auth_method', 'oauth')->set('platform', 'quantgov')->save();
+    $this->assertSame('https://rehearsal:placeholder-pass@uploads.stage.example', $credentials->getEndpoint());
+    $this->assertSame('https://uploads.stage.example', Credentials::redact($credentials->getEndpoint()));
+
+    $sent = NULL;
+    $middleware = (new EndpointUserInfoMiddleware())();
+    $handler = function ($request) use (&$sent) {
+      $sent = $request;
+      return Create::promiseFor(new Response(200));
+    };
+    $middleware($handler)(new Request('GET', 'https://rehearsal:placeholder-pass@uploads.stage.example/v1/ping'), [])->wait();
+    $this->assertSame('https://uploads.stage.example/v1/ping', (string) $sent->getUri());
+    $this->assertSame('Basic ' . base64_encode('rehearsal:placeholder-pass'), $sent->getHeaderLine('Authorization'));
+  }
+
+  /**
+   * Server-to-server calls use the internal dashboard; the browser does not.
+   *
+   * @covers ::getInternalDashboardUrl
+   */
+  public function testInternalDashboardForServerCalls(): void {
+    $this->setSetting('quant_api_dashboard_url', 'http://localhost:8002');
+    $this->setSetting('quant_api_dashboard_internal_url', 'http://host.docker.internal:8002/');
+    $this->assertStringStartsWith('http://localhost:8002/oauth/authorize?', $this->auth()->getAuthorizationUrl('st', 'https://site.example/cb', 'ch'));
+
+    $this->mock->append(self::json(200, ['access_token' => 'qca_x', 'refresh_token' => 'qcr_x', 'expires_in' => 60]));
+    $this->auth()->exchangeCode('code', 'https://site.example/cb', 'verifier');
+    $this->assertSame('http://host.docker.internal:8002/oauth/token', (string) $this->history[0]['request']->getUri());
+
+    // Without the internal setting, both are the same.
+    $this->setSetting('quant_api_dashboard_internal_url', '');
+    $this->assertSame('http://localhost:8002', $this->auth()->getInternalDashboardUrl());
   }
 
 }

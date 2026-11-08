@@ -234,6 +234,7 @@ class SettingsForm extends ConfigFormBase {
    */
   protected function buildAdvanced($config): array {
     $oauth = $this->credentials->usesOauth($config);
+    $override = Credentials::endpointOverride() !== '';
     return [
       '#type' => 'details',
       '#title' => $this->t('Advanced'),
@@ -241,11 +242,14 @@ class SettingsForm extends ConfigFormBase {
         '#type' => 'textfield',
         '#title' => $this->t('API Endpoint'),
         '#description' => $this->t('Leave the platform default unless Quant support gives you another endpoint. Use https and do not add <code>/v1</code>; the module adds it.'),
-        '#default_value' => $this->credentials->getEndpoint($config) ?: Platform::apiEndpoint(Platform::QUANTCDN),
+        '#default_value' => Credentials::redact($this->credentials->getEndpoint($config)) ?: Platform::apiEndpoint(Platform::QUANTCDN),
         '#parents' => ['api_endpoint'],
-        // A login publishes only to the platform's own host.
-        '#disabled' => $oauth,
-        '#field_suffix' => $oauth ? $this->t('Fixed to the platform while this site is logged in to Quant.') : NULL,
+        // A login publishes only to the platform's own host, unless
+        // settings.php names another endpoint.
+        '#disabled' => $oauth || $override,
+        '#field_suffix' => $override
+          ? $this->t("Set in settings.php (\$settings['quant_api_endpoint_url']).")
+          : ($oauth ? $this->t('Fixed to the platform while this site is logged in to Quant.') : NULL),
       ],
       'api_tls_disabled' => [
         '#type' => 'checkbox',
@@ -353,6 +357,10 @@ class SettingsForm extends ConfigFormBase {
    * platform, so switching the platform switches the endpoint.
    */
   protected function resolveEndpoint(FormStateInterface $form_state): string {
+    if (Credentials::endpointOverride() !== '') {
+      // settings.php decides; the stored value stays as it is.
+      return (string) ($this->config(self::SETTINGS)->get('api_endpoint') ?: Platform::apiEndpoint(Platform::QUANTCDN));
+    }
     $platform = (string) $form_state->getValue('platform');
     $platform = Platform::isKnown($platform) ? $platform : Platform::QUANTCDN;
     $endpoint = EndpointValidator::normalise($form_state->getValue('api_endpoint'));
