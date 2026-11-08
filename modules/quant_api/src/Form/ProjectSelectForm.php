@@ -8,6 +8,7 @@ use Drupal\Core\Url;
 use Drupal\quant_api\Credentials;
 use Drupal\quant_api\OAuth\AuthService;
 use Drupal\quant_api\OAuth\OAuthTokenStore;
+use Drupal\quant_api\OAuth\Platform;
 use Drupal\quant_api\OAuth\PortalClient;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -52,6 +53,7 @@ class ProjectSelectForm extends FormBase {
     if ($login === NULL) {
       return $this->expired($form);
     }
+    $this->auth->usePlatform($login['platform'] ?? NULL);
     $options = $this->projectOptions($login);
     if ($options === []) {
       $form['empty'] = [
@@ -99,6 +101,8 @@ class ProjectSelectForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $uid = (int) $this->currentUser()->id();
     $login = $this->tokenStore->getPendingLogin($uid);
+    $this->auth->usePlatform($login['platform'] ?? NULL);
+    $platform = $this->auth->getPlatform();
     [$org, $project] = explode(':', (string) $form_state->getValue('project'), 2);
     $access = (string) $login['tokens']['access_token'];
 
@@ -116,6 +120,8 @@ class ProjectSelectForm extends FormBase {
     $this->auth->saveConnection($login['tokens'], $write_token, $login['user']);
     $this->configFactory()->getEditable('quant_api.settings')
       ->set('auth_method', Credentials::METHOD_OAUTH)
+      ->set('platform', $platform)
+      ->set('api_endpoint', Platform::apiEndpoint($platform))
       ->set('api_account', $org)
       ->set('api_project', $project)
       ->set('api_token', NULL)

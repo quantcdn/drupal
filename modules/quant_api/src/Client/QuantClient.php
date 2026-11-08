@@ -120,7 +120,7 @@ class QuantClient implements QuantClientInterface {
     // An OAuth connection keeps its token outside config.
     $this->token = $this->credentials ? $this->credentials->getToken($this->config) : $this->config->get('api_token');
     $this->project = $this->config->get('api_project');
-    $this->endpoint = $this->config->get('api_endpoint') . '/v1';
+    $this->endpoint = ($this->credentials ? $this->credentials->getEndpoint($this->config) : $this->config->get('api_endpoint')) . '/v1';
     $this->tlsDisabled = $this->config->get('api_tls_disabled');
   }
 

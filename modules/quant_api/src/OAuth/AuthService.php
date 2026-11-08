@@ -71,6 +71,11 @@ class AuthService {
    */
   protected LoggerInterface $logger;
 
+  /**
+   * The platform of a login in progress, before it is saved.
+   */
+  protected ?string $platformOverride = NULL;
+
   public function __construct(
     protected ClientInterface $httpClient,
     protected ConfigFactoryInterface $configFactory,
@@ -87,8 +92,18 @@ class AuthService {
    * The platform the site is configured for.
    */
   public function getPlatform(): string {
-    $platform = (string) $this->configFactory->get('quant_api.settings')->get('platform');
+    $platform = $this->platformOverride ?? (string) $this->configFactory->get('quant_api.settings')->get('platform');
     return Platform::isKnown($platform) ? $platform : Platform::QUANTCDN;
+  }
+
+  /**
+   * Uses a platform for this request only: a login in progress.
+   *
+   * The site's platform and endpoint change only when the login completes,
+   * so a cancelled login never re-points a working connection.
+   */
+  public function usePlatform(?string $platform): void {
+    $this->platformOverride = Platform::isKnown($platform) ? $platform : NULL;
   }
 
   /**
@@ -213,16 +228,21 @@ class AuthService {
 
   /**
    * Refreshes from cron 30 days before expiry, or at half a short lifetime.
+   *
+   * @return bool
+   *   TRUE when the tokens were rotated.
    */
-  public function refreshFromCron(): void {
+  public function refreshFromCron(): bool {
     $record = $this->tokenStore->getAll();
     if (empty($record[OAuthTokenStore::REFRESH_TOKEN])) {
-      return;
+      return FALSE;
     }
     $margin = $this->getCronMargin($record);
-    if ($this->getRefreshDecision($record, $margin, TRUE) === 'refresh') {
-      $this->refreshIfAllowed($record, $margin);
+    if ($this->getRefreshDecision($record, $margin, TRUE) !== 'refresh') {
+      return FALSE;
     }
+    $this->refreshIfAllowed($record, $margin);
+    return $this->tokenStore->get(OAuthTokenStore::ACCESS_TOKEN) !== $record[OAuthTokenStore::ACCESS_TOKEN];
   }
 
   /**

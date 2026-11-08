@@ -326,4 +326,79 @@ class OAuthAuthServiceTest extends KernelTestBase {
     $this->assertSame('https://dash.quantgov.cloud', $this->auth()->getDashboardUrl());
   }
 
+  /**
+   * A copied database publishes nothing with the original site's login.
+   *
+   * @covers \Drupal\quant_api\Credentials::getToken
+   * @covers \Drupal\quant_api\Credentials::isCopiedSite
+   */
+  public function testCopiedSiteGetsNoToken(): void {
+    $this->connect(86400);
+    $this->config('quant_api.settings')->set('auth_method', 'oauth')->save();
+    $credentials = $this->container->get('quant_api.credentials');
+    $this->assertSame('write-token', $credentials->getToken());
+
+    $fingerprint = $this->store()->get(OAuthTokenStore::FINGERPRINT);
+    $fingerprint['database'] = hash('sha256', 'production database');
+    $this->store()->set(OAuthTokenStore::FINGERPRINT, $fingerprint);
+    $this->assertTrue($credentials->isCopiedSite());
+    $this->assertNull($credentials->getToken());
+    $this->assertFalse($credentials->hasToken());
+  }
+
+  /**
+   * With a login, the endpoint is the platform's own host.
+   *
+   * @covers \Drupal\quant_api\Credentials::getEndpoint
+   */
+  public function testLoginFixesTheEndpoint(): void {
+    $credentials = $this->container->get('quant_api.credentials');
+    $this->config('quant_api.settings')->set('api_endpoint', 'https://collector.example')->save();
+    $this->assertSame('https://collector.example', $credentials->getEndpoint(), 'Token connect keeps a custom endpoint.');
+
+    $this->config('quant_api.settings')->set('auth_method', 'oauth')->set('platform', 'quantgov')->save();
+    $this->assertSame('https://api.quantgov.cloud', $credentials->getEndpoint());
+    $this->config('quant_api.settings')->set('platform', 'quantcdn')->save();
+    $this->assertSame('https://api.quantcdn.io', $credentials->getEndpoint());
+  }
+
+  /**
+   * A write token rotated in the dashboard is re-read with the login.
+   *
+   * @covers \Drupal\quant_api\OAuth\WriteTokenSync::syncIfDue
+   */
+  public function testWriteTokenResync(): void {
+    $this->connect(86400 * 80);
+    $this->config('quant_api.settings')->set('auth_method', 'oauth')
+      ->set('api_account', 'test-org')->set('api_project', 'site-a')->save();
+    $sync = $this->container->get('quant_api.write_token_sync');
+
+    $this->mock->append(self::json(200, ['machine_name' => 'site-a', 'write_token' => 'rotated-token']));
+    $this->assertTrue($sync->syncIfDue(FALSE));
+    $this->assertSame('rotated-token', $this->store()->get(OAuthTokenStore::WRITE_TOKEN));
+    $request = $this->history[0]['request'];
+    $this->assertSame('/api/v2/organizations/test-org/projects/site-a', $request->getUri()->getPath());
+    $this->assertSame('with_token=1', $request->getUri()->getQuery());
+    $this->assertSame('Bearer qca_old', $request->getHeaderLine('Authorization'));
+
+    // Within a day nothing is sent, unless the login was just refreshed.
+    $this->assertNull($sync->syncIfDue(FALSE));
+    $this->assertCount(1, $this->history);
+    $this->mock->append(self::json(200, ['machine_name' => 'site-a', 'write_token' => 'rotated-token']));
+    $this->assertFalse($sync->syncIfDue(TRUE));
+  }
+
+  /**
+   * Cron reports whether it rotated the tokens.
+   *
+   * @covers ::refreshFromCron
+   */
+  public function testCronReportsTheRotation(): void {
+    $this->connect(86400 * 80, [OAuthTokenStore::LIFETIME => 7776000]);
+    $this->assertFalse($this->auth()->refreshFromCron());
+    $this->store()->set(OAuthTokenStore::EXPIRES_AT, time() + 86400);
+    $this->mock->append(self::rotated());
+    $this->assertTrue($this->auth()->refreshFromCron());
+  }
+
 }
