@@ -33,14 +33,6 @@ class QuantFormsPageTest extends BrowserTestBase {
   protected $defaultTheme = 'stark';
 
   /**
-   * The quant module's shipped metadata views have schema gaps until the
-   * fix/content-paths branch is merged.
-   *
-   * @var bool
-   */
-  protected $strictConfigSchema = FALSE;
-
-  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {

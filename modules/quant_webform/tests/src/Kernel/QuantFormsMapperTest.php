@@ -28,13 +28,6 @@ class QuantFormsMapperTest extends KernelTestBase {
   ];
 
   /**
-   * The webform module's own config has schema gaps on some versions.
-   *
-   * @var bool
-   */
-  protected $strictConfigSchema = FALSE;
-
-  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {

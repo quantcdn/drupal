@@ -28,13 +28,6 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
   protected $defaultTheme = 'stark';
 
   /**
-   * The quant and webform modules' shipped config has schema gaps.
-   *
-   * @var bool
-   */
-  protected $strictConfigSchema = FALSE;
-
-  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {

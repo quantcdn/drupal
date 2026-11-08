@@ -34,13 +34,6 @@ class QuantFormsExportTest extends BrowserTestBase {
   protected $defaultTheme = 'stark';
 
   /**
-   * The quant and webform modules' shipped config has schema gaps.
-   *
-   * @var bool
-   */
-  protected $strictConfigSchema = FALSE;
-
-  /**
    * The wizard under test.
    */
   protected Webform $webform;
