@@ -196,6 +196,8 @@ class AuthService {
    *   The user name and email, for display only.
    */
   public function saveConnection(array $tokens, string $write_token, array $user): void {
+    // The login this one replaces (Change project) is ended, not orphaned.
+    $this->revokeStoredLogin();
     $this->tokenStore->clear();
     $this->tokenStore->saveTokens($tokens);
     $this->tokenStore->setMany([
@@ -213,17 +215,32 @@ class AuthService {
    * its own. The local connection is deleted in every case.
    */
   public function disconnect(): void {
-    $access = $this->tokenStore->get(OAuthTokenStore::ACCESS_TOKEN);
-    if (is_string($access) && $access !== '') {
-      $this->revokeAtDashboard($access);
-    }
+    $this->revokeStoredLogin();
     $this->tokenStore->clear();
   }
 
   /**
-   * Asks the dashboard to delete this site's token (POST /api/oauth/revoke).
+   * Ends the stored login at the dashboard, if it belongs to this site.
+   *
+   * A copy of another site's database (for example staging from production)
+   * holds the original site's login. Revoking it would log the original site
+   * out, so a copy only forgets it locally.
    */
-  protected function revokeAtDashboard(string $access_token): void {
+  protected function revokeStoredLogin(): void {
+    $record = $this->tokenStore->getAll();
+    $access = $record[OAuthTokenStore::ACCESS_TOKEN] ?? NULL;
+    if (!is_string($access) || $access === '' || $this->isRecordFromAnotherSite($record)) {
+      return;
+    }
+    $this->revokeToken($access);
+  }
+
+  /**
+   * Asks the dashboard to delete one token (POST /api/oauth/revoke).
+   *
+   * For a token this site holds or has just received. Best effort.
+   */
+  public function revokeToken(string $access_token): void {
     try {
       $response = $this->httpClient->request('POST', $this->getInternalDashboardUrl() . '/api/oauth/revoke', [
         'headers' => [
@@ -300,7 +317,9 @@ class AuthService {
     if (!empty($record[OAuthTokenStore::REFUSAL])) {
       return self::RECONNECT_REFUSED;
     }
-    return $this->isExpiring($record, 0) ? self::RECONNECT_EXPIRED : NULL;
+    // An expired access token is renewed on the next request while a
+    // refresh token is stored; only without one is a new login needed.
+    return empty($record[OAuthTokenStore::REFRESH_TOKEN]) && $this->isExpiring($record, 0) ? self::RECONNECT_EXPIRED : NULL;
   }
 
   /**

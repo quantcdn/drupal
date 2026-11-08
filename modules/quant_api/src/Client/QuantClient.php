@@ -20,6 +20,13 @@ use GuzzleHttp\RequestOptions;
 class QuantClient implements QuantClientInterface {
 
   /**
+   * Whether the last ping() failed because Quant could not be reached.
+   *
+   * @var bool
+   */
+  protected bool $unreachable = FALSE;
+
+  /**
    * The configuration object for Quant API.
    *
    * @var \Drupal\Core\Config\ImmutableConfig
@@ -102,6 +109,13 @@ class QuantClient implements QuantClientInterface {
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function lastCallUnreachable() : bool {
+    return $this->unreachable;
+  }
+
+  /**
    * Tells the editor that Quant could not be reached, and logs the cause.
    *
    * The exception text names the request URL, which can carry credentials,
@@ -109,6 +123,7 @@ class QuantClient implements QuantClientInterface {
    * text without any user information in URLs.
    */
   protected function reportUnreachable(GuzzleException $e) : void {
+    $this->unreachable = TRUE;
     $this->logger->error('Quant API request failed (@class): @message', [
       '@class' => get_class($e),
       '@message' => preg_replace('#(https?://)[^/\s@]+@#i', '$1', $e->getMessage()),
@@ -242,6 +257,7 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function ping() {
+    $this->unreachable = FALSE;
     $this->refreshCredentials();
     if ($this->refusesWithoutToken('to check the connection')) {
       return FALSE;

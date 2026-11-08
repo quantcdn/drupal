@@ -25,6 +25,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class SettingsForm extends ConfigFormBase {
 
+  /**
+   * Session flag: the connection was just reported, so no second message.
+   */
+  public const REPORTED = 'quant_api.connection_reported';
+
   const SETTINGS = 'quant_api.settings';
 
   /**
@@ -281,15 +286,15 @@ class SettingsForm extends ConfigFormBase {
       return;
     }
     if ($this->client->ping()) {
-      // After a project pick, the pick already said where the site publishes.
-      if ($this->messenger()->messagesByType('status') !== []) {
+      // After a project pick or a confirm, that message already said so.
+      if ($this->getRequest()->getSession()->remove(self::REPORTED)) {
         return;
       }
       $this->messenger()->addStatus($this->t('Connected to the Quant project %project.', ['%project' => $this->client->getProject()]));
       return;
     }
     // The client has already said why when Quant could not be reached.
-    if ($this->messenger()->messagesByType('error') === []) {
+    if (!$this->client->lastCallUnreachable()) {
       $this->messenger()->addError($this->t('The Quant API did not accept the connection. Check the platform and the project, or log in to Quant again.'));
     }
   }
@@ -300,6 +305,9 @@ class SettingsForm extends ConfigFormBase {
   protected function showOverrides(array &$form): void {
     $overrides = $this->client->getOverrides();
     foreach ($overrides as $key => $value) {
+      if ($key === 'api_endpoint') {
+        $value = Credentials::redact((string) $value);
+      }
       $message = $key === 'api_token'
         ? $this->t('QuantAPI override: <code>api_token</code> has been overridden in the settings file.')
         : $this->t('QuantAPI override: <em>@key</em> has been overridden in the settings file with <em>@value</em>.', [
@@ -392,6 +400,7 @@ class SettingsForm extends ConfigFormBase {
       '@components' => implode(', ', $differences),
     ]);
     $this->messenger()->addStatus($this->t('Confirmed. This site publishes with its Quant login again.'));
+    $this->getRequest()->getSession()->set(self::REPORTED, TRUE);
   }
 
   /**
