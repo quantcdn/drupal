@@ -1,0 +1,6 @@
+services:
+  quant_webform_test.middleware:
+    class: Drupal\quant_webform_test\RecordingMiddleware
+    arguments: ['@state']
+    tags:
+      - { name: http_client_middleware }

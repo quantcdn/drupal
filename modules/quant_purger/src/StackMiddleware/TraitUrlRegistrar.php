@@ -27,6 +27,14 @@ trait TraitUrlRegistrar {
       return FALSE;
     }
 
+    // Before 2.3 the export fetch sent the token only with content drafts
+    // on, so a site with drafts off recorded no traffic. The fetch now always
+    // sends it (static Webforms need to recognise an export); keep the
+    // registry as it was on those sites.
+    if (\Drupal::config('quant.settings')->get('disable_content_drafts')) {
+      return FALSE;
+    }
+
     // Allow paths to be excluded from the traffic repository.
     $path = $this->generateUrl($request);
     $blocklist = $this->config->get('path_blocklist');

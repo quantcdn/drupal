@@ -1,0 +1,8 @@
+name: 'Quant webform test'
+description: 'Records the Quant content API calls of the Quant Forms tests.'
+type: module
+package: Testing
+hidden: true
+core_version_requirement: ^11
+dependencies:
+  - quantcdn:quant_webform

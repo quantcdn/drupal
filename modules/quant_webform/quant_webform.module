@@ -2,8 +2,17 @@
 
 /**
  * @file
- * Provides Quant Form integration for webform.
+ * Quant Forms support for Webform.
  */
+
+use Drupal\Component\Utility\Xss;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
+use Drupal\quant_webform\ExportContext;
+use Drupal\quant_webform\Plugin\WebformElement\QuantWizardPage;
+use Drupal\quant_webform\QuantFormsMapper;
+use Drupal\quant_webform\QuantFormsRegistry;
+use Drupal\webform\WebformInterface;
 
 /**
  * Implements hook_theme().
@@ -17,7 +26,7 @@ function quant_webform_theme() {
 }
 
 /**
- * Implements hook_page_attachments_alter().
+ * Implements hook_library_info_alter().
  */
 function quant_webform_library_info_alter(&$libraries, $extension) {
   // Webform files support auto-upload and validation via ajax.
@@ -27,4 +36,294 @@ function quant_webform_library_info_alter(&$libraries, $extension) {
       unset($libraries['webform.element.managed_file']);
     }
   }
+}
+
+/**
+ * Implements hook_webform_element_info_alter().
+ */
+function quant_webform_webform_element_info_alter(array &$definitions) {
+  // An export render shows every wizard page; a live render is unchanged.
+  if (isset($definitions['webform_wizard_page'])) {
+    $definitions['webform_wizard_page']['class'] = QuantWizardPage::class;
+  }
+}
+
+/**
+ * Implements hook_webform_submission_form_alter().
+ */
+function quant_webform_webform_submission_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+  // The export render and the live render differ, so they must not share a
+  // render cache entry. The page cache is handled by ExportRequestPolicy.
+  $form['#cache']['contexts'][] = 'quant_export';
+  if (!ExportContext::isExport()) {
+    return;
+  }
+  /** @var \Drupal\webform\WebformSubmissionInterface $submission */
+  $submission = $form_state->getFormObject()->getEntity();
+  $webform = $submission->getWebform();
+  if (!QuantFormsRegistry::isOptedIn($webform)) {
+    return;
+  }
+
+  $form['#attributes']['data-quant-webform'] = $webform->id();
+  // A Webform with its own page posts there from any page that embeds it (a
+  // footer newsletter, a block), so each form has one Quant Forms config.
+  $target = _quant_webform_target_path($webform);
+  if ($target !== NULL) {
+    $form['#action'] = $target;
+    $form['#attributes']['data-quant-target'] = $target;
+  }
+  _quant_webform_add_result_container($form, $webform);
+  _quant_webform_add_protection($form, $webform);
+  _quant_webform_static_actions($form, $webform);
+  $form['#attached']['library'][] = 'quant_webform/static_form';
+  $form['#attached']['drupalSettings']['quantWebform'][$webform->id()] = _quant_webform_settings($webform);
+}
+
+/**
+ * The path a Webform posts to on the static site: its own page, or NULL.
+ *
+ * NULL means the page that shows it (a Webform without a page of its own).
+ */
+function _quant_webform_target_path(WebformInterface $webform) {
+  if (!$webform->getSetting('page')) {
+    return NULL;
+  }
+  return $webform->toUrl('canonical')->toString(TRUE)->getGeneratedUrl();
+}
+
+/**
+ * Adds the honeypot field and the reCAPTCHA v2 widget set in Drupal.
+ */
+function _quant_webform_add_protection(array &$form, WebformInterface $webform) {
+  if ($webform->getThirdPartySetting('quant_webform', 'honeypot', FALSE)) {
+    // Hidden from people and assistive technology; a bot fills it in.
+    $form[QuantFormsMapper::HONEYPOT_FIELD] = [
+      '#type' => 'textfield',
+      '#title' => t('Leave this field empty'),
+      '#attributes' => ['autocomplete' => 'off', 'tabindex' => '-1'],
+      '#wrapper_attributes' => ['class' => ['quant-webform-hp'], 'aria-hidden' => 'true'],
+      '#weight' => 900,
+    ];
+  }
+  $recaptcha = (array) $webform->getThirdPartySetting('quant_webform', 'recaptcha', []);
+  if (!empty($recaptcha['enabled']) && !empty($recaptcha['site_key'])) {
+    $form['quant_recaptcha'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#attributes' => ['class' => ['g-recaptcha'], 'data-sitekey' => $recaptcha['site_key']],
+      '#weight' => 950,
+    ];
+    $form['#attached']['html_head'][] = [[
+      '#type' => 'html_tag',
+      '#tag' => 'script',
+      '#attributes' => ['src' => 'https://www.google.com/recaptcha/api.js', 'async' => TRUE, 'defer' => TRUE],
+    ], 'quant_webform_recaptcha',
+    ];
+  }
+}
+
+/**
+ * Adds the element that Quant fills with its result message.
+ */
+function _quant_webform_add_result_container(array &$form, WebformInterface $webform) {
+  foreach ($webform->getElementsDecodedAndFlattened() as $element) {
+    if (($element['#type'] ?? '') === 'quant_result_element') {
+      return;
+    }
+  }
+  $form['quant_form_result'] = [
+    '#theme' => 'quant_form_result',
+    '#weight' => -1000,
+  ];
+}
+
+/**
+ * Keeps only the buttons that work on a static page.
+ *
+ * The wizard and preview buttons ask Drupal for the next page, and drafts
+ * and uploads post to Drupal. The browser steps replace them.
+ */
+function _quant_webform_static_actions(array &$form, WebformInterface $webform) {
+  if (!isset($form['actions'])) {
+    return;
+  }
+  foreach (['wizard_prev', 'wizard_next', 'preview_prev', 'preview_next', 'draft', 'reset'] as $button) {
+    if (isset($form['actions'][$button])) {
+      $form['actions'][$button]['#access'] = FALSE;
+    }
+  }
+  if (isset($form['actions']['submit'])) {
+    // Webform hides submit until the last page; the browser steps show it.
+    $form['actions']['submit']['#access'] = TRUE;
+    $form['actions']['submit']['#attributes']['data-quant-submit'] = 'true';
+  }
+}
+
+/**
+ * The drupalSettings of one static form.
+ */
+function _quant_webform_settings(WebformInterface $webform) {
+  $type = (string) $webform->getSetting('confirmation_type');
+  $own = (array) $webform->getThirdPartySetting('quant_webform', 'confirmation', []);
+  $own_type = $own['type'] ?? 'webform';
+  if ($own_type !== 'webform') {
+    $type = $own_type === 'url' ? 'url' : 'message';
+  }
+  $settings = [
+    'wizard' => $webform->hasWizardPages(),
+    'preview' => (int) $webform->getSetting('preview') > 0,
+    'labels' => [
+      'prev' => (string) ($webform->getSetting('wizard_prev_button_label') ?: t('Back')),
+      'next' => (string) ($webform->getSetting('wizard_next_button_label') ?: t('Continue')),
+      'review' => (string) ($webform->getSetting('preview_next_button_label') ?: t('Review')),
+      'edit' => (string) ($webform->getSetting('preview_prev_button_label') ?: t('Edit')),
+      'previewTitle' => (string) ($webform->getSetting('preview_label') ?: t('Review')),
+      'sending' => (string) t('Sending…'),
+      'error' => (string) t('Your submission could not be sent. Please try again.'),
+      'required' => (string) t('Complete this field.'),
+      'step' => (string) t('Step @current of @total'),
+    ],
+    'confirmation' => [
+      'type' => in_array($type, ['url', 'url_message'], TRUE) ? 'url' : 'message',
+      'title' => (string) $webform->getSetting('confirmation_title'),
+      'message' => Xss::filterAdmin(_quant_webform_static_message($webform)),
+      'url' => $own_type === 'url' ? (string) ($own['url'] ?? '') : _quant_webform_confirmation_url($webform),
+    ],
+  ];
+  return $settings;
+}
+
+/**
+ * The confirmation message for the browser, without Webform tokens.
+ */
+function _quant_webform_static_message(WebformInterface $webform) {
+  $override = (string) $webform->getThirdPartySetting('quant_webform', 'success_message', '');
+  $message = $override !== '' ? $override : (string) $webform->getSetting('confirmation_message');
+  return QuantFormsMapper::stripTokens($message) ?: (string) t('Thank you. Your submission has been received.');
+}
+
+/**
+ * The address a url confirmation redirects to, or an empty string.
+ */
+function _quant_webform_confirmation_url(WebformInterface $webform) {
+  if (!in_array($webform->getSetting('confirmation_type'), ['url', 'url_message'], TRUE)) {
+    return '';
+  }
+  $url = trim((string) $webform->getSetting('confirmation_url'));
+  if ($url === '' || str_contains($url, '[')) {
+    return '';
+  }
+  try {
+    return str_starts_with($url, '/') || preg_match('#^https?://#', $url)
+      ? $url
+      : Url::fromUserInput('/' . ltrim($url, '/'))->toString();
+  }
+  catch (\Exception $e) {
+    return '';
+  }
+}
+
+/**
+ * Implements hook_webform_insert().
+ */
+function quant_webform_webform_insert(WebformInterface $webform) {
+  quant_webform_webform_update($webform);
+}
+
+/**
+ * Implements hook_webform_update().
+ */
+function quant_webform_webform_update(WebformInterface $webform) {
+  if (!_quant_webform_can_publish()) {
+    return;
+  }
+  /** @var \Drupal\quant_webform\QuantFormsRegistrar $registrar */
+  $registrar = \Drupal::service('quant_webform.registrar');
+  $registered = \Drupal::service('quant_webform.registry')->pagesOf($webform->id());
+  if (QuantFormsRegistry::isOptedIn($webform) && $webform->isOpen()) {
+    $registrar->pushNow($webform);
+    return;
+  }
+  if ($registered === []) {
+    // Never registered by this site: leave its pages (and any settings made
+    // by hand in the dashboard) alone.
+    return;
+  }
+  // Opted out or closed: stop taking submissions, then publish the page
+  // again without the static form behaviour.
+  $registrar->disable($webform);
+  if ($webform->isOpen()) {
+    $registrar->pushNow($webform);
+  }
+}
+
+/**
+ * Implements hook_webform_presave().
+ */
+function quant_webform_webform_presave(WebformInterface $webform) {
+  // Secrets from the Quant Forms section, stored only when the save happens
+  // and before hook_webform_update() publishes with them.
+  \Drupal::service('quant_webform.settings_section')->storePending($webform);
+}
+
+/**
+ * Implements hook_webform_predelete().
+ */
+function quant_webform_webform_predelete(WebformInterface $webform) {
+  // A new Webform with the same id must not inherit the secrets.
+  \Drupal::service('quant_webform.settings_section')->deleteSecrets($webform->id());
+  if (!_quant_webform_can_publish()) {
+    return;
+  }
+  \Drupal::service('quant_webform.registrar')->disable($webform);
+}
+
+/**
+ * Implements hook_cron().
+ */
+function quant_webform_cron() {
+  if (!_quant_webform_can_publish()) {
+    return;
+  }
+  $registry = \Drupal::service('quant_webform.registry');
+  $registrar = \Drupal::service('quant_webform.registrar');
+  $storage = \Drupal::entityTypeManager()->getStorage('webform');
+  // Every Webform with registered pages: closed (by schedule or by hand with
+  // no save), deleted or opted out means Quant Forms goes off. A failed
+  // turn-off stays registered and runs again on the next cron.
+  foreach ($registry->webformIds() as $id) {
+    $webform = $storage->load($id);
+    if (!$webform || !$webform->isOpen() || !QuantFormsRegistry::isOptedIn($webform)) {
+      $registrar->disablePaths($id);
+    }
+  }
+  // A scheduled Webform that opens again is published again.
+  foreach ($storage->loadByProperties(['status' => WebformInterface::STATUS_SCHEDULED]) as $webform) {
+    if (QuantFormsRegistry::isOptedIn($webform) && $registry->openStateChange($webform) === TRUE) {
+      $registrar->queue($webform);
+    }
+  }
+}
+
+/**
+ * Whether saves publish: a connection exists and config sync is not running.
+ */
+function _quant_webform_can_publish() {
+  if (\Drupal::isConfigSyncing()) {
+    return FALSE;
+  }
+  return \Drupal::service('quant_api.credentials')->hasToken();
+}
+
+/**
+ * Implements hook_webform_third_party_settings_form_alter().
+ *
+ * For an opted-in Webform, Drupal is where its Quant Forms settings are made:
+ * the editor never needs the Quant dashboard for it.
+ */
+function quant_webform_webform_third_party_settings_form_alter(array &$form, FormStateInterface $form_state) {
+  /** @var \Drupal\webform\WebformInterface $webform */
+  $webform = $form_state->getFormObject()->getEntity();
+  $form['third_party_settings']['quant_webform'] = \Drupal::service('quant_webform.settings_section')->build($webform);
 }

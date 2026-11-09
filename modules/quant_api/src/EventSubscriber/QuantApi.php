@@ -151,6 +151,12 @@ class QuantApi implements EventSubscriberInterface {
       $data['search_record'] = $meta['search_record'];
     }
 
+    // Quant Forms: a page that shows a registered Webform takes submissions.
+    if (isset($meta['form_enabled'])) {
+      $data['form_enabled'] = (bool) $meta['form_enabled'];
+      $data['form_config'] = $meta['form_config'] ?? [];
+    }
+
     if (isset($meta['content_timestamp'])) {
       $data['content_timestamp'] = $meta['content_timestamp'];
     }

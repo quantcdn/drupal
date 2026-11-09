@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Install and uninstall functions for the Quant webform module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function quant_webform_uninstall() {
+  // The Slack webhook and the registered pages are outside config.
+  \Drupal::keyValue('quant_webform.secrets')->deleteAll();
+  \Drupal::service('quant_webform.registry')->clear();
+}
+
+/**
+ * Quant Forms is opt-in from 2.3.0: no existing Webform is registered.
+ */
+function quant_webform_update_11001() {
+  // Nothing to change: the per-form setting defaults to off, so pages whose
+  // Quant Forms settings were made by hand in the dashboard keep them.
+  return t('Quant Forms is now opt-in for each Webform. No form was changed. Tick the forms on the Quant Forms page to let Drupal manage their Quant Forms settings.');
+}
