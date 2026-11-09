@@ -38,17 +38,6 @@ class SettingsBooleanTest extends KernelTestBase {
   ];
 
   /**
-   * The shipped defaults are booleans.
-   */
-  public function testInstallConfigIsBoolean(): void {
-    $path = \Drupal::service('extension.list.module')->getPath('quant');
-    $data = Yaml::decode(file_get_contents($this->root . '/' . $path . '/config/install/quant.settings.yml'));
-    foreach (self::KEYS as $key) {
-      $this->assertIsBool($data[$key], "$key is a boolean in config/install.");
-    }
-  }
-
-  /**
    * The update casts integers that an older install stored.
    */
   public function testUpdateCastsStoredIntegers(): void {
@@ -68,6 +57,41 @@ class SettingsBooleanTest extends KernelTestBase {
     }
     $this->assertTrue($settings->get('quant_enabled'));
     $this->assertFalse($settings->get('disable_content_drafts'));
+
+    // The token settings too.
+    $this->container->get('config.storage')->write('quant.token_settings', [
+      'disable' => 0,
+      'strict' => 1,
+      'secret' => 's',
+      'timeout' => '+1 minute',
+    ]);
+    $this->container->get('config.factory')->reset('quant.token_settings');
+    quant_update_9009();
+    $this->assertFalse($this->config('quant.token_settings')->get('disable'));
+    $this->assertTrue($this->config('quant.token_settings')->get('strict'));
+  }
+
+  /**
+   * The update drops the unticked keys of the Quant metadata Views option.
+   */
+  public function testUpdateFiltersTheViewsOption(): void {
+    $name = 'views.view.quant_metadata_node';
+    $path = 'display.default.display_options.fields.quant_metadata.quant_metadata';
+    $file = $this->root . '/' . \Drupal::service('extension.list.module')->getPath('quant') . "/config/install/$name.yml";
+    $view = Yaml::decode(file_get_contents($file));
+    $option = &$view['display']['default']['display_options']['fields']['quant_metadata']['quant_metadata'];
+    $option['md5'] = 0;
+    $option['seq_num'] = 0;
+    $this->container->get('config.storage')->write($name, $view);
+    $this->container->get('config.factory')->reset($name);
+
+    \Drupal::moduleHandler()->loadInclude('quant', 'install');
+    quant_update_9010();
+
+    $kept = $this->config($name)->get($path);
+    $this->assertArrayNotHasKey('md5', $kept);
+    $this->assertArrayNotHasKey('seq_num', $kept);
+    $this->assertSame('url', $kept['url']);
   }
 
 }

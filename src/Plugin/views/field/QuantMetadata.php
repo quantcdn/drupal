@@ -72,6 +72,21 @@ class QuantMetadata extends FieldPluginBase {
 
   /**
    * {@inheritdoc}
+   *
+   * Keeps only the ticked metadata keys, so the option is a list of strings,
+   * as its config schema says.
+   */
+  public function submitOptionsForm(&$form, FormStateInterface $form_state) {
+    $options = $form_state->getValue('options');
+    if (isset($options['quant_metadata']) && is_array($options['quant_metadata'])) {
+      $options['quant_metadata'] = array_filter($options['quant_metadata']);
+      $form_state->setValue('options', $options);
+    }
+    parent::submitOptionsForm($form, $form_state);
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function buildOptionsForm(&$form, FormStateInterface $form_state) {
     $form['quant_metadata'] = [

@@ -274,16 +274,6 @@ display:
             date_timestamp: date_timestamp
             published: published
             url: url
-            byte_length: 0
-            highest_revision_number: 0
-            md5: 0
-            published_revision: 0
-            redirect_http_code: 0
-            redirect_url: 0
-            revision_count: 0
-            revision_number: 0
-            seq_num: 0
-            type: 0
       pager:
         type: full
         options:
