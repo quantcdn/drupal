@@ -38,14 +38,7 @@ use Drupal\quant_search\QuantSearchPageInterface;
  *     "id" = "id",
  *     "label" = "label",
  *     "uuid" = "uuid",
- *     "route" = "route",
- *     "title" = "title",
- *     "description" = "description",
- *     "languages" = "languages",
- *     "bundles" = "bundles",
- *     "manual_filters" = "manual_filters",
- *     "facets" = "facets",
- *     "display" = "display"
+ *     "status" = "status"
  *   },
  *   config_export = {
  *     "id",
@@ -53,7 +46,6 @@ use Drupal\quant_search\QuantSearchPageInterface;
  *     "description",
  *     "route",
  *     "title",
- *     "description",
  *     "languages",
  *     "bundles",
  *     "manual_filters",

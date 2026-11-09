@@ -62,10 +62,10 @@ class Search extends ControllerBase {
     $searchEnabled = $this->enabled();
     if (!$searchEnabled) {
       if (\Drupal::service('quant_api.credentials')->hasToken($config) && $project = $this->client->project()) {
-        \Drupal::messenger()->addError(t('Search is not enabled for this project. It can be enabled via the Quant Dashboard. See <a href="https://docs.quantcdn.io/docs/dashboard/search">Quant Search documentation</a>.'));
+        \Drupal::messenger()->addError(t('Search is not enabled for this project. It can be enabled via the Quant Dashboard. See <a href="https://docs.quantcdn.io/dashboard/search/">Quant Search documentation</a>.'));
       }
       else {
-        \Drupal::messenger()->addError(t('Unable to connect to Quant API. See <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">Quant setup documentation</a>.'));
+        \Drupal::messenger()->addError(t('Unable to connect to Quant API. See <a href="https://docs.quantcdn.io/integrations/drupal/get-started/">Quant setup documentation</a>.'));
       }
     }
 

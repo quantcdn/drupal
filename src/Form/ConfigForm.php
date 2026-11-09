@@ -135,7 +135,7 @@ class ConfigForm extends ConfigFormBase {
     $form['local_server'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Webserver URL'),
-      '#description' => $this->t('Provide the fully-qualified domain name for the local webserver. e.g: <em>http://localhost</em>, <em>http://nginx:8080</em> or <em>http://127.0.0.1</em>. <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
+      '#description' => $this->t('Provide the fully-qualified domain name for the local webserver. e.g: <em>http://localhost</em>, <em>http://nginx:8080</em> or <em>http://127.0.0.1</em>. <a href="https://docs.quantcdn.io/integrations/drupal/get-started/">More info.</a>'),
       '#default_value' => $config->get('local_server') ?: 'http://localhost',
       '#required' => TRUE,
     ];
@@ -143,7 +143,7 @@ class ConfigForm extends ConfigFormBase {
     $form['host_domain'] = [
       '#type' => 'textfield',
       '#title' => $this->t('HTTP Host header'),
-      '#description' => $this->t('Optionally provide the expected host header for HTTP requests to the local webserver. This ensures absolute links in content point to the correct domain. e.g: <em>www.example.com</em> <a href="https://docs.quantcdn.io/docs/integrations/drupal#setup">More info.</a>'),
+      '#description' => $this->t('Optionally provide the expected host header for HTTP requests to the local webserver. This ensures absolute links in content point to the correct domain. e.g: <em>www.example.com</em> <a href="https://docs.quantcdn.io/integrations/drupal/get-started/">More info.</a>'),
       '#default_value' => $config->get('host_domain'),
     ];
 

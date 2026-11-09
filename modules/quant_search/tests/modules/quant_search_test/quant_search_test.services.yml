@@ -1,0 +1,6 @@
+services:
+  quant_search_test.middleware:
+    class: Drupal\quant_search_test\FakeSearchApi
+    arguments: ['@state']
+    tags:
+      - { name: http_client_middleware }

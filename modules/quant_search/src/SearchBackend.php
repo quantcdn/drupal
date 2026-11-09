@@ -5,6 +5,7 @@ namespace Drupal\quant_search;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Site\Settings;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Drupal\quant_search\Controller\Search;
 
@@ -152,7 +153,12 @@ class SearchBackend {
   }
 
   /**
-   * The Typesense host. Set it in settings.php for stage or local testing.
+   * The Typesense host.
+   *
+   * A QuantGov dashboard named in settings.php ($settings[
+   * 'quant_api_dashboard_url'] = 'https://dash.stage.quantgov.cloud') points
+   * search at the same environment (search.stage.quantgov.cloud). To set the
+   * host directly:
    *
    * @code
    * $config['quant_search.settings']['typesense_endpoint'] = 'https://search.stage.quantgov.cloud';
@@ -160,7 +166,23 @@ class SearchBackend {
    */
   public function typesenseEndpoint() {
     $endpoint = (string) $this->configFactory->get('quant_search.settings')->get('typesense_endpoint');
-    return rtrim($endpoint !== '' ? $endpoint : self::DEFAULT_TYPESENSE_ENDPOINT, '/');
+    if ($endpoint === '') {
+      $endpoint = self::searchHostForDashboard((string) Settings::get('quant_api_dashboard_url', '')) ?? self::DEFAULT_TYPESENSE_ENDPOINT;
+    }
+    return rtrim($endpoint, '/');
+  }
+
+  /**
+   * The search host of a QuantGov dashboard, or NULL for another host.
+   *
+   * The dashboard dash.<env>.quantgov.cloud gives search.<env>.quantgov.cloud.
+   */
+  protected static function searchHostForDashboard(string $dashboard) : ?string {
+    $host = (string) parse_url($dashboard, PHP_URL_HOST);
+    if (parse_url($dashboard, PHP_URL_SCHEME) !== 'https' || !preg_match('/^dash\.((?:[a-z0-9-]+\.)*)quantgov\.cloud$/', $host, $m)) {
+      return NULL;
+    }
+    return 'https://search.' . $m[1] . 'quantgov.cloud';
   }
 
   /**
