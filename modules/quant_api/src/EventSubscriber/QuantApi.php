@@ -555,7 +555,10 @@ class QuantApi implements EventSubscriberInterface {
       if (!str_contains($error->getMessage(), 'MD5 already matches')) {
         $this->logger->error($error->getMessage());
         $this->failures->record($url, 'file', $error);
+        return;
       }
+      // Quant already has this file.
+      $this->failures->clear($url);
       return;
     }
     $this->failures->clear($url);
