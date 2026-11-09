@@ -5,6 +5,8 @@
  * Hooks for the Quant API module.
  */
 
+use Drupal\quant_api\PushFailures;
+
 /**
  * Implements hook_cron().
  */
@@ -30,6 +32,9 @@ function quant_api_page_top(array &$page_top) {
   if (!$account->hasPermission('configure quant') && !$account->hasPermission('access content overview')) {
     return;
   }
+  // Cached pages are invalidated when the list changes (PushFailures).
+  $page_top['#cache']['tags'][] = PushFailures::CACHE_TAG;
+  $page_top['#cache']['contexts'][] = 'user.permissions';
   $failures = \Drupal::service('quant_api.push_failures')->all();
   if ($failures === []) {
     return;
@@ -38,7 +43,7 @@ function quant_api_page_top(array &$page_top) {
   \Drupal::messenger()->addWarning(\Drupal::translation()->formatPlural(
     count($failures),
     '1 change did not reach Quant (@url: @reason). It is not on the static site yet. After Quant is back, save the page again or run a seed.',
-    '@count changes did not reach Quant (the last: @url, @reason). They are not on the static site yet. After Quant is back, save the pages again or run a seed. The status report lists them.',
+    '@count changes did not reach Quant (the last: @url, @reason). They are not on the static site yet. After Quant is back, save the pages again or run a seed.',
     ['@url' => $last, '@reason' => $failures[$last]['reason']]
   ));
   $page_top['#cache']['max-age'] = 0;

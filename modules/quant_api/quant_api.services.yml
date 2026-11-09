@@ -74,6 +74,8 @@ services:
     arguments:
       - '@state'
       - '@datetime.time'
+      - '@cache_tags.invalidator'
+      - '@lock'
 
   quant_api.endpoint_userinfo_middleware:
     class: Drupal\quant_api\Http\EndpointUserInfoMiddleware
