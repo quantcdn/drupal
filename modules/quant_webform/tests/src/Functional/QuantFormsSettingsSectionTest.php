@@ -64,7 +64,7 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
     $session->pageTextContains('Enter a Slack incoming webhook URL');
     $session->pageTextContains('AUSTRALIA is not a two-letter country code');
     $session->pageTextContains('Enter a path on this site');
-    $this->assertFalse((bool) Webform::load('contact_us')->getThirdPartySetting('quant_webform', 'enabled'));
+    $this->assertFalse((bool) $this->webform()->getThirdPartySetting('quant_webform', 'enabled'));
 
     $this->submitForm([
       'third_party_settings[quant_webform][enabled]' => TRUE,
@@ -79,8 +79,9 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
       'third_party_settings[quant_webform][after][confirmation_type]' => 'url',
       'third_party_settings[quant_webform][after][confirmation_url]' => '/thank-you',
     ], 'Save');
+    $session->pageTextContains('Webform settings Contact us has been saved.');
 
-    $settings = Webform::load('contact_us')->getThirdPartySettings('quant_webform');
+    $settings = $this->webform()->getThirdPartySettings('quant_webform');
     $this->assertTrue($settings['enabled']);
     $this->assertSame('a@example.com, b@example.com', $settings['email']['to']);
     $this->assertSame(['KP', 'RU'], $settings['blocked_countries']);
@@ -133,6 +134,16 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
     $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
     $this->submitForm(['quant_webform_secrets[slack_webhook_remove]' => TRUE], 'Save');
     $this->assertNull($kv->get('slack_webhook:contact_us'));
+  }
+
+
+  /**
+   * The webform as the site stored it, not as this process cached it.
+   */
+  protected function webform(): Webform {
+    $storage = \Drupal::entityTypeManager()->getStorage('webform');
+    $storage->resetCache(['contact_us']);
+    return $storage->load('contact_us');
   }
 
 }
