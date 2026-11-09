@@ -35,7 +35,13 @@ final class ExportContext {
     // token is not validated on kernel.request, so the header alone proves
     // nothing.
     if (!$request->attributes->has('_quant_export')) {
-      $request->attributes->set('_quant_export', \Drupal::service('quant.token_manager')->isGenuine($request->headers->get('quant-token'), $request->getPathInfo()));
+      // The token names the route the export fetched: the path, with the
+      // base path of a site in a subdirectory.
+      $manager = \Drupal::service('quant.token_manager');
+      $token = $request->headers->get('quant-token');
+      $genuine = $manager->isGenuine($token, $request->getPathInfo())
+        || ($request->getBasePath() !== '' && $manager->isGenuine($token, $request->getBasePath() . $request->getPathInfo()));
+      $request->attributes->set('_quant_export', $genuine);
     }
     return (bool) $request->attributes->get('_quant_export');
   }
