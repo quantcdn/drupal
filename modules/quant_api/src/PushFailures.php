@@ -3,6 +3,8 @@
 namespace Drupal\quant_api;
 
 use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
+use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\Core\State\StateInterface;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
@@ -27,9 +29,16 @@ class PushFailures {
    */
   public const MAX = 50;
 
+  /**
+   * The cache tag of pages that show the list (or would show it).
+   */
+  public const CACHE_TAG = 'quant_api_push_failures';
+
   public function __construct(
     protected StateInterface $state,
     protected TimeInterface $time,
+    protected CacheTagsInvalidatorInterface $invalidator,
+    protected LockBackendInterface $lock,
   ) {}
 
   /**
@@ -44,24 +53,52 @@ class PushFailures {
    *   name the endpoint URL with credentials.
    */
   public function record(string $url, string $operation, \Throwable $error): void {
-    $all = $this->all();
-    unset($all[$url]);
-    $all[$url] = [
-      'operation' => $operation,
-      'reason' => self::reason($error),
-      'at' => $this->time->getRequestTime(),
-    ];
-    $this->state->set(self::KEY, array_slice($all, -self::MAX, NULL, TRUE));
+    $this->update(function (array $all) use ($url, $operation, $error) {
+      unset($all[$url]);
+      $all[$url] = [
+        'operation' => $operation,
+        'reason' => self::reason($error),
+        'at' => $this->time->getRequestTime(),
+      ];
+      return array_slice($all, -self::MAX, NULL, TRUE);
+    });
   }
 
   /**
    * Forgets a page after a push of it succeeded.
    */
   public function clear(string $url): void {
-    $all = $this->all();
-    if (isset($all[$url])) {
+    // Most pushes succeed: read without the lock first.
+    if (!isset($this->all()[$url])) {
+      return;
+    }
+    $this->update(function (array $all) use ($url) {
       unset($all[$url]);
-      $this->state->set(self::KEY, $all);
+      return $all;
+    });
+  }
+
+  /**
+   * Changes the list under a lock, so queue workers do not lose entries.
+   *
+   * @param callable $change
+   *   Gets the list and returns the new list.
+   */
+  protected function update(callable $change): void {
+    $locked = $this->lock->acquire(self::KEY, 5.0) || (!$this->lock->wait(self::KEY, 5) && $this->lock->acquire(self::KEY, 5.0));
+    try {
+      $this->state->resetCache();
+      $before = $this->all();
+      $after = $change($before);
+      if ($after !== $before) {
+        $this->state->set(self::KEY, $after);
+        $this->invalidator->invalidateTags([self::CACHE_TAG]);
+      }
+    }
+    finally {
+      if ($locked) {
+        $this->lock->release(self::KEY);
+      }
     }
   }
 
