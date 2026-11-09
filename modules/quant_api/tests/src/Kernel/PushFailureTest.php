@@ -6,6 +6,7 @@ use Drupal\KernelTests\KernelTestBase;
 use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\quant_api\Client\QuantClientInterface;
+use Drupal\quant_api\PushFailures;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Request;
@@ -116,10 +117,26 @@ class PushFailureTest extends KernelTestBase {
   /**
    * An unpublish of a page that is already gone is not a failure.
    */
-  public function testAlreadyUnpublishedIsNotAFailure(): void {
+  public function testAlreadyUnpublishedIsNoFailure(): void {
     $this->next = new \Exception('Resource is already unpublished');
     $this->subscriber()->onUnpublish(new QuantEvent('', '/gone', []));
     $this->assertSame([], $this->container->get('quant_api.push_failures')->all());
+  }
+
+  /**
+   * A change to the list invalidates pages that show it.
+   */
+  public function testChangeInvalidatesTheCacheTag(): void {
+    $failures = $this->container->get('quant_api.push_failures');
+    \Drupal::cache()->set('page', 'cached', -1, [PushFailures::CACHE_TAG]);
+    $failures->record('/a', 'publish', new \Exception('x'));
+    $this->assertFalse(\Drupal::cache()->get('page'), 'A new failure invalidates.');
+
+    \Drupal::cache()->set('page', 'cached', -1, [PushFailures::CACHE_TAG]);
+    $failures->clear('/not-listed');
+    $this->assertNotFalse(\Drupal::cache()->get('page'), 'No change, no invalidation.');
+    $failures->clear('/a');
+    $this->assertFalse(\Drupal::cache()->get('page'), 'A cleared failure invalidates.');
   }
 
   /**
