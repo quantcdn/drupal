@@ -107,4 +107,13 @@ function quant_search_run_index($nids, $languages, array &$context) {
 function quant_search_quant_search_page_delete(EntityInterface $entity) {
   $route = $entity->get('route');
   Utility::unpublishUrl('/' . $route, 'Unpublished search page');
+
+  // The page's search boxes go with it: a box without its page renders
+  // nothing and logs an error on every page view.
+  $blocks = \Drupal::entityTypeManager()->getStorage('block')->loadByProperties(['plugin' => 'quant_autocomplete_block']);
+  foreach ($blocks as $block) {
+    if (($block->get('settings')['page'] ?? NULL) === $entity->uuid()) {
+      $block->delete();
+    }
+  }
 }
