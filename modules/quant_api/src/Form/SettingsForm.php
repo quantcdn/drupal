@@ -480,6 +480,11 @@ class SettingsForm extends ConfigFormBase {
    * whatever the editor picks. Otherwise the saved platform, then the endpoint.
    */
   protected function defaultPlatform(?string $saved, string $endpoint): string {
+    // A site that is logged in shows the platform of its login, so a save for
+    // another reason never reads as a platform change (and a log out).
+    if (Platform::isKnown($saved) && $this->credentials->usesOauth()) {
+      return $saved;
+    }
     $dashboard = (string) Settings::get('quant_api_dashboard_url', '');
     if ($dashboard !== '') {
       return Platform::fromEndpoint($dashboard);

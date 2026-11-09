@@ -14,6 +14,7 @@ use Drupal\quant\Event\QuantEvent;
 use Drupal\quant\Event\QuantFileEvent;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Drupal\quant_api\EventSubscriber\QuantApi;
+use Drupal\quant_api\PushFailures;
 use Drupal\Tests\UnitTestCase;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
@@ -117,7 +118,7 @@ class QuantApiFilesTest extends UnitTestCase {
     });
 
     $this->client = $this->createMock(QuantClientInterface::class);
-    $this->subscriber = new QuantApi($this->client, $logger_factory, $dispatcher);
+    $this->subscriber = new QuantApi($this->client, $logger_factory, $dispatcher, $this->createMock(PushFailures::class));
   }
 
   /**
