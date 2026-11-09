@@ -75,62 +75,7 @@ display:
           hide_alter_empty: true
           click_sort_column: value
           type: file_link
-          settings:
-            relationship: none
-            fieldsets:
-              - more
-              - admin_label
-            custom_label: 0
-            label: ''
-            element_label_colon: 1
-            exclude: 0
-            element_type_enable: 0
-            element_type: ''
-            element_class_enable: 0
-            element_class: ''
-            element_label_type_enable: 0
-            element_label_type: ''
-            element_label_class_enable: 0
-            element_label_class: ''
-            element_wrapper_type_enable: 0
-            element_wrapper_type: ''
-            element_wrapper_class_enable: 0
-            element_wrapper_class: ''
-            element_default_classes: 1
-            alter:
-              alter_text: 0
-              text: ''
-              make_link: 0
-              path: ''
-              absolute: 0
-              replace_spaces: 0
-              external: 0
-              path_case: none
-              link_class: ''
-              alt: ''
-              rel: ''
-              prefix: ''
-              suffix: ''
-              target: ''
-              trim: 0
-              max_length: '0'
-              word_boundary: 0
-              ellipsis: 0
-              more_link: 0
-              more_link_text: ''
-              more_link_path: ''
-              html: 0
-              strip_tags: 0
-              preserve_tags: ''
-              trim_whitespace: 0
-              nl2br: 0
-            empty: ''
-            empty_zero: 0
-            hide_empty: 0
-            hide_alter_empty: 1
-            click_sort_column: value
-            type: file_link
-            field_api_classes: 0
+          settings: {  }
           group_column: value
           group_columns: {  }
           group_rows: true
@@ -396,15 +341,6 @@ display:
             published: published
             revision_count: revision_count
             url: url
-            byte_length: 0
-            highest_revision_number: 0
-            md5: 0
-            published_revision: 0
-            redirect_http_code: 0
-            redirect_url: 0
-            revision_number: 0
-            seq_num: 0
-            type: 0
       pager:
         type: mini
         options:
