@@ -116,7 +116,7 @@ class PushFailureTest extends KernelTestBase {
   /**
    * An unpublish of a page that is already gone is not a failure.
    */
-  public function testAlreadyUnpublishedIsNotAFailure(): void {
+  public function testAlreadyUnpublishedIsNoFailure(): void {
     $this->next = new \Exception('Resource is already unpublished');
     $this->subscriber()->onUnpublish(new QuantEvent('', '/gone', []));
     $this->assertSame([], $this->container->get('quant_api.push_failures')->all());

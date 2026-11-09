@@ -64,6 +64,8 @@ class QuantApi implements EventSubscriberInterface {
    *   The logger channel factory.
    * @param \Symfony\Component\EventDispatcher\EventDispatcher $event_dispatcher
    *   The event dispatcher.
+   * @param \Drupal\quant_api\PushFailures $failures
+   *   The pages whose last push failed.
    */
   public function __construct(QuantClientInterface $client, LoggerChannelFactoryInterface $logger_factory, EventDispatcher $event_dispatcher, PushFailures $failures) {
     $this->client = $client;
