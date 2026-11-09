@@ -136,7 +136,6 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
     $this->assertNull($kv->get('slack_webhook:contact_us'));
   }
 
-
   /**
    * The webform as the site stored it, not as this process cached it.
    */
