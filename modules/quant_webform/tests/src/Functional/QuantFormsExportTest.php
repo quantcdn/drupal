@@ -158,6 +158,16 @@ YAML,
   }
 
   /**
+   * A token for one page does not switch the render of another page.
+   */
+  public function testTokenForAnotherPageGetsTheLiveRender(): void {
+    $token = \Drupal::service('quant.token_manager')->create('/node/1');
+    $this->drupalGet('webform/service_request', [], ['quant-token' => $token]);
+    $this->assertSession()->elementNotExists('css', 'form[data-quant-webform]');
+    $this->assertSession()->fieldNotExists('description');
+  }
+
+  /**
    * A header that is not a signed token does not switch the render.
    */
   public function testForgedHeaderGetsTheLiveRender(): void {

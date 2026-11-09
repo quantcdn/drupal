@@ -50,15 +50,21 @@ class ExportTokenRegistrationTest extends KernelTestBase {
   public function testGenuineToken() : void {
     $manager = $this->container->get('quant.token_manager');
     $token = $manager->create('/contact');
-    $this->assertTrue($manager->isGenuine($token));
-    $this->assertFalse($manager->isGenuine('x'));
-    $this->assertFalse($manager->isGenuine(NULL));
+    $this->assertTrue($manager->isGenuine($token, '/contact'));
+    $this->assertFalse($manager->isGenuine('x', '/contact'));
+    $this->assertFalse($manager->isGenuine(NULL, '/contact'));
     [$header, $payload] = explode('.', $token);
-    $this->assertFalse($manager->isGenuine("$header.$payload.forged"));
+    $this->assertFalse($manager->isGenuine("$header.$payload.forged", '/contact'));
+
+    // A token is bound to the route it was made for (query aside).
+    $this->assertTrue($manager->isGenuine($manager->create('/news?page=2'), '/news'));
+    $this->assertTrue($manager->isGenuine($manager->create('/caf%C3%A9'), '/café'));
+    $this->assertFalse($manager->isGenuine($token, '/careers/apply'));
+    $this->assertFalse($manager->isGenuine($manager->create(), '/contact'));
 
     $this->config('quant.token_settings')->set('timeout', '-1 minute')->save();
     $expired = $this->container->get('quant.token_manager')->create('/contact');
-    $this->assertFalse($this->container->get('quant.token_manager')->isGenuine($expired));
+    $this->assertFalse($this->container->get('quant.token_manager')->isGenuine($expired, '/contact'));
   }
 
   /**

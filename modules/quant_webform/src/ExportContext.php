@@ -35,7 +35,7 @@ final class ExportContext {
     // token is not validated on kernel.request, so the header alone proves
     // nothing.
     if (!$request->attributes->has('_quant_export')) {
-      $request->attributes->set('_quant_export', \Drupal::service('quant.token_manager')->isGenuine($request->headers->get('quant-token')));
+      $request->attributes->set('_quant_export', \Drupal::service('quant.token_manager')->isGenuine($request->headers->get('quant-token'), $request->getPathInfo()));
     }
     return (bool) $request->attributes->get('_quant_export');
   }
