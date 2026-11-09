@@ -192,3 +192,10 @@ Each ruling is reversible unless marked. Format: id, date, ruling, reason.
 - A failed push after a save is logged, not shown: the push runs after the response. Kept for 2.3.0; a later release can show the last failure on the page info block.
 - Review findings left open (pre-existing, low): the platform radio can differ from the saved platform with a non-QuantGov dashboard override; export tokens are not bound to one route.
 - Quant Forms submissions through the staging edge return 500 after validation. Release waits until a submission passes on staging.
+
+## 2026-11-09 open items closed for 2.3.0
+
+- Failed pushes: kept per site in State (short reason only), shown to editors on the next page view (cache tag invalidated on change) and on the status report, cleared when the page is pushed again.
+- Search index: an unpublished page stayed in QuantGov search. Cause in the content API (remove_record sent the URL as the Typesense ID). Fix: quantcdn/quant-section#407 (Stuart deploys). The module needs no change.
+- Platform radio keeps the saved platform for a logged-in site. Export token bound to its path, with the base path of a subdirectory site.
+- The edge 500 on Quant Forms was the au-stg serve task definition (quantcdn/quant-govt-architecture#427, Stuart). The submission test waits for its deploy.
