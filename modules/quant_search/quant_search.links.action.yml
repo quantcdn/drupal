@@ -5,6 +5,12 @@ quant_search.create_page:
     - entity.quant_search_page.collection
     - quant_search.main
 
+quant_search.from_view:
+  route_name: 'quant_search.from_view'
+  title: 'Create from a View'
+  appears_on:
+    - entity.quant_search_page.collection
+
 entity.quant_search_page.add_form:
   route_name: 'entity.quant_search_page.add_form'
   title: 'Add a search page (all settings)'

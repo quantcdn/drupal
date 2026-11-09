@@ -74,3 +74,13 @@ quant_search.create_page:
     _custom_access: '\Drupal\quant_search\Controller\Search::administerAccess'
   options:
     _admin_route: TRUE
+
+quant_search.from_view:
+  path: '/admin/config/development/quant/search/pages/from-view'
+  defaults:
+    _form: '\Drupal\quant_search\Form\ViewPickerForm'
+    _title: 'Create a search page from a View'
+  requirements:
+    _custom_access: '\Drupal\quant_search\Controller\Search::administerAccess'
+  options:
+    _admin_route: TRUE

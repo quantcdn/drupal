@@ -320,6 +320,49 @@ class SearchBackend {
   }
 
   /**
+   * A filter for "the field is any of these values", in the backend syntax.
+   *
+   * @param string $field
+   *   The index key, for example topic_en.
+   * @param string[] $values
+   *   The values.
+   * @param string $backend
+   *   self::ALGOLIA or self::TYPESENSE.
+   *
+   * @return string
+   *   The filter, or an empty string when no value is usable.
+   */
+  public static function anyOf(string $field, array $values, string $backend): string {
+    $typesense = $backend === self::TYPESENSE;
+    $parts = array_values(array_filter(array_map(fn ($value) => self::equals($field, (string) $value, $typesense), $values)));
+    if (count($parts) < 2) {
+      return $parts[0] ?? '';
+    }
+    return '(' . implode($typesense ? ' || ' : ' OR ', $parts) . ')';
+  }
+
+  /**
+   * A filter for "the field has all of these values", in the backend syntax.
+   */
+  public static function allOf(string $field, array $values, string $backend): string {
+    $typesense = $backend === self::TYPESENSE;
+    $parts = array_values(array_filter(array_map(fn ($value) => self::equals($field, (string) $value, $typesense), $values)));
+    return count($parts) < 2 ? ($parts[0] ?? '') : '(' . implode($typesense ? ' && ' : ' AND ', $parts) . ')';
+  }
+
+  /**
+   * A filter for "the field has none of these values", in the backend syntax.
+   */
+  public static function noneOf(string $field, array $values, string $backend): string {
+    if ($backend === self::TYPESENSE) {
+      $values = array_values(array_filter(array_map('strval', $values), fn ($value) => strpos($value, '`') === FALSE));
+      return $values === [] ? '' : $field . ':!=[' . implode(',', array_map(fn ($value) => '`' . $value . '`', $values)) . ']';
+    }
+    $parts = array_values(array_map(fn ($value) => 'NOT ' . self::equals($field, (string) $value, FALSE), $values));
+    return count($parts) < 2 ? ($parts[0] ?? '') : '(' . implode(' AND ', $parts) . ')';
+  }
+
+  /**
    * One equality clause in the backend's syntax.
    *
    * Typesense quotes values with backticks, so a value that contains one is
