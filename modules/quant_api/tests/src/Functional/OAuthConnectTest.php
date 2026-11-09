@@ -281,6 +281,46 @@ class OAuthConnectTest extends BrowserTestBase {
   }
 
   /**
+   * A push that failed after a save is shown on the next page view.
+   */
+  public function testFailedPushIsShownOnTheNextPageView(): void {
+    \Drupal::service('quant_api.push_failures')->record('/news/a', 'publish', new \Exception('x'));
+    $this->drupalGet('admin/config/development/quant/api');
+    $session = $this->assertSession();
+    $session->pageTextContains('1 change did not reach Quant');
+    $session->pageTextContains('/news/a');
+
+    // Another editor of the same site sees it too: it is per site.
+    $this->drupalLogin($this->drupalCreateUser(['access content overview']));
+    $this->drupalGet('admin/content');
+    $session->pageTextContains('1 change did not reach Quant');
+
+    // A visitor does not.
+    $this->drupalLogout();
+    $this->drupalGet('user/login');
+    $session->pageTextNotContains('did not reach Quant');
+  }
+
+  /**
+   * A connected site shows its saved platform, so a save keeps the login.
+   *
+   * With a dashboard override outside quantgov.cloud (a local QuantGov
+   * dashboard), the radio used to default to QuantCDN while the saved
+   * platform was QuantGov. Saving the form for another reason then logged
+   * the site out.
+   */
+  public function testSaveKeepsTheLoginWithAnOverrideOnAnotherHost(): void {
+    $this->logInAndPick('site-b');
+    $this->config('quant_api.settings')->set('platform', 'quantgov')->save();
+
+    $this->drupalGet('admin/config/development/quant/api');
+    $this->assertSession()->checkboxChecked('edit-platform-quantgov');
+    $this->submitForm([], 'Save configuration');
+    $this->assertSession()->pageTextNotContains('The platform changed');
+    $this->assertSame('oauth', $this->config('quant_api.settings')->get('auth_method'));
+  }
+
+  /**
    * A QuantGov dashboard in settings.php makes QuantGov the starting platform.
    */
   public function testDashboardOverrideSetsTheDefaultPlatform(): void {

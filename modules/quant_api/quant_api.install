@@ -15,16 +15,17 @@ function quant_api_requirements($phase) {
   if ($phase !== 'runtime') {
     return [];
   }
+  $requirements = _quant_api_push_failure_requirements();
   $credentials = \Drupal::service('quant_api.credentials');
   if (!$credentials->usesOauth()) {
-    return [];
+    return $requirements;
   }
   if (!$credentials->isCopiedSite()) {
     $reason = \Drupal::service('quant_api.oauth')->getReconnectReason();
     if ($reason === NULL) {
-      return [];
+      return $requirements;
     }
-    return [
+    return $requirements + [
       'quant_api_login' => [
         'title' => t('Quant'),
         'value' => t('The Quant login needs renewing'),
@@ -35,7 +36,7 @@ function quant_api_requirements($phase) {
       ],
     ];
   }
-  return [
+  return $requirements + [
     'quant_api_copied_site' => [
       'title' => t('Quant'),
       'value' => t('Not publishing: this site looks like a copy of the connected site'),
@@ -44,6 +45,37 @@ function quant_api_requirements($phase) {
         ':url' => Url::fromRoute('quant_api.settings_form')->toString(),
       ]),
       'severity' => REQUIREMENT_ERROR,
+    ],
+  ];
+}
+
+/**
+ * The status report entry for pushes that did not reach Quant.
+ */
+function _quant_api_push_failure_requirements(): array {
+  $failures = \Drupal::service('quant_api.push_failures')->all();
+  if ($failures === []) {
+    return [];
+  }
+  $items = [];
+  foreach (array_slice(array_reverse($failures, TRUE), 0, 10, TRUE) as $url => $failure) {
+    $items[] = t('@url (@operation, @reason, @date)', [
+      '@url' => $url,
+      '@operation' => $failure['operation'],
+      '@reason' => $failure['reason'],
+      '@date' => \Drupal::service('date.formatter')->format($failure['at'], 'custom', 'Y-m-d H:i'),
+    ]);
+  }
+  $list = ['#theme' => 'item_list', '#items' => $items];
+  return [
+    'quant_api_push_failures' => [
+      'title' => t('Quant'),
+      'value' => \Drupal::translation()->formatPlural(count($failures), '1 change did not reach Quant', '@count changes did not reach Quant'),
+      'description' => [
+        'list' => $list,
+        'help' => ['#markup' => t('These pages are not up to date on the static site. After Quant is back, save each page again or run a seed. An entry goes away when its page is pushed.')],
+      ],
+      'severity' => REQUIREMENT_WARNING,
     ],
   ];
 }

@@ -50,6 +50,7 @@ services:
       - '@quant_api.client'
       - '@logger.factory'
       - '@event_dispatcher'
+      - '@quant_api.push_failures'
     tags:
       - { name: 'event_subscriber' }
 
@@ -67,6 +68,12 @@ services:
     class: Drupal\quant_api\Http\UnauthorizedResyncMiddleware
     tags:
       - { name: http_client_middleware }
+
+  quant_api.push_failures:
+    class: Drupal\quant_api\PushFailures
+    arguments:
+      - '@state'
+      - '@datetime.time'
 
   quant_api.endpoint_userinfo_middleware:
     class: Drupal\quant_api\Http\EndpointUserInfoMiddleware
