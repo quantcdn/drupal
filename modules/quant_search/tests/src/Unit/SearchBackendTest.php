@@ -162,7 +162,7 @@ class SearchBackendTest extends UnitTestCase {
       // The explicit setting still wins.
       $this->assertSame('https://search.example.test', $this->backend($project, $stats, 'https://search.example.test/')->typesenseEndpoint());
 
-      // A dashboard that is not a QuantGov one (a local portal) keeps the default.
+      // A dashboard that is not QuantGov (a local portal) keeps the default.
       new Settings(['quant_api_dashboard_url' => 'http://localhost:8001']);
       $this->assertSame('https://search.quantgov.cloud', $this->backend($project, $stats)->typesenseEndpoint());
     }
