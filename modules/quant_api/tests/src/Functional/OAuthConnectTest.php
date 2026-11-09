@@ -220,7 +220,7 @@ class OAuthConnectTest extends BrowserTestBase {
   }
 
   /**
-   * A refused refresh is not shown as "Connected", and the status report says so.
+   * A refused refresh is not shown as "Connected"; the status report says so.
    */
   public function testRefusedLoginIsShownToTheEditor(): void {
     $this->logInAndPick('site-b');
