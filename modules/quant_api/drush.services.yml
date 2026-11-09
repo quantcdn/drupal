@@ -1,0 +1,10 @@
+services:
+  quant_api.commands:
+    class: \Drupal\quant_api\Commands\QuantApiAuthCommands
+    arguments:
+      - '@config.factory'
+      - '@quant_api.credentials'
+      - '@quant_api.oauth'
+      - '@quant_api.oauth_store'
+    tags:
+      - { name: drush.command }

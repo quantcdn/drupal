@@ -6,11 +6,13 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\quant_api\Client\QuantClient;
 use Drupal\quant_api\Exception\InvalidPayload;
 use Drupal\Tests\UnitTestCase;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -104,8 +106,17 @@ class QuantClientTest extends UnitTestCase {
     return new QuantClient(
       new Client(['handler' => $stack]),
       $this->configFactory($overrides),
-      $this->createMock(LoggerChannelFactoryInterface::class)
+      $this->loggerFactory()
     );
+  }
+
+  /**
+   * A logger factory whose channel accepts every call.
+   */
+  protected function loggerFactory() : LoggerChannelFactoryInterface {
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($this->createMock(LoggerChannelInterface::class));
+    return $factory;
   }
 
   /**
@@ -489,6 +500,66 @@ class QuantClientTest extends UnitTestCase {
     );
 
     $this->assertEquals(['api_project' => 'overridden-project'], $client->getOverrides());
+  }
+
+  /**
+   * With no token the client sends nothing at all (fail closed).
+   *
+   * An unconnected site sent an unpublish with empty credentials when a
+   * search page was deleted. No call may leave Drupal without a token.
+   */
+  public function testNoTokenMeansNoRequest() : void {
+    $logger = $this->createMock(LoggerChannelInterface::class);
+    $logger->expects($this->atMost(1))->method('warning')
+      ->with($this->stringContains('no project token is set'));
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($logger);
+    $stack = HandlerStack::create(new MockHandler([]));
+    $stack->push(Middleware::history($this->history));
+    $client = new QuantClient(new Client(['handler' => $stack]), $this->configFactory(['api_token' => '']), $factory);
+
+    $this->assertSame([], $client->send(['url' => '/x', 'content' => 'x']));
+    $this->assertSame([], $client->sendRedirect(['url' => '/a', 'redirect_url' => '/b']));
+    $this->assertSame([], $client->unpublish('/x'));
+    $this->assertSame([], $client->sendSearchRecords([['url' => '/x']]));
+    $this->assertSame([], $client->clearSearchIndex());
+    $this->assertSame([], $client->addFacets(['tags_en']));
+    $this->assertSame([], $client->getUrlMeta(['/x']));
+    $this->assertFalse($client->ping());
+    $this->assertFalse($client->project());
+    $this->assertFalse($client->search());
+
+    $this->assertCount(0, $this->history, 'No request was sent.');
+  }
+
+  /**
+   * An unreachable endpoint is a plain message, not a crash or a URL leak.
+   *
+   * Guzzle's ConnectException is not a RequestException, so a catch of the
+   * latter let it through and the settings page failed with an error page.
+   * The exception text carries the endpoint URL, which can hold credentials.
+   */
+  public function testUnreachableEndpointIsReportedPlainly() : void {
+    $messenger = $this->createMock(MessengerInterface::class);
+    $shown = [];
+    $messenger->method('addError')->willReturnCallback(function ($message) use (&$shown, $messenger) {
+      $shown[] = (string) $message;
+      return $messenger;
+    });
+    \Drupal::getContainer()->set('messenger', $messenger);
+
+    $down = fn () => new ConnectException('cURL error 7: Failed to connect for https://user:secret@uploads.example/ping', new Request('GET', 'https://user:secret@uploads.example/ping'));
+    $client = $this->client([$down(), $down(), $down()]);
+
+    $this->assertFalse($client->ping());
+    $this->assertTrue($client->lastCallUnreachable());
+    $this->assertFalse($client->project());
+    $this->assertFalse($client->search());
+    $this->assertNotEmpty($shown);
+    foreach ($shown as $message) {
+      $this->assertStringContainsString('could not reach Quant', $message);
+      $this->assertStringNotContainsString('secret', $message);
+    }
   }
 
 }

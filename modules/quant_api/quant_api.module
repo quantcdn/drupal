@@ -1,0 +1,50 @@
+<?php
+
+/**
+ * @file
+ * Hooks for the Quant API module.
+ */
+
+use Drupal\quant_api\PushFailures;
+
+/**
+ * Implements hook_cron().
+ */
+function quant_api_cron() {
+  // Refresh the "Log in to Quant" token well before it expires. Publishing
+  // does not depend on it: the write token does not expire.
+  if (\Drupal::service('quant_api.credentials')->usesOauth()) {
+    $refreshed = \Drupal::service('quant_api.oauth')->refreshFromCron();
+    // A write token rotated in the dashboard recovers without a new login.
+    \Drupal::service('quant_api.write_token_sync')->syncIfDue($refreshed);
+  }
+}
+
+/**
+ * Implements hook_page_top().
+ *
+ * Pushes run after the response is sent, so an editor never saw one fail.
+ * The failures are kept for the site, and every editor sees them on the next
+ * page view until the pages are pushed again.
+ */
+function quant_api_page_top(array &$page_top) {
+  $account = \Drupal::currentUser();
+  if (!$account->hasPermission('configure quant') && !$account->hasPermission('access content overview')) {
+    return;
+  }
+  // Cached pages are invalidated when the list changes (PushFailures).
+  $page_top['#cache']['tags'][] = PushFailures::CACHE_TAG;
+  $page_top['#cache']['contexts'][] = 'user.permissions';
+  $failures = \Drupal::service('quant_api.push_failures')->all();
+  if ($failures === []) {
+    return;
+  }
+  $last = array_key_last($failures);
+  \Drupal::messenger()->addWarning(\Drupal::translation()->formatPlural(
+    count($failures),
+    '1 change did not reach Quant (@url: @reason). It is not on the static site yet. After Quant is back, save the page again or run a seed.',
+    '@count changes did not reach Quant (the last: @url, @reason). They are not on the static site yet. After Quant is back, save the pages again or run a seed.',
+    ['@url' => $last, '@reason' => $failures[$last]['reason']]
+  ));
+  $page_top['#cache']['max-age'] = 0;
+}

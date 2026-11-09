@@ -61,7 +61,7 @@ class Search extends ControllerBase {
 
     $searchEnabled = $this->enabled();
     if (!$searchEnabled) {
-      if ($config->get('api_token') && $project = $this->client->project()) {
+      if (\Drupal::service('quant_api.credentials')->hasToken($config) && $project = $this->client->project()) {
         \Drupal::messenger()->addError(t('Search is not enabled for this project. It can be enabled via the Quant Dashboard. See <a href="https://docs.quantcdn.io/docs/dashboard/search">Quant Search documentation</a>.'));
       }
       else {
@@ -390,7 +390,7 @@ class Search extends ControllerBase {
   public function enabled() {
     $config = $this->config(self::SETTINGS);
 
-    $searchEnabled = ($config->get('api_token') && $this->client->project() && $this->client->project()->config->search_enabled);
+    $searchEnabled = (\Drupal::service('quant_api.credentials')->hasToken($config) && $this->client->project() && $this->client->project()->config->search_enabled);
     if ($searchEnabled) {
       \Drupal::messenger()->addMessage(t('Search is enabled for project %api.', ['%api' => $config->get('api_project')]));
     }

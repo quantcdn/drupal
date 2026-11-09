@@ -1,0 +1,8 @@
+quant_api_oauth_test.authorize:
+  path: '/quant-test-dashboard/oauth/authorize'
+  defaults:
+    _controller: '\Drupal\quant_api_oauth_test\Controller\FakeDashboardController::authorize'
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE

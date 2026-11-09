@@ -112,6 +112,16 @@ interface QuantClientInterface {
   public function sendSearchRecords(array $records) : array;
 
   /**
+   * Whether the last ping() failed because Quant could not be reached.
+   *
+   * The client has then already shown the editor why.
+   *
+   * @return bool
+   *   TRUE when the endpoint could not be reached.
+   */
+  public function lastCallUnreachable() : bool;
+
+  /**
    * Clear a search index.
    *
    * @return array

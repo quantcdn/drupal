@@ -5,6 +5,44 @@ services:
       - '@http_client'
       - '@config.factory'
       - '@logger.factory'
+      - '@quant_api.credentials'
+
+  quant_api.credentials:
+    class: Drupal\quant_api\Credentials
+    arguments:
+      - '@config.factory'
+      - '@quant_api.oauth_store'
+      - '@config.storage'
+      - '@quant_api.site_fingerprint'
+
+  quant_api.oauth_store:
+    class: Drupal\quant_api\OAuth\OAuthTokenStore
+    arguments:
+      - '@keyvalue'
+      - '@keyvalue.expirable'
+
+  quant_api.site_fingerprint:
+    class: Drupal\quant_api\OAuth\SiteFingerprint
+    arguments:
+      - '@config.factory'
+
+  quant_api.oauth:
+    class: Drupal\quant_api\OAuth\AuthService
+    arguments:
+      - '@http_client'
+      - '@config.factory'
+      - '@quant_api.oauth_store'
+      - '@quant_api.site_fingerprint'
+      - '@lock'
+      - '@database'
+      - '@logger.factory'
+
+  quant_api.portal:
+    class: Drupal\quant_api\OAuth\PortalClient
+    arguments:
+      - '@http_client'
+      - '@quant_api.oauth'
+      - '@logger.factory'
 
   quant.output.api:
     class: Drupal\quant_api\EventSubscriber\QuantApi
@@ -12,5 +50,34 @@ services:
       - '@quant_api.client'
       - '@logger.factory'
       - '@event_dispatcher'
+      - '@quant_api.push_failures'
     tags:
       - { name: 'event_subscriber' }
+
+  quant_api.write_token_sync:
+    class: Drupal\quant_api\OAuth\WriteTokenSync
+    arguments:
+      - '@quant_api.oauth'
+      - '@quant_api.portal'
+      - '@quant_api.oauth_store'
+      - '@quant_api.credentials'
+      - '@config.factory'
+      - '@logger.factory'
+
+  quant_api.unauthorized_resync_middleware:
+    class: Drupal\quant_api\Http\UnauthorizedResyncMiddleware
+    tags:
+      - { name: http_client_middleware }
+
+  quant_api.push_failures:
+    class: Drupal\quant_api\PushFailures
+    arguments:
+      - '@state'
+      - '@datetime.time'
+      - '@cache_tags.invalidator'
+      - '@lock'
+
+  quant_api.endpoint_userinfo_middleware:
+    class: Drupal\quant_api\Http\EndpointUserInfoMiddleware
+    tags:
+      - { name: http_client_middleware }

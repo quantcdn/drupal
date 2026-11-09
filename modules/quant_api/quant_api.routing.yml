@@ -7,3 +7,49 @@ quant_api.settings_form:
     _permission: 'configure quant'
   options:
     _admin_route: TRUE
+
+quant_api.oauth_connect:
+  path: '/admin/config/development/quant/api/oauth/connect'
+  defaults:
+    _controller: '\Drupal\quant_api\Controller\OAuthController::connect'
+    _title: 'Log in to Quant'
+  requirements:
+    _permission: 'configure quant'
+    _csrf_token: 'TRUE'
+  options:
+    _admin_route: TRUE
+    no_cache: TRUE
+
+quant_api.oauth_callback:
+  path: '/admin/config/development/quant/api/oauth/callback'
+  defaults:
+    _controller: '\Drupal\quant_api\Controller\OAuthController::callback'
+    _title: 'Log in to Quant'
+  requirements:
+    _permission: 'configure quant'
+  options:
+    _admin_route: TRUE
+    no_cache: TRUE
+
+quant_api.oauth_project:
+  path: '/admin/config/development/quant/api/oauth/project'
+  defaults:
+    _form: '\Drupal\quant_api\Form\ProjectSelectForm'
+    _title: 'Choose a Quant project'
+  requirements:
+    _permission: 'configure quant'
+  options:
+    _admin_route: TRUE
+    no_cache: TRUE
+
+quant_api.oauth_disconnect:
+  path: '/admin/config/development/quant/api/oauth/disconnect'
+  defaults:
+    _controller: '\Drupal\quant_api\Controller\OAuthController::disconnect'
+    _title: 'Log out of Quant'
+  requirements:
+    _permission: 'configure quant'
+    _csrf_token: 'TRUE'
+  options:
+    _admin_route: TRUE
+    no_cache: TRUE

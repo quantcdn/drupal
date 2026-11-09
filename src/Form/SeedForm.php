@@ -340,7 +340,7 @@ class SeedForm extends FormBase {
       return;
     }
 
-    if ($config->get('api_token')) {
+    if (\Drupal::service('quant_api.credentials')->hasToken()) {
       if (!$project = $this->client->ping()) {
         \Drupal::messenger()->addError(t('Unable to connect to Quant API, check settings.'));
         return;

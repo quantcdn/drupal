@@ -1,0 +1,6 @@
+services:
+  quant_api_oauth_test.middleware:
+    class: Drupal\quant_api_oauth_test\FakeQuantMiddleware
+    arguments: ['@state']
+    tags:
+      - { name: http_client_middleware }

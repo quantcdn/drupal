@@ -1,0 +1,8 @@
+name: 'Quant API OAuth test'
+description: 'A fake Quant dashboard and content API for the Log in to Quant tests.'
+type: module
+package: Testing
+hidden: true
+core_version_requirement: ^11
+dependencies:
+  - quantcdn:quant_api

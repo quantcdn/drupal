@@ -5,9 +5,10 @@ namespace Drupal\quant_api\Client;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\quant\PublishGuard;
+use Drupal\quant_api\Credentials;
 use Drupal\quant_api\Exception\InvalidPayload;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Utils;
@@ -17,6 +18,13 @@ use GuzzleHttp\RequestOptions;
  * Quant API client.
  */
 class QuantClient implements QuantClientInterface {
+
+  /**
+   * Whether the last ping() failed because Quant could not be reached.
+   *
+   * @var bool
+   */
+  protected bool $unreachable = FALSE;
 
   /**
    * The configuration object for Quant API.
@@ -82,14 +90,45 @@ class QuantClient implements QuantClientInterface {
   protected $configFactory;
 
   /**
+   * Resolves the write token (settings.php, OAuth connection or config).
+   *
+   * @var \Drupal\quant_api\Credentials|null
+   */
+  protected $credentials;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(Client $client, ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory) {
+  public function __construct(Client $client, ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory, ?Credentials $credentials = NULL) {
     $this->configFactory = $config_factory;
     $this->client = $client;
     $this->logger = $logger_factory->get('quant_api');
+    $this->credentials = $credentials;
 
     $this->refreshCredentials();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function lastCallUnreachable() : bool {
+    return $this->unreachable;
+  }
+
+  /**
+   * Tells the editor that Quant could not be reached, and logs the cause.
+   *
+   * The exception text names the request URL, which can carry credentials,
+   * so the editor sees a fixed message and the log gets the class and the
+   * text without any user information in URLs.
+   */
+  protected function reportUnreachable(GuzzleException $e) : void {
+    $this->unreachable = TRUE;
+    $this->logger->error('Quant API request failed (@class): @message', [
+      '@class' => get_class($e),
+      '@message' => preg_replace('#(https?://)[^/\s@]+@#i', '$1', $e->getMessage()),
+    ]);
+    \Drupal::messenger()->addError(t('This site could not reach Quant. Check the API endpoint on the Quant API settings page, or try again in a few minutes. After Quant is back, save the changed content again or run a seed.'));
   }
 
   /**
@@ -108,10 +147,46 @@ class QuantClient implements QuantClientInterface {
     $this->config = $this->configFactory->get('quant_api.settings');
 
     $this->username = $this->config->get('api_account');
-    $this->token = $this->config->get('api_token');
+    // An OAuth connection keeps its token outside config.
+    $this->token = $this->credentials ? $this->credentials->getToken($this->config) : $this->config->get('api_token');
     $this->project = $this->config->get('api_project');
-    $this->endpoint = $this->config->get('api_endpoint') . '/v1';
+    $this->endpoint = ($this->credentials ? $this->credentials->getEndpoint($this->config) : $this->config->get('api_endpoint')) . '/v1';
     $this->tlsDisabled = $this->config->get('api_tls_disabled');
+  }
+
+  /**
+   * Refuses any call when no project token is set: no request leaves Drupal.
+   *
+   * An unconnected site used to send requests with empty credentials (for
+   * example an unpublish when a search page was deleted). Fail closed and say
+   * why, once per process.
+   *
+   * @param string $operation
+   *   What is being attempted, for the log.
+   *
+   * @return bool
+   *   TRUE when the caller must not proceed.
+   */
+  protected function refusesWithoutToken(string $operation) : bool {
+    if (!empty($this->token)) {
+      return FALSE;
+    }
+    static $logged = FALSE;
+    if (!$logged) {
+      $logged = TRUE;
+      $copy = $this->credentials && $this->credentials->usesOauth($this->config) ? $this->credentials->copyDifferences() : [];
+      if ($copy !== []) {
+        $this->logger->error('Quant: this site looks like a copy of the connected site (different: @components), so nothing is published (@operation). Log in to Quant again, or confirm it is the same site on the Quant API settings page.', [
+          '@components' => implode(', ', $copy),
+          '@operation' => $operation,
+        ]);
+        return TRUE;
+      }
+      $this->logger->warning('Quant API: no project token is set, so the module did not call the API (@operation). Connect the site on the Quant API settings page.', [
+        '@operation' => $operation,
+      ]);
+    }
+    return TRUE;
   }
 
   /**
@@ -129,6 +204,9 @@ class QuantClient implements QuantClientInterface {
    *   TRUE when the caller must not proceed.
    */
   protected function refusesWrite(string $operation) : bool {
+    if ($this->refusesWithoutToken($operation)) {
+      return TRUE;
+    }
     if (!PublishGuard::refuses($host)) {
       return FALSE;
     }
@@ -179,7 +257,11 @@ class QuantClient implements QuantClientInterface {
    * {@inheritdoc}
    */
   public function ping() {
+    $this->unreachable = FALSE;
     $this->refreshCredentials();
+    if ($this->refusesWithoutToken('to check the connection')) {
+      return FALSE;
+    }
 
     try {
       // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
@@ -194,8 +276,8 @@ class QuantClient implements QuantClientInterface {
         'verify' => $this->tlsDisabled ? FALSE : TRUE,
       ]);
     }
-    catch (RequestException $e) {
-      \Drupal::messenger()->addError($e->getMessage());
+    catch (GuzzleException $e) {
+      $this->reportUnreachable($e);
       return FALSE;
     }
 
@@ -221,6 +303,9 @@ class QuantClient implements QuantClientInterface {
    */
   public function project() {
     $this->refreshCredentials();
+    if ($this->refusesWithoutToken('to read the project')) {
+      return FALSE;
+    }
 
     try {
       // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
@@ -234,8 +319,8 @@ class QuantClient implements QuantClientInterface {
         'exceptions' => FALSE,
       ]);
     }
-    catch (RequestException $e) {
-      \Drupal::messenger()->addError($e->getMessage());
+    catch (GuzzleException $e) {
+      $this->reportUnreachable($e);
       return FALSE;
     }
 
@@ -261,6 +346,9 @@ class QuantClient implements QuantClientInterface {
    */
   public function search() {
     $this->refreshCredentials();
+    if ($this->refusesWithoutToken('to read the search index')) {
+      return FALSE;
+    }
 
     try {
       // @todo Switch from 'Quant-Customer' to 'Quant-Organization'.
@@ -274,8 +362,8 @@ class QuantClient implements QuantClientInterface {
         'exceptions' => FALSE,
       ]);
     }
-    catch (RequestException $e) {
-      \Drupal::messenger()->addError($e->getMessage());
+    catch (GuzzleException $e) {
+      $this->reportUnreachable($e);
       return FALSE;
     }
 
@@ -432,6 +520,9 @@ class QuantClient implements QuantClientInterface {
    */
   public function getUrlMeta(array $urls) : array {
     $this->refreshCredentials();
+    if ($this->refusesWithoutToken('to read page metadata')) {
+      return [];
+    }
     // Format array if it's not already.
     if (!array_key_exists('Quant-Url', $urls)) {
       $urls = [
