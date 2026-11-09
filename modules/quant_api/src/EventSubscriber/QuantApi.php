@@ -15,6 +15,7 @@ use Drupal\quant\Seed;
 use Drupal\quant\Utility;
 use Drupal\quant_api\Client\QuantClientInterface;
 use Drupal\quant_api\Exception\InvalidPayload;
+use Drupal\quant_api\PushFailures;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -45,6 +46,13 @@ class QuantApi implements EventSubscriberInterface {
   protected $eventDispatcher;
 
   /**
+   * The pages whose last push failed.
+   *
+   * @var \Drupal\quant_api\PushFailures
+   */
+  protected $failures;
+
+  /**
    * QuantAPI event subscriber.
    *
    * Listens to Quant events and triggers requests to the configured
@@ -57,8 +65,9 @@ class QuantApi implements EventSubscriberInterface {
    * @param \Symfony\Component\EventDispatcher\EventDispatcher $event_dispatcher
    *   The event dispatcher.
    */
-  public function __construct(QuantClientInterface $client, LoggerChannelFactoryInterface $logger_factory, EventDispatcher $event_dispatcher) {
+  public function __construct(QuantClientInterface $client, LoggerChannelFactoryInterface $logger_factory, EventDispatcher $event_dispatcher, PushFailures $failures) {
     $this->client = $client;
+    $this->failures = $failures;
     $this->logger = $logger_factory->get('quant_api');
     $this->eventDispatcher = $event_dispatcher;
   }
@@ -104,8 +113,10 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (\Exception $error) {
       $this->logger->error($error->getMessage());
+      $this->failures->record((string) $source, 'redirect', $error);
       return;
     }
+    $this->failures->clear((string) $source);
 
     return $res;
   }
@@ -161,8 +172,10 @@ class QuantApi implements EventSubscriberInterface {
     }
     catch (\Exception $error) {
       $this->logger->error($error->getMessage());
+      $this->failures->record($path, 'publish', $error);
       return FALSE;
     }
+    $this->failures->clear($path);
 
     $queue_factory = QuantQueueFactory::getInstance();
     $queue = $queue_factory->get('quant_seed_worker');
@@ -244,9 +257,14 @@ class QuantApi implements EventSubscriberInterface {
   protected function queuePaginationLinks(\DOMXPath $xpath, string $path, QueueInterface $queue) : void {
     $links_config = \Drupal::config('quant.settings')->get('xpath_selectors');
 
-    foreach (explode(PHP_EOL, (string) $links_config) as $links_line) {
+    foreach (preg_split('/\R/', (string) $links_config) as $links_line) {
+      // A blank line or an invalid expression selects nothing.
+      $nodes = trim($links_line) === '' ? FALSE : @$xpath->query(trim($links_line));
+      if ($nodes === FALSE) {
+        continue;
+      }
       /** @var \DOMElement $node */
-      foreach ($xpath->query(trim($links_line)) as $node) {
+      foreach ($nodes as $node) {
         $original_href = $new_href = $node->getAttribute('href');
         if ($original_href[0] === '?') {
           $new_href = strtok($path, '?') . $original_href;
@@ -540,9 +558,11 @@ class QuantApi implements EventSubscriberInterface {
       // or the file silently never reaches Quant.
       if (!str_contains($error->getMessage(), 'MD5 already matches')) {
         $this->logger->error($error->getMessage());
+        $this->failures->record($url, 'file', $error);
       }
       return;
     }
+    $this->failures->clear($url);
 
     return $res;
   }
@@ -559,11 +579,13 @@ class QuantApi implements EventSubscriberInterface {
       // Don't log it if it's a 404, since the content is unpublished.
       if (!str_contains($error->getMessage(), '404 Not Found') && !str_contains($error->getMessage(), 'Resource is already unpublished')) {
         $this->logger->error($error->getMessage());
+        $this->failures->record($url, 'unpublish', $error);
+        return;
       }
-      return;
     }
+    $this->failures->clear($url);
 
-    return $res;
+    return $res ?? NULL;
   }
 
 }
