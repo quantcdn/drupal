@@ -16,6 +16,8 @@
 - **The export fetch always sends the signed `quant-token`.** Before, it was
   sent only with content drafts on. The purger still records no traffic on
   sites with content drafts off, as before.
+- **An export token works only for the page it was made for.** The static
+  Webform render no longer accepts one signed token on every path.
 - **The API client sends nothing without a project token.** An unconnected
   site used to call the API with empty credentials.
 - **Update 8105 (quant_search) clears the stored default search host.** A
@@ -41,6 +43,8 @@ When Quant refuses to renew a login, the API settings page and the status
 report say "The Quant login needs renewing", and the button reads "Log in to
 Quant again". An unreachable Quant endpoint no longer breaks the API settings
 page; the editor sees a plain message without the endpoint URL.
+Saving the API settings of a logged-in site no longer logs it out when a
+`quant_api_dashboard_url` override points at a host outside quantgov.cloud.
 
 ## Content changes
 
@@ -49,6 +53,9 @@ page; the editor sees a plain message without the endpoint URL.
   new one. Sites with the Redirect module keep using its redirects.
 - Deleted content no longer leaves `/node/N` or `/taxonomy/term/N`
   redirecting to a page that is gone.
+- A push that does not reach Quant is no longer silent. Pushes run after the
+  page is saved, so editors now see a warning on their next page view, and
+  the status report lists the pages, until each page is pushed again.
 - The shipped metadata views pass strict config schema checks.
 
 ## Quant Forms for Webform
