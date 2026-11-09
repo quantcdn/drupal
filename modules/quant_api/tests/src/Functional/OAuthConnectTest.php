@@ -281,6 +281,25 @@ class OAuthConnectTest extends BrowserTestBase {
   }
 
   /**
+   * A connected site shows its saved platform, so a save keeps the login.
+   *
+   * With a dashboard override outside quantgov.cloud (a local QuantGov
+   * dashboard), the radio used to default to QuantCDN while the saved
+   * platform was QuantGov. Saving the form for another reason then logged
+   * the site out.
+   */
+  public function testSaveKeepsTheLoginWithAnOverrideOnAnotherHost(): void {
+    $this->logInAndPick('site-b');
+    $this->config('quant_api.settings')->set('platform', 'quantgov')->save();
+
+    $this->drupalGet('admin/config/development/quant/api');
+    $this->assertSession()->checkboxChecked('edit-platform-quantgov');
+    $this->submitForm([], 'Save configuration');
+    $this->assertSession()->pageTextNotContains('The platform changed');
+    $this->assertSame('oauth', $this->config('quant_api.settings')->get('auth_method'));
+  }
+
+  /**
    * A QuantGov dashboard in settings.php makes QuantGov the starting platform.
    */
   public function testDashboardOverrideSetsTheDefaultPlatform(): void {
