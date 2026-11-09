@@ -281,6 +281,27 @@ class OAuthConnectTest extends BrowserTestBase {
   }
 
   /**
+   * A push that failed after a save is shown on the next page view.
+   */
+  public function testFailedPushIsShownOnTheNextPageView(): void {
+    \Drupal::service('quant_api.push_failures')->record('/news/a', 'publish', new \Exception('x'));
+    $this->drupalGet('admin/config/development/quant/api');
+    $session = $this->assertSession();
+    $session->pageTextContains('1 change did not reach Quant');
+    $session->pageTextContains('/news/a');
+
+    // Another editor of the same site sees it too: it is per site.
+    $this->drupalLogin($this->drupalCreateUser(['access content overview']));
+    $this->drupalGet('admin/content');
+    $session->pageTextContains('1 change did not reach Quant');
+
+    // A visitor does not.
+    $this->drupalLogout();
+    $this->drupalGet('user/login');
+    $session->pageTextNotContains('did not reach Quant');
+  }
+
+  /**
    * A connected site shows its saved platform, so a save keeps the login.
    *
    * With a dashboard override outside quantgov.cloud (a local QuantGov
