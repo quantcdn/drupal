@@ -209,25 +209,69 @@ function quant_update_9008() {
  * Store the on/off settings as booleans, as their schema says.
  *
  * Sites that installed the module on Drupal 11.1 or earlier kept 0 and 1 from
- * config/install, which fails strict config schema checks.
+ * config/install (quant.settings, quant.token_settings, and the Quant Search
+ * entity settings), which fails strict config schema checks.
  */
 function quant_update_9009() {
-  $config = \Drupal::configFactory()->getEditable('quant.settings');
-  $keys = [
-    'quant_enabled',
-    'quant_enabled_nodes',
-    'quant_enabled_taxonomy',
-    'quant_enabled_views',
-    'quant_enabled_redirects',
-    'ssl_cert_verify',
-    'disable_content_drafts',
-    'quant_show_page_info_block',
+  $booleans = [
+    'quant.settings' => [
+      'quant_enabled',
+      'quant_enabled_nodes',
+      'quant_enabled_taxonomy',
+      'quant_enabled_views',
+      'quant_enabled_redirects',
+      'ssl_cert_verify',
+      'disable_content_drafts',
+      'quant_show_page_info_block',
+    ],
+    'quant.token_settings' => ['disable', 'strict'],
+    // Quant Search settings, if that submodule is on.
+    'quant_search.entities.settings' => [
+      'quant_search_entity_node',
+      'quant_search_entity_taxonomy_term',
+    ],
   ];
-  foreach ($keys as $key) {
-    $value = $config->get($key);
-    if ($value !== NULL && !is_bool($value)) {
-      $config->set($key, (bool) $value);
+  foreach ($booleans as $name => $keys) {
+    $config = \Drupal::configFactory()->getEditable($name);
+    if ($config->isNew()) {
+      continue;
+    }
+    foreach ($keys as $key) {
+      $value = $config->get($key);
+      if ($value !== NULL && !is_bool($value)) {
+        $config->set($key, (bool) $value);
+      }
+    }
+    $config->save(TRUE);
+  }
+}
+
+/**
+ * Keep only the ticked keys in the Quant metadata Views field option.
+ *
+ * The option came from checkboxes and kept 0 for each unticked key, which
+ * fails strict config schema checks. The field reads only ticked keys, so
+ * the result is the same.
+ */
+function quant_update_9010() {
+  $factory = \Drupal::configFactory();
+  foreach ($factory->listAll('views.view.') as $name) {
+    $view = $factory->getEditable($name);
+    $changed = FALSE;
+    foreach ((array) $view->get('display') as $display_id => $display) {
+      foreach ((array) ($display['display_options']['fields'] ?? []) as $field_id => $field) {
+        if (($field['plugin_id'] ?? '') !== 'quant_metadata' || !is_array($field['quant_metadata'] ?? NULL)) {
+          continue;
+        }
+        $kept = array_filter($field['quant_metadata']);
+        if ($kept !== $field['quant_metadata']) {
+          $view->set("display.$display_id.display_options.fields.$field_id.quant_metadata", $kept);
+          $changed = TRUE;
+        }
+      }
+    }
+    if ($changed) {
+      $view->save(TRUE);
     }
   }
-  $config->save(TRUE);
 }
