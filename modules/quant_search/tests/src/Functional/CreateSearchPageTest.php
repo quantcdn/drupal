@@ -64,6 +64,23 @@ class CreateSearchPageTest extends BrowserTestBase {
   }
 
   /**
+   * {@inheritdoc}
+   */
+  protected function tearDown(): void {
+    // A page created in the form publishes after the response. Let that
+    // finish before the test site is removed, or it writes into the removed
+    // site's files.
+    $storage = \Drupal::entityTypeManager()->getStorage('quant_search_page');
+    $storage->resetCache();
+    foreach ($storage->loadMultiple() as $page) {
+      if ($page->status()) {
+        $this->waitForPublish('/' . $page->get('route'));
+      }
+    }
+    parent::tearDown();
+  }
+
+  /**
    * Adds a taxonomy reference field to a content type.
    */
   protected function addTermField(string $bundle, string $name, string $vid): void {
