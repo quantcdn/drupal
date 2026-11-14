@@ -255,4 +255,59 @@ class CreateSearchPageTest extends BrowserTestBase {
     $this->assertSame('topics', $page->get('facets')[0]['facet_type_config']['taxonomy_vocabulary']);
   }
 
+  /**
+   * Deleting a search page removes its search box from the theme.
+   */
+  public function testDeletingThePageRemovesItsSearchBox(): void {
+    $this->drupalGet('admin/config/development/quant/search/pages/create');
+    $this->submitForm(['route' => 'search'], 'Create the search page');
+    $blocks = \Drupal::entityTypeManager()->getStorage('block');
+    $this->assertNotNull($blocks->load('olivero_quant_search_search'));
+
+    \Drupal::entityTypeManager()->getStorage('quant_search_page')->load('search')->delete();
+    $blocks->resetCache();
+    $this->assertNull($blocks->load('olivero_quant_search_search'), 'The search box of the deleted page is removed.');
+
+    // With no box left, a new page proposes one again.
+    $this->drupalGet('admin/config/development/quant/search/pages/create');
+    $this->assertSession()->checkboxChecked('edit-place-block');
+    $this->assertSession()->pageTextNotContains('This theme already has a Quant search box');
+  }
+
+  /**
+   * A box left by a deleted page (sites before this fix) is repaired.
+   *
+   * It is not counted as a search box, and creating the page again points it
+   * at the new page instead of keeping the old page's UUID.
+   */
+  public function testStaleSearchBoxIsRepointed(): void {
+    \Drupal::entityTypeManager()->getStorage('block')->create([
+      'id' => 'olivero_quant_search_search',
+      'theme' => 'olivero',
+      'region' => 'header',
+      'plugin' => 'quant_autocomplete_block',
+      'settings' => [
+        'id' => 'quant_autocomplete_block',
+        'label' => 'Search',
+        'label_display' => '0',
+        'provider' => 'quant_search',
+        'page' => 'f513fce8-5610-43d7-96c8-7335a2aa12af',
+        'placeholder' => 'Search',
+        'show_summary' => FALSE,
+      ],
+    ])->save();
+
+    $this->drupalGet('admin/config/development/quant/search/pages/create');
+    $session = $this->assertSession();
+    $session->checkboxChecked('edit-place-block');
+    $session->pageTextNotContains('This theme already has a Quant search box');
+
+    $this->submitForm(['route' => 'search'], 'Create the search page');
+    $page = \Drupal::entityTypeManager()->getStorage('quant_search_page')->load('search');
+    $blocks = \Drupal::entityTypeManager()->getStorage('block');
+    $blocks->resetCache();
+    $this->assertSame($page->uuid(), $blocks->load('olivero_quant_search_search')->get('settings')['page'], 'The box points at the new page.');
+    $session->pageTextContains('The search box is on every page in Drupal now.');
+  }
+
 }

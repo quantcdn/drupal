@@ -195,11 +195,12 @@ class CreateSearchPageForm extends FormBase {
   protected function buildBlockChoice(): array {
     $theme = $this->config('system.theme')->get('default');
     $regions = system_region_list($theme, REGIONS_VISIBLE);
-    // One search box is enough: a second page does not propose another.
-    $placed = $this->entityTypeManager->getStorage('block')->loadByProperties([
+    // One search box is enough: a second page does not propose another. A box
+    // whose page was deleted does not count.
+    $placed = array_filter($this->entityTypeManager->getStorage('block')->loadByProperties([
       'theme' => $theme,
       'plugin' => 'quant_autocomplete_block',
-    ]);
+    ]), fn ($block) => $this->pageExists($block->get('settings')['page'] ?? ''));
     return [
       '#type' => 'container',
       'place_block' => [
@@ -345,15 +346,25 @@ class CreateSearchPageForm extends FormBase {
   /**
    * Places the autocomplete block in the default theme.
    *
+   * A block of the same ID that a deleted page left behind is pointed at this
+   * page instead.
+   *
    * @return bool
-   *   Whether a new block was placed.
+   *   Whether a block was placed or repaired.
    */
   protected function placeBlock($page, string $region): bool {
     $theme = $this->config('system.theme')->get('default');
     $storage = $this->entityTypeManager->getStorage('block');
     $id = $theme . '_quant_search_' . $page->id();
-    if ($storage->load($id)) {
-      return FALSE;
+    $existing = $storage->load($id);
+    if ($existing) {
+      $settings = $existing->get('settings');
+      if ($this->pageExists($settings['page'] ?? '')) {
+        return FALSE;
+      }
+      $settings['page'] = $page->uuid();
+      $existing->set('settings', $settings)->save();
+      return TRUE;
     }
     $storage->create([
       'id' => $id,
@@ -373,6 +384,13 @@ class CreateSearchPageForm extends FormBase {
       'visibility' => [],
     ])->save();
     return TRUE;
+  }
+
+  /**
+   * Whether a search page with this UUID exists.
+   */
+  protected function pageExists(string $uuid): bool {
+    return $uuid !== '' && (bool) $this->entityTypeManager->getStorage('quant_search_page')->loadByProperties(['uuid' => $uuid]);
   }
 
   /**
