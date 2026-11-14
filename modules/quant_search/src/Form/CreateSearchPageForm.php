@@ -51,6 +51,13 @@ class CreateSearchPageForm extends FormBase {
   protected $themeHandler;
 
   /**
+   * The module handler, to offer the search box only with the block module.
+   *
+   * @var \Drupal\Core\Extension\ModuleHandlerInterface
+   */
+  protected $moduleHandler;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
@@ -60,6 +67,7 @@ class CreateSearchPageForm extends FormBase {
     $instance->router = $container->get('router.no_access_checks');
     $instance->converter = $container->get('quant_search.view_converter');
     $instance->themeHandler = $container->get('theme_handler');
+    $instance->moduleHandler = $container->get('module_handler');
     return $instance;
   }
 
@@ -140,7 +148,10 @@ class CreateSearchPageForm extends FormBase {
       '#min' => 5,
       '#max' => 100,
     ];
-    $form['block'] = $this->buildBlockChoice();
+    // The search box is a block: without the block module there is none.
+    if ($this->moduleHandler->moduleExists('block')) {
+      $form['block'] = $this->buildBlockChoice();
+    }
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [
       '#type' => 'submit',
@@ -216,19 +227,41 @@ class CreateSearchPageForm extends FormBase {
    * The region of the search box, with the suggested one chosen and named.
    */
   protected function buildRegionChoice(string $theme, array $regions): array {
-    $default = $this->defaultRegion($theme, $regions);
+    $core_search = $this->coreSearchRegions($theme);
+    $default = $this->defaultRegion($regions, $core_search);
+    $description = [
+      $this->t('Suggested for @theme: @region. Choose another region if the box fits better there. You can also move it later in <a href=":url">Block layout</a>.', [
+        '@theme' => $this->themeHandler->getName($theme),
+        '@region' => $regions[$default] ?? $default,
+        ':url' => Url::fromRoute('block.admin_display_theme', ['theme' => $theme])->toString(),
+      ]),
+    ];
+    if (in_array($default, $core_search, TRUE)) {
+      $description[] = $this->t('The theme shows the Drupal search box in this region, so the Quant search box sits next to it. Remove the Drupal one in Block layout if you want one box.');
+    }
     return [
       '#type' => 'select',
       '#title' => $this->t('Region'),
       '#options' => $regions,
       '#default_value' => $default,
-      '#description' => $this->t('Suggested for @theme: @region. Choose another region if the box fits better there. You can also move it later in <a href=":url">Block layout</a>.', [
-        '@theme' => $this->themeHandler->getName($theme),
-        '@region' => $regions[$default] ?? $default,
-        ':url' => Url::fromRoute('block.admin_display_theme', ['theme' => $theme])->toString(),
-      ]),
+      '#description' => ['#markup' => implode(' ', array_map('strval', $description))],
       '#states' => ['visible' => [':input[name="place_block"]' => ['checked' => TRUE]]],
     ];
+  }
+
+  /**
+   * The regions where the theme shows an enabled Drupal core search box.
+   *
+   * @return string[]
+   *   The region names.
+   */
+  protected function coreSearchRegions(string $theme): array {
+    $blocks = $this->entityTypeManager->getStorage('block')->loadByProperties([
+      'theme' => $theme,
+      'plugin' => 'search_form_block',
+      'status' => TRUE,
+    ]);
+    return array_values(array_map(fn ($block) => $block->getRegion(), $blocks));
   }
 
   /**
@@ -240,18 +273,14 @@ class CreateSearchPageForm extends FormBase {
    * search box in the secondary menu region, at the end of the main menu row.
    * Other themes get the region of the core search box when the theme shows
    * one, then the header.
+   *
+   * @param array $regions
+   *   The visible regions of the theme, keyed by name.
+   * @param string[] $core_search
+   *   The regions where the theme shows the core search box.
    */
-  protected function defaultRegion(string $theme, array $regions): string {
-    $core_search = $this->entityTypeManager->getStorage('block')->loadByProperties([
-      'theme' => $theme,
-      'plugin' => 'search_form_block',
-    ]);
-    $preferred = array_merge(
-      ['secondary_menu'],
-      array_map(fn ($block) => $block->getRegion(), array_values($core_search)),
-      ['header'],
-    );
-    foreach ($preferred as $region) {
+  protected function defaultRegion(array $regions, array $core_search): string {
+    foreach (array_merge(['secondary_menu'], $core_search, ['header']) as $region) {
       if (isset($regions[$region])) {
         return $region;
       }

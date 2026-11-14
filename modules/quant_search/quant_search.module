@@ -8,7 +8,6 @@
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\node\Entity\Node;
 use Drupal\quant\CliDomainContext;
-use Drupal\quant\Utility;
 use Drupal\quant_search\Controller\Search;
 use Drupal\quant_search\QuantSearchPageInterface;
 
@@ -104,9 +103,13 @@ function quant_search_run_index($nids, $languages, array &$context) {
 
 /**
  * Implements hook_ENTITY_TYPE_insert().
+ *
+ * A new page publishes at the end of the request.
+ *
+ * @see \Drupal\quant_search\SearchPagePublisher
  */
 function quant_search_quant_search_page_insert(QuantSearchPageInterface $page) {
-  \Drupal::service('quant_search.page_publisher')->publish($page, TRUE);
+  \Drupal::service('quant_search.page_publisher')->schedule($page, TRUE);
 }
 
 /**
@@ -119,13 +122,12 @@ function quant_search_quant_search_page_update(QuantSearchPageInterface $page) {
   // getOriginal() is new in Drupal 11.2; the original property is deprecated.
   $original = method_exists($page, 'getOriginal') ? $page->getOriginal() : ($page->original ?? NULL);
   $previous = $original && $original->status() ? (string) $original->get('route') : NULL;
-  \Drupal::service('quant_search.page_publisher')->publish($page, FALSE, $previous);
+  \Drupal::service('quant_search.page_publisher')->schedule($page, FALSE, $previous);
 }
 
 /**
  * Implements hook_ENTITY_TYPE_delete().
  */
 function quant_search_quant_search_page_delete(EntityInterface $entity) {
-  $route = $entity->get('route');
-  Utility::unpublishUrl('/' . $route, 'Unpublished search page');
+  \Drupal::service('quant_search.page_publisher')->scheduleDelete($entity);
 }

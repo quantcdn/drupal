@@ -3,6 +3,7 @@
 namespace Drupal\quant_search_test;
 
 use Drupal\Core\State\StateInterface;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\RequestInterface;
@@ -11,6 +12,7 @@ use Psr\Http\Message\RequestInterface;
  * Answers the Quant content API as a project with Algolia search enabled.
  *
  * Records every call (method, path, JSON body, Quant-Url header) in state.
+ * Answers every call with a 500 while quant_search_test.fail is set.
  */
 class FakeSearchApi {
 
@@ -34,6 +36,10 @@ class FakeSearchApi {
           'quant_url' => $request->getHeaderLine('Quant-Url'),
         ];
         $this->state->set('quant_search_test.calls', $log);
+        // With quant_search_test.fail set, every call fails as a 500 does.
+        if ($this->state->get('quant_search_test.fail')) {
+          return Create::rejectionFor(new RequestException('Server error', $request, new Response(500)));
+        }
         return Create::promiseFor(new Response(200, ['Content-Type' => 'application/json'], json_encode($this->answer($request))));
       };
     };

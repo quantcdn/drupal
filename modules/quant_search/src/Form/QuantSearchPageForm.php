@@ -436,6 +436,7 @@ class QuantSearchPageForm extends EntityForm {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     parent::validateForm($form, $form_state);
+    $this->validateRoute($form_state);
 
     // Completely empty facets are allowed since they will be removed during the
     // form save, so we only need to validate when facet data is set.
@@ -461,6 +462,20 @@ class QuantSearchPageForm extends EntityForm {
           $form_state->setErrorByName('missing-custom-key', $this->t('Missing custom facet key.'));
         }
       }
+    }
+  }
+
+  /**
+   * Refuses a route that another search page has.
+   *
+   * Two pages at one address would publish over each other on Quant.
+   */
+  protected function validateRoute(FormStateInterface $form_state): void {
+    $route = trim((string) $form_state->getValue('route'), '/');
+    $pages = $this->entityTypeManager->getStorage('quant_search_page')->loadByProperties(['route' => $route]);
+    unset($pages[$this->entity->id()]);
+    if ($pages) {
+      $form_state->setErrorByName('route', $this->t('Another search page uses this address.'));
     }
   }
 
