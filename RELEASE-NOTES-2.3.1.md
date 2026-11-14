@@ -7,7 +7,10 @@
   or a configuration import (`drush cim`) publishes too, like a node save.
   The publish runs at the end of the request, after the import is complete,
   and only when Quant is enabled (`quant.settings:quant_enabled`) and the
-  site is connected. A site that shares its configuration with another site
+  site is connected. A change saved during installation or in maintenance
+  mode is not published then: it is listed with the changes that did not
+  reach Quant, and the next save of the page or a seed publishes it. A site
+  that shares its configuration with another site
   publishes to its own project only; turn `quant_enabled` off on a copy that
   must not publish. Pages saved before the upgrade are not published again:
   save them or seed.
@@ -21,4 +24,6 @@
   of the theme's Drupal search box, then `header`, and says which one. The
   choice is shown only when the block module is installed.
 - **Two search pages cannot have the same address.** The search page form
-  refuses an address that another search page uses.
+  refuses an address that another search page uses. A route is saved without
+  slashes at either end and in lower case, because Quant paths do not depend
+  on case.

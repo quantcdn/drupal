@@ -14,6 +14,7 @@ use Drupal\quant\Plugin\QueueItem\RouteItem;
 use Drupal\quant\Utility;
 use Drupal\quant_api\Credentials;
 use Drupal\quant_api\PushFailures;
+use Drupal\quant_search\Entity\QuantSearchPage;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -31,14 +32,17 @@ class SearchPagePublisher {
   /**
    * The pages to publish at the end of the request, keyed by page ID.
    *
+   * Static, so that a container rebuild during a config import (a module
+   * installed by the import) does not split one page over two instances.
+   *
    * @var array<string, array{route: string, status: bool, facets: array, new: bool, previous: ?string}>
    */
-  protected array $pending = [];
+  protected static array $pending = [];
 
   /**
    * Whether the shutdown function is registered for the pending pages.
    */
-  protected bool $registered = FALSE;
+  protected static bool $registered = FALSE;
 
   public function __construct(
     protected SearchBackend $backend,
@@ -80,6 +84,8 @@ class SearchPagePublisher {
    * Schedules a deleted page for unpublishing at the end of the request.
    */
   public function scheduleDelete(QuantSearchPageInterface $page): void {
+    // The deleted page's route goes with it.
+    $this->routeBuilder->setRebuildNeeded();
     $this->queue((string) $page->id(), [
       'route' => (string) $page->get('route'),
       'status' => FALSE,
@@ -93,20 +99,20 @@ class SearchPagePublisher {
    * Adds a page to the pending pages; the first save keeps its old state.
    */
   protected function queue(string $id, array $item): void {
-    if (!$this->publishes($id)) {
+    if (!$this->connected() || $this->deferredBySiteState($item)) {
       return;
     }
-    if (isset($this->pending[$id])) {
+    if (isset(static::$pending[$id])) {
       // A page saved twice in one request: what was live before the first
       // save decides whether it is new and which old address to withdraw.
-      $item['new'] = $this->pending[$id]['new'];
-      $item['previous'] = $this->pending[$id]['previous'];
+      $item['new'] = static::$pending[$id]['new'];
+      $item['previous'] = static::$pending[$id]['previous'];
     }
-    $this->pending[$id] = $item;
-    if (!$this->registered) {
-      $this->registered = TRUE;
+    static::$pending[$id] = $item;
+    if (!static::$registered) {
+      static::$registered = TRUE;
       drupal_register_shutdown_function('quant_shutdown', [
-        'callback' => [$this, 'publishPending'],
+        'callback' => [static::class, 'publishPendingPages'],
         'args' => NULL,
         'request' => $this->requestStack->getCurrentRequest(),
       ]);
@@ -114,41 +120,67 @@ class SearchPagePublisher {
   }
 
   /**
-   * Whether a change of this page goes to Quant at all.
-   *
-   * Quant must be enabled (quant.settings:quant_enabled, as for nodes) and
-   * connected. During installation and in maintenance mode the change is
-   * left for a later save or seed.
+   * Whether Quant is enabled (as for nodes) and the site is connected.
    */
-  protected function publishes(string $id): bool {
-    if (!$this->configFactory->get('quant.settings')->get('quant_enabled') || !$this->credentials->hasToken()) {
+  protected function connected(): bool {
+    // Under drush, the domain's settings and token decide, so resolve the
+    // domain before reading them.
+    CliDomainContext::initialize();
+    return $this->configFactory->get('quant.settings')->get('quant_enabled') && $this->credentials->hasToken();
+  }
+
+  /**
+   * Leaves a change made during installation or in maintenance mode.
+   *
+   * The change is listed with the pushes that failed, so editors see that it
+   * is not on Quant until the page is saved again or the site is seeded.
+   *
+   * @return bool
+   *   Whether the change is left.
+   */
+  protected function deferredBySiteState(array $item): bool {
+    if (!InstallerKernel::installationAttempted() && !$this->state->get('system.maintenance_mode')) {
       return FALSE;
     }
-    if (InstallerKernel::installationAttempted() || $this->state->get('system.maintenance_mode')) {
-      $this->loggerFactory->get('quant_search')->notice('Search page @id was not published while the site is being installed or is in maintenance mode. Save the page again or seed to publish it.', ['@id' => $id]);
-      return FALSE;
-    }
+    $url = '/' . $item['route'];
+    $this->loggerFactory->get('quant_search')->notice('The search page at @url was not published while the site is being installed or is in maintenance mode. Save the page again or seed to publish it.', ['@url' => $url]);
+    $this->failures->record($url, $item['status'] ? 'publish' : 'unpublish', new \RuntimeException('Not sent'), 'not sent during installation or maintenance mode');
     return TRUE;
   }
 
   /**
-   * Publishes the pending pages. Runs as a shutdown function.
+   * Publishes the pending pages with the current publisher service.
+   *
+   * The shutdown callback. It asks the container for the service, so the work
+   * uses the services of the container that is current at the end.
+   */
+  public static function publishPendingPages(): void {
+    \Drupal::service('quant_search.page_publisher')->publishPending();
+  }
+
+  /**
+   * Publishes the pending pages.
    */
   public function publishPending(): void {
-    $pending = $this->pending;
-    $this->pending = [];
-    $this->registered = FALSE;
+    $pending = static::$pending;
+    static::$pending = [];
+    static::$registered = FALSE;
     if ($pending === []) {
       return;
     }
     // Under drush, resolve the domain's project before anything is sent.
     CliDomainContext::initialize();
-    $this->routeBuilder->rebuildIfNeeded();
+    try {
+      $this->routeBuilder->rebuildIfNeeded();
+    }
+    catch (\Throwable $error) {
+      $this->loggerFactory->get('quant_search')->error('The router was not rebuilt before the search pages were published: @message', ['@message' => $error->getMessage()]);
+    }
     foreach ($pending as $id => $item) {
       try {
         $this->publishItem($item);
       }
-      catch (\Exception $error) {
+      catch (\Throwable $error) {
         $this->loggerFactory->get('quant_search')->error('Search page @id was not published: @message', [
           '@id' => $id,
           '@message' => $error->getMessage(),
@@ -182,7 +214,8 @@ class SearchPagePublisher {
    */
   protected function retirePrevious(array $item): void {
     $previous = $item['previous'];
-    if ($previous === NULL || $previous === $item['route'] || $this->routeInUse($previous)) {
+    // Quant paths do not depend on case: /Search and /search are one page.
+    if ($previous === NULL || strtolower($previous) === strtolower($item['route']) || $this->routeInUse($previous)) {
       return;
     }
     Utility::unpublishUrl('/' . $previous, 'Unpublished search page');
@@ -204,10 +237,13 @@ class SearchPagePublisher {
    * Whether an enabled search page has this route.
    */
   protected function routeInUse(string $route): bool {
-    return (bool) $this->entityTypeManager->getStorage('quant_search_page')->loadByProperties([
-      'route' => $route,
-      'status' => TRUE,
-    ]);
+    $route = QuantSearchPage::normaliseRoute($route);
+    foreach ($this->entityTypeManager->getStorage('quant_search_page')->loadByProperties(['status' => TRUE]) as $page) {
+      if (QuantSearchPage::normaliseRoute((string) $page->get('route')) === $route) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
 }

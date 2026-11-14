@@ -5,6 +5,7 @@ namespace Drupal\quant_search\Form;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\quant_search\Entity\QuantSearchPage;
 use Drupal\taxonomy\Entity\Vocabulary;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -471,11 +472,14 @@ class QuantSearchPageForm extends EntityForm {
    * Two pages at one address would publish over each other on Quant.
    */
   protected function validateRoute(FormStateInterface $form_state): void {
-    $route = trim((string) $form_state->getValue('route'), '/');
-    $pages = $this->entityTypeManager->getStorage('quant_search_page')->loadByProperties(['route' => $route]);
+    $route = QuantSearchPage::normaliseRoute((string) $form_state->getValue('route'));
+    $pages = $this->entityTypeManager->getStorage('quant_search_page')->loadMultiple();
     unset($pages[$this->entity->id()]);
-    if ($pages) {
-      $form_state->setErrorByName('route', $this->t('Another search page uses this address.'));
+    foreach ($pages as $page) {
+      if (QuantSearchPage::normaliseRoute((string) $page->get('route')) === $route) {
+        $form_state->setErrorByName('route', $this->t('Another search page uses this address.'));
+        return;
+      }
     }
   }
 

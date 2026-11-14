@@ -326,10 +326,33 @@ class SearchPagePublishTest extends BrowserTestBase {
     $this->endRequest();
     $this->drupalLogin($this->drupalCreateUser(['administer quant search', 'access content']));
 
+    // The same address with slashes and capitals is the same address.
     $this->drupalGet('admin/config/development/quant/search/pages/second');
-    $this->submitForm(['route' => 'search'], 'Save');
+    $this->submitForm(['route' => '/Search/'], 'Save');
     $this->assertSession()->pageTextContains('Another search page uses this address.');
     $this->assertSame('find', \Drupal::entityTypeManager()->getStorage('quant_search_page')->loadUnchanged('second')->get('route'));
+  }
+
+  /**
+   * A route is saved without slashes at either end and in lower case.
+   */
+  public function testRouteIsNormalisedOnSave(): void {
+    $page = $this->createPage('find', ' /Find/Pages/ ');
+    $this->assertSame('find/pages', $page->get('route'));
+    $this->endRequest();
+  }
+
+  /**
+   * A change in maintenance mode is listed as not sent, not lost silently.
+   */
+  public function testMaintenanceModeListsTheChange(): void {
+    \Drupal::state()->set('system.maintenance_mode', TRUE);
+    $this->clearCalls();
+    $this->createPage();
+    $this->endRequest();
+    $this->assertSame([], $this->published());
+    $failures = $this->container->get('quant_api.push_failures')->all();
+    $this->assertSame('not sent during installation or maintenance mode', $failures['/search']['reason'] ?? NULL);
   }
 
   /**

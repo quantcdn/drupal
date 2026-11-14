@@ -3,6 +3,7 @@
 namespace Drupal\quant_search\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
+use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\quant_search\QuantSearchPageInterface;
 
 /**
@@ -132,6 +133,23 @@ class QuantSearchPage extends ConfigEntityBase implements QuantSearchPageInterfa
    * @var array
    */
   protected $display = [];
+
+  /**
+   * {@inheritdoc}
+   */
+  public function preSave(EntityStorageInterface $storage) {
+    parent::preSave($storage);
+    $this->route = self::normaliseRoute((string) $this->route);
+  }
+
+  /**
+   * A route without slashes or spaces at either end, in lower case.
+   *
+   * Quant paths do not depend on case, so /Search and /search are one page.
+   */
+  public static function normaliseRoute(string $route): string {
+    return strtolower(trim(trim($route), '/'));
+  }
 
   /**
    * Get route for string representation.

@@ -20,17 +20,19 @@ trait WaitsForQuantCallsTrait {
    * @param int $seconds
    *   How long to wait.
    */
-  protected function waitForQuantCall(callable $matches, int $seconds = 20): void {
+  protected function waitForQuantCall(callable $matches, int $seconds = 60): void {
     $end = microtime(TRUE) + $seconds;
     do {
       \Drupal::state()->resetCache();
       if (array_filter(\Drupal::state()->get('quant_search_test.calls', []), $matches)) {
-        // Calls of the same shutdown that come after this one.
-        usleep(500000);
+        // Long enough for a late second publish to arrive, so that a test
+        // that expects one publish sees a duplicate.
+        sleep(3);
         \Drupal::state()->resetCache();
         return;
       }
-      usleep(200000);
+      // Not more often: on SQLite each read delays the site's writes.
+      sleep(1);
     } while (microtime(TRUE) < $end);
     $this->fail('The Quant API call did not come.');
   }
