@@ -5,6 +5,13 @@
               const { autocomplete, getAlgoliaResults } = window["@algolia/autocomplete-js"];
               const searchClient = Drupal.quantSearch.createSearchClient(drupalSettings.quantSearchAutocomplete);
 
+              // A theme can widen the suggestions beyond a narrow box with the
+              // --quant-search-autocomplete-panel-placement custom property:
+              // start, end, full-width or input-wrapper-width (the default).
+              const container = document.querySelector('#quant-search-autocomplete');
+              const placements = ['start', 'end', 'full-width', 'input-wrapper-width'];
+              const placement = container ? getComputedStyle(container).getPropertyValue('--quant-search-autocomplete-panel-placement').trim() : '';
+
               autocomplete({
                   navigator: {
                     navigate({ itemUrl }) {
@@ -27,6 +34,7 @@
                   },
                   container: "#quant-search-autocomplete",
                   detachedMediaQuery: "none",
+                  panelPlacement: placements.includes(placement) ? placement : 'input-wrapper-width',
                   placeholder: drupalSettings.quantSearchAutocomplete.placeholder,
                   getSources() {
                       return [{
@@ -57,9 +65,12 @@
                           },
                           templates: {
                               item({ item, html }) {
+                                  // No heading element: an option in a listbox must
+                                  // not contain one, and theme heading margins
+                                  // spread the suggestions apart.
                                   return html`
-                                  <div>
-                                    <h6 class="autocomplete-hit-name">${item.title}</h6>
+                                  <div class="autocomplete-hit">
+                                    <span class="autocomplete-hit-name">${item.title}</span>
                                     ${drupalSettings.quantSearchAutocomplete.show_summary == true ? html`<div class="autocomplete-hit-description">${item.summary}</div>` : ''}
                                 </div>`
                               },

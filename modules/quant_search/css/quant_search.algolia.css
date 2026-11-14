@@ -1,35 +1,45 @@
-.quant-search .flex-grid {
-  display: flex;
+/**
+ * @file
+ * Default styles for the Quant search page.
+ *
+ * The page inherits the theme's fonts, colours and links. It overrides the
+ * InstantSearch theme's fixed colours, and the theme's general form styles
+ * where they break the search box layout. A theme can change the look with
+ * these custom properties on .quant-search (or any ancestor):
+ *
+ * --quant-search-gap: space between the filters and the results.
+ * --quant-search-facets-width: width of the filter column.
+ * --quant-search-facet-gap: space between the filter groups.
+ * --quant-search-border-color: borders of the input and buttons.
+ * --quant-search-divider-color: lines between the results and under headings.
+ * --quant-search-radius: corner radius of the input and buttons.
+ * --quant-search-input-height: height of the search input.
+ * --quant-search-input-background: background of the search input.
+ * --quant-search-focus-color: colour of the focus outline.
+ * --quant-search-tint: background of counts, tags and highlights.
+ * --quant-search-checkbox-size: size of the filter checkboxes.
+ * --quant-search-accent: accent colour of native checkboxes.
+ */
+
+.quant-search {
+  --quant-search-border-color-default: color-mix(in srgb, currentColor 55%, transparent);
+  --quant-search-divider-color-default: color-mix(in srgb, currentColor 20%, transparent);
+  --quant-search-tint-default: color-mix(in srgb, currentColor 10%, transparent);
 }
 
-.quant-search .col.content {
-  flex-grow: 1;
+.quant-search [class^="ais-"] {
+  font-size: inherit;
 }
 
-.quant-search .col.facets {
-  min-width: 20%;
-  margin-right: 2em;
-}
-
-@media (max-width: 600px) {
-  .quant-search .flex-grid {
-    display: block;
-  }
-  .quant-search {
-    margin: 1em;
-  }
-}
-
-.quant-search .facet-container {
-  margin-bottom: 40px;
-}
-
-.quant-search .facet-heading {
-  margin-bottom: 10px;
-  border-bottom: 1px solid #e9edf2;
-  text-transform: uppercase;
-  font-size: 0.75em;
-  font-weight: 600;
+.quant-search .ais-SearchBox,
+.quant-search .ais-RefinementList,
+.quant-search .ais-ClearRefinements,
+.quant-search .ais-Menu,
+.quant-search .ais-MenuSelect,
+.quant-search .ais-Hits,
+.quant-search .ais-Stats,
+.quant-search .ais-Pagination {
+  color: inherit;
 }
 
 .quant-search img {
@@ -37,122 +47,436 @@
   height: auto;
 }
 
-.quant-search .ais-ClearRefinements {
-  margin: 1em 0;
+/* Layout ------------------------------------------------------------------ */
+
+.quant-search .flex-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--quant-search-gap, 2rem);
 }
+
+.quant-search .col.content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.quant-search .col.facets {
+  min-width: 0;
+}
+
+@media (min-width: 48rem) {
+  .quant-search .flex-grid {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .quant-search .col.facets {
+    flex: 0 0 var(--quant-search-facets-width, 15rem);
+  }
+}
+
+/* The filters fold away behind a toggle on narrow screens only. */
+.quant-search .facets-toggle {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--quant-search-border-color, var(--quant-search-border-color-default));
+  border-radius: var(--quant-search-radius, 0.25rem);
+  font-weight: 600;
+}
+
+.quant-search .facets-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.quant-search .facets-toggle::after {
+  width: 0.5em;
+  height: 0.5em;
+  margin-inline-start: 0.75em;
+  content: "";
+  transform: translateY(-25%) rotate(45deg);
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+}
+
+.quant-search .col.facets[open] > .facets-toggle {
+  margin-bottom: 1.5rem;
+}
+
+.quant-search .col.facets[open] > .facets-toggle::after {
+  transform: translateY(25%) rotate(-135deg);
+}
+
+.quant-search .facets-toggle:focus-visible {
+  outline: 2px solid var(--quant-search-focus-color, currentColor);
+  outline-offset: 2px;
+}
+
+@media (min-width: 48rem) {
+  .quant-search .facets-toggle {
+    display: none;
+  }
+}
+
+/* Search box -------------------------------------------------------------- */
 
 .quant-search .ais-SearchBox {
-  margin: 1em 0;
+  margin: 0 0 1.5rem;
 }
 
-.quant-search .ais-Pagination {
-  margin: 2em 0;
+.quant-search .ais-SearchBox .ais-SearchBox {
+  margin: 0;
 }
 
-.quant-search .ais-Pagination-link {
-  border-radius: 0;
-}
-
-.quant-search .ais-InstantSearch {
-  max-width: 960px;
-  overflow: hidden;
-  margin: 0 auto;
-}
-
-.quant-search .ais-Hits-item {
-  margin-bottom: 1em;
-  width: calc(50% - 1rem);
-  border: none;
-  box-shadow: 0 2px 5px 0 #e3e5ec;
-  background: #fff;
-}
-
-.quant-search .ais-Highlight-highlighted,
-.ais-Snippet-highlighted {
-  background-color: #e7eefa;
+.quant-search .ais-SearchBox-form {
+  display: block;
+  position: relative;
 }
 
 .quant-search .ais-SearchBox-input {
-  height: 50px;
-  font-size: 1.2em;
-  border-radius: 0;
-  padding: 0.3rem 4rem;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  min-height: var(--quant-search-input-height, 3rem);
+  margin: 0;
+  padding-block: 0;
+  padding-inline: 2.75rem;
+  color: inherit;
+  border: 1px solid var(--quant-search-border-color, var(--quant-search-border-color-default));
+  border-radius: var(--quant-search-radius, 0.25rem);
+  background-color: var(--quant-search-input-background, transparent);
+  box-shadow: none;
+  font: inherit;
+  font-size: 1.125rem;
 }
 
-.quant-search .ais-SearchBox-submitIcon {
-  width: 20px;
-  height: 20px;
+.quant-search .ais-SearchBox-input::placeholder {
+  opacity: 0.7;
+  color: inherit;
+}
+
+.quant-search .ais-SearchBox-input:focus {
+  border-color: var(--quant-search-border-color, var(--quant-search-border-color-default));
+  outline: 2px solid var(--quant-search-focus-color, currentColor);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.quant-search .ais-SearchBox-submit,
+.quant-search .ais-SearchBox-reset,
+.quant-search .ais-SearchBox-loadingIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  transform: none;
+  color: inherit;
+  border: 0;
+  border-radius: var(--quant-search-radius, 0.25rem);
+  background: none;
+  inset-block: 0;
 }
 
 .quant-search .ais-SearchBox-submit {
-  left: 1rem;
+  inset-inline: 0 auto;
 }
 
-.quant-search .ais-Hits-item img {
-  margin-right: 1em;
+/* The widget hides the clear button and the spinner with the hidden attribute. */
+.quant-search .ais-SearchBox-reset[hidden],
+.quant-search .ais-SearchBox-loadingIndicator[hidden] {
+  display: none;
+}
+
+.quant-search .ais-SearchBox-reset,
+.quant-search .ais-SearchBox-loadingIndicator {
+  inset-inline: auto 0;
+}
+
+.quant-search .ais-SearchBox-submit:focus-visible,
+.quant-search .ais-SearchBox-reset:focus-visible {
+  outline: 2px solid var(--quant-search-focus-color, currentColor);
+  outline-offset: -0.375rem;
+}
+
+.quant-search .ais-SearchBox-submitIcon,
+.quant-search .ais-SearchBox-resetIcon,
+.quant-search .ais-SearchBox-loadingIcon {
+  position: static;
+  width: 1.125rem;
+  height: 1.125rem;
+  transform: none;
+}
+
+.quant-search .ais-SearchBox-resetIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.quant-search .ais-SearchBox-submitIcon path,
+.quant-search .ais-SearchBox-resetIcon path {
+  fill: currentColor;
+}
+
+.quant-search .ais-Stats {
+  margin: 0 0 0.5rem;
+}
+
+.quant-search .ais-Stats-text {
+  font-size: 0.875em;
+}
+
+/* Filters ----------------------------------------------------------------- */
+
+.quant-search .facet-container {
+  margin-bottom: var(--quant-search-facet-gap, 1.75rem);
+}
+
+/* A filter with no values for the current results shows nothing, and the
+   filter column goes when no filter has values (for example, no results). */
+.quant-search .facet-container:has(.ais-RefinementList--noRefinement, .ais-Menu--noRefinement, .ais-MenuSelect--noRefinement) {
+  display: none;
+}
+
+.quant-search .col.facets:not(:has(.ais-RefinementList-item, .ais-Menu-item, .ais-MenuSelect-option)) {
+  display: none;
+}
+
+.quant-search .facet-heading {
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--quant-search-divider-color, var(--quant-search-divider-color-default));
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.quant-search .ais-RefinementList-list,
+.quant-search .ais-Menu-list {
+  line-height: 1.4;
+}
+
+.quant-search .ais-RefinementList-item + .ais-RefinementList-item,
+.quant-search .ais-Menu-item + .ais-Menu-item {
+  margin-top: 0.25rem;
+}
+
+.quant-search .ais-RefinementList-label,
+.quant-search .ais-Menu-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.quant-search .ais-RefinementList-checkbox {
+  flex: none;
+  width: var(--quant-search-checkbox-size, 1.125rem);
+  height: var(--quant-search-checkbox-size, 1.125rem);
+  margin: 0;
+  accent-color: var(--quant-search-accent, auto);
+}
+
+.quant-search .ais-RefinementList-checkbox:focus-visible {
+  outline: 2px solid var(--quant-search-focus-color, currentColor);
+  outline-offset: 2px;
+}
+
+.quant-search .ais-RefinementList-labelText,
+.quant-search .ais-Menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.quant-search .ais-RefinementList-item--selected .ais-RefinementList-labelText,
+.quant-search .ais-Menu-item--selected .ais-Menu-label {
+  font-weight: 600;
+}
+
+.quant-search .ais-RefinementList-count,
+.quant-search .ais-Menu-count {
+  flex: none;
+  min-width: 1.75em;
+  padding: 0.0625rem 0.5em;
+  text-align: center;
+  color: inherit;
+  border-radius: 999px;
+  background-color: var(--quant-search-tint, var(--quant-search-tint-default));
+  font-size: 0.8125em;
+  font-variant-numeric: tabular-nums;
+}
+
+.quant-search .ais-ClearRefinements {
+  margin: 0 0 1.5rem;
+}
+
+.quant-search .ais-ClearRefinements-button,
+.quant-search .ais-RefinementList-showMore,
+.quant-search .ais-Menu-showMore {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.875rem;
+  color: inherit;
+  border: 1px solid var(--quant-search-border-color, var(--quant-search-border-color-default));
+  border-radius: var(--quant-search-radius, 0.25rem);
+  background: none;
+  font-size: 0.875em;
+}
+
+.quant-search .ais-RefinementList-showMore,
+.quant-search .ais-Menu-showMore {
+  margin-top: 0.75rem;
+}
+
+.quant-search .ais-ClearRefinements-button:hover,
+.quant-search .ais-RefinementList-showMore:hover,
+.quant-search .ais-Menu-showMore:hover {
+  background-color: var(--quant-search-tint, var(--quant-search-tint-default));
+}
+
+.quant-search .ais-ClearRefinements-button--disabled:hover {
+  background: none;
+}
+
+.quant-search .ais-ClearRefinements-button:focus-visible,
+.quant-search .ais-RefinementList-showMore:focus-visible,
+.quant-search .ais-Menu-showMore:focus-visible,
+.quant-search .ais-Menu-link:focus-visible {
+  outline: 2px solid var(--quant-search-focus-color, currentColor);
+  outline-offset: 2px;
+}
+
+/* Results ----------------------------------------------------------------- */
+
+.quant-search .ais-Hits-list {
+  display: block;
+  margin: 0;
+}
+
+.quant-search .ais-Hits-item {
+  width: auto;
+  margin: 0;
+  padding: 1.25rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--quant-search-divider-color, var(--quant-search-divider-color-default));
+  background: none;
+  box-shadow: none;
+}
+
+.quant-search .ais-Hits-item:first-child {
+  padding-top: 0.5rem;
+}
+
+.quant-search .ais-Hits-item::after {
+  display: table;
+  clear: both;
+  content: "";
 }
 
 .quant-search .ais-Hits-item a {
-  font-size: 1.1em;
-  font-weight: 500;
   text-decoration: none;
-  color: #5878f9;
-  margin-top: 1em;
+}
+
+.quant-search .ais-Hits-item a:hover .hit-name,
+.quant-search .ais-Hits-item a:focus-visible .hit-name {
+  text-decoration: underline;
+}
+
+.quant-search .ais-Hits-item img {
+  float: inline-start;
+  max-width: 100px;
+  margin-inline-end: 1em;
 }
 
 .quant-search .hit-name {
-  margin: 1em 0;
+  margin: 0 0 0.375rem;
 }
 
 .quant-search .hit-description {
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 0.5em;
+  margin: 0;
 }
 
-.quant-search .hit-tag {
-  background-color: #dcdcdc;
-  color: #5a5a5a;
-  text-transform: uppercase;
-  font-size: 0.75em;
+.quant-search .ais-Highlight-highlighted,
+.quant-search .ais-Snippet-highlighted {
+  color: inherit;
+  border-radius: 0.125rem;
+  background-color: var(--quant-search-tint, var(--quant-search-tint-default));
   font-weight: 600;
-  padding: 5px 10px;
-  margin-right: 10px;
-  border-radius: 3px;
 }
 
 .quant-search .hit-tags {
   clear: both;
-  margin-top: 20px;
+  margin-top: 1rem;
 }
 
-.quant-search .ais-Hits-item {
-  margin-bottom: 1em;
-  width: 100%;
-  border: none;
-  box-shadow: none;
+.quant-search .hit-tag {
+  display: inline-block;
+  margin-inline-end: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.25rem;
+  background-color: var(--quant-search-tint, var(--quant-search-tint-default));
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Pagination -------------------------------------------------------------- */
+
+.quant-search .ais-Pagination {
+  margin: 2rem 0;
+}
+
+/* One page of results needs no page links. */
+.quant-search .ais-Pagination--noRefinement {
+  display: none;
+}
+
+.quant-search .ais-Pagination-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.quant-search .ais-Pagination-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  color: inherit;
+  border: 1px solid var(--quant-search-border-color, var(--quant-search-border-color-default));
+  border-radius: var(--quant-search-radius, 0.25rem);
+}
+
+.quant-search .ais-Pagination-link:hover {
+  background-color: var(--quant-search-tint, var(--quant-search-tint-default));
+}
+
+.quant-search .ais-Pagination-link:focus-visible {
+  outline: 2px solid var(--quant-search-focus-color, currentColor);
+  outline-offset: 2px;
+}
+
+.quant-search .ais-Pagination-item--selected .ais-Pagination-link,
+.quant-search .ais-Pagination-item--selected .ais-Pagination-link:hover {
+  color: inherit;
+  border-color: currentColor;
+  background-color: var(--quant-search-tint, var(--quant-search-tint-default));
+  font-weight: 700;
+}
+
+.quant-search .ais-Pagination-item--disabled .ais-Pagination-link,
+.quant-search .ais-Pagination-item--disabled .ais-Pagination-link:hover {
+  opacity: 0.5;
+  color: inherit;
   background: none;
-}
-
-.quant-search .ais-Hits-item:hover {
-  box-shadow: 0 2px 5px 0 #e3e5ec;
-  background: #fff;
-}
-
-.quant-search .ais-Hits-item img {
-  max-width: 100px;
-  float: left;
-}
-
-.quant-search .hit-name {
-  margin-top: 0;
-}
-
-.quant-search [class^=ais-] {
-  font-size: inherit;
-}
-
-.quant-search button {
-  background-color: transparent;
-  border: none;
 }

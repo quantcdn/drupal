@@ -76,6 +76,9 @@
                         search.addWidgets([
                             instantsearch.widgets.clearRefinements({
                                 container: '#clear-refinements',
+                                templates: {
+                                    resetLabel: Drupal.t('Clear filters'),
+                                },
                             }),
                         ]);
                     }
@@ -146,6 +149,19 @@
                 ]);
 
                 search.start();
+
+                // The filters show beside the results on wide screens, and
+                // fold away behind their toggle on narrow screens. The
+                // breakpoint matches quant_search.algolia.css.
+                const filters = document.querySelector('.quant-search details.facets');
+                if (filters && window.matchMedia) {
+                    const narrow = window.matchMedia('(max-width: 47.99rem)');
+                    const sync = function () {
+                        filters.open = !narrow.matches;
+                    };
+                    sync();
+                    narrow.addEventListener('change', sync);
+                }
 
             })
         }
