@@ -240,11 +240,13 @@
 
 /* A filter with no values for the current results shows nothing, and the
    filter column goes when no filter has values (for example, no results). */
-.quant-search .facet-container:has(.ais-RefinementList--noRefinement, .ais-Menu--noRefinement, .ais-MenuSelect--noRefinement) {
+.quant-search .facet-container:has(.ais-RefinementList--noRefinement),
+.quant-search .facet-container:has(.ais-Menu--noRefinement),
+.quant-search .facet-container:has(.ais-MenuSelect--noRefinement) {
   display: none;
 }
 
-.quant-search .col.facets:not(:has(.ais-RefinementList-item, .ais-Menu-item, .ais-MenuSelect-option)) {
+.quant-search .col.facets:not(:has(.ais-RefinementList-item)):not(:has(.ais-Menu-item)):not(:has(.ais-MenuSelect-option)) {
   display: none;
 }
 
