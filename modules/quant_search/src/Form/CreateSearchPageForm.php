@@ -30,13 +30,6 @@ class CreateSearchPageForm extends FormBase {
   protected $entityTypeManager;
 
   /**
-   * The search page publisher.
-   *
-   * @var \Drupal\quant_search\SearchPagePublisher
-   */
-  protected $publisher;
-
-  /**
    * The router, to refuse a path that Drupal already uses.
    *
    * @var \Symfony\Component\Routing\Matcher\RequestMatcherInterface
@@ -51,15 +44,22 @@ class CreateSearchPageForm extends FormBase {
   protected $converter;
 
   /**
+   * The theme handler, for the name of the theme that gets the search box.
+   *
+   * @var \Drupal\Core\Extension\ThemeHandlerInterface
+   */
+  protected $themeHandler;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     $instance = new static();
     $instance->proposer = $container->get('quant_search.facet_proposer');
     $instance->entityTypeManager = $container->get('entity_type.manager');
-    $instance->publisher = $container->get('quant_search.page_publisher');
     $instance->router = $container->get('router.no_access_checks');
     $instance->converter = $container->get('quant_search.view_converter');
+    $instance->themeHandler = $container->get('theme_handler');
     return $instance;
   }
 
@@ -208,14 +208,55 @@ class CreateSearchPageForm extends FormBase {
         '#default_value' => $placed === [],
         '#description' => $placed === [] ? '' : $this->t('This theme already has a Quant search box. Tick this only to add a second one for this page.'),
       ],
-      'region' => [
-        '#type' => 'select',
-        '#title' => $this->t('Region'),
-        '#options' => $regions,
-        '#default_value' => isset($regions['header']) ? 'header' : array_key_first($regions),
-        '#states' => ['visible' => [':input[name="place_block"]' => ['checked' => TRUE]]],
-      ],
+      'region' => $this->buildRegionChoice($theme, $regions),
     ];
+  }
+
+  /**
+   * The region of the search box, with the suggested one chosen and named.
+   */
+  protected function buildRegionChoice(string $theme, array $regions): array {
+    $default = $this->defaultRegion($theme, $regions);
+    return [
+      '#type' => 'select',
+      '#title' => $this->t('Region'),
+      '#options' => $regions,
+      '#default_value' => $default,
+      '#description' => $this->t('Suggested for @theme: @region. Choose another region if the box fits better there. You can also move it later in <a href=":url">Block layout</a>.', [
+        '@theme' => $this->themeHandler->getName($theme),
+        '@region' => $regions[$default] ?? $default,
+        ':url' => Url::fromRoute('block.admin_display_theme', ['theme' => $theme])->toString(),
+      ]),
+      '#states' => ['visible' => [':input[name="place_block"]' => ['checked' => TRUE]]],
+    ];
+  }
+
+  /**
+   * The region suggested for the search box.
+   *
+   * In Olivero and themes based on it, the header region holds the logo: a
+   * box there sits beside the logo, out of line with the menu, and stays on
+   * the bar when the menu folds into the mobile menu. Olivero puts its own
+   * search box in the secondary menu region, at the end of the main menu row.
+   * Other themes get the region of the core search box when the theme shows
+   * one, then the header.
+   */
+  protected function defaultRegion(string $theme, array $regions): string {
+    $core_search = $this->entityTypeManager->getStorage('block')->loadByProperties([
+      'theme' => $theme,
+      'plugin' => 'search_form_block',
+    ]);
+    $preferred = array_merge(
+      ['secondary_menu'],
+      array_map(fn ($block) => $block->getRegion(), array_values($core_search)),
+      ['header'],
+    );
+    foreach ($preferred as $region) {
+      if (isset($regions[$region])) {
+        return $region;
+      }
+    }
+    return (string) array_key_first($regions);
   }
 
   /**
@@ -293,7 +334,6 @@ class CreateSearchPageForm extends FormBase {
     ]);
     $page->save();
     $added = $this->indexBundles($bundles);
-    $this->publisher->publish($page, TRUE);
     $placed = $form_state->getValue('place_block') && $this->placeBlock($page, (string) $form_state->getValue('region'));
 
     $this->messenger()->addStatus($this->t('The search page is at <a href=":url">/@route</a>.', [

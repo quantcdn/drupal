@@ -10,7 +10,7 @@ use Psr\Http\Message\RequestInterface;
 /**
  * Answers the Quant content API as a project with Algolia search enabled.
  *
- * Records every call (method, path, JSON body) in state.
+ * Records every call (method, path, JSON body, Quant-Url header) in state.
  */
 class FakeSearchApi {
 
@@ -30,6 +30,8 @@ class FakeSearchApi {
           'method' => $request->getMethod(),
           'path' => $request->getUri()->getPath(),
           'body' => json_decode((string) $request->getBody(), TRUE),
+          // Unpublish names its path in a header, not in the body.
+          'quant_url' => $request->getHeaderLine('Quant-Url'),
         ];
         $this->state->set('quant_search_test.calls', $log);
         return Create::promiseFor(new Response(200, ['Content-Type' => 'application/json'], json_encode($this->answer($request))));

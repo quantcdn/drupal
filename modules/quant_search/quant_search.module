@@ -10,6 +10,7 @@ use Drupal\node\Entity\Node;
 use Drupal\quant\CliDomainContext;
 use Drupal\quant\Utility;
 use Drupal\quant_search\Controller\Search;
+use Drupal\quant_search\QuantSearchPageInterface;
 
 /**
  * Implements hook_theme().
@@ -99,6 +100,26 @@ function quant_search_run_index($nids, $languages, array &$context) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'];
   }
 
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert().
+ */
+function quant_search_quant_search_page_insert(QuantSearchPageInterface $page) {
+  \Drupal::service('quant_search.page_publisher')->publish($page, TRUE);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_update().
+ *
+ * Publishes on every save, like a node save, so that a page saved by drush, a
+ * recipe or a config import reaches Quant as well as one saved in a form.
+ */
+function quant_search_quant_search_page_update(QuantSearchPageInterface $page) {
+  // getOriginal() is new in Drupal 11.2; the original property is deprecated.
+  $original = method_exists($page, 'getOriginal') ? $page->getOriginal() : ($page->original ?? NULL);
+  $previous = $original && $original->status() ? (string) $original->get('route') : NULL;
+  \Drupal::service('quant_search.page_publisher')->publish($page, FALSE, $previous);
 }
 
 /**

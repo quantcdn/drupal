@@ -146,6 +146,48 @@ class CreateSearchPageTest extends BrowserTestBase {
   }
 
   /**
+   * In Olivero the search box goes beside the menu, not in the logo row.
+   *
+   * Olivero's header region holds the site branding. Olivero puts its own
+   * search box in the secondary menu region, at the end of the menu row.
+   */
+  public function testSearchBoxRegionInOlivero(): void {
+    $this->drupalGet('admin/config/development/quant/search/pages/create');
+    $session = $this->assertSession();
+    $session->fieldValueEquals('region', 'secondary_menu');
+    $session->pageTextContains('Suggested for Olivero: Secondary menu.');
+
+    $this->submitForm([], 'Create the search page');
+    $block = \Drupal::entityTypeManager()->getStorage('block')->load('olivero_quant_search_search');
+    $this->assertSame('secondary_menu', $block->getRegion());
+  }
+
+  /**
+   * Without a secondary menu region, the box goes where core search is.
+   */
+  public function testSearchBoxRegionFollowsCoreSearchBlock(): void {
+    \Drupal::service('module_installer')->install(['search']);
+    \Drupal::service('theme_installer')->install(['claro']);
+    $this->config('system.theme')->set('default', 'claro')->save();
+    $this->drupalPlaceBlock('search_form_block', ['theme' => 'claro', 'region' => 'breadcrumb']);
+
+    $this->drupalGet('admin/config/development/quant/search/pages/create');
+    $this->assertSession()->fieldValueEquals('region', 'breadcrumb');
+    $this->assertSession()->pageTextContains('Suggested for Claro: Breadcrumb.');
+  }
+
+  /**
+   * Without either, the box goes in the header.
+   */
+  public function testSearchBoxRegionFallsBackToHeader(): void {
+    \Drupal::service('theme_installer')->install(['claro']);
+    $this->config('system.theme')->set('default', 'claro')->save();
+
+    $this->drupalGet('admin/config/development/quant/search/pages/create');
+    $this->assertSession()->fieldValueEquals('region', 'header');
+  }
+
+  /**
    * A page saved by either form is valid against the schema.
    */
   public function testSavedPageMatchesTheSchema(): void {

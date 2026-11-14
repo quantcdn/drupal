@@ -495,8 +495,6 @@ class QuantSearchPageForm extends EntityForm {
       ]));
     }
 
-    \Drupal::service('quant_search.page_publisher')->publish($page, $status === SAVED_NEW);
-
     $form_state->setRedirect('entity.quant_search_page.collection');
   }
 
