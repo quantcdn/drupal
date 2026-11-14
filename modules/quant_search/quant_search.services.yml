@@ -21,6 +21,13 @@ services:
       - '@quant_search.backend'
       - '@router.builder'
       - '@quant_api.credentials'
+      - '@config.factory'
+      - '@state'
+      - '@logger.factory'
+      - '@quant_api.push_failures'
+      - '@entity_type.manager'
+      - '@event_dispatcher'
+      - '@request_stack'
 
   quant_search.view_converter:
     class: Drupal\quant_search\ViewSearchPageConverter

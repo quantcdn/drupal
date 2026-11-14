@@ -30,13 +30,6 @@ class CreateSearchPageForm extends FormBase {
   protected $entityTypeManager;
 
   /**
-   * The search page publisher.
-   *
-   * @var \Drupal\quant_search\SearchPagePublisher
-   */
-  protected $publisher;
-
-  /**
    * The router, to refuse a path that Drupal already uses.
    *
    * @var \Symfony\Component\Routing\Matcher\RequestMatcherInterface
@@ -51,15 +44,30 @@ class CreateSearchPageForm extends FormBase {
   protected $converter;
 
   /**
+   * The theme handler, for the name of the theme that gets the search box.
+   *
+   * @var \Drupal\Core\Extension\ThemeHandlerInterface
+   */
+  protected $themeHandler;
+
+  /**
+   * The module handler, to offer the search box only with the block module.
+   *
+   * @var \Drupal\Core\Extension\ModuleHandlerInterface
+   */
+  protected $moduleHandler;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     $instance = new static();
     $instance->proposer = $container->get('quant_search.facet_proposer');
     $instance->entityTypeManager = $container->get('entity_type.manager');
-    $instance->publisher = $container->get('quant_search.page_publisher');
     $instance->router = $container->get('router.no_access_checks');
     $instance->converter = $container->get('quant_search.view_converter');
+    $instance->themeHandler = $container->get('theme_handler');
+    $instance->moduleHandler = $container->get('module_handler');
     return $instance;
   }
 
@@ -140,7 +148,10 @@ class CreateSearchPageForm extends FormBase {
       '#min' => 5,
       '#max' => 100,
     ];
-    $form['block'] = $this->buildBlockChoice();
+    // The search box is a block: without the block module there is none.
+    if ($this->moduleHandler->moduleExists('block')) {
+      $form['block'] = $this->buildBlockChoice();
+    }
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [
       '#type' => 'submit',
@@ -208,14 +219,73 @@ class CreateSearchPageForm extends FormBase {
         '#default_value' => $placed === [],
         '#description' => $placed === [] ? '' : $this->t('This theme already has a Quant search box. Tick this only to add a second one for this page.'),
       ],
-      'region' => [
-        '#type' => 'select',
-        '#title' => $this->t('Region'),
-        '#options' => $regions,
-        '#default_value' => isset($regions['header']) ? 'header' : array_key_first($regions),
-        '#states' => ['visible' => [':input[name="place_block"]' => ['checked' => TRUE]]],
-      ],
+      'region' => $this->buildRegionChoice($theme, $regions),
     ];
+  }
+
+  /**
+   * The region of the search box, with the suggested one chosen and named.
+   */
+  protected function buildRegionChoice(string $theme, array $regions): array {
+    $core_search = $this->coreSearchRegions($theme);
+    $default = $this->defaultRegion($regions, $core_search);
+    $description = [
+      $this->t('Suggested for @theme: @region. Choose another region if the box fits better there. You can also move it later in <a href=":url">Block layout</a>.', [
+        '@theme' => $this->themeHandler->getName($theme),
+        '@region' => $regions[$default] ?? $default,
+        ':url' => Url::fromRoute('block.admin_display_theme', ['theme' => $theme])->toString(),
+      ]),
+    ];
+    if (in_array($default, $core_search, TRUE)) {
+      $description[] = $this->t('The theme shows the Drupal search box in this region, so the Quant search box sits next to it. Remove the Drupal one in Block layout if you want one box.');
+    }
+    return [
+      '#type' => 'select',
+      '#title' => $this->t('Region'),
+      '#options' => $regions,
+      '#default_value' => $default,
+      '#description' => ['#markup' => implode(' ', array_map('strval', $description))],
+      '#states' => ['visible' => [':input[name="place_block"]' => ['checked' => TRUE]]],
+    ];
+  }
+
+  /**
+   * The regions where the theme shows an enabled Drupal core search box.
+   *
+   * @return string[]
+   *   The region names.
+   */
+  protected function coreSearchRegions(string $theme): array {
+    $blocks = $this->entityTypeManager->getStorage('block')->loadByProperties([
+      'theme' => $theme,
+      'plugin' => 'search_form_block',
+      'status' => TRUE,
+    ]);
+    return array_values(array_map(fn ($block) => $block->getRegion(), $blocks));
+  }
+
+  /**
+   * The region suggested for the search box.
+   *
+   * In Olivero and themes based on it, the header region holds the logo: a
+   * box there sits beside the logo, out of line with the menu, and stays on
+   * the bar when the menu folds into the mobile menu. Olivero puts its own
+   * search box in the secondary menu region, at the end of the main menu row.
+   * Other themes get the region of the core search box when the theme shows
+   * one, then the header.
+   *
+   * @param array $regions
+   *   The visible regions of the theme, keyed by name.
+   * @param string[] $core_search
+   *   The regions where the theme shows the core search box.
+   */
+  protected function defaultRegion(array $regions, array $core_search): string {
+    foreach (array_merge(['secondary_menu'], $core_search, ['header']) as $region) {
+      if (isset($regions[$region])) {
+        return $region;
+      }
+    }
+    return (string) array_key_first($regions);
   }
 
   /**
@@ -293,7 +363,6 @@ class CreateSearchPageForm extends FormBase {
     ]);
     $page->save();
     $added = $this->indexBundles($bundles);
-    $this->publisher->publish($page, TRUE);
     $placed = $form_state->getValue('place_block') && $this->placeBlock($page, (string) $form_state->getValue('region'));
 
     $this->messenger()->addStatus($this->t('The search page is at <a href=":url">/@route</a>.', [
