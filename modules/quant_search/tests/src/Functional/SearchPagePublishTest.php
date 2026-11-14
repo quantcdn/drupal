@@ -4,6 +4,7 @@ namespace Drupal\Tests\quant_search\Functional;
 
 use Drupal\quant\Event\QuantRedirectEvent;
 use Drupal\quant_search\QuantSearchPageInterface;
+use Drupal\quant_search\SearchPagePublisher;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\quant_search\Traits\WaitsForQuantCallsTrait;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -59,6 +60,10 @@ class SearchPagePublishTest extends BrowserTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
+    // The publisher keeps pending pages in static properties. Start empty.
+    foreach (['pending' => [], 'registered' => FALSE] as $name => $value) {
+      (new \ReflectionProperty(SearchPagePublisher::class, $name))->setValue(NULL, $value);
+    }
     $this->drupalCreateContentType(['type' => 'article', 'name' => 'Article']);
     $this->config('quant_api.settings')
       ->set('api_account', 'test-org')
@@ -334,12 +339,46 @@ class SearchPagePublishTest extends BrowserTestBase {
   }
 
   /**
-   * A route is saved without slashes at either end and in lower case.
+   * A route is saved without spaces or slashes at either end, case kept.
+   *
+   * Drupal routes depend on case, so a link to /Find/Pages keeps working.
    */
-  public function testRouteIsNormalisedOnSave(): void {
+  public function testRouteIsTrimmedOnSave(): void {
     $page = $this->createPage('find', ' /Find/Pages/ ');
-    $this->assertSame('find/pages', $page->get('route'));
+    $this->assertSame('Find/Pages', $page->get('route'));
     $this->endRequest();
+  }
+
+  /**
+   * A change of case only is not a move: Quant paths do not depend on case.
+   */
+  public function testChangeOfCaseOnlyIsNoMove(): void {
+    $page = $this->createPage('search', 'Search');
+    $this->endRequest();
+
+    $this->clearCalls();
+    $page->set('route', 'search')->save();
+    $this->endRequest();
+    $this->assertSame(['/search'], $this->published());
+    $this->assertSame([], $this->unpublished());
+    $this->assertSame([], $this->redirects);
+  }
+
+  /**
+   * A route stored with slashes (before routes were trimmed) is handled.
+   *
+   * Disabling such a page unpublishes /search, not //search/.
+   */
+  public function testStoredRouteWithSlashesUnpublishesTheTrimmedPath(): void {
+    $this->createPage();
+    $this->endRequest();
+    \Drupal::configFactory()->getEditable('quant_search.quant_search.search')->set('route', '/search/')->save();
+    $page = \Drupal::entityTypeManager()->getStorage('quant_search_page')->loadUnchanged('search');
+
+    $this->clearCalls();
+    $page->disable()->save();
+    $this->endRequest();
+    $this->assertSame(['/search'], $this->unpublished());
   }
 
   /**

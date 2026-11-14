@@ -472,11 +472,11 @@ class QuantSearchPageForm extends EntityForm {
    * Two pages at one address would publish over each other on Quant.
    */
   protected function validateRoute(FormStateInterface $form_state): void {
-    $route = QuantSearchPage::normaliseRoute((string) $form_state->getValue('route'));
+    $route = QuantSearchPage::routeKey((string) $form_state->getValue('route'));
     $pages = $this->entityTypeManager->getStorage('quant_search_page')->loadMultiple();
     unset($pages[$this->entity->id()]);
     foreach ($pages as $page) {
-      if (QuantSearchPage::normaliseRoute((string) $page->get('route')) === $route) {
+      if (QuantSearchPage::routeKey((string) $page->get('route')) === $route) {
         $form_state->setErrorByName('route', $this->t('Another search page uses this address.'));
         return;
       }

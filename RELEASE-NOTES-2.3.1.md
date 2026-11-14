@@ -24,6 +24,8 @@
   of the theme's Drupal search box, then `header`, and says which one. The
   choice is shown only when the block module is installed.
 - **Two search pages cannot have the same address.** The search page form
-  refuses an address that another search page uses. A route is saved without
-  slashes at either end and in lower case, because Quant paths do not depend
-  on case.
+  refuses an address that another search page uses, also when only the case
+  differs (`/Search` and `/search`), because Quant paths do not depend on
+  case. A route is saved without spaces or slashes at either end; its case
+  is kept, so links to it on the site keep working. A change of case only is
+  not a move: nothing is unpublished or redirected.

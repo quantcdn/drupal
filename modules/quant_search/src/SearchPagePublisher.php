@@ -72,11 +72,12 @@ class SearchPagePublisher {
     // the request, or before the publish below.
     $this->routeBuilder->setRebuildNeeded();
     $this->queue((string) $page->id(), [
-      'route' => (string) $page->get('route'),
+      'route' => QuantSearchPage::normaliseRoute((string) $page->get('route')),
       'status' => (bool) $page->status(),
       'facets' => (array) $page->get('facets'),
       'new' => $is_new,
-      'previous' => $previous_route,
+      // A route stored before routes were trimmed can have slashes.
+      'previous' => $previous_route === NULL ? NULL : QuantSearchPage::normaliseRoute($previous_route),
     ]);
   }
 
@@ -87,7 +88,7 @@ class SearchPagePublisher {
     // The deleted page's route goes with it.
     $this->routeBuilder->setRebuildNeeded();
     $this->queue((string) $page->id(), [
-      'route' => (string) $page->get('route'),
+      'route' => QuantSearchPage::normaliseRoute((string) $page->get('route')),
       'status' => FALSE,
       'facets' => [],
       'new' => FALSE,
@@ -143,8 +144,19 @@ class SearchPagePublisher {
       return FALSE;
     }
     $url = '/' . $item['route'];
-    $this->loggerFactory->get('quant_search')->notice('The search page at @url was not published while the site is being installed or is in maintenance mode. Save the page again or seed to publish it.', ['@url' => $url]);
-    $this->failures->record($url, $item['status'] ? 'publish' : 'unpublish', new \RuntimeException('Not sent'), 'not sent during installation or maintenance mode');
+    $logger = $this->loggerFactory->get('quant_search');
+    $logger->notice('The search page at @url was not published while the site is being installed or is in maintenance mode. Save the page again or seed to publish it.', ['@url' => $url]);
+    // During installation the state or the lock may not work yet. That must
+    // not break the save.
+    try {
+      $this->failures->record($url, $item['status'] ? 'publish' : 'unpublish', new \RuntimeException('Not sent'), 'not sent during installation or maintenance mode');
+    }
+    catch (\Throwable $error) {
+      $logger->error('The search page at @url was not listed as not sent: @message', [
+        '@url' => $url,
+        '@message' => $error->getMessage(),
+      ]);
+    }
     return TRUE;
   }
 
@@ -215,7 +227,7 @@ class SearchPagePublisher {
   protected function retirePrevious(array $item): void {
     $previous = $item['previous'];
     // Quant paths do not depend on case: /Search and /search are one page.
-    if ($previous === NULL || strtolower($previous) === strtolower($item['route']) || $this->routeInUse($previous)) {
+    if ($previous === NULL || QuantSearchPage::routeKey($previous) === QuantSearchPage::routeKey($item['route']) || $this->routeInUse($previous)) {
       return;
     }
     Utility::unpublishUrl('/' . $previous, 'Unpublished search page');
@@ -237,9 +249,9 @@ class SearchPagePublisher {
    * Whether an enabled search page has this route.
    */
   protected function routeInUse(string $route): bool {
-    $route = QuantSearchPage::normaliseRoute($route);
+    $route = QuantSearchPage::routeKey($route);
     foreach ($this->entityTypeManager->getStorage('quant_search_page')->loadByProperties(['status' => TRUE]) as $page) {
-      if (QuantSearchPage::normaliseRoute((string) $page->get('route')) === $route) {
+      if (QuantSearchPage::routeKey((string) $page->get('route')) === $route) {
         return TRUE;
       }
     }
