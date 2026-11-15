@@ -128,11 +128,19 @@
                     }),
                     instantsearch.widgets.hits({
                         container: '#hits',
+                        // Result URLs come from the search index: link only
+                        // http, https and relative ones. Other results show
+                        // as text.
+                        transformItems(items) {
+                            return items.map(function (item) {
+                                return Object.assign({}, item, { url: Drupal.quantSearch.safeUrl(item.url) });
+                            });
+                        },
                         templates: {
                             empty: '<h4>No results found.</h4><p>Please try again with different search terms or filters.</p>',
                             item: `
                     <div>
-                        <a href="{{url}}">
+                        <a{{#url}} href="{{url}}"{{/url}}>
                         {{#helpers.image}}{{image}}{{/helpers.image}}
                         <h4 class="hit-name">
                             {{#helpers.highlight}}{ "attribute": "title" }{{/helpers.highlight}}
