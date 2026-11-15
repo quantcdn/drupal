@@ -4,6 +4,20 @@
             once('autocompleteBlockInit', 'html', context).forEach(function(element) {
               const { autocomplete, getAlgoliaResults } = window["@algolia/autocomplete-js"];
               const searchClient = Drupal.quantSearch.createSearchClient(drupalSettings.quantSearchAutocomplete);
+              // Result URLs come from the search index: open only http,
+              // https and relative ones. Other suggestions are not links.
+              const safeUrl = Drupal.quantSearch.safeUrl;
+              const openUrl = function (url, newWindow) {
+                const target = safeUrl(url);
+                if (!target) {
+                  return null;
+                }
+                if (!newWindow) {
+                  window.location.assign(target);
+                  return null;
+                }
+                return window.open(target, '_blank', 'noopener');
+              };
 
               // A theme can widen the suggestions beyond a narrow box with the
               // --quant-search-autocomplete-panel-placement custom property:
@@ -15,17 +29,17 @@
               autocomplete({
                   navigator: {
                     navigate({ itemUrl }) {
-                      window.location.assign(itemUrl);
+                      openUrl(itemUrl, false);
                     },
                     navigateNewTab({ itemUrl }) {
-                      const windowReference = window.open(itemUrl, '_blank', 'noopener');
+                      const windowReference = openUrl(itemUrl, true);
 
                       if (windowReference) {
                         windowReference.focus();
                       }
                     },
                     navigateNewWindow({ itemUrl }) {
-                      window.open(itemUrl, '_blank', 'noopener');
+                      openUrl(itemUrl, true);
                     },
                   },
                   onSubmit({ state, event }) {
@@ -40,7 +54,7 @@
                       return [{
                           sourceId: drupalSettings.quantSearchAutocomplete.index,
                           getItemUrl({ item }) {
-                              return item.url;
+                              return safeUrl(item.url) || undefined;
                           },
                           getItems({ query }) {
                               return getAlgoliaResults({
@@ -61,7 +75,7 @@
                               });
                           },
                           onSelect: function (event) {
-                            window.location.assign(event.item.url);
+                            openUrl(event.item.url, false);
                           },
                           templates: {
                               item({ item, html }) {
