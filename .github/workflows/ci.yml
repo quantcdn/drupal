@@ -10,6 +10,18 @@ jobs:
       - name: Lint
         run: phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,yml .
 
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # The search scripts' own tests. They use the Node test runner and
+      # need no packages.
+      - name: JavaScript tests
+        run: node --test modules/quant_search/tests/js/*.test.js
+
   phpunit:
     runs-on: ubuntu-latest
     container: quantcdn/drupal-ci:11.1.x-dev

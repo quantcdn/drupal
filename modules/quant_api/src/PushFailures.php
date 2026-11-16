@@ -51,13 +51,16 @@ class PushFailures {
    * @param \Throwable $error
    *   The failure. Only a short reason is kept, never its message, which can
    *   name the endpoint URL with credentials.
+   * @param string|null $reason
+   *   A short reason to show instead of the one read from the error, for a
+   *   push that was not attempted.
    */
-  public function record(string $url, string $operation, \Throwable $error): void {
-    $this->update(function (array $all) use ($url, $operation, $error) {
+  public function record(string $url, string $operation, \Throwable $error, ?string $reason = NULL): void {
+    $this->update(function (array $all) use ($url, $operation, $error, $reason) {
       unset($all[$url]);
       $all[$url] = [
         'operation' => $operation,
-        'reason' => self::reason($error),
+        'reason' => $reason ?? self::reason($error),
         'at' => $this->time->getRequestTime(),
       ];
       return array_slice($all, -self::MAX, NULL, TRUE);

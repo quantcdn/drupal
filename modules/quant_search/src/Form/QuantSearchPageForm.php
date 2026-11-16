@@ -5,6 +5,7 @@ namespace Drupal\quant_search\Form;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\quant_search\Entity\QuantSearchPage;
 use Drupal\taxonomy\Entity\Vocabulary;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -436,6 +437,7 @@ class QuantSearchPageForm extends EntityForm {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     parent::validateForm($form, $form_state);
+    $this->validateRoute($form_state);
 
     // Completely empty facets are allowed since they will be removed during the
     // form save, so we only need to validate when facet data is set.
@@ -460,6 +462,23 @@ class QuantSearchPageForm extends EntityForm {
         if ($facet['facet_type_config']['facet_type'] == "custom" && empty($facet['facet_type_config']['custom_key'])) {
           $form_state->setErrorByName('missing-custom-key', $this->t('Missing custom facet key.'));
         }
+      }
+    }
+  }
+
+  /**
+   * Refuses a route that another search page has.
+   *
+   * Two pages at one address would publish over each other on Quant.
+   */
+  protected function validateRoute(FormStateInterface $form_state): void {
+    $route = QuantSearchPage::routeKey((string) $form_state->getValue('route'));
+    $pages = $this->entityTypeManager->getStorage('quant_search_page')->loadMultiple();
+    unset($pages[$this->entity->id()]);
+    foreach ($pages as $page) {
+      if (QuantSearchPage::routeKey((string) $page->get('route')) === $route) {
+        $form_state->setErrorByName('route', $this->t('Another search page uses this address.'));
+        return;
       }
     }
   }
@@ -494,8 +513,6 @@ class QuantSearchPageForm extends EntityForm {
         '%label' => $page->label(),
       ]));
     }
-
-    \Drupal::service('quant_search.page_publisher')->publish($page, $status === SAVED_NEW);
 
     $form_state->setRedirect('entity.quant_search_page.collection');
   }

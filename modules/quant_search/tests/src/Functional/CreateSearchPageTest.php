@@ -7,6 +7,7 @@ use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\quant_search\Form\CreateSearchPageForm;
 use Drupal\taxonomy\Entity\Vocabulary;
 use Drupal\Tests\BrowserTestBase;
+use Drupal\Tests\quant_search\Traits\WaitsForQuantCallsTrait;
 use Drupal\views\Entity\View;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -17,6 +18,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  */
 #[RunTestsInSeparateProcesses]
 class CreateSearchPageTest extends BrowserTestBase {
+
+  use WaitsForQuantCallsTrait;
 
   /**
    * {@inheritdoc}
@@ -61,6 +64,23 @@ class CreateSearchPageTest extends BrowserTestBase {
   }
 
   /**
+   * {@inheritdoc}
+   */
+  protected function tearDown(): void {
+    // A page created in the form publishes after the response. Let that
+    // finish before the test site is removed, or it writes into the removed
+    // site's files.
+    $storage = \Drupal::entityTypeManager()->getStorage('quant_search_page');
+    $storage->resetCache();
+    foreach ($storage->loadMultiple() as $page) {
+      if ($page->status()) {
+        $this->waitForPublish('/' . $page->get('route'));
+      }
+    }
+    parent::tearDown();
+  }
+
+  /**
    * Adds a taxonomy reference field to a content type.
    */
   protected function addTermField(string $bundle, string $name, string $vid): void {
@@ -102,13 +122,15 @@ class CreateSearchPageTest extends BrowserTestBase {
     $types = array_map(fn ($facet) => $facet['facet_type_config']['facet_type'] . ':' . $facet['facet_type_config']['taxonomy_vocabulary'], $page->get('facets'));
     $this->assertSame(['content_type:', 'taxonomy:topics', 'taxonomy:regions'], $types);
 
-    // The facets were registered and the page was published.
+    // The facets were registered and the page was published, after the
+    // response.
+    $this->waitForPublish('/search');
     $calls = \Drupal::state()->get('quant_search_test.calls', []);
     $facets = array_values(array_filter($calls, fn ($call) => $call['path'] === '/v1/search/facet'));
     $this->assertNotEmpty($facets);
     $this->assertContains('topics_en', $facets[0]['body']);
     $pushed = array_filter($calls, fn ($call) => $call['path'] === '/v1' && ($call['body']['url'] ?? '') === '/search');
-    $this->assertNotEmpty($pushed, 'The search page was published.');
+    $this->assertCount(1, $pushed, 'The search page was published once.');
 
     // The default index already covers every type, so nothing changed and
     // no re-index is asked for. The search box is in the header.
@@ -143,6 +165,52 @@ class CreateSearchPageTest extends BrowserTestBase {
     $this->submitForm(['route' => 'Search Page!'], 'Create the search page');
     $this->assertSession()->pageTextContains('Use lower-case letters');
     $this->assertSame('news_search', CreateSearchPageForm::machineName(CreateSearchPageForm::normaliseRoute('/News/Search/')));
+  }
+
+  /**
+   * In Olivero the search box goes beside the menu, not in the logo row.
+   *
+   * Olivero's header region holds the site branding. Olivero puts its own
+   * search box in the secondary menu region, at the end of the menu row.
+   */
+  public function testSearchBoxRegionInOlivero(): void {
+    $this->drupalGet('admin/config/development/quant/search/pages/create');
+    $session = $this->assertSession();
+    $session->fieldValueEquals('region', 'secondary_menu');
+    $session->pageTextContains('Suggested for Olivero: Secondary menu.');
+
+    $this->submitForm([], 'Create the search page');
+    $block = \Drupal::entityTypeManager()->getStorage('block')->load('olivero_quant_search_search');
+    $this->assertSame('secondary_menu', $block->getRegion());
+  }
+
+  /**
+   * Without a secondary menu region, the box goes where core search is.
+   *
+   * A disabled core search box does not count.
+   */
+  public function testSearchBoxRegionFollowsCoreSearchBlock(): void {
+    \Drupal::service('module_installer')->install(['search']);
+    \Drupal::service('theme_installer')->install(['claro']);
+    $this->config('system.theme')->set('default', 'claro')->save();
+    $this->drupalPlaceBlock('search_form_block', ['theme' => 'claro', 'region' => 'help'])->disable()->save();
+    $this->drupalPlaceBlock('search_form_block', ['theme' => 'claro', 'region' => 'breadcrumb']);
+
+    $this->drupalGet('admin/config/development/quant/search/pages/create');
+    $this->assertSession()->fieldValueEquals('region', 'breadcrumb');
+    $this->assertSession()->pageTextContains('Suggested for Claro: Breadcrumb.');
+    $this->assertSession()->pageTextContains('the Quant search box sits next to it');
+  }
+
+  /**
+   * Without either, the box goes in the header.
+   */
+  public function testSearchBoxRegionFallsBackToHeader(): void {
+    \Drupal::service('theme_installer')->install(['claro']);
+    $this->config('system.theme')->set('default', 'claro')->save();
+
+    $this->drupalGet('admin/config/development/quant/search/pages/create');
+    $this->assertSession()->fieldValueEquals('region', 'header');
   }
 
   /**

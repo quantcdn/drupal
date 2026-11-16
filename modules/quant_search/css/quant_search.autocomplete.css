@@ -1,12 +1,94 @@
-.autocomplete-hit-name {
-  font-weight: bold;
+/**
+ * @file
+ * Default styles for the Quant search box with suggestions.
+ *
+ * The box uses the Algolia autocomplete classic theme. A theme changes its
+ * colours with the --aa-* custom properties of that theme (for example
+ * --aa-primary-color-rgb, --aa-input-border-color-rgb), and the width with
+ * --quant-search-autocomplete-width. A narrow box can show wider suggestions:
+ * set --quant-search-autocomplete-panel-placement to end (or start) on
+ * .quant-search-autocomplete, and give .aa-Panel a min-width. The rules below
+ * stop the theme's general form styles from drawing a second input inside the
+ * box.
+ */
+
+.quant-search-autocomplete {
+  width: var(--quant-search-autocomplete-width, auto);
+  max-width: 100%;
+}
+
+.quant-search-autocomplete .aa-Form {
+  box-sizing: border-box;
+}
+
+.quant-search-autocomplete .aa-Form:focus-within {
+  outline: 2px solid var(--quant-search-focus-color, rgba(var(--aa-primary-color-rgb), 1));
+  outline-offset: 2px;
+}
+
+.quant-search-autocomplete .aa-Input {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  height: var(--aa-search-input-height, 44px);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  color: rgba(var(--aa-text-color-rgb), var(--aa-text-color-alpha));
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+}
+
+/* The form draws the focus outline for the input. */
+.quant-search-autocomplete .aa-Input:focus {
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+}
+
+.quant-search-autocomplete .aa-Input::placeholder {
+  opacity: 1;
+  color: rgba(var(--aa-text-color-rgb), 0.7);
+}
+
+.quant-search-autocomplete .aa-SubmitButton,
+.quant-search-autocomplete .aa-ClearButton {
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.quant-search-autocomplete .aa-SubmitButton:focus-visible,
+.quant-search-autocomplete .aa-ClearButton:focus-visible {
+  outline: 2px solid var(--quant-search-focus-color, rgba(var(--aa-primary-color-rgb), 1));
+  outline-offset: -4px;
 }
 
 .aa-Panel {
   z-index: 9999;
 }
 
-.quant-search-autocomplete button {
-  background-color: transparent;
-  border: none;
+.aa-Panel .aa-Item {
+  padding: 0.5rem 0.75rem;
+}
+
+.aa-Panel .autocomplete-hit-name {
+  display: block;
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.aa-Panel .autocomplete-hit-description {
+  margin-top: 0.25rem;
+  color: rgba(var(--aa-text-color-rgb), 0.8);
+  font-size: 0.875em;
+  line-height: 1.4;
 }

@@ -4,30 +4,33 @@
     <h4>{{ page.description }}</h4>
     {% endif %}
 
+    {% if page.display.results.display_search %}
+    <div id="searchbox" class="ais-SearchBox"></div>
+    {% endif %}
+
     <div class="flex-grid">
 
         {% if facets is not empty %}
-        <div class="col facets">
+        {# Open by default; quant-search.js folds it away on narrow screens. #}
+        <details class="col facets" open>
+            <summary class="facets-toggle">{{ 'Filter results'|t }}</summary>
+
             {% if page.display.results.show_clear_refinements %}
             <div id="clear-refinements"></div>
             {% endif %}
 
             {% for facet in facets %}
-            <div class="facet-container">
-                <div class="facet-heading">{{ facet.facet_heading }}</div>
+            <div class="facet-container" role="group" aria-labelledby="facet-heading-{{ facet.facet_container }}">
+                <div class="facet-heading" id="facet-heading-{{ facet.facet_container }}">{{ facet.facet_heading }}</div>
                 <div id="facet_{{ facet.facet_container }}"></div>
             </div>
             {% endfor %}
-        </div>
+        </details>
         {% endif %}
 
         <div class="col content">
-            {% if page.display.results.display_search %}
-            <div id="searchbox" class="ais-SearchBox"></div>
-            {% endif %}
-
             {% if page.display.results.display_stats %}
-            <div id="stats"></div>
+            <div id="stats" role="status"></div>
             {% endif %}
 
             <div id="hits"></div>

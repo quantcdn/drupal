@@ -17,6 +17,37 @@
   Drupal.quantSearch = Drupal.quantSearch || {};
 
   /**
+   * The URL schemes a search result may link to.
+   */
+  var SAFE_PROTOCOLS = ['http:', 'https:'];
+
+  /**
+   * A search result URL that is safe to link to or open.
+   *
+   * Result URLs come from the search index. Only http, https and relative
+   * URLs are links; any other scheme (javascript:, data:, vbscript: and so
+   * on) or a URL that does not parse is not.
+   *
+   * @param {*} url
+   *   The URL from a search result.
+   *
+   * @return {string|null}
+   *   The URL unchanged, or null when it must not be a link.
+   */
+  Drupal.quantSearch.safeUrl = function (url) {
+    if (typeof url !== 'string' || url.trim() === '') {
+      return null;
+    }
+    try {
+      var parsed = new URL(url, window.location.origin);
+      return SAFE_PROTOCOLS.indexOf(parsed.protocol) === -1 ? null : url;
+    }
+    catch (e) {
+      return null;
+    }
+  };
+
+  /**
    * The Typesense node for an endpoint URL.
    */
   Drupal.quantSearch.typesenseNodes = function (endpoint) {
