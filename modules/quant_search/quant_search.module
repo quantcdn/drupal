@@ -130,4 +130,16 @@ function quant_search_quant_search_page_update(QuantSearchPageInterface $page) {
  */
 function quant_search_quant_search_page_delete(EntityInterface $entity) {
   \Drupal::service('quant_search.page_publisher')->scheduleDelete($entity);
+
+  // The page's search boxes go with it: a box without its page renders
+  // nothing and logs an error on every page view.
+  if (!\Drupal::moduleHandler()->moduleExists('block')) {
+    return;
+  }
+  $blocks = \Drupal::entityTypeManager()->getStorage('block')->loadByProperties(['plugin' => 'quant_autocomplete_block']);
+  foreach ($blocks as $block) {
+    if (($block->get('settings')['page'] ?? NULL) === $entity->uuid()) {
+      $block->delete();
+    }
+  }
 }
