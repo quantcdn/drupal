@@ -18,6 +18,15 @@ class FakeQuantMiddleware {
 
   public const WRITE_TOKEN_PREFIX = 'fake-write-token-';
 
+  /**
+   * The alert channels the fake dashboard lists by default.
+   */
+  public const DEFAULT_CHANNELS = [
+    ['id' => 'ch_email1', 'name' => 'Enquiries', 'type' => 'email', 'hint' => 'e***@example.com'],
+    ['id' => 'ch_email2', 'name' => 'Records', 'type' => 'email', 'hint' => 'r***@example.com'],
+    ['id' => 'ch_slack1', 'name' => 'Web team', 'type' => 'slack', 'hint' => '#web'],
+  ];
+
   public function __construct(protected StateInterface $state) {}
 
   /**
@@ -50,7 +59,25 @@ class FakeQuantMiddleware {
       return NULL;
     }
     $this->record($request);
-    return $this->dashboard($request, $sub);
+    return $this->alertChannels($request, $sub) ?? $this->dashboard($request, $sub);
+  }
+
+  /**
+   * The alert channels of a project, or NULL for another path.
+   *
+   * State "quant_api_oauth_test.alert_channels_status" selects the answer:
+   * 200 (default) with the rows of "quant_api_oauth_test.alert_channels"
+   * (or DEFAULT_CHANNELS), or that status with an error body.
+   */
+  protected function alertChannels(RequestInterface $request, string $path): ?Response {
+    if ($request->getMethod() !== 'GET' || preg_match('#^/api/v3/organizations/test-org/projects/[a-z-]+/alert-channels$#', $path) !== 1) {
+      return NULL;
+    }
+    $status = (int) $this->state->get('quant_api_oauth_test.alert_channels_status', 200);
+    $body = $status === 200
+      ? ['channels' => $this->state->get('quant_api_oauth_test.alert_channels', self::DEFAULT_CHANNELS)]
+      : ['message' => 'Refused'];
+    return $this->bearer($request, self::json($status, $body));
   }
 
   /**

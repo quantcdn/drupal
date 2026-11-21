@@ -34,3 +34,7 @@ services:
   quant_webform.settings_section:
     class: Drupal\quant_webform\QuantFormsSettingsSection
     arguments: ['@quant_webform.mapper', '@quant_webform.report', '@email.validator']
+
+  quant_webform.alert_channels:
+    class: Drupal\quant_webform\QuantAlertChannels
+    arguments: ['@quant_api.oauth', '@quant_api.portal', '@quant_api.credentials', '@config.factory']

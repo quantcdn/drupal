@@ -9,13 +9,19 @@ use Psr\Log\LoggerInterface;
 /**
  * The dashboard API calls of "Log in to Quant", made with the OAuth token.
  *
- * The module uses the OAuth token for four calls only: the user, the project
- * list, the project limit and the project write token. Content, forms and
- * search use the write token on the content API.
+ * The module uses the OAuth token for five calls only: the user, the project
+ * list, the project limit, the project write token and the alert channels of
+ * the project. Content, forms and search use the write token on the content
+ * API.
  */
 class PortalClient {
 
   protected const TIMEOUT = 30;
+
+  /**
+   * The alert channels are read while a settings page loads: a short wait.
+   */
+  protected const LIST_TIMEOUT = 10;
 
   /**
    * Only machine names reach a URL path.
@@ -99,6 +105,26 @@ class PortalClient {
   }
 
   /**
+   * The alert channels that the forms of one project can use.
+   *
+   * @return array
+   *   - status: the HTTP status, or 0 when no answer came.
+   *   - channels: the rows of the answer (unchecked), or an empty list.
+   */
+  public function listAlertChannels(string $access_token, string $organization, string $project): array {
+    if (!self::isMachineName($organization) || !self::isMachineName($project)) {
+      return ['status' => 0, 'channels' => []];
+    }
+    $path = '/api/v3/organizations/' . $organization . '/projects/' . $project . '/alert-channels';
+    $result = $this->request('GET', $path, $access_token, NULL, self::LIST_TIMEOUT);
+    $channels = $result['data']['channels'] ?? [];
+    return [
+      'status' => $result['status'],
+      'channels' => $result['status'] === 200 && is_array($channels) ? array_values($channels) : [],
+    ];
+  }
+
+  /**
    * Whether a value is a safe organisation or project machine name.
    */
   public static function isMachineName(string $value): bool {
@@ -109,12 +135,25 @@ class PortalClient {
    * Sends one call and returns the decoded data, or NULL on any failure.
    */
   protected function send(string $method, string $path, string $access_token, ?array $json = NULL): ?array {
+    $result = $this->request($method, $path, $access_token, $json, self::TIMEOUT);
+    return $result['status'] === 200 ? $result['data'] : NULL;
+  }
+
+  /**
+   * Sends one call and returns its status and decoded data.
+   *
+   * @return array
+   *   - status: the HTTP status; 0 when no answer came, or when a 200 answer
+   *     is not JSON.
+   *   - data: the decoded data ('data' unwrapped), or NULL.
+   */
+  protected function request(string $method, string $path, string $access_token, ?array $json, int $timeout): array {
     $options = [
       'headers' => [
         'Authorization' => 'Bearer ' . $access_token,
         'Accept' => 'application/json',
       ],
-      'timeout' => self::TIMEOUT,
+      'timeout' => $timeout,
       'http_errors' => FALSE,
     ];
     if ($json !== NULL) {
@@ -129,18 +168,22 @@ class PortalClient {
         '@path' => strtok($path, '?'),
         '@class' => get_class($e),
       ]);
-      return NULL;
+      return ['status' => 0, 'data' => NULL];
     }
+    $status = $response->getStatusCode();
     $data = json_decode((string) $response->getBody(), TRUE);
-    if ($response->getStatusCode() !== 200 || !is_array($data)) {
+    if ($status !== 200 || !is_array($data)) {
       $this->logger->warning('The Quant dashboard call @method @path returned status @status.', [
         '@method' => $method,
         '@path' => strtok($path, '?'),
-        '@status' => $response->getStatusCode(),
+        '@status' => $status,
       ]);
-      return NULL;
+      return ['status' => $status === 200 ? 0 : $status, 'data' => NULL];
     }
-    return isset($data['data']) && is_array($data['data']) ? $data['data'] : $data;
+    return [
+      'status' => 200,
+      'data' => isset($data['data']) && is_array($data['data']) ? $data['data'] : $data,
+    ];
   }
 
 }
