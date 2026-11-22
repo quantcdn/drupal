@@ -45,3 +45,15 @@ channel, and "Cc" to send an email channel as cc.
 
 "Keep submissions for" sets how long Quant keeps the form's submissions: the
 organisation default, 30 days, 90 days, 1 year, 2 years, 7 years, or forever.
+
+## Known limitations
+
+- While the site is not connected with "Log in to Quant", or its login needs
+  "Reconnect to Quant", the stored channels of a form cannot be changed in
+  Drupal. They stay as they are and keep publishing. Connect or reconnect to
+  change them.
+- A form with channels takes no Slack webhook of its own. A save that picks
+  channels and enters a webhook is refused with a message.
+- The "Connect to Quant" and "Reconnect to Quant" links show only to users
+  with the "configure quant" permission. Other users are asked to find a site
+  administrator.
