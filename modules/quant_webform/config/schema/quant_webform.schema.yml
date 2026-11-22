@@ -82,3 +82,19 @@ webform.settings.third_party.quant_webform:
     success_message:
       type: text
       label: 'Message after a submit on the static site'
+    channels:
+      type: sequence
+      label: 'Quant alert channels (when set, they replace the email recipients and the Slack webhook)'
+      sequence:
+        type: mapping
+        label: 'Alert channel'
+        mapping:
+          id:
+            type: string
+            label: 'Channel ID'
+          cc:
+            type: boolean
+            label: 'Send as cc (email channels only)'
+    retention_days:
+      type: string
+      label: 'Days to keep submissions: empty for the organisation default, 0 to keep them'

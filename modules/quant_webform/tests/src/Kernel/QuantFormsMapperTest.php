@@ -403,4 +403,177 @@ YAML);
     $this->assertSame('', $this->mapper()->secret('recaptcha_secret', $webform->id()));
   }
 
+  /**
+   * A form with an email handler, a form webhook and a site webhook.
+   */
+  protected function notifiedWebform(): Webform {
+    $webform = $this->webform("email: { '#type': email, '#title': Email }", [], [
+      'email' => [
+        'id' => 'email',
+        'settings' => [
+          'states' => ['completed'],
+          'to_mail' => 'enquiries@example.com',
+          'cc_mail' => 'records@example.com',
+          'from_mail' => '_default',
+          'subject' => 'Enquiry from [webform_submission:values:email]',
+          'reply_to' => '[webform_submission:values:email:raw]',
+          'html' => TRUE,
+        ],
+      ],
+    ]);
+    $this->mapper()->setSecret('slack_webhook', $webform->id(), 'https://hooks.slack.com/services/form');
+    $this->mapper()->setSecret('slack_webhook', NULL, 'https://hooks.slack.com/services/site');
+    return $webform;
+  }
+
+  /**
+   * Without channels, the notifications are exactly those of 2.3.3.
+   *
+   * @covers ::map
+   */
+  public function testLegacyShapeWithoutChannels(): void {
+    $webform = $this->notifiedWebform();
+    $expected = [
+      'email' => [
+        'enabled' => TRUE,
+        'to' => 'enquiries@example.com',
+        'subject' => 'Enquiry from {{email}}',
+        'options' => ['text_only' => FALSE, 'include_results' => TRUE],
+        'cc' => 'records@example.com',
+        'from' => 'site@example.com',
+        'reply_to' => '{{email}}',
+      ],
+      'slack' => ['webhook' => 'https://hooks.slack.com/services/form', 'enabled' => TRUE],
+    ];
+    $before = $this->mapper()->map($webform, '/x')['config'];
+    $this->assertSame($expected, $before['notifications']);
+    $this->assertArrayNotHasKey('retention_days', $before);
+
+    // The settings that a 2.4 save stores with no channel picked change
+    // nothing in the config.
+    $webform->setThirdPartySetting('quant_webform', 'channels', [])
+      ->setThirdPartySetting('quant_webform', 'retention_days', '')
+      ->save();
+    $this->assertSame(json_encode($before), json_encode($this->mapper()->map($webform, '/x')['config']));
+  }
+
+  /**
+   * With channels, the channel shape: no addresses, no webhook.
+   *
+   * @covers ::channels
+   * @covers ::map
+   */
+  public function testChannelShape(): void {
+    $webform = $this->notifiedWebform();
+    $webform->setThirdPartySetting('quant_webform', 'channels', [
+      ['id' => 'ch_a', 'cc' => FALSE],
+      ['id' => 'ch_b', 'cc' => TRUE],
+    ])->save();
+    $notifications = $this->mapper()->map($webform, '/x')['config']['notifications'];
+    $this->assertSame([
+      'channels' => ['ch_a', ['id' => 'ch_b', 'cc' => TRUE]],
+      'email' => [
+        'subject' => 'Enquiry from {{email}}',
+        'from' => 'site@example.com',
+        'reply_to' => '{{email}}',
+        'options' => ['text_only' => FALSE, 'include_results' => TRUE],
+      ],
+    ], $notifications);
+    $this->assertStringNotContainsString('hooks.slack.com', json_encode($notifications));
+  }
+
+  /**
+   * Custom email settings keep the subject, sender and reply-to only.
+   *
+   * @covers ::map
+   */
+  public function testChannelShapeWithCustomEmail(): void {
+    $webform = $this->notifiedWebform();
+    $webform->setThirdPartySetting('quant_webform', 'channels', [['id' => 'ch_a', 'cc' => FALSE]])
+      ->setThirdPartySetting('quant_webform', 'email', [
+        'mode' => 'custom',
+        'to' => 'a@example.com',
+        'cc' => 'b@example.com',
+        'from' => 'web@example.com',
+        'reply_to' => '{{email}}',
+        'subject' => 'Website enquiry',
+      ])->save();
+    $this->assertSame([
+      'subject' => 'Website enquiry',
+      'from' => 'web@example.com',
+      'reply_to' => '{{email}}',
+      'options' => ['text_only' => FALSE, 'include_results' => TRUE],
+    ], $this->mapper()->map($webform, '/x')['config']['notifications']['email']);
+
+    // A subject of spaces only: the default subject.
+    $webform->setThirdPartySetting('quant_webform', 'email', ['mode' => 'custom', 'to' => '', 'subject' => '   '])->save();
+    $this->assertSame('New submission: Test form', $this->mapper()->map($webform, '/x')['config']['notifications']['email']['subject']);
+
+    // Custom mode with no subject and no recipients: the default subject.
+    $webform->setThirdPartySetting('quant_webform', 'email', ['mode' => 'custom', 'to' => '', 'subject' => ''])->save();
+    $this->assertSame([
+      'subject' => 'New submission: Test form',
+      'options' => ['text_only' => FALSE, 'include_results' => TRUE],
+    ], $this->mapper()->map($webform, '/x')['config']['notifications']['email']);
+  }
+
+  /**
+   * Email mode "off" with channels: the default subject, no recipients.
+   *
+   * @covers ::map
+   */
+  public function testChannelShapeWithEmailOff(): void {
+    $webform = $this->notifiedWebform();
+    $webform->setThirdPartySetting('quant_webform', 'channels', [['id' => 'ch_a', 'cc' => FALSE]])
+      ->setThirdPartySetting('quant_webform', 'email', ['mode' => 'off'])
+      ->save();
+    $this->assertSame([
+      'channels' => ['ch_a'],
+      'email' => [
+        'subject' => 'New submission: Test form',
+        'options' => ['text_only' => FALSE, 'include_results' => TRUE],
+      ],
+    ], $this->mapper()->map($webform, '/x')['config']['notifications']);
+  }
+
+  /**
+   * Invalid stored entries are dropped; only valid IDs are channels.
+   *
+   * @covers ::channels
+   */
+  public function testInvalidStoredChannelDropped(): void {
+    $webform = $this->notifiedWebform();
+    $webform->setThirdPartySetting('quant_webform', 'channels', [
+      ['id' => 'bad id!', 'cc' => FALSE],
+      ['id' => str_repeat('x', 65), 'cc' => TRUE],
+      ['id' => 'ch_ok', 'cc' => TRUE],
+      ['id' => 'ch_ok', 'cc' => FALSE],
+    ])->save();
+    $this->assertSame([['id' => 'ch_ok', 'cc' => TRUE]], $this->mapper()->channels($webform));
+    $this->assertSame([['id' => 'ch_ok', 'cc' => TRUE]], $this->mapper()->map($webform, '/x')['config']['notifications']['channels']);
+
+    // Only invalid entries: the legacy shape.
+    $webform->setThirdPartySetting('quant_webform', 'channels', [['id' => 'bad id!', 'cc' => FALSE]])->save();
+    $this->assertSame([], $this->mapper()->channels($webform));
+    $this->assertArrayHasKey('slack', $this->mapper()->map($webform, '/x')['config']['notifications']);
+  }
+
+  /**
+   * The retention period is sent as days, and only when it is set.
+   *
+   * @covers ::map
+   */
+  public function testRetentionDays(): void {
+    $webform = $this->webform("name: { '#type': textfield, '#title': Name }");
+    $webform->setThirdPartySetting('quant_webform', 'retention_days', '365')->save();
+    $this->assertSame(365, $this->mapper()->map($webform, '/x')['config']['retention_days']);
+    $webform->setThirdPartySetting('quant_webform', 'retention_days', '0')->save();
+    $this->assertSame(0, $this->mapper()->map($webform, '/x')['config']['retention_days']);
+    $webform->setThirdPartySetting('quant_webform', 'retention_days', '')->save();
+    $this->assertArrayNotHasKey('retention_days', $this->mapper()->map($webform, '/x')['config']);
+    // A value that is not a choice is not sent.
+    $webform->setThirdPartySetting('quant_webform', 'retention_days', '45')->save();
+    $this->assertArrayNotHasKey('retention_days', $this->mapper()->map($webform, '/x')['config']);
+  }
+
 }

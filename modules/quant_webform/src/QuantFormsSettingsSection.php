@@ -5,6 +5,7 @@ namespace Drupal\quant_webform;
 use Drupal\Component\Utility\EmailValidatorInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\Url;
 use Drupal\webform\WebformInterface;
 
 /**
@@ -35,10 +36,16 @@ class QuantFormsSettingsSection {
    */
   protected const EMAIL_KEYS = ['mode', 'to', 'cc', 'from', 'reply_to', 'subject'];
 
+  /**
+   * The channel state of a form that is off and has no channels.
+   */
+  protected const OFF = 'off';
+
   public function __construct(
     protected QuantFormsMapper $mapper,
     protected QuantFormsReport $report,
     protected EmailValidatorInterface $emailValidator,
+    protected QuantAlertChannels $alertChannels,
   ) {}
 
   /**
@@ -47,16 +54,41 @@ class QuantFormsSettingsSection {
   public function build(WebformInterface $webform): array {
     $settings = (array) $webform->getThirdPartySettings('quant_webform');
     $on = [':input[name="third_party_settings[quant_webform][enabled]"]' => ['checked' => TRUE]];
+    // Read once per request; validate() uses the same list.
+    $list = $this->channelList($webform);
     return [
       '#type' => 'details',
+      // The channel list and the connection state change outside Drupal.
+      '#cache' => ['max-age' => 0],
       '#title' => $this->t('Quant Forms'),
       '#open' => TRUE,
       '#description' => $this->t('On the static site, Quant takes the submissions of this form, stores them and sends the notifications. When this form is on, these settings replace any Quant Forms settings made for its page in the Quant dashboard.'),
       '#element_validate' => [[$this, 'validate']],
+      // validate() needs only the ID and the type of each channel.
+      '#quant_alert_channels' => [
+        'state' => $list['state'],
+        'channels' => array_map(fn ($channel) => ['id' => $channel['id'], 'type' => $channel['type']], $list['channels']),
+      ],
       'enabled' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Take submissions through Quant Forms'),
         '#default_value' => QuantFormsRegistry::isOptedIn($webform),
+      ],
+      'channels' => ['#states' => ['visible' => $on]] + $this->buildChannels($webform, $list),
+      'retention_days' => [
+        '#type' => 'select',
+        '#title' => $this->t('Keep submissions for'),
+        '#options' => [
+          '' => $this->t('Organisation default'),
+          '0' => $this->t('Keep forever'),
+          '30' => $this->t('30 days'),
+          '90' => $this->t('90 days'),
+          '365' => $this->t('1 year'),
+          '730' => $this->t('2 years'),
+          '2555' => $this->t('7 years'),
+        ],
+        '#default_value' => (string) ($settings['retention_days'] ?? ''),
+        '#states' => ['visible' => $on],
       ],
       'email' => ['#states' => ['visible' => $on]] + $this->buildEmail($webform, $settings),
       'slack' => [
@@ -71,6 +103,135 @@ class QuantFormsSettingsSection {
       'unsupported' => $this->buildUnsupported(),
       'report' => $this->report->build($webform),
     ];
+  }
+
+  /**
+   * The channel list, read only for a form that is on or has channels.
+   *
+   * A form that is off and has no channels shows a note instead, so most
+   * Webform settings pages make no dashboard call.
+   */
+  protected function channelList(WebformInterface $webform): array {
+    if (!QuantFormsRegistry::isOptedIn($webform) && $this->mapper->channels($webform) === []) {
+      return ['state' => self::OFF, 'channels' => []];
+    }
+    return $this->alertChannels->load();
+  }
+
+  /**
+   * The alert channels of the organisation, with the picked ones ticked.
+   */
+  protected function buildChannels(WebformInterface $webform, array $list): array {
+    $section = [
+      '#type' => 'details',
+      '#title' => $this->t('Alert channels'),
+      '#open' => TRUE,
+      '#description' => $this->t('Send the notifications of this form to alert channels of your Quant organisation. With a channel picked, the Slack webhook of this form and the email recipients set in Drupal are not used. The email subject, sender name and reply-to still apply.'),
+    ];
+    $stored = $this->storedChannels($webform);
+    if ($list['state'] !== QuantAlertChannels::OK) {
+      return $section + $this->channelsMessage($list['state'], count($stored));
+    }
+    $section['list'] = [
+      '#type' => 'table',
+      '#header' => [$this->t('Channel'), $this->t('Type'), $this->t('Sends to'), $this->t('Use'), $this->t('Cc')],
+      '#empty' => $this->t('Your organisation has no alert channels. Add them in the Quant dashboard.'),
+    ];
+    foreach ($list['channels'] as $channel) {
+      $section['list'][$channel['id']] = $this->channelRow($channel, $stored[$channel['id']] ?? NULL, TRUE);
+    }
+    // Picked channels that the organisation no longer has: kept until unticked.
+    foreach (array_diff_key($stored, array_column($list['channels'], NULL, 'id')) as $id => $entry) {
+      $section['list'][$id] = $this->channelRow([
+        'id' => $id,
+        'name' => (string) $this->t('Channel no longer exists'),
+        'type' => '',
+        'hint' => $id,
+      ], $entry, FALSE);
+    }
+    return $section;
+  }
+
+  /**
+   * Why the channels cannot be picked now. The stored ones stay.
+   */
+  protected function channelsMessage(string $state, int $stored): array {
+    // A site without a login starts on the API settings page, where the
+    // platform is chosen; a login that must be renewed starts at once.
+    // A user who may not open the page is asked to find an administrator.
+    $connect = fn ($title, $route, $ask) => Url::fromRoute($route)->access() ? [
+      '#type' => 'link',
+      '#title' => $title,
+      '#url' => Url::fromRoute($route),
+      '#prefix' => '<p>',
+      '#suffix' => '</p>',
+    ] : ['#markup' => '<p>' . $ask . '</p>'];
+    $items = match ($state) {
+      QuantAlertChannels::NOT_CONNECTED => [
+        'message' => ['#markup' => '<p>' . $this->t('Log in to Quant to pick the alert channels of your organisation. A site connected with a project token cannot read them.') . '</p>'],
+        'link' => $connect($this->t('Connect to Quant'), 'quant_api.settings_form', $this->t('Ask a site administrator to connect to Quant.')),
+      ],
+      QuantAlertChannels::RECONNECT => [
+        'message' => ['#markup' => '<p>' . $this->t('The Quant login of this site cannot read the alert channels. Log in to Quant again.') . '</p>'],
+        'link' => $connect($this->t('Reconnect to Quant'), 'quant_api.oauth_connect', $this->t('Ask a site administrator to reconnect to Quant.')),
+      ],
+      self::OFF => [
+        'message' => ['#markup' => '<p>' . $this->t('Tick "Take submissions through Quant Forms" and save to pick alert channels.') . '</p>'],
+      ],
+      default => [
+        'message' => ['#markup' => '<p>' . $this->t('The alert channels are not available now.') . '</p>'],
+      ],
+    };
+    if ($stored > 0) {
+      $items['kept'] = [
+        '#markup' => '<p>' . $this->formatPlural($stored, 'This form keeps its picked channel.', 'This form keeps its @count picked channels.') . '</p>',
+      ];
+    }
+    return $items;
+  }
+
+  /**
+   * One channel: its name, type and hint as text, and the checkboxes.
+   *
+   * @param array $channel
+   *   The channel: id, name, type and hint.
+   * @param array|null $entry
+   *   The stored entry (id, cc), or NULL when the form does not use it.
+   * @param bool $listed
+   *   Whether the organisation's list has the channel.
+   */
+  protected function channelRow(array $channel, ?array $entry, bool $listed): array {
+    $types = ['email' => $this->t('Email'), 'slack' => $this->t('Slack')];
+    $row = [
+      'name' => ['#plain_text' => $channel['name']],
+      'type' => ['#plain_text' => (string) ($types[$channel['type']] ?? $channel['type'])],
+      'hint' => ['#plain_text' => $channel['hint']],
+      'use' => [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Use @channel', ['@channel' => $channel['name']]),
+        '#title_display' => 'invisible',
+        '#default_value' => $entry !== NULL,
+      ],
+      'cc' => [],
+    ];
+    // Only an email channel can be cc. A channel that is no longer listed
+    // keeps the cc it has; a listed Slack channel never shows the box.
+    if ($channel['type'] === 'email' || (!$listed && !empty($entry['cc']))) {
+      $row['cc'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Send @channel as cc', ['@channel' => $channel['name']]),
+        '#title_display' => 'invisible',
+        '#default_value' => !empty($entry['cc']),
+      ];
+    }
+    return $row;
+  }
+
+  /**
+   * The stored channels of a Webform, keyed by ID.
+   */
+  protected function storedChannels(WebformInterface $webform): array {
+    return array_column($this->mapper->channels($webform), NULL, 'id');
   }
 
   /**
@@ -281,15 +442,16 @@ class QuantFormsSettingsSection {
     $values = (array) $form_state->getValue($base);
     /** @var \Drupal\webform\WebformInterface $webform */
     $webform = $form_state->getFormObject()->getEntity();
+    $flat = $this->flatten($values) + $this->flattenChannelSettings($values, $webform, $element['#quant_alert_channels'] ?? $this->channelList($webform));
     // Secrets are checked and held whether or not the form is ticked, so
     // "Remove the saved Slack webhook" always works.
-    $this->validateSecrets($element, $form_state);
+    $this->validateSecrets($element, $form_state, $flat['channels'] !== []);
     if (!empty($values['enabled'])) {
-      $this->validateEmail($values, $element, $form_state);
+      $this->validateEmail($values, $element, $form_state, $flat['channels'] !== []);
       $this->validateProtection($values, $element, $form_state, $webform);
       $this->validateAfter($values, $element, $form_state);
     }
-    $form_state->setValue($base, (empty($values['enabled']) ? ['enabled' => FALSE] : []) + $this->flatten($values));
+    $form_state->setValue($base, (empty($values['enabled']) ? ['enabled' => FALSE] : []) + $flat);
     // Stored by hook_webform_presave(), so only when the Webform is saved.
     self::$pending[$webform->id()] = (array) $form_state->getValue(self::SECRET_PARENTS);
   }
@@ -311,6 +473,10 @@ class QuantFormsSettingsSection {
     }
     if (trim((string) ($secrets['recaptcha_secret'] ?? '')) !== '') {
       $this->mapper->setSecret('recaptcha_secret', $webform->id(), trim($secrets['recaptcha_secret']));
+    }
+    // The channels replace the form's own webhook. The site webhook stays.
+    if ($this->mapper->channels($webform) !== []) {
+      $this->mapper->setSecret('slack_webhook', $webform->id(), '');
     }
   }
 
@@ -349,14 +515,69 @@ class QuantFormsSettingsSection {
   }
 
   /**
-   * Checks the email addresses of a custom email.
+   * The stored shape of the alert channels and the retention period.
    */
-  protected function validateEmail(array $values, array $element, FormStateInterface $form_state): void {
+  protected function flattenChannelSettings(array $values, WebformInterface $webform, array $list): array {
+    return [
+      'channels' => $this->flattenChannels((array) ($values['channels']['list'] ?? []), $webform, $list),
+      'retention_days' => (string) (QuantFormsMapper::retentionDays($values) ?? ''),
+    ];
+  }
+
+  /**
+   * The picked channels to store.
+   *
+   * A channel is accepted only when the list has it or the form has it
+   * stored, and cc only for a listed email channel or a stored cc entry.
+   * Without the list, the stored channels stay as they are.
+   *
+   * @param array $posted
+   *   The posted rows, keyed by channel ID: use and cc.
+   * @param \Drupal\webform\WebformInterface $webform
+   *   The Webform, with its stored channels.
+   * @param array $list
+   *   The list that build() kept: state, and channels with id and type.
+   *
+   * @return array
+   *   A list of ['id' => string, 'cc' => bool].
+   */
+  public function flattenChannels(array $posted, WebformInterface $webform, array $list): array {
+    $stored = $this->storedChannels($webform);
+    if ($list['state'] !== QuantAlertChannels::OK) {
+      return array_values($stored);
+    }
+    $listed = array_column($list['channels'], NULL, 'id');
+    $picked = [];
+    foreach ($posted as $id => $row) {
+      $id = (string) $id;
+      if (empty($row['use']) || (!isset($listed[$id]) && !isset($stored[$id]))) {
+        continue;
+      }
+      $cc_allowed = isset($listed[$id]) ? $listed[$id]['type'] === 'email' : !empty($stored[$id]['cc']);
+      $picked[] = ['id' => $id, 'cc' => $cc_allowed && !empty($row['cc'])];
+    }
+    return $picked;
+  }
+
+  /**
+   * Checks the email addresses of a custom email.
+   *
+   * @param array $values
+   *   The values of the section.
+   * @param array $element
+   *   The section.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   * @param bool $channels
+   *   Whether the form uses alert channels: then "To" is not required.
+   */
+  protected function validateEmail(array $values, array $element, FormStateInterface $form_state, bool $channels): void {
     $email = (array) ($values['email'] ?? []);
     if (($email['mode'] ?? 'handler') !== 'custom') {
       return;
     }
-    $checks = ['to' => TRUE, 'cc' => FALSE, 'from' => FALSE];
+    // With channels picked, the channels are the recipients.
+    $checks = ['to' => !$channels, 'cc' => FALSE, 'from' => FALSE];
     foreach ($checks as $key => $required) {
       $value = trim((string) ($email[$key] ?? ''));
       if (($required && $value === '') || !$this->isEmailList($value, $key !== 'from')) {
@@ -393,10 +614,15 @@ class QuantFormsSettingsSection {
 
   /**
    * The Slack webhook must be an https URL on hooks.slack.com.
+   *
+   * A form with alert channels takes no webhook of its own.
    */
-  protected function validateSecrets(array $element, FormStateInterface $form_state): void {
+  protected function validateSecrets(array $element, FormStateInterface $form_state, bool $channels): void {
     $webhook = trim((string) $form_state->getValue(array_merge(self::SECRET_PARENTS, ['slack_webhook'])));
-    if ($webhook !== '' && !self::isSlackWebhook($webhook)) {
+    if ($webhook !== '' && $channels) {
+      $form_state->setError($element['secrets']['slack_webhook'], $this->t('A form with alert channels does not use a Slack webhook. Remove the webhook, or untick the channels.'));
+    }
+    elseif ($webhook !== '' && !self::isSlackWebhook($webhook)) {
       $form_state->setError($element['secrets']['slack_webhook'], $this->t('Enter a Slack incoming webhook URL. It starts with https://hooks.slack.com/.'));
     }
   }

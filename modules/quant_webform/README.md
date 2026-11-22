@@ -35,13 +35,25 @@ Drupal.
 ## Settings
 
 - Per Webform (Settings > General > Third party settings > Quant Forms):
-  the opt-in; the notification email (from the first email handler, set
-  in Drupal, or none); Slack on or off and an optional webhook for the form;
+  the opt-in; the alert channels of the Quant organisation (see below); how
+  long Quant keeps the submissions (the organisation default, 30 days to 7
+  years, or forever); the notification email (from the first email handler,
+  set in Drupal, or none); Slack on or off and an optional webhook for the form;
   a hidden honeypot field; reCAPTCHA v2 (site key, and the secret); the AI
   spam check; refused countries and IP addresses; what shows after a submit
   (as the Webform says, a message, or another page). Secrets are kept outside
   config and shown masked. Features that Quant Forms cannot do are listed,
   greyed out, with the reason.
+- Alert channels: email lists and Slack destinations that are kept in the
+  Quant dashboard. The list is read with "Log in to Quant", so a site that
+  connects with a project token shows "Connect to Quant" instead. Tick "Use"
+  to send the notifications of the form to a channel, and "Cc" to send an
+  email channel as cc. With a channel picked, the Slack webhook of the form
+  and the email recipients set in Drupal are not used, and a save deletes the
+  webhook of the form (the site webhook stays). The email subject, sender
+  name and reply-to still apply. When the list cannot be read, the picked
+  channels stay as they are. A picked channel that the organisation no longer
+  has shows as "Channel no longer exists" until it is unticked.
 - Site wide (Configuration > Quant > Forms): the AI spam check (off, or a score
   from 1 to 6), what to do with spam, and a Slack incoming webhook. The webhook
   is kept outside config, so a config export never contains it.
@@ -61,8 +73,9 @@ Drupal.
 | Text, email, tel, url, number, date, textarea, select, radios, checkboxes, checkbox, hidden, likert | Supported. |
 | Composite elements (address, name, contact, custom composite) | Supported. Each part posts as `key[part]`. Quant checks parts that are marked required. |
 | File uploads (managed_file and the image, document, audio and video variants) | Supported. Quant stores the files with the submission. With JavaScript, each file of a multi-file field is kept (`attachments`, `attachments_1`, ...). Without JavaScript only the last file is kept. |
-| Email handler | Supported. The first enabled email handler becomes the Quant email (to, cc, from, subject, reply-to). `[webform_submission:values:KEY]` becomes `{{KEY}}`; other tokens are removed. Addresses that contain tokens are left out. |
-| Slack | Supported, with the site webhook. |
+| Email handler | Supported. The first enabled email handler becomes the Quant email (to, cc, from, subject, reply-to). `[webform_submission:values:KEY]` becomes `{{KEY}}`; other tokens are removed. Addresses that contain tokens are left out. With alert channels picked, only its subject, from and reply-to are used. |
+| Slack | Supported, with the webhook of the form or the site webhook. With alert channels picked, a Slack channel of the organisation is used instead. |
+| Alert channels | Supported. The picked email and Slack channels of the Quant organisation receive the notifications; an email channel can be cc. |
 | Honeypot module | Supported (its field is a Quant honeypot field). |
 | reCAPTCHA v2 (CAPTCHA module with reCAPTCHA) | Supported. |
 | AI spam scoring | Supported (site setting). |

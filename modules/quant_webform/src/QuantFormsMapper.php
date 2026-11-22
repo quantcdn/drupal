@@ -39,6 +39,11 @@ class QuantFormsMapper {
   public const MESSAGE_MAX = 256;
 
   /**
+   * The retention periods Quant accepts, in days. 0 keeps submissions.
+   */
+  public const RETENTION_DAYS = [30, 90, 365, 730, 2555, 0];
+
+  /**
    * Fields that Drupal adds and that are not submission data.
    */
   public const DRUPAL_FIELDS = ['form_build_id', 'form_token', 'form_id', 'op', 'honeypot_time', 'antibot_key'];
@@ -185,11 +190,28 @@ class QuantFormsMapper {
       ],
       'notifications' => $this->notifications($webform),
     ];
+    $config += self::retentionConfig($form);
     $secret = !empty($form['recaptcha']['enabled']) ? $this->secret('recaptcha_secret', $webform->id()) : $this->recaptchaSecret($elements);
     if ($secret !== '') {
       $config['recaptcha_secret_key'] = $secret;
     }
     return $config;
+  }
+
+  /**
+   * The retention_days key of the config, when a period is set.
+   */
+  protected static function retentionConfig(array $form): array {
+    $days = self::retentionDays($form);
+    return $days === NULL ? [] : ['retention_days' => $days];
+  }
+
+  /**
+   * The stored retention period in days, or NULL for the organisation default.
+   */
+  public static function retentionDays(array $form): ?int {
+    $days = (string) ($form['retention_days'] ?? '');
+    return ctype_digit($days) && in_array((int) $days, self::RETENTION_DAYS, TRUE) ? (int) $days : NULL;
   }
 
   /**
@@ -337,9 +359,16 @@ class QuantFormsMapper {
   }
 
   /**
-   * The email and Slack notifications.
+   * The email and Slack notifications, or the alert channels.
    */
   protected function notifications(WebformInterface $webform): array {
+    $channels = $this->channels($webform);
+    if ($channels !== []) {
+      return [
+        'channels' => array_map(fn ($channel) => $channel['cc'] ? $channel : $channel['id'], $channels),
+        'email' => $this->channelEmail($webform),
+      ];
+    }
     $notifications = [];
     $email = $this->emailSettings($webform);
     if ($email !== NULL) {
@@ -351,6 +380,61 @@ class QuantFormsMapper {
       $notifications['slack'] = ['webhook' => $webhook, 'enabled' => TRUE];
     }
     return $notifications;
+  }
+
+  /**
+   * The stored alert channels with a valid ID, each ID once.
+   *
+   * @return array
+   *   A list of ['id' => string, 'cc' => bool].
+   */
+  public function channels(WebformInterface $webform): array {
+    $channels = [];
+    foreach ((array) $webform->getThirdPartySetting('quant_webform', 'channels', []) as $channel) {
+      $id = is_array($channel) ? ($channel['id'] ?? NULL) : NULL;
+      if (QuantAlertChannels::isId($id) && !isset($channels[$id])) {
+        $channels[$id] = ['id' => $id, 'cc' => !empty($channel['cc'])];
+      }
+    }
+    return array_values($channels);
+  }
+
+  /**
+   * The email settings of a form with channels, which are the recipients.
+   *
+   * The subject, sender and reply-to come from the email mode as in
+   * emailSettings(), without addresses. Mode "off" uses the defaults.
+   */
+  protected function channelEmail(WebformInterface $webform): array {
+    $source = $this->emailSource($webform);
+    $subject = self::limit((string) ($source['subject'] ?? ''));
+    $settings = ['subject' => $subject !== '' ? $subject : $this->defaultSubject($webform)];
+    foreach (['from', 'reply_to'] as $key) {
+      if ((string) ($source[$key] ?? '') !== '') {
+        $settings[$key] = $source[$key];
+      }
+    }
+    $settings['options'] = $source['options'] ?? ['text_only' => FALSE, 'include_results' => TRUE];
+    return $settings;
+  }
+
+  /**
+   * The email of the form's email mode, with its addresses; empty for "off".
+   */
+  protected function emailSource(WebformInterface $webform): array {
+    $email = (array) $webform->getThirdPartySetting('quant_webform', 'email', []);
+    return match ($email['mode'] ?? 'handler') {
+      'off' => [],
+      'custom' => $this->customEmail($webform, $email),
+      default => $this->emailNotification($webform) ?? [],
+    };
+  }
+
+  /**
+   * The default email subject.
+   */
+  protected function defaultSubject(WebformInterface $webform): string {
+    return self::limit((string) $this->t('New submission: @form', ['@form' => $webform->label()]));
   }
 
   /**
@@ -368,6 +452,14 @@ class QuantFormsMapper {
     if ($mode !== 'custom') {
       return $this->emailNotification($webform);
     }
+    $settings = $this->customEmail($webform, $email);
+    return $settings['to'] === '' ? NULL : $settings;
+  }
+
+  /**
+   * The email set in Drupal (mode "custom"), with an empty "to" when unset.
+   */
+  protected function customEmail(WebformInterface $webform, array $email): array {
     $settings = [
       'enabled' => TRUE,
       'to' => (string) ($email['to'] ?? ''),
@@ -379,7 +471,7 @@ class QuantFormsMapper {
         $settings[$key] = (string) $email[$key];
       }
     }
-    return $settings['to'] === '' ? NULL : $settings;
+    return $settings;
   }
 
   /**
