@@ -57,7 +57,7 @@ class QuantFormsSettingsSection {
       '#open' => TRUE,
       '#description' => $this->t('On the static site, Quant takes the submissions of this form, stores them and sends the notifications. When this form is on, these settings replace any Quant Forms settings made for its page in the Quant dashboard.'),
       '#element_validate' => [[$this, 'validate']],
-      // Without the hints: a cached form never holds them.
+      // validate() needs only the ID and the type of each channel.
       '#quant_alert_channels' => [
         'state' => $list['state'],
         'channels' => array_map(fn ($channel) => ['id' => $channel['id'], 'type' => $channel['type']], $list['channels']),
@@ -136,21 +136,23 @@ class QuantFormsSettingsSection {
    * Why the channels cannot be picked now. The stored ones stay.
    */
   protected function channelsMessage(string $state, int $stored): array {
-    $connect = fn ($title) => [
+    // A site without a login starts on the API settings page, where the
+    // platform is chosen; a login that must be renewed starts at once.
+    $connect = fn ($title, $route) => [
       '#type' => 'link',
       '#title' => $title,
-      '#url' => Url::fromRoute('quant_api.oauth_connect'),
+      '#url' => Url::fromRoute($route),
       '#prefix' => '<p>',
       '#suffix' => '</p>',
     ];
     $items = match ($state) {
       QuantAlertChannels::NOT_CONNECTED => [
         'message' => ['#markup' => '<p>' . $this->t('Log in to Quant to pick the alert channels of your organisation. A site connected with a project token cannot read them.') . '</p>'],
-        'link' => $connect($this->t('Connect to Quant')),
+        'link' => $connect($this->t('Connect to Quant'), 'quant_api.settings_form'),
       ],
       QuantAlertChannels::RECONNECT => [
         'message' => ['#markup' => '<p>' . $this->t('The Quant login of this site cannot read the alert channels. Log in to Quant again.') . '</p>'],
-        'link' => $connect($this->t('Reconnect to Quant')),
+        'link' => $connect($this->t('Reconnect to Quant'), 'quant_api.oauth_connect'),
       ],
       default => [
         'message' => ['#markup' => '<p>' . $this->t('The alert channels are not available now.') . '</p>'],
@@ -414,7 +416,7 @@ class QuantFormsSettingsSection {
     $values = (array) $form_state->getValue($base);
     /** @var \Drupal\webform\WebformInterface $webform */
     $webform = $form_state->getFormObject()->getEntity();
-    $flat = $this->flatten($values, $webform, $element['#quant_alert_channels'] ?? $this->alertChannels->load());
+    $flat = $this->flatten($values) + $this->flattenChannelSettings($values, $webform, $element['#quant_alert_channels'] ?? $this->alertChannels->load());
     // Secrets are checked and held whether or not the form is ticked, so
     // "Remove the saved Slack webhook" always works.
     $this->validateSecrets($element, $form_state);
@@ -463,7 +465,7 @@ class QuantFormsSettingsSection {
   /**
    * The stored shape of the section's values.
    */
-  protected function flatten(array $values, WebformInterface $webform, array $list): array {
+  protected function flatten(array $values): array {
     $protection = (array) ($values['protection'] ?? []);
     $after = (array) ($values['after'] ?? []);
     return [
@@ -483,6 +485,14 @@ class QuantFormsSettingsSection {
         'url' => trim((string) ($after['confirmation_url'] ?? '')),
       ],
       'success_message' => trim((string) ($after['success_message'] ?? '')),
+    ];
+  }
+
+  /**
+   * The stored shape of the alert channels and the retention period.
+   */
+  protected function flattenChannelSettings(array $values, WebformInterface $webform, array $list): array {
+    return [
       'channels' => $this->flattenChannels((array) ($values['channels']['list'] ?? []), $webform, $list),
       'retention_days' => (string) (QuantFormsMapper::retentionDays($values) ?? ''),
     ];

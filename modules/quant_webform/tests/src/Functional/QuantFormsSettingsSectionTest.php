@@ -331,6 +331,8 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
     $this->storeChannels([['id' => 'ch_email1', 'cc' => FALSE]]);
     $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
     $this->assertSession()->linkExists('Connect to Quant');
+    $this->assertSession()->linkByHrefExists('/admin/config/development/quant/api');
+    $this->assertSession()->linkByHrefNotExists('/oauth/connect');
     $this->submitForm(['third_party_settings[quant_webform][enabled]' => TRUE], 'Save');
     $this->assertSame([['id' => 'ch_email1', 'cc' => FALSE]], $this->storedChannels());
     $config = \Drupal::service('quant_webform.mapper')->map($this->webform(), '/x')['config'];
