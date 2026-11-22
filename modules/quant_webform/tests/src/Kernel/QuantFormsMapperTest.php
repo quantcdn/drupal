@@ -505,6 +505,10 @@ YAML);
       'options' => ['text_only' => FALSE, 'include_results' => TRUE],
     ], $this->mapper()->map($webform, '/x')['config']['notifications']['email']);
 
+    // A subject of spaces only: the default subject.
+    $webform->setThirdPartySetting('quant_webform', 'email', ['mode' => 'custom', 'to' => '', 'subject' => '   '])->save();
+    $this->assertSame('New submission: Test form', $this->mapper()->map($webform, '/x')['config']['notifications']['email']['subject']);
+
     // Custom mode with no subject and no recipients: the default subject.
     $webform->setThirdPartySetting('quant_webform', 'email', ['mode' => 'custom', 'to' => '', 'subject' => ''])->save();
     $this->assertSame([

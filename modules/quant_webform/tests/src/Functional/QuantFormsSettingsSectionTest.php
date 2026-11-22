@@ -52,7 +52,7 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
       'title' => 'Contact us',
       'elements' => "email: { '#type': email, '#title': Email }",
     ])->save();
-    $this->drupalLogin($this->drupalCreateUser(['administer webform']));
+    $this->drupalLogin($this->drupalCreateUser(['administer webform', 'configure quant']));
   }
 
   /**
@@ -271,6 +271,51 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
   }
 
   /**
+   * A listed Slack channel never shows a Cc box, also with a stored cc.
+   */
+  public function testNoCcBoxOnSlack(): void {
+    $this->connect();
+    $this->storeChannels([['id' => 'ch_slack1', 'cc' => TRUE]]);
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    $this->assertSession()->checkboxChecked(sprintf(self::ROW, 'ch_slack1', 'use'));
+    $this->assertSession()->fieldNotExists(sprintf(self::ROW, 'ch_slack1', 'cc'));
+  }
+
+  /**
+   * A new form webhook in the same save as channels is refused.
+   */
+  public function testWebhookWithChannelsIsRefused(): void {
+    $this->connect();
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    $this->submitForm([
+      sprintf(self::ROW, 'ch_email1', 'use') => TRUE,
+      'quant_webform_secrets[slack_webhook]' => 'https://hooks.slack.com/services/T1/B1/both1234',
+    ], 'Save');
+    $this->assertSession()->pageTextContains('A form with alert channels does not use a Slack webhook. Remove the webhook, or untick the channels.');
+    $this->assertSame([], $this->storedChannels());
+    $this->assertNull(\Drupal::keyValue(QuantFormsMapper::SECRETS)->get('slack_webhook:contact_us'));
+  }
+
+  /**
+   * Without the Quant permission, the message asks for an administrator.
+   */
+  public function testNoLinkWithoutPermission(): void {
+    $this->drupalLogin($this->drupalCreateUser(['administer webform']));
+    $this->connect();
+    \Drupal::state()->set('quant_api_oauth_test.alert_channels_status', 403);
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    $this->assertSession()->pageTextContains('Ask a site administrator to reconnect to Quant.');
+    $this->assertSession()->linkNotExists('Reconnect to Quant');
+    $this->assertSession()->linkByHrefNotExists('/oauth/connect');
+
+    // A site with a project token only.
+    $this->config('quant_api.settings')->set('auth_method', 'token')->save();
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    $this->assertSession()->pageTextContains('Ask a site administrator to connect to Quant.');
+    $this->assertSession()->linkNotExists('Connect to Quant');
+  }
+
+  /**
    * A login that the dashboard refuses (403) must log in again.
    */
   public function testReconnect(): void {
@@ -340,6 +385,8 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
     $session = $this->assertSession();
     $session->pageTextContains('Channel no longer exists');
     $session->checkboxChecked(sprintf(self::ROW, 'ch_gone', 'use'));
+    // A missing channel keeps the cc it has.
+    $session->checkboxChecked(sprintf(self::ROW, 'ch_gone', 'cc'));
     $this->submitForm([], 'Save');
     $this->assertSame([['id' => 'ch_email1', 'cc' => FALSE], ['id' => 'ch_gone', 'cc' => TRUE]], $this->storedChannels());
 

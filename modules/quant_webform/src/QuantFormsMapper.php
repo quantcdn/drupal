@@ -407,7 +407,8 @@ class QuantFormsMapper {
    */
   protected function channelEmail(WebformInterface $webform): array {
     $source = $this->emailSource($webform);
-    $settings = ['subject' => $source['subject'] ?? $this->defaultSubject($webform)];
+    $subject = self::limit((string) ($source['subject'] ?? ''));
+    $settings = ['subject' => $subject !== '' ? $subject : $this->defaultSubject($webform)];
     foreach (['from', 'reply_to'] as $key) {
       if ((string) ($source[$key] ?? '') !== '') {
         $settings[$key] = $source[$key];
