@@ -282,6 +282,39 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
   }
 
   /**
+   * A stored cc on a listed Slack channel becomes "to" at the next save.
+   */
+  public function testStoredSlackCcIsNormalised(): void {
+    $this->connect();
+    $this->storeChannels([['id' => 'ch_slack1', 'cc' => TRUE]]);
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    $this->submitForm([], 'Save');
+    $this->assertSession()->pageTextContains('Webform settings Contact us has been saved.');
+    $this->assertSame([['id' => 'ch_slack1', 'cc' => FALSE]], $this->storedChannels());
+    $config = \Drupal::service('quant_webform.mapper')->map($this->webform(), '/x')['config'];
+    $this->assertSame(['ch_slack1'], $config['notifications']['channels']);
+  }
+
+  /**
+   * A save that fails validation deletes no secret.
+   */
+  public function testFailedSaveKeepsTheWebhook(): void {
+    $this->connect();
+    $kv = \Drupal::keyValue(QuantFormsMapper::SECRETS);
+    $kv->set('slack_webhook:contact_us', 'https://hooks.slack.com/services/T1/B1/keep1234');
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    $this->submitForm([
+      sprintf(self::ROW, 'ch_email1', 'use') => TRUE,
+      'third_party_settings[quant_webform][email][mode]' => 'custom',
+      'third_party_settings[quant_webform][email][to]' => 'a@example.com',
+      'third_party_settings[quant_webform][email][cc]' => 'not an address',
+    ], 'Save');
+    $this->assertSession()->pageTextContains('Cc: enter valid email addresses');
+    $this->assertSame([], $this->storedChannels());
+    $this->assertSame('https://hooks.slack.com/services/T1/B1/keep1234', $kv->get('slack_webhook:contact_us'));
+  }
+
+  /**
    * A new form webhook in the same save as channels is refused.
    */
   public function testWebhookWithChannelsIsRefused(): void {

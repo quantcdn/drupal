@@ -530,8 +530,18 @@ class QuantFormsSettingsSection {
    * A channel is accepted only when the list has it or the form has it
    * stored, and cc only for a listed email channel or a stored cc entry.
    * Without the list, the stored channels stay as they are.
+   *
+   * @param array $posted
+   *   The posted rows, keyed by channel ID: use and cc.
+   * @param \Drupal\webform\WebformInterface $webform
+   *   The Webform, with its stored channels.
+   * @param array $list
+   *   The list that build() kept: state, and channels with id and type.
+   *
+   * @return array
+   *   A list of ['id' => string, 'cc' => bool].
    */
-  protected function flattenChannels(array $posted, WebformInterface $webform, array $list): array {
+  public function flattenChannels(array $posted, WebformInterface $webform, array $list): array {
     $stored = $this->storedChannels($webform);
     if ($list['state'] !== QuantAlertChannels::OK) {
       return array_values($stored);
