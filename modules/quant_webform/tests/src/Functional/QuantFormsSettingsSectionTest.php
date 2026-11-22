@@ -65,9 +65,9 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
     $session->checkboxNotChecked('third_party_settings[quant_webform][enabled]');
     $session->pageTextContains('Not available with Quant Forms');
     $session->elementAttributeExists('css', 'input[name="quant_webform_unsupported[captcha]"]', 'disabled');
-    // A site connected with a project token only cannot read the channels.
+    // A form that is off and has no channels does not read the channels.
     $session->pageTextContains('Alert channels');
-    $session->linkExists('Connect to Quant');
+    $session->pageTextContains('Tick "Take submissions through Quant Forms" and save to pick alert channels.');
     $session->fieldNotExists(sprintf(self::ROW, 'ch_email1', 'use'));
 
     $this->submitForm([
@@ -157,8 +157,14 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
 
   /**
    * Connects the site with the fake dashboard's login.
+   *
+   * @param bool $enable
+   *   Whether to tick "Take submissions through Quant Forms" on the form.
    */
-  protected function connect(): void {
+  protected function connect(bool $enable = TRUE): void {
+    if ($enable) {
+      $this->webform()->setThirdPartySetting('quant_webform', 'enabled', TRUE)->save();
+    }
     $this->config('quant_api.settings')
       ->set('auth_method', 'oauth')
       ->set('api_account', 'test-org')
@@ -245,6 +251,23 @@ class QuantFormsSettingsSectionTest extends BrowserTestBase {
     ], 'Save');
     $this->assertSame([], $this->storedChannels());
     $this->assertSame('https://hooks.slack.com/services/T1/B1/again123', $kv->get('slack_webhook:contact_us'));
+  }
+
+  /**
+   * A form that is not ticked and has no channels calls no dashboard.
+   */
+  public function testNoCallWhenFormIsOff(): void {
+    $this->connect(FALSE);
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    $this->assertSession()->pageTextContains('Tick "Take submissions through Quant Forms" and save to pick alert channels.');
+    $this->assertSession()->fieldNotExists(sprintf(self::ROW, 'ch_email1', 'use'));
+    $this->submitForm([], 'Save');
+    $this->assertSame([], \Drupal::state()->get('quant_api_oauth_test.requests', []));
+
+    // Ticked and saved: the next page lists the channels.
+    $this->submitForm(['third_party_settings[quant_webform][enabled]' => TRUE], 'Save');
+    $this->drupalGet('admin/structure/webform/manage/contact_us/settings');
+    $this->assertSession()->fieldExists(sprintf(self::ROW, 'ch_email1', 'use'));
   }
 
   /**

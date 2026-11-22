@@ -4,11 +4,18 @@
 
 - **Nothing changes until you pick alert channels.** A Webform without
   channels publishes the same Quant Forms config as in 2.3.3: the same email
-  and the same Slack webhook. There is no update hook.
+  and the same Slack webhook.
+- **Run `drush updb` (or update.php) after the upgrade.** The post update
+  `quant_webform_post_update_alert_channels` changes no data. It rebuilds the
+  service container, which needs the new alert channel service. Without it the
+  Webform settings pages can fail until the caches are rebuilt.
 - **Sites that logged in to Quant before 2.4 need "Reconnect to Quant" once.**
   An older login cannot read the alert channels. The Quant Forms section of
   the Webform then shows "Reconnect to Quant"; follow the link and choose the
   same project. Publishing is not affected.
+- **The channel list is read only for a form that is on or has channels.**
+  A form that does not take submissions through Quant Forms says: tick "Take
+  submissions through Quant Forms" and save to pick alert channels.
 - **Sites connected with a project token** cannot read the channels. The
   section shows "Connect to Quant". Channels that a form already has stay and
   still publish.

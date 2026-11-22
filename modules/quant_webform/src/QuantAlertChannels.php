@@ -33,6 +33,11 @@ class QuantAlertChannels {
   public const RECONNECT = 'reconnect';
 
   /**
+   * The answers that mean the login must be renewed.
+   */
+  protected const RECONNECT_STATUSES = [401, 403];
+
+  /**
    * The dashboard did not answer, or answered with an error.
    */
   public const UNAVAILABLE = 'unavailable';
@@ -87,7 +92,7 @@ class QuantAlertChannels {
       return self::result(self::RECONNECT);
     }
     $answer = $this->portal->listAlertChannels($access, (string) $config->get('api_account'), (string) $config->get('api_project'));
-    if ($answer['status'] === 403) {
+    if (in_array($answer['status'], self::RECONNECT_STATUSES, TRUE)) {
       return self::result(self::RECONNECT);
     }
     if ($answer['status'] !== 200) {

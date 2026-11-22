@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\quant_webform\Kernel;
 
+use Drupal\Core\Logger\RfcLogLevel;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\quant_api\OAuth\OAuthTokenStore;
 use Drupal\quant_webform\QuantAlertChannels;
@@ -22,7 +23,7 @@ class QuantAlertChannelsTest extends KernelTestBase {
    */
   protected static $modules = [
     'system', 'user', 'field', 'text', 'filter', 'file', 'node', 'taxonomy', 'views',
-    'webform', 'quant', 'quant_api', 'quant_webform', 'quant_api_oauth_test',
+    'webform', 'quant', 'quant_api', 'quant_webform', 'quant_api_oauth_test', 'dblog',
   ];
 
   /**
@@ -31,6 +32,7 @@ class QuantAlertChannelsTest extends KernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installConfig(['quant_api']);
+    $this->installSchema('dblog', ['watchdog']);
     $this->setSetting('quant_api_dashboard_url', 'http://dashboard.test/quant-test-dashboard');
   }
 
@@ -110,14 +112,34 @@ class QuantAlertChannelsTest extends KernelTestBase {
   }
 
   /**
-   * A 403 asks for a new login.
+   * A 403 or a 401 (a revoked token) asks for a new login.
    *
    * @covers ::load
    */
   public function testReconnect(): void {
     $this->connect();
-    \Drupal::state()->set('quant_api_oauth_test.alert_channels_status', 403);
-    $this->assertSame(['state' => 'reconnect', 'channels' => []], $this->channels()->load());
+    foreach ([403, 401] as $status) {
+      \Drupal::state()->set('quant_api_oauth_test.alert_channels_status', $status);
+      $this->assertSame(['state' => 'reconnect', 'channels' => []], $this->channels()->load(), "Status $status");
+    }
+    // An expected state, so the log gets debug entries, not warnings.
+    $this->assertSame([RfcLogLevel::DEBUG, RfcLogLevel::DEBUG], $this->logLevels());
+
+    \Drupal::state()->set('quant_api_oauth_test.alert_channels_status', 500);
+    $this->channels()->load();
+    $this->assertSame([RfcLogLevel::DEBUG, RfcLogLevel::DEBUG, RfcLogLevel::WARNING], $this->logLevels());
+  }
+
+  /**
+   * The severities of the quant_api log entries, oldest first.
+   */
+  protected function logLevels(): array {
+    return array_map('intval', \Drupal::database()->select('watchdog', 'w')
+      ->fields('w', ['severity'])
+      ->condition('type', 'quant_api')
+      ->orderBy('wid')
+      ->execute()
+      ->fetchCol());
   }
 
   /**

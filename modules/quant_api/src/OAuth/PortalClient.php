@@ -5,6 +5,7 @@ namespace Drupal\quant_api\OAuth;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use GuzzleHttp\ClientInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 
 /**
  * The dashboard API calls of "Log in to Quant", made with the OAuth token.
@@ -21,7 +22,12 @@ class PortalClient {
   /**
    * The alert channels are read while a settings page loads: a short wait.
    */
-  protected const LIST_TIMEOUT = 10;
+  protected const LIST_HTTP = ['connect_timeout' => 3, 'timeout' => 5];
+
+  /**
+   * The HTTP options of the other calls.
+   */
+  protected const HTTP = ['timeout' => self::TIMEOUT];
 
   /**
    * Only machine names reach a URL path.
@@ -116,7 +122,8 @@ class PortalClient {
       return ['status' => 0, 'channels' => []];
     }
     $path = '/api/v3/organizations/' . $organization . '/projects/' . $project . '/alert-channels';
-    $result = $this->request('GET', $path, $access_token, NULL, self::LIST_TIMEOUT);
+    // A refused login is an expected state here (the editor reconnects).
+    $result = $this->request('GET', $path, $access_token, NULL, self::LIST_HTTP, [401, 403]);
     $channels = $result['data']['channels'] ?? [];
     return [
       'status' => $result['status'],
@@ -135,7 +142,7 @@ class PortalClient {
    * Sends one call and returns the decoded data, or NULL on any failure.
    */
   protected function send(string $method, string $path, string $access_token, ?array $json = NULL): ?array {
-    $result = $this->request($method, $path, $access_token, $json, self::TIMEOUT);
+    $result = $this->request($method, $path, $access_token, $json, self::HTTP);
     return $result['status'] === 200 ? $result['data'] : NULL;
   }
 
@@ -147,15 +154,14 @@ class PortalClient {
    *     is not JSON.
    *   - data: the decoded data ('data' unwrapped), or NULL.
    */
-  protected function request(string $method, string $path, string $access_token, ?array $json, int $timeout): array {
+  protected function request(string $method, string $path, string $access_token, ?array $json, array $http, array $quiet = []): array {
     $options = [
       'headers' => [
         'Authorization' => 'Bearer ' . $access_token,
         'Accept' => 'application/json',
       ],
-      'timeout' => $timeout,
       'http_errors' => FALSE,
-    ];
+    ] + $http;
     if ($json !== NULL) {
       $options['json'] = $json;
     }
@@ -173,7 +179,7 @@ class PortalClient {
     $status = $response->getStatusCode();
     $data = json_decode((string) $response->getBody(), TRUE);
     if ($status !== 200 || !is_array($data)) {
-      $this->logger->warning('The Quant dashboard call @method @path returned status @status.', [
+      $this->logger->log(in_array($status, $quiet, TRUE) ? LogLevel::DEBUG : LogLevel::WARNING, 'The Quant dashboard call @method @path returned status @status.', [
         '@method' => $method,
         '@path' => strtok($path, '?'),
         '@status' => $status,

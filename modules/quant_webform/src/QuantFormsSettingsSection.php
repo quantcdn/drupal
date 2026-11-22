@@ -36,6 +36,11 @@ class QuantFormsSettingsSection {
    */
   protected const EMAIL_KEYS = ['mode', 'to', 'cc', 'from', 'reply_to', 'subject'];
 
+  /**
+   * The channel state of a form that is off and has no channels.
+   */
+  protected const OFF = 'off';
+
   public function __construct(
     protected QuantFormsMapper $mapper,
     protected QuantFormsReport $report,
@@ -50,9 +55,11 @@ class QuantFormsSettingsSection {
     $settings = (array) $webform->getThirdPartySettings('quant_webform');
     $on = [':input[name="third_party_settings[quant_webform][enabled]"]' => ['checked' => TRUE]];
     // Read once per request; validate() uses the same list.
-    $list = $this->alertChannels->load();
+    $list = $this->channelList($webform);
     return [
       '#type' => 'details',
+      // The channel list and the connection state change outside Drupal.
+      '#cache' => ['max-age' => 0],
       '#title' => $this->t('Quant Forms'),
       '#open' => TRUE,
       '#description' => $this->t('On the static site, Quant takes the submissions of this form, stores them and sends the notifications. When this form is on, these settings replace any Quant Forms settings made for its page in the Quant dashboard.'),
@@ -96,6 +103,19 @@ class QuantFormsSettingsSection {
       'unsupported' => $this->buildUnsupported(),
       'report' => $this->report->build($webform),
     ];
+  }
+
+  /**
+   * The channel list, read only for a form that is on or has channels.
+   *
+   * A form that is off and has no channels shows a note instead, so most
+   * Webform settings pages make no dashboard call.
+   */
+  protected function channelList(WebformInterface $webform): array {
+    if (!QuantFormsRegistry::isOptedIn($webform) && $this->mapper->channels($webform) === []) {
+      return ['state' => self::OFF, 'channels' => []];
+    }
+    return $this->alertChannels->load();
   }
 
   /**
@@ -153,6 +173,9 @@ class QuantFormsSettingsSection {
       QuantAlertChannels::RECONNECT => [
         'message' => ['#markup' => '<p>' . $this->t('The Quant login of this site cannot read the alert channels. Log in to Quant again.') . '</p>'],
         'link' => $connect($this->t('Reconnect to Quant'), 'quant_api.oauth_connect'),
+      ],
+      self::OFF => [
+        'message' => ['#markup' => '<p>' . $this->t('Tick "Take submissions through Quant Forms" and save to pick alert channels.') . '</p>'],
       ],
       default => [
         'message' => ['#markup' => '<p>' . $this->t('The alert channels are not available now.') . '</p>'],
@@ -416,7 +439,7 @@ class QuantFormsSettingsSection {
     $values = (array) $form_state->getValue($base);
     /** @var \Drupal\webform\WebformInterface $webform */
     $webform = $form_state->getFormObject()->getEntity();
-    $flat = $this->flatten($values) + $this->flattenChannelSettings($values, $webform, $element['#quant_alert_channels'] ?? $this->alertChannels->load());
+    $flat = $this->flatten($values) + $this->flattenChannelSettings($values, $webform, $element['#quant_alert_channels'] ?? $this->channelList($webform));
     // Secrets are checked and held whether or not the form is ticked, so
     // "Remove the saved Slack webhook" always works.
     $this->validateSecrets($element, $form_state);
