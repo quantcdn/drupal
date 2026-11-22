@@ -73,8 +73,9 @@ Drupal.
 | Text, email, tel, url, number, date, textarea, select, radios, checkboxes, checkbox, hidden, likert | Supported. |
 | Composite elements (address, name, contact, custom composite) | Supported. Each part posts as `key[part]`. Quant checks parts that are marked required. |
 | File uploads (managed_file and the image, document, audio and video variants) | Supported. Quant stores the files with the submission. With JavaScript, each file of a multi-file field is kept (`attachments`, `attachments_1`, ...). Without JavaScript only the last file is kept. |
-| Email handler | Supported. The first enabled email handler becomes the Quant email (to, cc, from, subject, reply-to). `[webform_submission:values:KEY]` becomes `{{KEY}}`; other tokens are removed. Addresses that contain tokens are left out. |
-| Slack | Supported, with the site webhook. |
+| Email handler | Supported. The first enabled email handler becomes the Quant email (to, cc, from, subject, reply-to). `[webform_submission:values:KEY]` becomes `{{KEY}}`; other tokens are removed. Addresses that contain tokens are left out. With alert channels picked, only its subject, from and reply-to are used. |
+| Slack | Supported, with the webhook of the form or the site webhook. With alert channels picked, a Slack channel of the organisation is used instead. |
+| Alert channels | Supported. The picked email and Slack channels of the Quant organisation receive the notifications; an email channel can be cc. |
 | Honeypot module | Supported (its field is a Quant honeypot field). |
 | reCAPTCHA v2 (CAPTCHA module with reCAPTCHA) | Supported. |
 | AI spam scoring | Supported (site setting). |
