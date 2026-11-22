@@ -190,15 +190,20 @@ class QuantFormsMapper {
       ],
       'notifications' => $this->notifications($webform),
     ];
-    $retention = self::retentionDays($form);
-    if ($retention !== NULL) {
-      $config['retention_days'] = $retention;
-    }
+    $config += self::retentionConfig($form);
     $secret = !empty($form['recaptcha']['enabled']) ? $this->secret('recaptcha_secret', $webform->id()) : $this->recaptchaSecret($elements);
     if ($secret !== '') {
       $config['recaptcha_secret_key'] = $secret;
     }
     return $config;
+  }
+
+  /**
+   * The retention_days key of the config, when a period is set.
+   */
+  protected static function retentionConfig(array $form): array {
+    $days = self::retentionDays($form);
+    return $days === NULL ? [] : ['retention_days' => $days];
   }
 
   /**
@@ -401,12 +406,7 @@ class QuantFormsMapper {
    * emailSettings(), without addresses. Mode "off" uses the defaults.
    */
   protected function channelEmail(WebformInterface $webform): array {
-    $email = (array) $webform->getThirdPartySetting('quant_webform', 'email', []);
-    $source = match ($email['mode'] ?? 'handler') {
-      'off' => [],
-      'custom' => $this->customEmail($webform, $email),
-      default => $this->emailNotification($webform) ?? [],
-    };
+    $source = $this->emailSource($webform);
     $settings = ['subject' => $source['subject'] ?? $this->defaultSubject($webform)];
     foreach (['from', 'reply_to'] as $key) {
       if ((string) ($source[$key] ?? '') !== '') {
@@ -415,6 +415,18 @@ class QuantFormsMapper {
     }
     $settings['options'] = $source['options'] ?? ['text_only' => FALSE, 'include_results' => TRUE];
     return $settings;
+  }
+
+  /**
+   * The email of the form's email mode, with its addresses; empty for "off".
+   */
+  protected function emailSource(WebformInterface $webform): array {
+    $email = (array) $webform->getThirdPartySetting('quant_webform', 'email', []);
+    return match ($email['mode'] ?? 'handler') {
+      'off' => [],
+      'custom' => $this->customEmail($webform, $email),
+      default => $this->emailNotification($webform) ?? [],
+    };
   }
 
   /**
