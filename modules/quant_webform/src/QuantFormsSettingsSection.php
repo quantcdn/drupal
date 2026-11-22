@@ -57,7 +57,11 @@ class QuantFormsSettingsSection {
       '#open' => TRUE,
       '#description' => $this->t('On the static site, Quant takes the submissions of this form, stores them and sends the notifications. When this form is on, these settings replace any Quant Forms settings made for its page in the Quant dashboard.'),
       '#element_validate' => [[$this, 'validate']],
-      '#quant_alert_channels' => $list,
+      // Without the hints: a cached form never holds them.
+      '#quant_alert_channels' => [
+        'state' => $list['state'],
+        'channels' => array_map(fn ($channel) => ['id' => $channel['id'], 'type' => $channel['type']], $list['channels']),
+      ],
       'enabled' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Take submissions through Quant Forms'),
